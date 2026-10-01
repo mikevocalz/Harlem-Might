@@ -1,0 +1,27 @@
+{
+  "name": "harlem-might",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Harlem Might — Expo SDK 58 + Next.js + Skia + Viro Web/OpenXR + Rive universal spatial app.",
+  "license": "MIT",
+  "packageManager": "pnpm@12.8.1",
+  "engines": {
+    "node": ">=24.15.0 <26"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "gen": "node tooling/generators/gen.mjs",
+    "spatial:prepare-web": "node tooling/copy-viro-web-assets.mjs",
+    "skia:prepare-web": "node tooling/copy-skia-web-assets.mjs",
+    "postinstall": "node tooling/copy-viro-web-assets.mjs && node tooling/copy-skia-web-assets.mjs",
+    "spatial:verify-android": "node tooling/verify-spatial-android.mjs",
+    "spatial:verify-typegpu": "node tooling/verify-typegpu-toolchain.mjs"
+  },
+  "devDependencies": {
+    "turbo": "catalog:"
+  }
+}

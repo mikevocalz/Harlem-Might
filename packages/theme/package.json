@@ -1,0 +1,36 @@
+{
+  "name": "@acme/theme",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./theme.css": "./theme.css",
+    "./theme-native.css": "./theme-native.css",
+    "./switch": {
+      "react-native": "./switch.native.ts",
+      "default": "./switch.ts"
+    }
+  },
+  "scripts": {
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "build": "node build-css.mjs"
+  },
+  "devDependencies": {
+    "@acme/config": "workspace:*",
+    "eslint": "catalog:",
+    "eslint-config-expo": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "react-native": "*"
+  },
+  "peerDependenciesMeta": {
+    "react-native": {
+      "optional": true
+    }
+  },
+  "type": "module"
+}

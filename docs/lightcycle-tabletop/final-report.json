@@ -1,0 +1,74 @@
+{
+  "schema": "game-room.room-final-report.v1",
+  "roomId": "lightcycle-tabletop-grid-v1",
+  "gates": {
+    "function": false,
+    "form": false,
+    "runtime": false
+  },
+  "formChecks": {
+    "floorPlanParity": false,
+    "primaryArrival": true,
+    "symmetry": false,
+    "shell": false,
+    "manifold": false,
+    "booleans": false,
+    "collisions": false,
+    "support": false,
+    "attachmentOrientation": false,
+    "ceilingAttachmentOrientation": true,
+    "seatingOrientation": true,
+    "focalDistribution": false,
+    "heroClearance": false,
+    "colonnades": true,
+    "screenClearance": false,
+    "scale": true,
+    "camera": false,
+    "ceilingCoverage": true,
+    "environmentCoverage": false,
+    "provenance": false
+  },
+  "reviewRenders": {
+    "corners": [],
+    "ceiling": [],
+    "environment": {}
+  },
+  "runtimeChecks": {
+    "vlow": false,
+    "textureTiers": false,
+    "lightmap": false,
+    "lightingManifest": false,
+    "performance": false,
+    "browserCapture": "",
+    "errors": [
+      "game-dev CLI not installed in current runtime, so sealed local capture/performance evidence has not been produced",
+      "No production Light Cycle GLB is committed; supply NEXT_PUBLIC_/EXPO_PUBLIC_LIGHTCYCLE_GLB_URL and satisfy the portable node+clip contract",
+      "No compiled production LightCycleScoreboard .riv is committed; supply NEXT_PUBLIC_/EXPO_PUBLIC_LIGHTCYCLE_SCOREBOARD_RIV_URL",
+      "Native/headset builds must install the private nitro-canvas-in-Vision#decax9-three-panel package; assert-viro-fork.mjs now fails fast when it is absent",
+      "Real two-device co-location test has not yet been run on physical hardware"
+    ]
+  },
+  "postmortem": {
+    "observations": [
+      "Deterministic gameplay core is intentionally separate from Viro/Three rendering.",
+      "Quest VRActivity required an additional shared-frame bridge in the Viro fork.",
+      "Three WebGPU uses react-native-webgpu with the same GPUDevice shared by Three WebGPURenderer and TypeGPU.",
+      "The Nitro Rive bridge now uses Rive 11 deferred GPU rendering and presents hardware frames into the AHardwareBuffer sampled by Viro.",
+      "Native/Viro and web/Three now consume one canonical MatchScoreboard Rive binding contract."
+    ],
+    "corrections": [
+      "Patched ViroVRSceneNavigator to expose shared-frame create/join calls and arSceneNavigator alias.",
+      "Added TypeGPU compiler resolution preflight for both Next and Expo/Metro.",
+      "Added native fail-fast verification for the private Nitro Rive GPU bridge.",
+      "Added web Rive scoreboard binding over the Three WebGPU tabletop renderer.",
+      "Three GLB loading now validates both required model nodes and authored animation clips."
+    ],
+    "remainingRisks": [
+      "Production Light Cycle GLB has not yet been validated against the portable node/clip contract.",
+      "Compiled production scoreboard .riv has not yet been delivered/validated against MatchScoreboard bindings.",
+      "Phone/Quest co-location still requires physical two-device runtime validation.",
+      "Viro tabletop currently uses procedural cycle geometry; wiring the same production GLB through Viro3DObject/bone transforms remains the next model-parity task."
+    ]
+  },
+  "proposedLessons": []
+}

@@ -1,0 +1,7 @@
+@import 'tailwindcss';
+@import 'uniwind';
+@import '@acme/theme/theme-native.css';
+
+@source './app/**/*.{ts,tsx}';
+@source '../../packages/ui';
+@source '../../packages/app/features';

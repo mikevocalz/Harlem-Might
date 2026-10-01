@@ -1,0 +1,80 @@
+{
+  "schema": "game-room.room-brief.v1",
+  "roomId": "lightcycle-tabletop-grid-v1",
+  "family": "gameplay-room",
+  "purpose": "Two-player co-located Light Cycle Classic Grid Duel on a shared physical tabletop, with deterministic lethal light walls and synchronized Rive match UI.",
+  "runtimeSurface": "Viro mixed reality on supported co-located device families; same deterministic gameplay core rendered by Three.js for web/non-spatial play.",
+  "boundsMeters": [
+    1.2,
+    0.35,
+    0.8
+  ],
+  "hero": {
+    "id": "classic-grid-arena",
+    "role": "Shared tabletop combat arena and primary gameplay read",
+    "reservedBoundsMeters": [
+      1.2,
+      0.3,
+      0.8
+    ]
+  },
+  "symmetry": {
+    "mode": "bilateral",
+    "order": 2,
+    "appliesTo": [
+      "arena shell",
+      "spawn gates",
+      "player scoreboard positions",
+      "starting positions"
+    ],
+    "exceptions": [
+      "player-generated light walls",
+      "derez debris",
+      "runtime effects"
+    ]
+  },
+  "circulation": {
+    "description": "Players remain physically outside the virtual board and may walk around the table. Never require reaching through or stepping into the arena volume.",
+    "minimumClearanceMeters": 0.6
+  },
+  "productionCamera": {
+    "viewport": [
+      1920,
+      1080
+    ],
+    "location": [
+      0,
+      1.25,
+      1.6
+    ],
+    "target": [
+      0,
+      0,
+      0
+    ],
+    "verticalFovDegrees": 60
+  },
+  "performanceBudget": {
+    "maxSceneTriangles": 350000,
+    "maxVLowBytes": 33554432,
+    "maxHighTextureBytes": 134217728
+  },
+  "creditBudget": {
+    "maximumCredits": 0,
+    "approvalRequired": true
+  },
+  "environment": {
+    "type": "passthrough",
+    "identity": "Co-located mixed-reality tabletop",
+    "source": "Viro shared frame / platform passthrough",
+    "assignmentKey": "shared-tabletop-frame"
+  },
+  "artifacts": {
+    "floorPlan": "docs/lightcycle-tabletop/room-layout.json",
+    "reflectedCeilingPlan": "",
+    "planMetadata": "docs/lightcycle-tabletop/plan-metadata.json",
+    "wallElevations": [],
+    "visualTarget": "TRON-inspired black glass Grid with cyan/orange energy, without shipping proprietary film/game assets.",
+    "openingContactSheet": ""
+  }
+}

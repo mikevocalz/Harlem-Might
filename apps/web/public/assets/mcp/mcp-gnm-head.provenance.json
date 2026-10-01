@@ -1,0 +1,26 @@
+{
+  "generated_at": "2026-09-30T05:02:43.785320+00:00",
+  "source_model": "GNM Head",
+  "source_gnm_version": "3.0",
+  "source_variant": "head",
+  "source_repository": "https://github.com/google/GNM",
+  "source_web_container_repository": "https://github.com/xrblocks/assets-gnm",
+  "source_license": "Apache-2.0",
+  "source_sha256": "fd19f46eef6f8bfb725fceab581e1bc8837209997ca3fd43f3c1735003c86961",
+  "output_sha256": "a546d61ee0b62195ce12a18258b305a0965ddc273cc8997dc259ff0268ce21f0",
+  "identity_seed": 1982,
+  "identity_spread": 0.18,
+  "target_height_meters": 0.255,
+  "num_vertices": 17821,
+  "num_triangles": 35324,
+  "materials": [
+    "skin",
+    "teeth",
+    "gums",
+    "tongue",
+    "scleras",
+    "irises",
+    "pupils"
+  ],
+  "output": "mcp-gnm-head.glb"
+}

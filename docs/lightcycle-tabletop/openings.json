@@ -1,0 +1,15 @@
+{
+  "schema": "game-room.opening-schedule.v1",
+  "roomId": "lightcycle-tabletop-grid-v1",
+  "primaryArrival": {
+    "openingId": "spatial-placement",
+    "exception": "This is a tabletop MR gameplay room, not an architectural room. Primary arrival is host placement/localization of the shared Grid."
+  },
+  "openings": [
+    {
+      "id": "spatial-placement",
+      "kind": "runtime-entry",
+      "description": "Host confirms tabletop placement; guests enter through Viro room code and shared-frame localization."
+    }
+  ]
+}

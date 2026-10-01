@@ -1,0 +1,269 @@
+<Rive version="1" kind="fragment">
+  <!--
+    Original Grid-world VFX library. No film logos, characters, or copied assets.
+    Standard artboards are intentionally vector/state-machine based so the core
+    pack remains usable without experimental GPU Canvas features.
+  -->
+
+  <Artboard width="256" height="256" name="GridCoreSpinner" id="0:2" defaultStateMachineId="0:70" viewModelId="0:900" viewModelInstanceId="0:910" styleId="0:3">
+    <LayoutComponentStyle name="Artboard Style" id="0:3"/>
+
+    <Node x="128" y="128" name="OuterRotor" id="0:10">
+      <Shape name="OuterGlow">
+        <Ellipse width="198" height="198" originX="0.5" originY="0.5"/>
+        <Stroke thickness="15" opacity="0.16">
+          <SolidColor colorValue="FF00F3FF"><DataBindContext sourcePathIds="0:900-0:901" propertyKey="37"/></SolidColor>
+          <Feather strength="22"/>
+        </Stroke>
+      </Shape>
+      <Shape name="OuterArc">
+        <Ellipse width="188" height="188" originX="0.5" originY="0.5"/>
+        <Stroke thickness="5" cap="square">
+          <SolidColor colorValue="FF00F3FF"><DataBindContext sourcePathIds="0:900-0:901" propertyKey="37"/></SolidColor>
+          <TrimPath start="0.02" end="0.36" offset="0.04"/>
+        </Stroke>
+      </Shape>
+      <Shape rotation="0.2" name="OuterArc2">
+        <Ellipse width="188" height="188" originX="0.5" originY="0.5"/>
+        <Stroke thickness="2">
+          <SolidColor colorValue="A8FFFFFF"/>
+          <TrimPath start="0.55" end="0.68" offset="0.08"/>
+        </Stroke>
+      </Shape>
+    </Node>
+
+    <Node x="128" y="128" name="InnerRotor" id="0:20">
+      <Shape name="InnerArc">
+        <Ellipse width="132" height="132" originX="0.5" originY="0.5"/>
+        <Stroke thickness="6">
+          <SolidColor colorValue="FFFF7A00"><DataBindContext sourcePathIds="0:900-0:902" propertyKey="37"/></SolidColor>
+          <TrimPath start="0.08" end="0.31" offset="0.2"/>
+        </Stroke>
+      </Shape>
+      <Shape name="InnerTicks">
+        <Ellipse width="112" height="112" originX="0.5" originY="0.5"/>
+        <Stroke thickness="2">
+          <SolidColor colorValue="A8FFFFFF"/>
+          <DashPath><Dash length="3"/><Dash length="13"/></DashPath>
+        </Stroke>
+      </Shape>
+    </Node>
+
+    <Shape x="128" y="128" name="PulseRing" id="0:30" opacity="0.75" scaleX="0.72" scaleY="0.72">
+      <Ellipse width="102" height="102" originX="0.5" originY="0.5"/>
+      <Stroke thickness="4">
+        <SolidColor colorValue="FF00F3FF"><DataBindContext sourcePathIds="0:900-0:901" propertyKey="37"/></SolidColor>
+      </Stroke>
+    </Shape>
+
+    <Node x="128" y="128" name="Core" id="0:40">
+      <Shape rotation="0.785398" name="CoreHalo">
+        <Rectangle width="52" height="52" originX="0.5" originY="0.5" cornerRadiusTL="8"/>
+        <Fill><SolidColor colorValue="3300F3FF"/></Fill>
+      </Shape>
+      <Shape rotation="0.785398" name="CoreDiamond">
+        <Rectangle width="30" height="30" originX="0.5" originY="0.5" cornerRadiusTL="4"/>
+        <Fill>
+          <RadialGradient startX="-8" startY="-8" endX="18" endY="18">
+            <GradientStop colorValue="FFFFFFFF" position="0"/>
+            <GradientStop colorValue="FFB8FFFF" position="0.35"/>
+            <GradientStop colorValue="FF00F3FF" position="1"><DataBindContext sourcePathIds="0:900-0:901" propertyKey="38"/></GradientStop>
+          </RadialGradient>
+        </Fill>
+      </Shape>
+      <Shape name="CoreLineH"><Rectangle width="76" height="2" originX="0.5" originY="0.5"/><Fill><SolidColor colorValue="A8FFFFFF"/></Fill></Shape>
+      <Shape name="CoreLineV"><Rectangle width="2" height="76" originX="0.5" originY="0.5"/><Fill><SolidColor colorValue="A8FFFFFF"/></Fill></Shape>
+    </Node>
+
+    <LinearAnimation duration="120" fps="60" loopValue="loop" name="Grid Core Spin" id="0:60">
+      <KeyedObject objectId="0:10"><KeyedProperty propertyKey="15"><KeyFrameDouble frame="0" value="0" interpolationType="linear"/><KeyFrameDouble frame="120" value="6.2831855" interpolationType="linear"/></KeyedProperty></KeyedObject>
+      <KeyedObject objectId="0:20"><KeyedProperty propertyKey="15"><KeyFrameDouble frame="0" value="0" interpolationType="linear"/><KeyFrameDouble frame="120" value="-6.2831855" interpolationType="linear"/></KeyedProperty></KeyedObject>
+      <KeyedObject objectId="0:40">
+        <KeyedProperty propertyKey="15"><KeyFrameDouble frame="0" value="0"/><KeyFrameDouble frame="120" value="3.1415927" interpolationType="linear"/></KeyedProperty>
+        <KeyedProperty propertyKey="16"><KeyFrameDouble frame="0" value="0.92"/><KeyFrameDouble frame="60" value="1.08"/><KeyFrameDouble frame="120" value="0.92"/></KeyedProperty>
+        <KeyedProperty propertyKey="17"><KeyFrameDouble frame="0" value="0.92"/><KeyFrameDouble frame="60" value="1.08"/><KeyFrameDouble frame="120" value="0.92"/></KeyedProperty>
+      </KeyedObject>
+      <KeyedObject objectId="0:30">
+        <KeyedProperty propertyKey="16"><KeyFrameDouble frame="0" value="0.7"/><KeyFrameDouble frame="120" value="1.35" interpolationType="linear"/></KeyedProperty>
+        <KeyedProperty propertyKey="17"><KeyFrameDouble frame="0" value="0.7"/><KeyFrameDouble frame="120" value="1.35" interpolationType="linear"/></KeyedProperty>
+        <KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="0.7"/><KeyFrameDouble frame="80" value="0.14"/><KeyFrameDouble frame="120" value="0"/></KeyedProperty>
+      </KeyedObject>
+    </LinearAnimation>
+
+    <StateMachine name="Spinner" id="0:70">
+      <StateMachineLayer name="Loop" id="0:71">
+        <AnyState x="360" y="-100"/><ExitState x="520" y="-100"/>
+        <EntryState><StateTransition stateToId="0:72"/></EntryState>
+        <AnimationState x="180" y="0" animationId="0:60" id="0:72" stateName="ENERGIZE"/>
+      </StateMachineLayer>
+    </StateMachine>
+  </Artboard>
+
+  <Artboard width="512" height="512" name="GridImpact" id="0:102" defaultStateMachineId="0:170" viewModelId="0:900" viewModelInstanceId="0:910" styleId="0:103">
+    <LayoutComponentStyle name="Artboard Style" id="0:103"/>
+    <Shape x="256" y="256" name="ShockRing" id="0:110" opacity="0">
+      <Ellipse width="86" height="86" originX="0.5" originY="0.5"/>
+      <Stroke thickness="10"><SolidColor colorValue="FF00F3FF"><DataBindContext sourcePathIds="0:900-0:901" propertyKey="37"/></SolidColor></Stroke>
+    </Shape>
+    <Shape x="256" y="256" name="WhiteCore" id="0:111" scaleX="0" scaleY="0">
+      <Star width="100" height="100" points="8" innerRadius="0.12" originX="0.5" originY="0.5"/>
+      <Fill><RadialGradient startX="0" startY="0" endX="50" endY="0"><GradientStop colorValue="FFFFFFFF" position="0"/><GradientStop colorValue="FF00F3FF" position="0.55"/><GradientStop colorValue="0000F3FF" position="1"/></RadialGradient></Fill>
+    </Shape>
+    <Node x="256" y="256" name="Sparks" id="0:120" opacity="0">
+      <Shape rotation="0"><Rectangle x="55" width="86" height="4" originY="0.5"/><Fill><SolidColor colorValue="FFFFFFFF"/></Fill></Shape>
+      <Shape rotation="0.45"><Rectangle x="48" width="70" height="3" originY="0.5"/><Fill><SolidColor colorValue="FF00F3FF"/></Fill></Shape>
+      <Shape rotation="0.95"><Rectangle x="62" width="94" height="3" originY="0.5"/><Fill><SolidColor colorValue="FFFFFFFF"/></Fill></Shape>
+      <Shape rotation="1.5"><Rectangle x="52" width="80" height="3" originY="0.5"/><Fill><SolidColor colorValue="FFFF7A00"/></Fill></Shape>
+      <Shape rotation="2.1"><Rectangle x="48" width="68" height="4" originY="0.5"/><Fill><SolidColor colorValue="FF00F3FF"/></Fill></Shape>
+      <Shape rotation="2.7"><Rectangle x="58" width="90" height="3" originY="0.5"/><Fill><SolidColor colorValue="FFFFFFFF"/></Fill></Shape>
+      <Shape rotation="3.4"><Rectangle x="50" width="72" height="3" originY="0.5"/><Fill><SolidColor colorValue="FFFF7A00"/></Fill></Shape>
+      <Shape rotation="4.2"><Rectangle x="62" width="88" height="3" originY="0.5"/><Fill><SolidColor colorValue="FFFFFFFF"/></Fill></Shape>
+      <Shape rotation="5.0"><Rectangle x="50" width="70" height="4" originY="0.5"/><Fill><SolidColor colorValue="FF00F3FF"/></Fill></Shape>
+      <Shape rotation="5.7"><Rectangle x="60" width="94" height="3" originY="0.5"/><Fill><SolidColor colorValue="FFFFFFFF"/></Fill></Shape>
+    </Node>
+    <LinearAnimation duration="54" fps="60" loopValue="oneShot" name="Impact" id="0:160">
+      <KeyedObject objectId="0:111"><KeyedProperty propertyKey="16"><KeyFrameDouble frame="0" value="0"/><KeyFrameDouble frame="4" value="1.35"/><KeyFrameDouble frame="18" value="0.7"/><KeyFrameDouble frame="54" value="0"/></KeyedProperty><KeyedProperty propertyKey="17"><KeyFrameDouble frame="0" value="0"/><KeyFrameDouble frame="4" value="1.35"/><KeyFrameDouble frame="18" value="0.7"/><KeyFrameDouble frame="54" value="0"/></KeyedProperty></KeyedObject>
+      <KeyedObject objectId="0:110"><KeyedProperty propertyKey="16"><KeyFrameDouble frame="0" value="0.2"/><KeyFrameDouble frame="54" value="5.6" interpolationType="linear"/></KeyedProperty><KeyedProperty propertyKey="17"><KeyFrameDouble frame="0" value="0.2"/><KeyFrameDouble frame="54" value="5.6" interpolationType="linear"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="0.95"/><KeyFrameDouble frame="54" value="0" interpolationType="linear"/></KeyedProperty></KeyedObject>
+      <KeyedObject objectId="0:120"><KeyedProperty propertyKey="16"><KeyFrameDouble frame="0" value="0.35"/><KeyFrameDouble frame="22" value="1.8"/><KeyFrameDouble frame="54" value="3.2"/></KeyedProperty><KeyedProperty propertyKey="17"><KeyFrameDouble frame="0" value="0.35"/><KeyFrameDouble frame="22" value="1.8"/><KeyFrameDouble frame="54" value="3.2"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="1"/><KeyFrameDouble frame="28" value="0.8"/><KeyFrameDouble frame="54" value="0"/></KeyedProperty><KeyedProperty propertyKey="15"><KeyFrameDouble frame="0" value="0"/><KeyFrameDouble frame="54" value="0.6"/></KeyedProperty></KeyedObject>
+    </LinearAnimation>
+    <StateMachine name="FX" id="0:170"><StateMachineLayer name="Main" id="0:171"><AnyState x="360" y="-100"/><ExitState x="520" y="-100"/><EntryState><StateTransition stateToId="0:172"/></EntryState><AnimationState x="180" y="0" animationId="0:160" id="0:172" stateName="IMPACT"/></StateMachineLayer></StateMachine>
+  </Artboard>
+
+  <Artboard width="512" height="512" name="GridDerez" id="0:202" defaultStateMachineId="0:270" viewModelId="0:900" viewModelInstanceId="0:910" styleId="0:203">
+    <LayoutComponentStyle name="Artboard Style" id="0:203"/>
+    <Shape x="256" y="256" name="DerezCore" id="0:210"><Polygon width="84" height="84" points="4" originX="0.5" originY="0.5"/><Fill><RadialGradient startX="-15" startY="-15" endX="45" endY="45"><GradientStop colorValue="FFFFFFFF" position="0"/><GradientStop colorValue="FF00F3FF" position="0.5"/><GradientStop colorValue="0000F3FF" position="1"/></RadialGradient></Fill></Shape>
+    <Shape x="256" y="256" name="DerezRing" id="0:211"><Ellipse width="112" height="112" originX="0.5" originY="0.5"/><Stroke thickness="4"><SolidColor colorValue="FFFFFFFF"/></Stroke></Shape>
+    <Node x="256" y="256" name="Fragments" id="0:220">
+      <Shape x="-18" y="-16" name="F1" id="0:221"><Polygon width="28" height="38" points="3" originX="0.5" originY="0.5"/><Fill><SolidColor colorValue="FF00F3FF"/></Fill></Shape>
+      <Shape x="18" y="-17" name="F2" id="0:222"><Polygon width="34" height="30" points="4" originX="0.5" originY="0.5"/><Fill><SolidColor colorValue="FFFFFFFF"/></Fill></Shape>
+      <Shape x="-24" y="18" name="F3" id="0:223"><Polygon width="24" height="32" points="3" originX="0.5" originY="0.5"/><Fill><SolidColor colorValue="FFFF7A00"/></Fill></Shape>
+      <Shape x="22" y="19" name="F4" id="0:224"><Polygon width="30" height="34" points="5" originX="0.5" originY="0.5"/><Fill><SolidColor colorValue="FF00F3FF"/></Fill></Shape>
+      <Shape x="0" y="-29" name="F5" id="0:225"><Polygon width="22" height="30" points="3" originX="0.5" originY="0.5"/><Fill><SolidColor colorValue="FFFFFFFF"/></Fill></Shape>
+      <Shape x="2" y="30" name="F6" id="0:226"><Polygon width="26" height="34" points="4" originX="0.5" originY="0.5"/><Fill><SolidColor colorValue="FFFF7A00"/></Fill></Shape>
+    </Node>
+    <LinearAnimation duration="72" fps="60" loopValue="oneShot" name="Derez" id="0:260">
+      <KeyedObject objectId="0:210"><KeyedProperty propertyKey="16"><KeyFrameDouble frame="0" value="1"/><KeyFrameDouble frame="9" value="0.35"/><KeyFrameDouble frame="17" value="1.4"/><KeyFrameDouble frame="72" value="0"/></KeyedProperty><KeyedProperty propertyKey="17"><KeyFrameDouble frame="0" value="1"/><KeyFrameDouble frame="9" value="0.35"/><KeyFrameDouble frame="17" value="1.4"/><KeyFrameDouble frame="72" value="0"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="1"/><KeyFrameDouble frame="34" value="0.65"/><KeyFrameDouble frame="72" value="0"/></KeyedProperty></KeyedObject>
+      <KeyedObject objectId="0:211"><KeyedProperty propertyKey="16"><KeyFrameDouble frame="0" value="0.5"/><KeyFrameDouble frame="72" value="6.5"/></KeyedProperty><KeyedProperty propertyKey="17"><KeyFrameDouble frame="0" value="0.5"/><KeyFrameDouble frame="72" value="6.5"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="0.9"/><KeyFrameDouble frame="72" value="0"/></KeyedProperty></KeyedObject>
+      <KeyedObject objectId="0:221"><KeyedProperty propertyKey="13"><KeyFrameDouble frame="0" value="-18"/><KeyFrameDouble frame="72" value="-210"/></KeyedProperty><KeyedProperty propertyKey="14"><KeyFrameDouble frame="0" value="-16"/><KeyFrameDouble frame="72" value="-160"/></KeyedProperty><KeyedProperty propertyKey="15"><KeyFrameDouble frame="0" value="0"/><KeyFrameDouble frame="72" value="-3.7"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="1"/><KeyFrameDouble frame="72" value="0"/></KeyedProperty></KeyedObject>
+      <KeyedObject objectId="0:222"><KeyedProperty propertyKey="13"><KeyFrameDouble frame="0" value="18"/><KeyFrameDouble frame="72" value="220"/></KeyedProperty><KeyedProperty propertyKey="14"><KeyFrameDouble frame="0" value="-17"/><KeyFrameDouble frame="72" value="-120"/></KeyedProperty><KeyedProperty propertyKey="15"><KeyFrameDouble frame="0" value="0"/><KeyFrameDouble frame="72" value="4.1"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="1"/><KeyFrameDouble frame="72" value="0"/></KeyedProperty></KeyedObject>
+      <KeyedObject objectId="0:223"><KeyedProperty propertyKey="13"><KeyFrameDouble frame="0" value="-24"/><KeyFrameDouble frame="72" value="-190"/></KeyedProperty><KeyedProperty propertyKey="14"><KeyFrameDouble frame="0" value="18"/><KeyFrameDouble frame="72" value="190"/></KeyedProperty><KeyedProperty propertyKey="15"><KeyFrameDouble frame="0" value="0"/><KeyFrameDouble frame="72" value="3.2"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="1"/><KeyFrameDouble frame="72" value="0"/></KeyedProperty></KeyedObject>
+      <KeyedObject objectId="0:224"><KeyedProperty propertyKey="13"><KeyFrameDouble frame="0" value="22"/><KeyFrameDouble frame="72" value="210"/></KeyedProperty><KeyedProperty propertyKey="14"><KeyFrameDouble frame="0" value="19"/><KeyFrameDouble frame="72" value="180"/></KeyedProperty><KeyedProperty propertyKey="15"><KeyFrameDouble frame="0" value="0"/><KeyFrameDouble frame="72" value="-4.4"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="1"/><KeyFrameDouble frame="72" value="0"/></KeyedProperty></KeyedObject>
+      <KeyedObject objectId="0:225"><KeyedProperty propertyKey="14"><KeyFrameDouble frame="0" value="-29"/><KeyFrameDouble frame="72" value="-235"/></KeyedProperty><KeyedProperty propertyKey="15"><KeyFrameDouble frame="0" value="0"/><KeyFrameDouble frame="72" value="5.2"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="1"/><KeyFrameDouble frame="72" value="0"/></KeyedProperty></KeyedObject>
+      <KeyedObject objectId="0:226"><KeyedProperty propertyKey="14"><KeyFrameDouble frame="0" value="30"/><KeyFrameDouble frame="72" value="238"/></KeyedProperty><KeyedProperty propertyKey="15"><KeyFrameDouble frame="0" value="0"/><KeyFrameDouble frame="72" value="-5.5"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="1"/><KeyFrameDouble frame="72" value="0"/></KeyedProperty></KeyedObject>
+    </LinearAnimation>
+    <StateMachine name="FX" id="0:270"><StateMachineLayer name="Main" id="0:271"><AnyState x="360" y="-100"/><ExitState x="520" y="-100"/><EntryState><StateTransition stateToId="0:272"/></EntryState><AnimationState x="180" y="0" animationId="0:260" id="0:272" stateName="DEREZ"/></StateMachineLayer></StateMachine>
+  </Artboard>
+
+  <Artboard width="512" height="512" name="GridLaserSlice" id="0:302" defaultStateMachineId="0:370" viewModelId="0:900" viewModelInstanceId="0:910" styleId="0:303">
+    <LayoutComponentStyle name="Artboard Style" id="0:303"/>
+    <Node x="256" y="256" rotation="-0.55" name="Laser" id="0:310" opacity="0">
+      <Shape name="Glow"><Rectangle width="620" height="40" originX="0.5" originY="0.5"/><Fill><LinearGradient startX="-310" startY="0" endX="310" endY="0"><GradientStop colorValue="00FFFFFF" position="0"/><GradientStop colorValue="FFFFFFFF" position="0.5"/><GradientStop colorValue="00FFFFFF" position="1"/></LinearGradient></Fill></Shape>
+      <Shape name="Core"><Rectangle width="620" height="4" originX="0.5" originY="0.5"/><Fill><SolidColor colorValue="FFFFFFFF"/></Fill></Shape>
+    </Node>
+    <Shape x="256" y="256" name="SlicePulse" id="0:311" opacity="0"><Ellipse width="80" height="80" originX="0.5" originY="0.5"/><Stroke thickness="5"><SolidColor colorValue="FF00F3FF"/></Stroke></Shape>
+    <LinearAnimation duration="38" fps="60" loopValue="oneShot" name="Slice" id="0:360">
+      <KeyedObject objectId="0:310"><KeyedProperty propertyKey="13"><KeyFrameDouble frame="0" value="-210"/><KeyFrameDouble frame="22" value="256"/><KeyFrameDouble frame="38" value="700"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="0"/><KeyFrameDouble frame="2" value="1"/><KeyFrameDouble frame="26" value="1"/><KeyFrameDouble frame="38" value="0"/></KeyedProperty></KeyedObject>
+      <KeyedObject objectId="0:311"><KeyedProperty propertyKey="16"><KeyFrameDouble frame="0" value="0.4"/><KeyFrameDouble frame="38" value="5"/></KeyedProperty><KeyedProperty propertyKey="17"><KeyFrameDouble frame="0" value="0.4"/><KeyFrameDouble frame="38" value="5"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="0.9"/><KeyFrameDouble frame="38" value="0"/></KeyedProperty></KeyedObject>
+    </LinearAnimation>
+    <StateMachine name="FX" id="0:370"><StateMachineLayer name="Main" id="0:371"><AnyState x="360" y="-100"/><ExitState x="520" y="-100"/><EntryState><StateTransition stateToId="0:372"/></EntryState><AnimationState x="180" y="0" animationId="0:360" id="0:372" stateName="SLICE"/></StateMachineLayer></StateMachine>
+  </Artboard>
+
+  <Artboard width="512" height="512" name="GridShockwave" id="0:402" defaultStateMachineId="0:470" viewModelId="0:900" viewModelInstanceId="0:910" styleId="0:403">
+    <LayoutComponentStyle name="Artboard Style" id="0:403"/>
+    <Shape x="256" y="256" name="Ring1" id="0:410"><Ellipse width="64" height="64" originX="0.5" originY="0.5"/><Stroke thickness="9"><SolidColor colorValue="FFFFFFFF"/></Stroke></Shape>
+    <Shape x="256" y="256" name="Ring2" id="0:411"><Ellipse width="92" height="92" originX="0.5" originY="0.5"/><Stroke thickness="4"><SolidColor colorValue="FF00F3FF"/></Stroke></Shape>
+    <Shape x="256" y="256" name="Ring3" id="0:412"><Ellipse width="118" height="118" originX="0.5" originY="0.5"/><Stroke thickness="2"><SolidColor colorValue="FFFF7A00"/></Stroke></Shape>
+    <LinearAnimation duration="72" fps="60" loopValue="oneShot" name="Wave" id="0:460">
+      <KeyedObject objectId="0:410"><KeyedProperty propertyKey="16"><KeyFrameDouble frame="0" value="0.25"/><KeyFrameDouble frame="72" value="6.8"/></KeyedProperty><KeyedProperty propertyKey="17"><KeyFrameDouble frame="0" value="0.25"/><KeyFrameDouble frame="72" value="6.8"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="1"/><KeyFrameDouble frame="72" value="0"/></KeyedProperty></KeyedObject>
+      <KeyedObject objectId="0:411"><KeyedProperty propertyKey="16"><KeyFrameDouble frame="0" value="0.15"/><KeyFrameDouble frame="72" value="5.2"/></KeyedProperty><KeyedProperty propertyKey="17"><KeyFrameDouble frame="0" value="0.15"/><KeyFrameDouble frame="72" value="5.2"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="0.75"/><KeyFrameDouble frame="72" value="0"/></KeyedProperty></KeyedObject>
+      <KeyedObject objectId="0:412"><KeyedProperty propertyKey="16"><KeyFrameDouble frame="0" value="0.1"/><KeyFrameDouble frame="72" value="4"/></KeyedProperty><KeyedProperty propertyKey="17"><KeyFrameDouble frame="0" value="0.1"/><KeyFrameDouble frame="72" value="4"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="0.65"/><KeyFrameDouble frame="72" value="0"/></KeyedProperty></KeyedObject>
+    </LinearAnimation>
+    <StateMachine name="FX" id="0:470"><StateMachineLayer name="Main" id="0:471"><AnyState x="360" y="-100"/><ExitState x="520" y="-100"/><EntryState><StateTransition stateToId="0:472"/></EntryState><AnimationState x="180" y="0" animationId="0:460" id="0:472" stateName="SHOCKWAVE"/></StateMachineLayer></StateMachine>
+  </Artboard>
+
+  <Artboard width="512" height="512" name="GridBoost" id="0:502" defaultStateMachineId="0:570" viewModelId="0:900" viewModelInstanceId="0:910" styleId="0:503">
+    <LayoutComponentStyle name="Artboard Style" id="0:503"/>
+    <Node x="256" y="256" name="Tunnel" id="0:510">
+      <Shape rotation="0" opacity="0.9"><PointsPath isClosed="true"><StraightVertex x="-18" y="-20"/><StraightVertex x="18" y="-20"/><StraightVertex x="210" y="-170"/><StraightVertex x="-210" y="-170"/></PointsPath><Fill><LinearGradient startX="0" startY="-20" endX="0" endY="-170"><GradientStop colorValue="CC00F3FF" position="0"/><GradientStop colorValue="0000F3FF" position="1"/></LinearGradient></Fill></Shape>
+      <Shape rotation="1.5708" opacity="0.7"><PointsPath isClosed="true"><StraightVertex x="-14" y="-18"/><StraightVertex x="14" y="-18"/><StraightVertex x="180" y="-170"/><StraightVertex x="-180" y="-170"/></PointsPath><Fill><LinearGradient startX="0" startY="-18" endX="0" endY="-170"><GradientStop colorValue="AAFFFFFF" position="0"/><GradientStop colorValue="00FFFFFF" position="1"/></LinearGradient></Fill></Shape>
+      <Shape rotation="3.14159" opacity="0.8"><PointsPath isClosed="true"><StraightVertex x="-16" y="-18"/><StraightVertex x="16" y="-18"/><StraightVertex x="190" y="-170"/><StraightVertex x="-190" y="-170"/></PointsPath><Fill><LinearGradient startX="0" startY="-18" endX="0" endY="-170"><GradientStop colorValue="AAFF7A00" position="0"/><GradientStop colorValue="00FF7A00" position="1"/></LinearGradient></Fill></Shape>
+      <Shape rotation="4.71239" opacity="0.7"><PointsPath isClosed="true"><StraightVertex x="-14" y="-18"/><StraightVertex x="14" y="-18"/><StraightVertex x="180" y="-170"/><StraightVertex x="-180" y="-170"/></PointsPath><Fill><LinearGradient startX="0" startY="-18" endX="0" endY="-170"><GradientStop colorValue="AAFFFFFF" position="0"/><GradientStop colorValue="00FFFFFF" position="1"/></LinearGradient></Fill></Shape>
+    </Node>
+    <Shape x="256" y="256" name="BoostCore" id="0:511"><Ellipse width="54" height="54" originX="0.5" originY="0.5"/><Fill><RadialGradient startX="0" startY="0" endX="27" endY="0"><GradientStop colorValue="FFFFFFFF" position="0"/><GradientStop colorValue="FF00F3FF" position="0.65"/><GradientStop colorValue="0000F3FF" position="1"/></RadialGradient></Fill></Shape>
+    <LinearAnimation duration="48" fps="60" loopValue="oneShot" name="Warp" id="0:560">
+      <KeyedObject objectId="0:510"><KeyedProperty propertyKey="15"><KeyFrameDouble frame="0" value="0"/><KeyFrameDouble frame="48" value="1.15"/></KeyedProperty><KeyedProperty propertyKey="16"><KeyFrameDouble frame="0" value="0.45"/><KeyFrameDouble frame="12" value="1.35"/><KeyFrameDouble frame="48" value="2.2"/></KeyedProperty><KeyedProperty propertyKey="17"><KeyFrameDouble frame="0" value="0.45"/><KeyFrameDouble frame="12" value="1.35"/><KeyFrameDouble frame="48" value="2.2"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="0"/><KeyFrameDouble frame="4" value="1"/><KeyFrameDouble frame="48" value="0"/></KeyedProperty></KeyedObject>
+      <KeyedObject objectId="0:511"><KeyedProperty propertyKey="16"><KeyFrameDouble frame="0" value="0.7"/><KeyFrameDouble frame="8" value="1.55"/><KeyFrameDouble frame="48" value="0.6"/></KeyedProperty><KeyedProperty propertyKey="17"><KeyFrameDouble frame="0" value="0.7"/><KeyFrameDouble frame="8" value="1.55"/><KeyFrameDouble frame="48" value="0.6"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="1"/><KeyFrameDouble frame="48" value="0"/></KeyedProperty></KeyedObject>
+    </LinearAnimation>
+    <StateMachine name="FX" id="0:570"><StateMachineLayer name="Main" id="0:571"><AnyState x="360" y="-100"/><ExitState x="520" y="-100"/><EntryState><StateTransition stateToId="0:572"/></EntryState><AnimationState x="180" y="0" animationId="0:560" id="0:572" stateName="BOOST"/></StateMachineLayer></StateMachine>
+  </Artboard>
+
+  <Artboard width="512" height="256" name="GridRoomSync" id="0:602" defaultStateMachineId="0:670" viewModelId="0:900" viewModelInstanceId="0:910" styleId="0:603">
+    <LayoutComponentStyle name="Artboard Style" id="0:603"/>
+    <Shape x="90" y="128" name="Host" id="0:610"><Ellipse width="42" height="42" originX="0.5" originY="0.5"/><Stroke thickness="6"><SolidColor colorValue="FF00F3FF"/></Stroke></Shape>
+    <Shape x="422" y="128" name="Guest" id="0:611"><Ellipse width="42" height="42" originX="0.5" originY="0.5"/><Stroke thickness="6"><SolidColor colorValue="FFFF7A00"/></Stroke></Shape>
+    <Shape x="256" y="128" name="Link"><PointsPath><StraightVertex x="-145" y="0"/><StraightVertex x="145" y="0"/></PointsPath><Stroke thickness="3"><SolidColor colorValue="55FFFFFF"/></Stroke></Shape>
+    <Shape x="90" y="128" name="SyncPulse" id="0:612"><Ellipse width="24" height="24" originX="0.5" originY="0.5"/><Fill><SolidColor colorValue="FFFFFFFF"/></Fill></Shape>
+    <Shape x="256" y="128" name="LockCore" id="0:613" opacity="0" rotation="0.785398"><Rectangle width="34" height="34" originX="0.5" originY="0.5"/><Fill><SolidColor colorValue="FFFFFFFF"/></Fill></Shape>
+    <LinearAnimation duration="72" fps="60" loopValue="oneShot" name="Sync" id="0:660">
+      <KeyedObject objectId="0:612"><KeyedProperty propertyKey="13"><KeyFrameDouble frame="0" value="90"/><KeyFrameDouble frame="52" value="422" interpolationType="linear"/></KeyedProperty><KeyedProperty propertyKey="16"><KeyFrameDouble frame="0" value="0.5"/><KeyFrameDouble frame="26" value="1.3"/><KeyFrameDouble frame="52" value="0.6"/></KeyedProperty><KeyedProperty propertyKey="17"><KeyFrameDouble frame="0" value="0.5"/><KeyFrameDouble frame="26" value="1.3"/><KeyFrameDouble frame="52" value="0.6"/></KeyedProperty></KeyedObject>
+      <KeyedObject objectId="0:613"><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="0"/><KeyFrameDouble frame="48" value="0"/><KeyFrameDouble frame="54" value="1"/><KeyFrameDouble frame="72" value="0.6"/></KeyedProperty><KeyedProperty propertyKey="16"><KeyFrameDouble frame="48" value="0"/><KeyFrameDouble frame="60" value="1.3"/><KeyFrameDouble frame="72" value="1"/></KeyedProperty><KeyedProperty propertyKey="17"><KeyFrameDouble frame="48" value="0"/><KeyFrameDouble frame="60" value="1.3"/><KeyFrameDouble frame="72" value="1"/></KeyedProperty></KeyedObject>
+    </LinearAnimation>
+    <StateMachine name="FX" id="0:670"><StateMachineLayer name="Main" id="0:671"><AnyState x="360" y="-100"/><ExitState x="520" y="-100"/><EntryState><StateTransition stateToId="0:672"/></EntryState><AnimationState x="180" y="0" animationId="0:660" id="0:672" stateName="SYNC"/></StateMachineLayer></StateMachine>
+  </Artboard>
+
+  <Artboard width="512" height="384" name="GridMatLock" id="0:702" defaultStateMachineId="0:770" viewModelId="0:900" viewModelInstanceId="0:910" styleId="0:703">
+    <LayoutComponentStyle name="Artboard Style" id="0:703"/>
+    <Node x="256" y="192" name="Mat" id="0:710" opacity="0.25" scaleX="0.82" scaleY="0.82">
+      <Shape name="Plate"><Rectangle width="330" height="200" originX="0.5" originY="0.5" cornerRadiusTL="12"/><Fill><SolidColor colorValue="DD020407"/></Fill><Stroke thickness="4"><SolidColor colorValue="FF00F3FF"/></Stroke></Shape>
+      <Shape name="GridH1"><Rectangle y="-66" width="330" height="2" originX="0.5" originY="0.5"/><Fill><SolidColor colorValue="6600F3FF"/></Fill></Shape>
+      <Shape name="GridH2"><Rectangle y="0" width="330" height="2" originX="0.5" originY="0.5"/><Fill><SolidColor colorValue="6600F3FF"/></Fill></Shape>
+      <Shape name="GridH3"><Rectangle y="66" width="330" height="2" originX="0.5" originY="0.5"/><Fill><SolidColor colorValue="6600F3FF"/></Fill></Shape>
+      <Shape name="GridV1"><Rectangle x="-110" width="2" height="200" originX="0.5" originY="0.5"/><Fill><SolidColor colorValue="6600F3FF"/></Fill></Shape>
+      <Shape name="GridV2"><Rectangle x="0" width="2" height="200" originX="0.5" originY="0.5"/><Fill><SolidColor colorValue="6600F3FF"/></Fill></Shape>
+      <Shape name="GridV3"><Rectangle x="110" width="2" height="200" originX="0.5" originY="0.5"/><Fill><SolidColor colorValue="6600F3FF"/></Fill></Shape>
+    </Node>
+    <Shape x="256" y="88" name="Scan" id="0:711"><Rectangle width="310" height="8" originX="0.5" originY="0.5"/><Fill><LinearGradient startX="-155" startY="0" endX="155" endY="0"><GradientStop colorValue="00FFFFFF" position="0"/><GradientStop colorValue="FFFFFFFF" position="0.5"/><GradientStop colorValue="00FFFFFF" position="1"/></LinearGradient></Fill></Shape>
+    <LinearAnimation duration="80" fps="60" loopValue="oneShot" name="Lock" id="0:760">
+      <KeyedObject objectId="0:710"><KeyedProperty propertyKey="16"><KeyFrameDouble frame="0" value="0.82"/><KeyFrameDouble frame="48" value="1.05"/><KeyFrameDouble frame="68" value="1"/></KeyedProperty><KeyedProperty propertyKey="17"><KeyFrameDouble frame="0" value="0.82"/><KeyFrameDouble frame="48" value="1.05"/><KeyFrameDouble frame="68" value="1"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="0.25"/><KeyFrameDouble frame="32" value="0.75"/><KeyFrameDouble frame="68" value="1"/></KeyedProperty></KeyedObject>
+      <KeyedObject objectId="0:711"><KeyedProperty propertyKey="14"><KeyFrameDouble frame="0" value="88"/><KeyFrameDouble frame="48" value="296" interpolationType="linear"/></KeyedProperty><KeyedProperty propertyKey="18"><KeyFrameDouble frame="0" value="0"/><KeyFrameDouble frame="3" value="1"/><KeyFrameDouble frame="48" value="1"/><KeyFrameDouble frame="62" value="0"/></KeyedProperty></KeyedObject>
+    </LinearAnimation>
+    <StateMachine name="FX" id="0:770"><StateMachineLayer name="Main" id="0:771"><AnyState x="360" y="-100"/><ExitState x="520" y="-100"/><EntryState><StateTransition stateToId="0:772"/></EntryState><AnimationState x="180" y="0" animationId="0:760" id="0:772" stateName="LOCK"/></StateMachineLayer></StateMachine>
+  </Artboard>
+
+  <DataConverterRangeMapper minInput="0" maxInput="1" minOutput="0.25" maxOutput="1" clampLower="true" clampUpper="true" name="IntensityOpacity" id="0:950"/>
+
+  <ViewModel defaultInstanceId="0:910" name="GridFx" id="0:900">
+    <ViewModelPropertyColor name="playerColor" id="0:901"/>
+    <ViewModelPropertyColor name="opponentColor" id="0:902"/>
+    <ViewModelPropertyNumber name="intensity" id="0:903"/>
+    <ViewModelPropertyNumber name="seed" id="0:904"/>
+    <ViewModelPropertyNumber name="impactAngle" id="0:905"/>
+    <ViewModelPropertyNumber name="velocity" id="0:906"/>
+    <ViewModelPropertyNumber name="worldX" id="0:907"/>
+    <ViewModelPropertyNumber name="worldY" id="0:908"/>
+    <ViewModelPropertyNumber name="worldZ" id="0:909"/>
+    <ViewModelPropertyNumber name="serial" id="0:911"/>
+    <ViewModelPropertyString name="effectType" id="0:912"/>
+    <ViewModelPropertyString name="collisionCause" id="0:913"/>
+    <ViewModelPropertyString name="qualityTier" id="0:914"/>
+    <ViewModelPropertyString name="winner" id="0:915"/>
+    <ViewModelPropertyString name="localPlayer" id="0:916"/>
+    <ViewModelInstance exports="true" name="Default" id="0:910">
+      <ViewModelInstanceColor propertyValue="FF00F3FF" viewModelPropertyId="0:901"/>
+      <ViewModelInstanceColor propertyValue="FFFF7A00" viewModelPropertyId="0:902"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:903"/>
+      <ViewModelInstanceNumber propertyValue="1982" viewModelPropertyId="0:904"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:905"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:906"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:907"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:908"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:909"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:911"/>
+      <ViewModelInstanceString propertyValue="impact" viewModelPropertyId="0:912"/>
+      <ViewModelInstanceString propertyValue="none" viewModelPropertyId="0:913"/>
+      <ViewModelInstanceString propertyValue="standard" viewModelPropertyId="0:914"/>
+      <ViewModelInstanceString propertyValue="none" viewModelPropertyId="0:915"/>
+      <ViewModelInstanceString propertyValue="none" viewModelPropertyId="0:916"/>
+    </ViewModelInstance>
+  </ViewModel>
+</Rive>

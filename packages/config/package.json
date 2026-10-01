@@ -1,0 +1,15 @@
+{
+  "name": "@acme/config",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./typescript/*": "./typescript/*",
+    "./eslint/*": "./eslint/*",
+    "./prettier": "./prettier/index.json",
+    "./jest-rsc-preset.js": "./jest-rsc-preset.js"
+  },
+  "devDependencies": {
+    "eslint": "catalog:",
+    "eslint-config-expo": "catalog:"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "schema": "game-room.milestone-reviews.v1",
+  "roomId": "lightcycle-tabletop-grid-v1",
+  "function": {
+    "status": "pending",
+    "approvedBy": "",
+    "approvedAt": "",
+    "evidence": [
+      "docs/lightcycle-tabletop/room-brief.json",
+      "docs/lightcycle-tabletop/room-layout.json",
+      "packages/spatial/lightcycle/tabletopCore.ts"
+    ],
+    "strangestElement": "Persistent player-generated light walls progressively reshape the playable topology during each round.",
+    "notes": "Core rules are implemented/tested; physical two-device tabletop validation and human Function approval remain."
+  },
+  "form": {
+    "status": "pending",
+    "approvedBy": "",
+    "approvedAt": "",
+    "evidence": [
+      "packages/spatial/lightcycle/assetContract.ts"
+    ],
+    "strangestElement": "Derez uses pre-fractured cycle pieces while gameplay collision remains deterministic and renderer-independent.",
+    "notes": "No production GLB or Rive scoreboard asset is currently vendored in this branch."
+  },
+  "runtime": {
+    "status": "pending",
+    "approvedBy": "",
+    "approvedAt": "",
+    "evidence": [
+      "packages/spatial/TabletopColocationScene.native.tsx"
+    ],
+    "strangestElement": "Two devices render one physically aligned arena while simulation authority remains host-side.",
+    "notes": "game-dev CLI is unavailable in the current execution environment, so sealed capture/performance evidence has not been produced."
+  }
+}

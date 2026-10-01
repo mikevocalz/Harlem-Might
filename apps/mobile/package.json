@@ -1,0 +1,82 @@
+{
+  "name": "mobile",
+  "main": "expo-router/entry",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "node scripts/assert-viro-fork.mjs && expo start",
+    "android": "node scripts/assert-viro-fork.mjs && expo run:android",
+    "ios": "node scripts/assert-viro-fork.mjs && expo run:ios",
+    "web": "expo start --web",
+    "lint": "expo lint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test 'src/**/*.test.ts'",
+    "viro:assert-fork": "node scripts/assert-viro-fork.mjs",
+    "prebuild": "node scripts/assert-viro-fork.mjs && expo prebuild"
+  },
+  "dependencies": {
+    "@acme/app": "workspace:*",
+    "@acme/spatial": "workspace:*",
+    "@acme/theme": "workspace:*",
+    "@acme/ui": "workspace:*",
+    "@expo/env": "catalog:",
+    "@expo/metro-runtime": "catalog:",
+    "@expo/ui": "catalog:",
+    "@metavr/layout-compat": "catalog:",
+    "@metavr/layout-window-compat": "catalog:",
+    "@react-navigation/native": "catalog:",
+    "@reactvision/react-viro": "catalog:",
+    "@rive-app/react-native": "catalog:",
+    "@shopify/react-native-skia": "catalog:",
+    "@tanstack/react-pacer": "catalog:",
+    "@tanstack/react-query": "catalog:",
+    "canvaskit-wasm": "catalog:",
+    "expo": "catalog:",
+    "expo-asset": "catalog:",
+    "expo-drag-drop-content-view": "catalog:",
+    "expo-font": "catalog:",
+    "expo-image": "catalog:",
+    "expo-linking": "catalog:",
+    "expo-paste-input": "catalog:",
+    "expo-router": "catalog:",
+    "expo-splash-screen": "catalog:",
+    "expo-status-bar": "catalog:",
+    "expo-system-ui": "catalog:",
+    "lucide-react-native": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-native": "catalog:",
+    "react-native-audio-api": "catalog:",
+    "react-native-gesture-handler": "catalog:",
+    "react-native-keyboard-controller": "catalog:",
+    "react-native-mmkv": "catalog:",
+    "react-native-nitro-modules": "catalog:",
+    "react-native-pulsar": "catalog:",
+    "react-native-reanimated": "catalog:",
+    "react-native-safe-area-context": "catalog:",
+    "react-native-screens": "catalog:",
+    "react-native-svg": "catalog:",
+    "react-native-web": "catalog:",
+    "react-native-worklets": "catalog:",
+    "solito": "catalog:",
+    "uniwind": "catalog:",
+    "zustand": "catalog:"
+  },
+  "devDependencies": {
+    "@acme/config": "workspace:*",
+    "@tailwindcss/postcss": "catalog:",
+    "@types/react": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-expo": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:"
+  },
+  "private": true,
+  "expo": {
+    "install": {
+      "exclude": [
+        "react",
+        "react-dom"
+      ]
+    }
+  }
+}

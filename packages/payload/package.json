@@ -1,0 +1,29 @@
+{
+  "name": "@acme/payload",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/payload.config.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./config": "./src/payload.config.ts"
+  },
+  "scripts": {
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@payloadcms/db-postgres": "catalog:",
+    "payload": "catalog:",
+    "pg": "catalog:",
+    "sharp": "catalog:"
+  },
+  "devDependencies": {
+    "@acme/config": "workspace:*",
+    "@types/pg": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-expo": "catalog:",
+    "typescript": "catalog:"
+  }
+}

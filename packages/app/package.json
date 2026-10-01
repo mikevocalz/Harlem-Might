@@ -1,0 +1,51 @@
+{
+  "name": "@acme/app",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./features/*": "./features/*"
+  },
+  "scripts": {
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test '**/*.test.ts'"
+  },
+  "dependencies": {
+    "@acme/theme": "workspace:*",
+    "@acme/ui": "workspace:*",
+    "@tanstack/react-query": "catalog:",
+    "date-fns": "catalog:",
+    "expo-document-picker": "catalog:",
+    "expo-file-system": "catalog:",
+    "expo-image-picker": "catalog:",
+    "expo-router": "catalog:",
+    "lucide-react": "catalog:",
+    "lucide-react-native": "catalog:",
+    "react-native-audio-api": "catalog:",
+    "react-native-enriched-html": "catalog:",
+    "react-native-gesture-handler": "catalog:",
+    "react-native-keyboard-controller": "catalog:",
+    "react-native-mmkv": "catalog:",
+    "react-native-reanimated": "catalog:",
+    "react-native-safe-area-context": "catalog:",
+    "react-native-svg": "catalog:",
+    "react-native-worklets": "catalog:",
+    "react-native-youtube-bridge": "catalog:",
+    "solito": "catalog:",
+    "zustand": "catalog:"
+  },
+  "devDependencies": {
+    "@acme/config": "workspace:*",
+    "@types/react": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-expo": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  }
+}

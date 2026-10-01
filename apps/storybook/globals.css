@@ -1,0 +1,23 @@
+/* `important`: RNW injects UNLAYERED runtime styles (default black text,
+   flex-grow:0) which beat layered utilities regardless of order — v4's
+   important flag puts utilities back on top. Native (NW5 runtime) unaffected. */
+@import 'tailwindcss' important;
+@import '@acme/theme/theme.css';
+
+@source '../../packages/ui';
+@source '../../packages/app/features';
+
+/* Retro brand fonts — the web app loads these via next/font; storybook (vite)
+   needs plain @font-face pointing at the shared assets package. */
+@font-face {
+  font-family: 'Archivo Black';
+  src: url('../../packages/assets/fonts/ArchivoBlack-Regular.ttf') format('truetype');
+  font-weight: 400 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('../../packages/assets/fonts/SpaceGrotesk-Variable.ttf') format('truetype');
+  font-weight: 300 700;
+  font-display: swap;
+}

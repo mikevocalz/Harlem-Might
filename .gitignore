@@ -1,0 +1,22 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Dependencies
+node_modules
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Build outputs
+dist
+*.tsbuildinfo
+storybook-static
+
+# Caches
+.turbo
+.expo
+.vercel
+
+# OS
+.DS_Store

@@ -1,0 +1,203 @@
+/* GENERATED from tokens.ts — do not edit by hand. `node build-css.mjs` */
+@theme {
+  --color-burgundy-50: #FFFCEB;
+  --color-burgundy-100: #FFF7C7;
+  --color-burgundy-200: #FFEE8A;
+  --color-burgundy-300: #FFE14D;
+  --color-burgundy-400: #FFDB33;
+  --color-burgundy-500: #F2C700;
+  --color-burgundy-600: #D1A800;
+  --color-burgundy-700: #A98700;
+  --color-burgundy-800: #806400;
+  --color-burgundy-900: #574400;
+  --color-burgundy-950: #332800;
+  --color-ember-50: #FFF0F7;
+  --color-ember-100: #FFDBEC;
+  --color-ember-200: #FFB8D9;
+  --color-ember-300: #FF8FC2;
+  --color-ember-400: #FF69B4;
+  --color-ember-500: #F7418F;
+  --color-ember-600: #DB2777;
+  --color-ember-700: #B01B5E;
+  --color-ember-800: #831146;
+  --color-ember-900: #570A2E;
+  --color-ember-950: #33061B;
+  --color-ink-50: #FFFDF7;
+  --color-ink-100: #F6F3E8;
+  --color-ink-200: #E5E1D3;
+  --color-ink-300: #C4C0B0;
+  --color-ink-400: #94917F;
+  --color-ink-500: #6E6B5C;
+  --color-ink-600: #55524A;
+  --color-ink-700: #3B3833;
+  --color-ink-800: #262420;
+  --color-ink-900: #171614;
+  --color-ink-950: #0D0C0B;
+  --color-white: #FFFFFF;
+  --color-gold-50: #EEF4FF;
+  --color-gold-100: #DCE8FF;
+  --color-gold-200: #B8D0FF;
+  --color-gold-300: #8AB0FF;
+  --color-gold-400: #5C8AFF;
+  --color-gold-500: #3B6DF6;
+  --color-gold-600: #2952D9;
+  --color-gold-700: #1F3FAD;
+  --color-gold-800: #172E80;
+  --color-gold-900: #101F57;
+  --color-gold-950: #0A1433;
+  --color-forest-50: #EEF6F0;
+  --color-forest-100: #D3E9D8;
+  --color-forest-200: #ADD6B6;
+  --color-forest-300: #7DB98B;
+  --color-forest-400: #529B65;
+  --color-forest-500: #357A49;
+  --color-forest-600: #28613A;
+  --color-forest-700: #214E30;
+  --color-forest-800: #183D26;
+  --color-forest-900: #102B1C;
+  --color-forest-950: #08190F;
+  --color-sky-50: #EEF4FA;
+  --color-sky-100: #D4E6F4;
+  --color-sky-200: #B3D4ED;
+  --color-sky-300: #88BBE2;
+  --color-sky-400: #5B9DD3;
+  --color-sky-500: #3B7EB8;
+  --color-sky-600: #2F6597;
+  --color-sky-700: #28527D;
+  --color-sky-800: #214060;
+  --color-sky-900: #172E45;
+  --color-sky-950: #0D1B29;
+  --color-rose-50: #FDF2F2;
+  --color-rose-100: #FBE0E0;
+  --color-rose-200: #F6C5C5;
+  --color-rose-300: #EB9C9C;
+  --color-rose-400: #D96B6B;
+  --color-rose-500: #C04444;
+  --color-rose-600: #A03333;
+  --color-rose-700: #7E2929;
+  --color-rose-800: #5D2121;
+  --color-rose-900: #3D1717;
+  --color-rose-950: #230C0C;
+  --color-slate-50: #F4F4F5;
+  --color-slate-100: #E4E4E7;
+  --color-slate-200: #D4D4D8;
+  --color-slate-300: #A1A1AA;
+  --color-slate-400: #71717A;
+  --color-slate-500: #52525B;
+  --color-slate-600: #3F3F46;
+  --color-slate-700: #27272A;
+  --color-slate-800: #18181B;
+  --color-slate-900: #121215;
+  --color-slate-950: #09090B;
+  --font-display: 'Archivo Black', 'Arial Black', sans-serif;
+  --font-sans: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --text-display-2xl: 4.5rem;
+  --text-display-2xl--line-height: 1.05;
+  --text-display-2xl--letter-spacing: -0.02em;
+  --text-display-xl: 3.75rem;
+  --text-display-xl--line-height: 1.05;
+  --text-display-xl--letter-spacing: -0.02em;
+  --text-display-lg: 3rem;
+  --text-display-lg--line-height: 1.1;
+  --text-display-lg--letter-spacing: -0.01em;
+  --text-display-md: 2.25rem;
+  --text-display-md--line-height: 1.15;
+  --text-display-md--letter-spacing: -0.01em;
+  --text-display-sm: 1.875rem;
+  --text-display-sm--line-height: 1.2;
+  --text-display-sm--letter-spacing: 0;
+  --container-content-form: 28rem;
+  --container-content-feed: 38rem;
+  --container-content-prose: 65ch;
+  --container-content-detail: 48rem;
+  --container-content-screen: 56rem;
+  --container-content-wide: 72rem;
+  --container-screen-2xl: 96rem;
+  --container-pane-primary: 20rem;
+  --container-pane-primary-narrow: 16rem;
+  --container-pane-supplementary: 21rem;
+  --container-pane-inspector: 20rem;
+  --radius-xs: 0.125rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-card: 0.625rem;
+  --radius-sheet: 0.875rem;
+  --radius-full: 9999px;
+  --shadow-card: 4px 4px 0 0 var(--color-border-strong);
+  --shadow-raised: 6px 6px 0 0 var(--color-border-strong);
+  --shadow-overlay: 9px 9px 0 0 var(--color-border-strong);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --breakpoint-sm: 40rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+  --breakpoint-2xl: 96rem;
+}
+
+/* Semantic colors. Uniwind resolves themes from these @variant blocks and
+   registers the utilities (bg-surface, text-text, ...) from them too, so they
+   are deliberately NOT duplicated into @theme above. Every variant must declare
+   the IDENTICAL set of variables or Uniwind raises a runtime error. */
+@layer theme {
+  :root {
+    @variant light {
+      --color-surface: #FFFDF7;
+      --color-surface-raised: #FFFFFF;
+      --color-surface-sunken: #F6F3E8;
+      --color-text: #0D0C0B;
+      --color-text-muted: #55524A;
+      --color-text-inverse: #FFFDF7;
+      --color-primary: #FFDB33;
+      --color-primary-pressed: #F2C700;
+      --color-on-primary: #0D0C0B;
+      --color-accent: #F7418F;
+      --color-accent-pressed: #DB2777;
+      --color-on-accent: #0D0C0B;
+      --color-border: #0D0C0B;
+      --color-border-strong: #000000;
+      --color-focus: #3B6DF6;
+      --color-danger: #D31F2B;
+      --color-on-danger: #FFFFFF;
+    }
+    @variant dark {
+      --color-surface: #161411;
+      --color-surface-raised: #211F1B;
+      --color-surface-sunken: #0F0E0C;
+      --color-text: #FFFDF7;
+      --color-text-muted: #94917F;
+      --color-text-inverse: #0D0C0B;
+      --color-primary: #FFDB33;
+      --color-primary-pressed: #F2C700;
+      --color-on-primary: #0D0C0B;
+      --color-accent: #FF69B4;
+      --color-accent-pressed: #F7418F;
+      --color-on-accent: #0D0C0B;
+      --color-border: #FFFDF7;
+      --color-border-strong: #FFFDF7;
+      --color-focus: #5C8AFF;
+      --color-danger: #FF7A85;
+      --color-on-danger: #3D0508;
+    }
+  }
+}
+
+:root {
+  --z-base: 0;
+  --z-raised: 10;
+  --z-sticky: 30;
+  --z-nav: 50;
+  --z-overlay: 70;
+  --z-modal: 80;
+  --z-toast: 90;
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 500ms;
+}
+
+@layer base {
+  .text-body-default { color: var(--color-text); }
+}

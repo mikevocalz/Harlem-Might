@@ -1,0 +1,125 @@
+{
+  "schema": "game-room.layout.v1",
+  "roomId": "lightcycle-tabletop-grid-v1",
+  "units": "meters",
+  "surfaces": [
+    {
+      "id": "grid-floor",
+      "kind": "gameplay-surface",
+      "center": [
+        0,
+        0,
+        0
+      ],
+      "size": [
+        1.2,
+        0.02,
+        0.8
+      ],
+      "collisionRole": "virtual-arena-boundary"
+    },
+    {
+      "id": "north-score-edge",
+      "kind": "ui-edge",
+      "center": [
+        0,
+        0.16,
+        -0.46
+      ],
+      "size": [
+        1.1,
+        0.22,
+        0.02
+      ]
+    },
+    {
+      "id": "south-score-edge",
+      "kind": "ui-edge",
+      "center": [
+        0,
+        0.16,
+        0.46
+      ],
+      "size": [
+        1.1,
+        0.22,
+        0.02
+      ]
+    }
+  ],
+  "instances": [
+    {
+      "id": "spawn-p1",
+      "asset": "lightcycle",
+      "position": [
+        -0.3,
+        0.04,
+        0.2
+      ],
+      "rotationDegrees": [
+        0,
+        90,
+        0
+      ],
+      "player": "p1"
+    },
+    {
+      "id": "spawn-p2",
+      "asset": "lightcycle",
+      "position": [
+        0.3,
+        0.04,
+        -0.2
+      ],
+      "rotationDegrees": [
+        0,
+        -90,
+        0
+      ],
+      "player": "p2"
+    },
+    {
+      "id": "rive-score-p1",
+      "asset": "rive-scoreboard",
+      "position": [
+        0,
+        0.18,
+        0.48
+      ],
+      "rotationDegrees": [
+        -90,
+        0,
+        0
+      ],
+      "faces": "p1"
+    },
+    {
+      "id": "rive-score-p2",
+      "asset": "rive-scoreboard",
+      "position": [
+        0,
+        0.18,
+        -0.48
+      ],
+      "rotationDegrees": [
+        -90,
+        180,
+        0
+      ],
+      "faces": "p2"
+    }
+  ],
+  "productionCamera": {
+    "location": [
+      0,
+      1.25,
+      1.6
+    ],
+    "target": [
+      0,
+      0,
+      0
+    ],
+    "verticalFovDegrees": 60
+  }
+}

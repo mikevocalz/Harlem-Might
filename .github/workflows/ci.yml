@@ -1,0 +1,28 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail on committed .env files
+        run: |
+          if git ls-files | grep -E '(^|/)\.env(\..*)?$' | grep -v '\.env\.example$'; then
+            echo '::error::.env files must never be committed'; exit 1
+          fi
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          # Single source of truth for the Node floor (RN 0.87 requires >= 22.13.0).
+          # Bump .nvmrc and the root package.json "engines" together.
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm spatial:verify-android
+      - run: pnpm spatial:verify-typegpu
+      - run: pnpm --filter @acme/spatial test
+      - run: pnpm turbo build typecheck lint

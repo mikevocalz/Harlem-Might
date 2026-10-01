@@ -1,0 +1,37 @@
+{
+  "schema": "game-room.prop-manifest.v1",
+  "roomId": "lightcycle-tabletop-grid-v1",
+  "generation": {
+    "provider": "meshy",
+    "apiModel": "meshy-5",
+    "pricingSource": "https://docs.meshy.ai/en/api/pricing",
+    "pricingVerifiedAt": "",
+    "creditsPerTexturedTask": 15,
+    "hardCreditCeiling": 0,
+    "maxChargedAttemptsPerAsset": 2
+  },
+  "assets": [
+    {
+      "id": "lightcycle",
+      "role": "hero gameplay vehicle",
+      "status": "asset-not-yet-vendored",
+      "generationAllowed": false,
+      "contract": "packages/spatial/lightcycle/assetContract.ts",
+      "notes": "Do not generate or spend credits until Function gate and paid-generation approval. Required canonical nodes/clips are enforced in code."
+    },
+    {
+      "id": "rive-scoreboard",
+      "role": "player name/score/readiness/leaderboard panel",
+      "status": "rive-file-not-yet-authored",
+      "generationAllowed": false,
+      "notes": "Rive is presentation only; authoritative values come from deterministic/replicated match state."
+    },
+    {
+      "id": "classic-grid-arena",
+      "role": "tabletop arena shell",
+      "status": "procedural-first",
+      "generationAllowed": false,
+      "notes": "Prefer procedural Viro/Three geometry for collision/readability; authored dressing comes after Function gate."
+    }
+  ]
+}

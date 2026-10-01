@@ -1,0 +1,46 @@
+{
+  "engine": "VoxCPM2",
+  "engine_repository": "https://github.com/OpenBMB/VoxCPM",
+  "engine_license": "Apache-2.0",
+  "source_strategy": "VoiceStudio-compatible VoxCPM2 voice design + controllable cloning",
+  "identity_seed": 1982,
+  "voice_description": "A very deep mature male baritone; resonant chest voice; controlled, authoritarian synthetic intelligence; slow deliberate pacing; cold calm menace; precise diction; subtle machine-like detachment; cinematic science-fiction control-room presence; never shout; no celebrity imitation",
+  "sample_rate": 48000,
+  "clips": {
+    "race-start": {
+      "file": "race-start.wav",
+      "text": "Programs. The Grid is live. Power cycles are stable. Begin.",
+      "style": "calm, absolute authority, ceremonial"
+    },
+    "boost": {
+      "file": "boost.wav",
+      "text": "Velocity anomaly detected. Interesting.",
+      "style": "quietly intrigued, controlled"
+    },
+    "low-energy": {
+      "file": "low-energy.wav",
+      "text": "Want me to slow down your power cycles for you?",
+      "style": "dry, amused threat, unhurried"
+    },
+    "derez-local": {
+      "file": "derez-local.wav",
+      "text": "Program derezzed. The Grid remembers every mistake.",
+      "style": "cold, final, no sympathy"
+    },
+    "derez-rival": {
+      "file": "derez-rival.wav",
+      "text": "Rival process terminated. Continue.",
+      "style": "satisfied but restrained"
+    },
+    "round-result": {
+      "file": "round-result.wav",
+      "text": "Round adjudicated. Return to your marks.",
+      "style": "formal adjudicator, controlled"
+    },
+    "end-of-line": {
+      "file": "end-of-line.wav",
+      "text": "End of line.",
+      "style": "very slow, final, ominous, allow the last word to resonate"
+    }
+  }
+}
