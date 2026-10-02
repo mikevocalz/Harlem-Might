@@ -54,7 +54,8 @@
     "tailwind-merge": "catalog:",
     "tailwind-variants": "catalog:",
     "uniwind": "catalog:",
-    "zustand": "catalog:"
+    "zustand": "catalog:",
+    "kinetrell": "workspace:*"
   },
   "devDependencies": {
     "@acme/config": "workspace:*",

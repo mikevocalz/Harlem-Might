@@ -83,3 +83,5 @@ export {
   MightsNotchCard,
   type GridCardProps,
 } from './future';
+
+export { MightsParallax, type MightsParallaxProps } from './MightsParallax';
