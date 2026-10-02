@@ -180,3 +180,15 @@ export const DropSurface = ({
 export const DocumentHtmlBase = dom<P & { lang?: string }>('html');
 export const DocumentHeadBase = dom('head');
 export const DocumentBodyBase = dom('body');
+
+
+export type GpuCanvasBaseProps =
+  Omit<React.CanvasHTMLAttributes<HTMLCanvasElement>, 'className' | 'style'> &
+  P;
+
+export const GpuCanvasBase = React.forwardRef<
+  HTMLCanvasElement,
+  GpuCanvasBaseProps
+>(function GpuCanvasBase({ className, style, ...props }, ref) {
+  return <canvas ref={ref} {...toDom(className, style)} {...props} />;
+});

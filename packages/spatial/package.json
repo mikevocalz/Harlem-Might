@@ -23,6 +23,10 @@
     "./audio": {
       "react-native": "./audio/index.native.ts",
       "default": "./audio/index.web.ts"
+    },
+    "./sightline": {
+      "react-native": "./sightline/index.native.ts",
+      "default": "./sightline/index.web.ts"
     }
   },
   "scripts": {

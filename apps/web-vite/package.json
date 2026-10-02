@@ -22,7 +22,12 @@
     "react-dom": "catalog:",
     "react-native-css": "catalog:",
     "react-native-web": "catalog:",
-    "zustand": "catalog:"
+    "zustand": "catalog:",
+    "@acme/spatial": "workspace:*",
+    "@gsap/react": "catalog:",
+    "gsap": "catalog:",
+    "kinetrell": "catalog:",
+    "lenis": "catalog:"
   },
   "devDependencies": {
     "@acme/config": "workspace:*",
