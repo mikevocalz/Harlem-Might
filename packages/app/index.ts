@@ -1,7 +1,6 @@
 // @acme/app — universal business/domain logic and shared screens.
 // Screens live in features/* (Solito pattern); add domains alongside them.
 export { HomeScreen } from './features/home/screen';
-export { ExploreScreen } from './features/explore/screen';
 export { NotificationsScreen } from './features/notifications/screen';
 export { ProfileScreen } from './features/profile/screen';
 export { SettingsScreen } from './features/settings/screen';
