@@ -22,7 +22,7 @@ const labelLifecycle = (value?: string | null) =>
 
 const qualityTone = (state?: string | null) => {
   if (state === 'verified') return 'success' as const;
-  if (state === 'needs_review') return 'warning' as const;
+  if (state === 'needs_review') return 'accent' as const;
   return 'neutral' as const;
 };
 
