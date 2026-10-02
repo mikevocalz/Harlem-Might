@@ -175,3 +175,8 @@ export const DropSurface = ({
 }: DropSurfaceProps) => (
   <div {...toDom(className, style)} {...props} />
 );
+
+
+export const DocumentHtmlBase = dom<P & { lang?: string }>('html');
+export const DocumentHeadBase = dom('head');
+export const DocumentBodyBase = dom('body');
