@@ -240,9 +240,9 @@ export function ProductHome() {
           {CHAPTERS.map((chapter, index) => (
             <View
               key={chapter.number}
-              ref={(node) => {
-                chapterRefs.current[index] = node as never;
-              }}
+              ref={((node: HTMLElement | null) => {
+                chapterRefs.current[index] = node;
+              }) as never}
               className="min-w-0"
             >
               <Card
