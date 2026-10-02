@@ -1,5 +1,14 @@
 # Harlem Mights motion + spatial hero contract
 
+## App boundary
+
+- `apps/web` (Next.js) owns the public/product site: header, footer, homepage,
+  product screens and the Kinetrell/Lenis/GSAP motion system.
+- `apps/web-vite` owns the internal curator/catalogue workspace and
+  Payload-backed operational tooling. It must not become a second product site.
+- `packages/spatial` owns reusable spatial/WebGPU rendering surfaces shared by
+  the product site and immersive routes.
+
 ## Ownership
 
 Kinetrell owns the motion language.

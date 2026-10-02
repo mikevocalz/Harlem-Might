@@ -1,112 +1,72 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { Link, createFileRoute } from '@tanstack/react-router';
 import { Card, Heading, Text } from '@acme/ui';
 import { Main, Section, View } from '@acme/ui/tw';
-import { listPages, type CmsStatus } from '@/lib/payload';
-import { PageCard } from '@/components/page-card';
-import { CmsOffline } from '@/components/cms-offline';
-import { SightlineHero } from '@/components/sightline-hero';
-
-const TITLE = 'Harlem Mights — see Harlem in layers';
-const DESCRIPTION =
-  'A spatial guide to Harlem: places, history, food, culture, walks, events and AR navigation built from a first-party catalogue.';
 
 export const Route = createFileRoute('/')({
-  loader: () => listPages(),
   head: () => ({
     meta: [
-      { title: TITLE },
-      { name: 'description', content: DESCRIPTION },
-      { property: 'og:title', content: TITLE },
-      { property: 'og:description', content: DESCRIPTION },
-      { property: 'og:type', content: 'website' },
+      { title: 'Harlem Might Curator Workspace' },
+      {
+        name: 'description',
+        content: 'Payload-backed catalogue and curator tools for Harlem Might.',
+      },
     ],
   }),
-  component: LandingPage,
+  component: CuratorLanding,
 });
 
-const CHAPTERS = [
-  {
-    title: 'Start with a block.',
-    body: 'Move the map, pick a place, and keep the story attached to the location instead of reducing Harlem to a list of pins.',
-  },
-  {
-    title: 'Look up. The history is already there.',
-    body: 'Carry a walking route from the map into AR, resolve the real entrance, and surface the story where it happened.',
-  },
-  {
-    title: 'The same corner. Another century.',
-    body: 'Registered archival layers make then-and-now comparisons spatial, sourced and connected to the exact place.',
-  },
-] as const;
-
-function LandingPage() {
-  const { pages, status } = Route.useLoaderData();
-
+function CuratorLanding() {
   return (
     <Main className="flex-1 bg-surface">
-      <SightlineHero />
-
-      <Section className="mx-auto w-full max-w-screen-2xl gap-6 px-4 py-14 sm:px-6 md:py-20">
-        <View className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {CHAPTERS.map((chapter, index) => (
-            <Card
-              key={chapter.title}
-              elevation={index === 0 ? 'raised' : 'flat'}
-              className="min-h-60 gap-4 border-border bg-surface-raised p-6"
-            >
-              <Text className="text-xs font-semibold tabular-nums text-primary">
-                {String(index + 1).padStart(2, '0')}
-              </Text>
-              <Heading level={2} size="title" className="text-text">
-                {chapter.title}
-              </Heading>
-              <Text className="text-sm leading-6 text-text-muted md:text-base md:leading-7">
-                {chapter.body}
-              </Text>
-            </Card>
-          ))}
-        </View>
-      </Section>
-
-      <Section className="mx-auto w-full max-w-screen-2xl gap-6 px-4 py-14 sm:px-6 md:py-20">
-        <View className="max-w-3xl gap-2">
-          <Heading level={2} size="display-sm" className="text-text">
-            Stories from the catalogue
+      <Section className="mx-auto w-full max-w-screen-xl gap-8 px-4 py-16 sm:px-6 md:py-24">
+        <View className="max-w-3xl gap-3">
+          <Text className="text-sm font-semibold text-primary">Internal workspace</Text>
+          <Heading level={1} size="display-md" className="text-text">
+            Harlem Might catalogue + Payload tools
           </Heading>
-          <Text className="text-sm leading-6 text-text-muted md:text-base">
-            Published editorial pages from Payload appear here while the full place, story and tour collections are built.
+          <Text className="text-base leading-7 text-text-muted">
+            This Vite surface is for the canonical place catalogue, curation and
+            Payload-backed operations. The public product experience lives in the
+            Next.js web app.
           </Text>
         </View>
-        <CmsRail pages={pages} status={status} />
+
+        <View className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Link
+            to="/admin"
+            className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/40"
+          >
+            <Card className="min-h-48 gap-3 border-border bg-surface-raised p-6 shadow-card transition-transform duration-150 hover:-translate-y-0.5 motion-reduce:transform-none">
+              <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+                Curator
+              </Text>
+              <Heading level={2} size="title" className="text-text">
+                Open admin workspace
+              </Heading>
+              <Text className="text-sm leading-6 text-text-muted">
+                Review catalogue health, source quality and curator-facing operations.
+              </Text>
+            </Card>
+          </Link>
+
+          <Link
+            to="/admin/businesses"
+            className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/40"
+          >
+            <Card className="min-h-48 gap-3 border-border bg-surface-raised p-6 shadow-card transition-transform duration-150 hover:-translate-y-0.5 motion-reduce:transform-none">
+              <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+                Catalogue
+              </Text>
+              <Heading level={2} size="title" className="text-text">
+                Businesses + places
+              </Heading>
+              <Text className="text-sm leading-6 text-text-muted">
+                Work with canonical records, lifecycle state, imagery and review data.
+              </Text>
+            </Card>
+          </Link>
+        </View>
       </Section>
     </Main>
-  );
-}
-
-function CmsRail({
-  pages,
-  status,
-}: {
-  pages: Awaited<ReturnType<typeof listPages>>['pages'];
-  status: CmsStatus;
-}) {
-  if (!status.ok) return <CmsOffline detail={status.detail} />;
-
-  if (pages.length === 0) {
-    return (
-      <View className="rounded-xl border border-border bg-surface-raised px-6 py-10 shadow-card">
-        <Text className="text-sm text-text-muted">
-          The editorial catalogue is connected and ready for its first published story.
-        </Text>
-      </View>
-    );
-  }
-
-  return (
-    <View className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {pages.map((page) => (
-        <PageCard key={page.id} page={page} />
-      ))}
-    </View>
   );
 }

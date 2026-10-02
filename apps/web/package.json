@@ -44,7 +44,11 @@
     "sharp": "catalog:",
     "solito": "catalog:",
     "zod": "catalog:",
-    "zustand": "catalog:"
+    "zustand": "catalog:",
+    "@gsap/react": "catalog:",
+    "gsap": "catalog:",
+    "kinetrell": "catalog:",
+    "lenis": "catalog:"
   },
   "devDependencies": {
     "@acme/config": "workspace:*",
