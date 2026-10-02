@@ -1,9 +1,3 @@
-/**
- * `/pages` — every published entry in the `pages` collection, straight off the
- * Payload REST API.
- *
- * SOT-KEYWORDS: web-vite pages index payload listing
- */
 import { createFileRoute } from '@tanstack/react-router';
 import { Heading, Text } from '@acme/ui';
 import { Main, Section, View } from '@acme/ui/tw';
@@ -15,8 +9,11 @@ export const Route = createFileRoute('/pages/')({
   loader: () => listPages(),
   head: () => ({
     meta: [
-      { title: 'Content — Harlem Might' },
-      { name: 'description', content: 'Pages published in the Harlem Might CMS.' },
+      { title: 'Stories and pages — Harlem Mights' },
+      {
+        name: 'description',
+        content: 'Published stories and editorial pages from the Harlem Mights catalogue.',
+      },
     ],
   }),
   component: PagesIndex,
@@ -26,30 +23,23 @@ function PagesIndex() {
   const { pages, status } = Route.useLoaderData();
 
   return (
-    <Main className="flex-1">
-      <Section className="mx-auto w-full max-w-screen-2xl gap-6 px-4 py-16 sm:px-6">
-        <View className="gap-1">
-          <Text className="text-xs font-semibold uppercase tracking-[0.32em] text-cyan-300">
-            Harlem Might / Content
-          </Text>
-          <Heading level={1} size="display-sm" className="text-white">
-            Published pages
+    <Main className="flex-1 bg-surface">
+      <Section className="mx-auto w-full max-w-screen-2xl gap-8 px-4 py-12 sm:px-6 md:py-16">
+        <View className="max-w-4xl gap-3">
+          <Heading level={1} size="display-md" className="tracking-[-0.035em] text-text">
+            Published stories
           </Heading>
+          <Text className="max-w-3xl text-base leading-7 text-text-muted">
+            Editorial pages from the Harlem Mights catalogue, with sources and place context kept close to the story.
+          </Text>
         </View>
 
         {!status.ok ? (
           <CmsOffline detail={status.detail} />
         ) : pages.length === 0 ? (
-          <View className="rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] px-6 py-10">
-            <Text className="text-sm text-cyan-100/60">
-              Nothing published yet — create a page in the{' '}
-              <a
-                href="http://localhost:3000/admin"
-                className="text-cyan-300 underline underline-offset-4"
-              >
-                Payload admin
-              </a>{' '}
-              and tick `published`.
+          <View className="rounded-xl border border-border bg-surface-raised px-6 py-10 shadow-card">
+            <Text className="text-sm leading-6 text-text-muted">
+              The editorial catalogue is connected and ready for its first published story.
             </Text>
           </View>
         ) : (
