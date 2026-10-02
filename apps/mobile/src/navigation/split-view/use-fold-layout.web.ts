@@ -40,7 +40,7 @@ const listeners = new Set<() => void>();
 let listening = false;
 
 function readSnapshot(): WebFoldSnapshot {
-  if (typeof window === 'undefined') return SERVER_SNAPSHOT;
+  if (typeof globalThis.window === 'undefined') return SERVER_SNAPSHOT;
 
   const posture =
     (navigator as FoldableNavigator).devicePosture?.type === 'folded'
@@ -48,7 +48,7 @@ function readSnapshot(): WebFoldSnapshot {
       : 'continuous';
 
   const segments = [
-    ...((window as FoldableWindow).viewport?.segments ?? []),
+    ...((globalThis.window as FoldableWindow).viewport?.segments ?? []),
   ].map((segment) => ({
     x: segment.x,
     y: segment.y,
@@ -75,19 +75,19 @@ function refresh() {
 }
 
 function startListening() {
-  if (listening || typeof window === 'undefined') return;
+  if (listening || typeof globalThis.window === 'undefined') return;
   listening = true;
   snapshot = readSnapshot();
 
-  window.addEventListener('resize', refresh);
+  globalThis.addEventListener('resize', refresh);
   (navigator as FoldableNavigator).devicePosture?.addEventListener('change', refresh);
 }
 
 function stopListening() {
-  if (!listening || typeof window === 'undefined' || listeners.size > 0) return;
+  if (!listening || typeof globalThis.window === 'undefined' || listeners.size > 0) return;
   listening = false;
 
-  window.removeEventListener('resize', refresh);
+  globalThis.removeEventListener('resize', refresh);
   (navigator as FoldableNavigator).devicePosture?.removeEventListener('change', refresh);
 }
 
