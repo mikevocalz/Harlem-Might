@@ -21,6 +21,7 @@ import {
   FigcaptionBase, AddressBase, DetailsBase, SummaryBase,
   FieldsetBase, LegendBase, SelectBase,
   DocumentHtmlBase, DocumentHeadBase, DocumentBodyBase,
+  GpuCanvasBase,
   ButtonBase, InputBase, TextareaBase, LabelBase, FormBase,
 } from './dom';
 
@@ -29,6 +30,7 @@ import {
 export const Document = DocumentHtmlBase;
 export const DocumentHead = DocumentHeadBase;
 export const DocumentBody = DocumentBodyBase;
+export const GpuCanvas = css(GpuCanvasBase, 'GpuCanvas');
 
 // ---- layout -------------------------------------------------------------
 

@@ -149,3 +149,11 @@ export const FormBase = (props: P) => <Div role="form" {...props} />;
 export const DocumentHtmlBase = ({ children }: P) => <>{children}</>;
 export const DocumentHeadBase = ({ children }: P) => <>{children}</>;
 export const DocumentBodyBase = ({ children }: P) => <>{children}</>;
+
+
+/**
+ * Type-compatible native fallback for the semantic GPU surface. Spatial
+ * renderers use react-native-webgpu's Canvas directly on native; this keeps
+ * feature code from ever inventing a raw web canvas.
+ */
+export const GpuCanvasBase = (props: P) => <Div {...props} />;
