@@ -146,6 +146,7 @@ export function SiteHeader() {
 
   return (
     <Header
+      data-site-header
       className={`sticky top-0 z-50 border-b backdrop-blur-md transition-all duration-base motion-reduce:transition-none ${
         scrolled
           ? 'border-cyan-400/30 bg-[#050505]/95 shadow-[0_12px_40px_rgba(0,0,0,0.45)]'
