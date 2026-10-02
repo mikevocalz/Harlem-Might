@@ -103,6 +103,8 @@ catalog:
   "@expo/ui": 58.0.9
   expo-paste-input: 0.2.2
   expo-drag-drop-content-view: 0.9.2
+  "@kishannareshpal/expo-pdf": 0.3.2
+  react-native-secure-webview: 0.1.0
 
   # universal GPU graphics
   "@shopify/react-native-skia": 2.13.0

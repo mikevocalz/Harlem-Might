@@ -59,7 +59,10 @@
     "react-native-worklets": "catalog:",
     "solito": "catalog:",
     "uniwind": "catalog:",
-    "zustand": "catalog:"
+    "zustand": "catalog:",
+    "@kishannareshpal/expo-pdf": "catalog:",
+    "expo-file-system": "catalog:",
+    "react-native-secure-webview": "catalog:"
   },
   "devDependencies": {
     "@acme/config": "workspace:*",

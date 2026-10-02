@@ -60,6 +60,16 @@ const columns: ColumnDef<CmsPlace, unknown>[] = [
     ),
   },
   {
+    id: 'menus',
+    header: 'Menus',
+    accessorFn: (row) => row.menus?.filter((menu) => menu.active !== false).length ?? 0,
+    cell: ({ row }) => (
+      <Text className="text-sm tabular-nums text-text-muted">
+        {row.original.menus?.filter((menu) => menu.active !== false).length ?? 0}
+      </Text>
+    ),
+  },
+  {
     id: 'quality',
     header: 'Quality',
     accessorFn: (row) => row.dataQuality?.state ?? 'unverified',
