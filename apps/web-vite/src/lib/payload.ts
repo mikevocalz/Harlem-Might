@@ -62,3 +62,46 @@ export async function getPage(slug: string): Promise<CmsPage | null> {
     return null;
   }
 }
+
+
+export interface CmsMedia {
+  id: string;
+  url?: string | null;
+  alt?: string | null;
+}
+
+export interface CmsPlace {
+  id: string;
+  name: string;
+  slug: string;
+  kind?: string | null;
+  lifecycle?: string | null;
+  primaryCategory?: string | null;
+  primaryArea?: string | null;
+  logo?: string | CmsMedia | null;
+  menus?: Array<{
+    id?: string | null;
+    label?: string | null;
+    format?: 'image_gallery' | 'pdf' | 'web' | null;
+    active?: boolean | null;
+  }> | null;
+  dataQuality?: {
+    state?: string | null;
+    lastReviewedAt?: string | null;
+  } | null;
+  updatedAt: string;
+  createdAt: string;
+}
+
+export async function listPlaces(): Promise<{ places: CmsPlace[]; status: CmsStatus }> {
+  try {
+    const res = await payload.find<CmsPlace>('places', 'sort=name&limit=200&depth=1');
+    return { places: res.docs, status: { ok: true } };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      places: [],
+      status: { ok: false, reason: 'offline', detail },
+    };
+  }
+}

@@ -77,6 +77,16 @@
     "dev": {
       "persistent": true,
       "cache": false
+    },
+    "@acme/payload#build": {
+      "outputs": [
+        "src/payload-types.ts"
+      ]
+    },
+    "@acme/payload#typecheck": {
+      "dependsOn": [
+        "build"
+      ]
     }
   }
 }

@@ -39,6 +39,7 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
   esbuild: true
+  kinetrell@https://codeload.github.com/mikevocalz/Kinetrell/tar.gz/344de51531ce050c4311d3feb70e4d596bdc8041: true
 
 # Expo SDK 58 packages were published together. Keep pnpm's 24-hour
 # release-age protection for the rest of the graph while allowing the explicitly
@@ -103,6 +104,8 @@ catalog:
   "@expo/ui": 58.0.9
   expo-paste-input: 0.2.2
   expo-drag-drop-content-view: 0.9.2
+  "@kishannareshpal/expo-pdf": 0.3.2
+  react-native-secure-webview: 0.1.0
 
   # universal GPU graphics
   "@shopify/react-native-skia": 2.13.0
@@ -141,6 +144,10 @@ catalog:
   "@tanstack/react-table": 9.2.4
   "@tanstack/react-router": 1.170.41
   "@tanstack/react-start": 1.168.60
+  "@gsap/react": 2.1.2
+  gsap: 3.15.0
+  lenis: 1.3.26
+  kinetrell: github:mikevocalz/Kinetrell#344de51531ce050c4311d3feb70e4d596bdc8041
   "@legendapp/list": 3.4.0
   "@legendapp/motion": 2.5.3
   date-fns: 4.4.0

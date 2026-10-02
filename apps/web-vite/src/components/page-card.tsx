@@ -1,9 +1,3 @@
-/**
- * One published CMS page as a card — hairline cyan border, the dark grid
- * card language in miniature.
- *
- * SOT-KEYWORDS: web-vite page card payload
- */
 import { Link } from '@tanstack/react-router';
 import { Text, View } from '@acme/ui/tw';
 import type { CmsPage } from '@/lib/payload';
@@ -13,19 +7,17 @@ export function PageCard({ page }: { page: CmsPage }) {
     <Link
       to="/pages/$slug"
       params={{ slug: page.slug }}
-      className="group block rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] p-5 transition-colors duration-150 hover:border-cyan-400/40 hover:bg-cyan-400/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+      className="group block rounded-xl border border-border bg-surface-raised p-5 shadow-card transition-all duration-150 hover:-translate-y-0.5 hover:border-border-strong hover:shadow-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/40 motion-reduce:transform-none motion-reduce:transition-none"
     >
-      <View className="gap-2">
-        <Text className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-400/70">
-          /pages/{page.slug}
-        </Text>
-        <Text className="font-display text-lg font-bold uppercase tracking-wide text-cyan-50 group-hover:text-cyan-300">
+      <View className="gap-3">
+        <Text className="text-xs font-medium text-text-muted">{page.slug}</Text>
+        <Text className="font-display text-lg font-semibold tracking-[-0.02em] text-text group-hover:text-primary">
           {page.title}
         </Text>
         {page.summary ? (
-          <Text className="text-sm leading-relaxed text-cyan-100/60">{page.summary}</Text>
+          <Text className="text-sm leading-6 text-text-muted">{page.summary}</Text>
         ) : null}
-        <Text className="pt-1 text-xs text-cyan-400/60">Read →</Text>
+        <Text className="pt-1 text-xs font-semibold text-primary">Read story</Text>
       </View>
     </Link>
   );
