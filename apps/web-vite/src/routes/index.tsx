@@ -1,9 +1,10 @@
-import { Link, createFileRoute } from '@tanstack/react-router';
-import { Card, GridScene, Heading, Text } from '@acme/ui';
+import { createFileRoute } from '@tanstack/react-router';
+import { Card, Heading, Text } from '@acme/ui';
 import { Main, Section, View } from '@acme/ui/tw';
 import { listPages, type CmsStatus } from '@/lib/payload';
 import { PageCard } from '@/components/page-card';
 import { CmsOffline } from '@/components/cms-offline';
+import { SightlineHero } from '@/components/sightline-hero';
 
 const TITLE = 'Harlem Mights — see Harlem in layers';
 const DESCRIPTION =
@@ -43,53 +44,7 @@ function LandingPage() {
 
   return (
     <Main className="flex-1 bg-surface">
-      <View className="relative min-h-[78vh] overflow-hidden border-b border-border">
-        <View className="absolute inset-0 opacity-75">
-          <GridScene
-            className="flex-1"
-            horizon={0.5}
-            gap={0}
-            speed={0.32}
-            lineColor="#A9B4AE"
-            glowColor="#1F4FE0"
-            backgroundColor="#EEF0EC"
-            opacity={0.42}
-            showCeiling={false}
-          />
-        </View>
-
-        <Section className="relative mx-auto w-full max-w-screen-2xl gap-6 px-4 py-20 sm:px-6 sm:py-28 lg:py-36">
-          <View className="max-w-4xl gap-5">
-            <Text className="self-start rounded-full border border-border bg-surface-raised/90 px-3 py-1.5 text-xs font-medium text-text-muted shadow-card">
-              A spatial guide to Harlem
-            </Text>
-            <Heading level={1} size="display-2xl" className="max-w-4xl tracking-[-0.045em] text-text">
-              See Harlem in layers.
-            </Heading>
-            <Text className="max-w-3xl text-base leading-7 text-text-muted md:text-xl md:leading-9">
-              Every block here holds more than one Harlem. Find the places people talk about,
-              the stories behind them, and the way to walk there.
-            </Text>
-            <View className="mt-2 flex-row flex-wrap gap-3">
-              <Link
-                to="/explore"
-                className="rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-on-primary shadow-card transition-colors duration-150 hover:bg-primary-pressed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/40"
-              >
-                Explore Harlem
-              </Link>
-              <Link
-                to="/ar"
-                className="rounded-lg border border-border-strong bg-surface-raised px-5 py-3 text-sm font-semibold text-text shadow-card transition-colors duration-150 hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/40"
-              >
-                See how AR works
-              </Link>
-            </View>
-            <Text className="pt-2 text-xs text-text-muted">
-              Built from local knowledge, public records and verified sources.
-            </Text>
-          </View>
-        </Section>
-      </View>
+      <SightlineHero />
 
       <Section className="mx-auto w-full max-w-screen-2xl gap-6 px-4 py-14 sm:px-6 md:py-20">
         <View className="grid grid-cols-1 gap-4 lg:grid-cols-3">
