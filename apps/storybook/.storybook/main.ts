@@ -4,6 +4,7 @@ import type { StorybookConfig } from '@storybook/react-vite';
 import react from '@vitejs/plugin-react';
 
 const here = dirname(fileURLToPath(import.meta.url));
+const rootNodeModules = resolve(here, '../../../node_modules');
 
 // Stories live co-located with components in packages/* (§3.2);
 // this app only configures and aggregates.
@@ -53,15 +54,15 @@ const config: StorybookConfig = {
         // to the Storybook workspace's concrete installation.
         {
           find: /^react-native-web\/(.*)$/,
-          replacement: `${resolve(here, '../node_modules/react-native-web')}/$1`,
+          replacement: `${resolve(rootNodeModules, 'react-native-web')}/$1`,
         },
         {
           find: /^react-native-web$/,
-          replacement: resolve(here, '../node_modules/react-native-web/dist/index.js'),
+          replacement: resolve(rootNodeModules, 'react-native-web/dist/index.js'),
         },
         {
           find: /^react-native$/,
-          replacement: resolve(here, '../node_modules/react-native-web/dist/index.js'),
+          replacement: resolve(rootNodeModules, 'react-native-web/dist/index.js'),
         },
         ...aliasEntries.filter(
           (entry) => entry.find !== 'react-native' && entry.find !== 'react-native-web',
