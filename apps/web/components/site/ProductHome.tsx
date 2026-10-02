@@ -238,29 +238,33 @@ export function ProductHome() {
 
         <View className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {CHAPTERS.map((chapter, index) => (
-            <Card
+            <View
               key={chapter.number}
               ref={(node) => {
                 chapterRefs.current[index] = node as never;
               }}
-              elevation={index === 1 ? 'raised' : 'flat'}
-              className="min-h-72 gap-4 border-border bg-surface-raised p-6"
+              className="min-w-0"
             >
-              <View className="flex-row items-center justify-between">
-                <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-                  {chapter.eyebrow}
+              <Card
+                elevation={index === 1 ? 'raised' : 'flat'}
+                className="min-h-72 gap-4 border-border bg-surface-raised p-6"
+              >
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+                    {chapter.eyebrow}
+                  </Text>
+                  <Text className="text-xs font-semibold tabular-nums text-text-muted">
+                    {chapter.number}
+                  </Text>
+                </View>
+                <Heading level={3} size="title" className="text-text">
+                  {chapter.title}
+                </Heading>
+                <Text className="text-sm leading-6 text-text-muted md:text-base md:leading-7">
+                  {chapter.body}
                 </Text>
-                <Text className="text-xs font-semibold tabular-nums text-text-muted">
-                  {chapter.number}
-                </Text>
-              </View>
-              <Heading level={3} size="title" className="text-text">
-                {chapter.title}
-              </Heading>
-              <Text className="text-sm leading-6 text-text-muted md:text-base md:leading-7">
-                {chapter.body}
-              </Text>
-            </Card>
+              </Card>
+            </View>
           ))}
         </View>
       </Section>
