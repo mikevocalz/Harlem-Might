@@ -5,6 +5,7 @@ import { buildConfig } from 'payload';
 import sharp from 'sharp';
 import { Users } from './collections/Users';
 import { Media } from './collections/Media';
+import { Pages } from './collections/Pages';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const serverURL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
@@ -20,7 +21,7 @@ export default buildConfig({
   routes: {
     api: '/payload-api',
   },
-  collections: [Users, Media],
+  collections: [Users, Media, Pages],
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URL,

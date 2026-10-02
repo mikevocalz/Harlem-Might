@@ -2,6 +2,12 @@ packages:
   - apps/*
   - packages/*
 
+# Flat node_modules like MoyoLearn: the TanStack Start/Vite apps resolve
+# react-native-web's transitive CJS closure (fbjs, styleq, inline-style-prefixer…)
+# from the workspace root; pnpm's isolated layout hides it inside .pnpm and Vite's
+# dep optimizer then cannot see the packages it is asked to pre-bundle.
+nodeLinker: hoisted
+
 # Expo SDK 58 stable owns the React / RN / Metro compatibility matrix.
 # Keep these overrides aligned with the SDK 58 template instead of forcing
 # upstream "latest" versions that Expo has not validated together.
@@ -133,6 +139,8 @@ catalog:
   "@tanstack/react-form": 1.33.5
   "@tanstack/react-pacer": 0.23.0
   "@tanstack/react-table": 9.2.4
+  "@tanstack/react-router": 1.170.41
+  "@tanstack/react-start": 1.168.60
   "@legendapp/list": 3.4.0
   "@legendapp/motion": 2.5.3
   date-fns: 4.4.0
@@ -154,8 +162,11 @@ catalog:
   "@storybook/react-vite": 10.6.0
   "@storybook/addon-a11y": 10.6.0
   "@vitejs/plugin-react": ^6.1.1
+  "@tailwindcss/vite": 4.3.3
   vite: ^8.3.1
   vite-plugin-react-native-web: ^3.2.0
+  # Nitro — the server/compiler half of TanStack Start (vite dev + vite build).
+  nitro: 3.0.260903-beta
   sonner: 2.0.8
   sonner-native: 0.27.0
 

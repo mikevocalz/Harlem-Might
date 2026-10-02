@@ -10,6 +10,7 @@ const targets = [
   ['apps/web/package.json', 'apps/web/public/canvaskit'],
   ['apps/storybook/package.json', 'apps/storybook/public/canvaskit'],
   ['apps/mobile/package.json', 'apps/mobile/public/canvaskit'],
+  ['apps/web-vite/package.json', 'apps/web-vite/public/canvaskit'],
 ];
 
 for (const [manifest, destination] of targets) {
