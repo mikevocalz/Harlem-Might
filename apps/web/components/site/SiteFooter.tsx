@@ -1,87 +1,105 @@
 'use client';
+
+import { useEffect, useRef } from 'react';
+import gsap from 'gsap';
 import { Link } from 'solito/link';
+import { attachScrollTrigger, ensureScrollTrigger } from 'kinetrell/web/gsap';
+import { useBrowserReducedMotion } from 'kinetrell/web/react';
 import { Footer, Nav, View, Text as TWText, P } from '@acme/ui/tw';
 import { NAV_ITEMS, PROFILE } from './nav';
 
-// The footer is a system map of the template, not decoration: every column
-// states something true — the pages that exist, the tools that run, the
-// stack underneath.
-const TOOLKIT = [
-  { label: 'Storybook', href: 'http://localhost:6006' },
-  { label: 'Payload admin', href: '/admin' },
-  { label: 'README', href: 'https://github.com/mikevocalz/Solito-NativeUI-Starter' },
-] as const;
-
-const STACK = ['Expo SDK 58', 'Next.js 16', 'Solito 5', 'Skia', 'Viro / OpenXR', 'Rive'] as const;
-
 const footerLink =
-  'text-sm text-cyan-100/60 transition-colors duration-fast hover:text-cyan-300 ' +
-  'rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50';
+  'rounded text-sm text-text-muted transition-colors duration-200 hover:text-primary ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/40';
 
-const columnTitle = 'text-xs font-semibold uppercase tracking-wider text-cyan-300';
+const columnTitle = 'text-xs font-semibold uppercase tracking-[0.16em] text-primary';
 
 export function SiteFooter() {
+  const rootRef = useRef<HTMLElement | null>(null);
+  const contentRef = useRef<HTMLElement | null>(null);
+  const reducedMotion = useBrowserReducedMotion('system');
+
+  useEffect(() => {
+    const root = rootRef.current;
+    const content = contentRef.current;
+    if (!root || !content || reducedMotion || !ensureScrollTrigger()) return;
+
+    const timeline = gsap.timeline({ paused: true });
+    timeline.fromTo(
+      content,
+      { y: 34, autoAlpha: 0.55 },
+      { y: 0, autoAlpha: 1, ease: 'none', duration: 1 },
+    );
+
+    const trigger = attachScrollTrigger(timeline, {
+      trigger: root,
+      start: 'top 92%',
+      end: 'top 62%',
+      scrub: 0.55,
+    });
+
+    return () => {
+      trigger.kill();
+      timeline.kill();
+    };
+  }, [reducedMotion]);
+
   return (
-    <Footer className="border-t border-cyan-400/25 bg-[#050505] [box-shadow:0_-1px_24px_rgba(0,243,255,0.08)]">
-      <View className="mx-auto w-full max-w-screen-2xl gap-10 px-4 py-12 sm:px-6 md:flex-row md:justify-between">
-        {/* Brand */}
-        <View className="max-w-xs gap-3">
-          <View className="flex-row items-center gap-2.5">
-            <View className="h-9 w-9 items-center justify-center rounded-md border border-cyan-400/50 bg-cyan-400/10 shadow-[0_0_14px_rgba(0,243,255,0.25)]">
-              <TWText className="text-base font-bold text-cyan-300">H</TWText>
-            </View>
-            <TWText className="font-display text-lg font-bold uppercase tracking-widest text-cyan-50">
-              Harlem Might
-            </TWText>
-          </View>
-          <P className="text-sm leading-relaxed text-cyan-100/50">
-            One codebase for screens, spatial windows and WebXR — Expo, Next.js,
-            Skia, Rive and Viro on a single Neon Grid.
+    <Footer
+      ref={rootRef as never}
+      className="border-t border-border bg-surface-raised"
+    >
+      <View
+        ref={contentRef as never}
+        className="mx-auto w-full max-w-screen-2xl gap-10 px-4 py-12 sm:px-6 lg:flex-row lg:justify-between"
+      >
+        <View className="max-w-md gap-3">
+          <TWText className="font-display text-xl font-bold tracking-[-0.03em] text-text">
+            Harlem Might
+          </TWText>
+          <P className="text-sm leading-6 text-text-muted">
+            Discover Harlem through places, stories, routes and spatial layers that
+            keep context attached to the block where it belongs.
           </P>
+          <TWText className="text-xs font-medium uppercase tracking-[0.16em] text-primary">
+            See the block. Know the story.
+          </TWText>
         </View>
 
-        {/* Columns */}
         <View className="flex-row flex-wrap gap-10 md:gap-16">
-          <Nav aria-label="Pages" className="min-w-28 gap-2.5">
-            <TWText className={columnTitle}>
-              Pages
-            </TWText>
-            {[...NAV_ITEMS, PROFILE].map((item) => (
+          <Nav aria-label="Product" className="min-w-28 gap-2.5">
+            <TWText className={columnTitle}>Product</TWText>
+            {NAV_ITEMS.map((item) => (
               <Link key={item.href} href={item.href} className={footerLink}>
                 {item.label}
               </Link>
             ))}
           </Nav>
 
-          <Nav aria-label="Toolkit" className="min-w-28 gap-2.5">
-            <TWText className={columnTitle}>
-              Toolkit
-            </TWText>
-            {TOOLKIT.map((item) => (
-              <Link key={item.label} href={item.href} className={footerLink}>
-                {item.label}
-              </Link>
-            ))}
+          <Nav aria-label="Account" className="min-w-28 gap-2.5">
+            <TWText className={columnTitle}>Account</TWText>
+            <Link href={PROFILE.href} className={footerLink}>
+              Profile
+            </Link>
+            <Link href="/settings" className={footerLink}>
+              Settings
+            </Link>
           </Nav>
 
-          <View className="min-w-28 gap-2.5">
-            <TWText className={columnTitle}>
-              Stack
+          <View className="max-w-52 gap-2.5">
+            <TWText className={columnTitle}>Built for place</TWText>
+            <TWText className="text-sm leading-6 text-text-muted">
+              First-party catalogue, entrance-aware routes, verified sources and
+              spatial storytelling.
             </TWText>
-            {STACK.map((item) => (
-              <TWText key={item} className="text-sm text-cyan-100/50">
-                {item}
-              </TWText>
-            ))}
           </View>
         </View>
       </View>
 
-      {/* Legal bar */}
-      <View className="border-t border-cyan-400/15">
+      <View className="border-t border-border">
         <View className="mx-auto w-full max-w-screen-2xl flex-row flex-wrap items-center justify-between gap-2 px-4 py-5 sm:px-6">
-          <TWText className="text-xs text-cyan-100/40">© Harlem Might</TWText>
-          <TWText className="text-xs text-cyan-100/40">MIT licensed — make it yours.</TWText>
+          <TWText className="text-xs text-text-muted">© Harlem Might</TWText>
+          <TWText className="text-xs text-text-muted">Built for Harlem first.</TWText>
         </View>
       </View>
     </Footer>
