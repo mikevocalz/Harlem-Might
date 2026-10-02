@@ -3,6 +3,7 @@ import { View } from '@acme/ui/tw';
 import { Document } from '../Document';
 import { SiteHeader } from '../../components/site/SiteHeader';
 import { SiteFooter } from '../../components/site/SiteFooter';
+import { ProductSiteMotion } from '../../components/site/ProductSiteMotion';
 import '../rn-globals';
 import '../globals.css';
 
@@ -12,15 +13,17 @@ export const metadata: Metadata = {
     template: '%s — Harlem Might',
   },
   description:
-    'Harlem Might — a universal spatial app: Expo SDK 58, Next.js, Skia, Rive and Viro/OpenXR.',
+    'Explore Harlem through places, stories, culture, routes and spatial context — all connected to the neighborhood.',
 };
 
 export default function SiteLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <Document>
-      <SiteHeader />
-      <View className="min-h-screen flex-1">{children}</View>
-      <SiteFooter />
+      <ProductSiteMotion>
+        <SiteHeader />
+        <View className="min-h-screen flex-1 bg-[#050505]">{children}</View>
+        <SiteFooter />
+      </ProductSiteMotion>
     </Document>
   );
 }
