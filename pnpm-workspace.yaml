@@ -39,6 +39,7 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
   esbuild: true
+  kinetrell@https://codeload.github.com/mikevocalz/Kinetrell/tar.gz/344de51531ce050c4311d3feb70e4d596bdc8041: true
 
 # Expo SDK 58 packages were published together. Keep pnpm's 24-hour
 # release-age protection for the rest of the graph while allowing the explicitly
