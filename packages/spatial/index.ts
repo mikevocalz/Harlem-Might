@@ -8,3 +8,5 @@ export { GridRaceScene } from './GridRaceScene';
 export * from './lightcycle';
 export * from './mcp';
 export * from './tabletopRenderState';
+
+export { MightsSightlineHero, type MightsSightlineHeroProps } from './MightsSightlineHero';
