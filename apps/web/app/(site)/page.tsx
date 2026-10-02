@@ -1,5 +1,5 @@
-import { SpatialScreen } from '@acme/spatial';
+import { ProductHome } from '../../components/site/ProductHome';
 
 export default function HomePage() {
-  return <SpatialScreen />;
+  return <ProductHome />;
 }
