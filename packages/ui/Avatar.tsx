@@ -1,34 +1,68 @@
+'use client';
 import { tv, type VariantProps } from 'tailwind-variants';
 import { SolitoImage } from 'solito/image';
 import { View, Text } from './tw';
 
 const avatar = tv({
   slots: {
-    root: 'relative items-center justify-center overflow-hidden rounded-md border-2 border-border bg-burgundy-200',
-    initials: 'font-semibold text-burgundy-800',
+    root:
+      'relative shrink-0 items-center justify-center overflow-hidden border border-border bg-surface-sunken',
+    initials: 'font-semibold tracking-[-0.02em]',
   },
   variants: {
     size: {
+      xs: { root: 'h-7 w-7', initials: 'text-[10px]' },
       sm: { root: 'h-8 w-8', initials: 'text-xs' },
       md: { root: 'h-11 w-11', initials: 'text-sm' },
-      lg: { root: 'h-16 w-16', initials: 'text-xl' },
-      xl: { root: 'h-24 w-24', initials: 'text-3xl' },
+      lg: { root: 'h-14 w-14', initials: 'text-base' },
+      xl: { root: 'h-20 w-20', initials: 'text-2xl' },
+    },
+    entity: {
+      person: { root: 'rounded-full' },
+      business: { root: 'rounded-xl' },
     },
   },
-  defaultVariants: { size: 'md' },
+  defaultVariants: { size: 'md', entity: 'person' },
 });
+
+const FALLBACK_TONES = [
+  'bg-gold-50 text-gold-800',
+  'bg-forest-50 text-forest-800',
+  'bg-sky-50 text-sky-800',
+  'bg-rose-50 text-rose-800',
+] as const;
 
 export interface AvatarProps extends VariantProps<typeof avatar> {
   name: string;
-  imageUri?: string;
+  imageUri?: string | null;
+  fallbackLabel?: string;
   className?: string;
 }
 
 const initialsOf = (name: string) =>
-  name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('');
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase())
+    .join('');
 
-export function Avatar({ name, imageUri, size, className }: AvatarProps) {
-  const { root, initials } = avatar({ size });
+const toneFor = (value: string) => {
+  const index = Array.from(value).reduce((sum, character) => sum + character.charCodeAt(0), 0);
+  return FALLBACK_TONES[index % FALLBACK_TONES.length];
+};
+
+export function Avatar({
+  name,
+  imageUri,
+  fallbackLabel,
+  size,
+  entity,
+  className,
+}: AvatarProps) {
+  const { root, initials } = avatar({ size, entity });
+  const label = fallbackLabel?.trim() || initialsOf(name) || 'HM';
+
   return (
     <View className={root({ className })} aria-label={name}>
       {imageUri ? (
@@ -38,10 +72,12 @@ export function Avatar({ name, imageUri, size, className }: AvatarProps) {
           fill
           unoptimized
           contentFit="cover"
-          sizes="64px"
+          sizes="80px"
         />
       ) : (
-        <Text className={initials()}>{initialsOf(name)}</Text>
+        <View className={`h-full w-full items-center justify-center ${toneFor(name)}`}>
+          <Text className={initials()}>{label}</Text>
+        </View>
       )}
     </View>
   );

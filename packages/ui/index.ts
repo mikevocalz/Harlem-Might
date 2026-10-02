@@ -11,7 +11,8 @@ export { Button, type ButtonProps } from './Button';
 export { IconButton, type IconButtonProps } from './IconButton';
 export { Card, type CardProps } from './Card';
 export { Badge, type BadgeProps } from './Badge';
-export { Avatar, type AvatarProps } from './Avatar';
+export { Avatar, Avatar as MightsAvatar, type AvatarProps } from './Avatar';
+export { BusinessIdentity, type BusinessIdentityProps } from './BusinessIdentity';
 export { Image, type ImageProps } from './Image';
 
 // forms
@@ -44,7 +45,12 @@ export { TabBarAccessory, type TabBarAccessoryProps } from './TabBarAccessory';
 
 // data
 export { VirtualList, type VirtualListProps } from './VirtualList';
-export { DataTable, type DataTableProps, type ColumnDef } from './DataTable';
+export {
+  DataTable,
+  DataTable as MightsTable,
+  type DataTableProps,
+  type ColumnDef,
+} from './DataTable';
 export { useAppForm, withForm, useFieldContext, useFormContext, useFormStore } from './form';
 
 export { SafeArea, type SafeAreaProps } from './SafeArea';
