@@ -7,11 +7,18 @@ const rawSemanticTags = [
   'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'li',
 ]
 
+const productMotionFiles = [
+  'components/site/ProductHome.tsx',
+  'components/site/SiteMotionShell.tsx',
+  'components/site/SiteHeader.tsx',
+  'components/site/SiteFooter.tsx',
+]
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   {
     files: ['**/*.ts', '**/*.tsx'],
-    ignores: ['components/site/Landing.tsx'],
+    ignores: productMotionFiles,
     rules: {
       'no-restricted-imports': [
         'error',
@@ -33,7 +40,7 @@ const eslintConfig = defineConfig([
             },
             {
               group: ['gsap', 'gsap/*'],
-              message: 'GSAP is scoped to components/site/Landing.tsx for the public landing experience.',
+              message: 'Raw GSAP is scoped to the Kinetrell-owned product-site motion layer.',
             },
           ],
         },
@@ -42,7 +49,7 @@ const eslintConfig = defineConfig([
   },
   {
     files: ['app/(site)/**/*.tsx', 'components/site/**/*.tsx'],
-    ignores: ['components/site/Landing.tsx', 'app/Document.tsx'],
+    ignores: ['app/Document.tsx'],
     rules: {
       'no-restricted-syntax': [
         'error',
