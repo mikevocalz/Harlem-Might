@@ -111,6 +111,9 @@ export interface InputBaseProps extends P {
   placeholderTextColor?: string;
   numberOfLines?: number;
   autoFocus?: boolean;
+  autoComplete?: React.InputHTMLAttributes<HTMLInputElement>['autoComplete'];
+  autoCapitalize?: React.InputHTMLAttributes<HTMLInputElement>['autoCapitalize'];
+  inputMode?: React.InputHTMLAttributes<HTMLInputElement>['inputMode'];
   onBlur?: () => void;
   onFocus?: () => void;
   role?: string;
@@ -172,3 +175,20 @@ export const DropSurface = ({
 }: DropSurfaceProps) => (
   <div {...toDom(className, style)} {...props} />
 );
+
+
+export const DocumentHtmlBase = dom<P & { lang?: string }>('html');
+export const DocumentHeadBase = dom('head');
+export const DocumentBodyBase = dom('body');
+
+
+export type GpuCanvasBaseProps =
+  Omit<React.CanvasHTMLAttributes<HTMLCanvasElement>, 'className' | 'style'> &
+  P;
+
+export const GpuCanvasBase = React.forwardRef<
+  HTMLCanvasElement,
+  GpuCanvasBaseProps
+>(function GpuCanvasBase({ className, style, ...props }, ref) {
+  return <canvas ref={ref} {...toDom(className, style)} {...props} />;
+});

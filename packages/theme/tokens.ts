@@ -87,25 +87,23 @@ export const palette = {
 // Emitted as `light-dark(...)` so system-following is zero-code on every platform.
 
 export const semantic = {
-  surface: { light: palette.ink[50], dark: '#161411' },
-  'surface-raised': { light: palette.white, dark: '#211F1B' },
-  'surface-sunken': { light: palette.ink[100], dark: '#0F0E0C' },
-  text: { light: palette.ink[950], dark: palette.ink[50] },
-  'text-muted': { light: palette.ink[600], dark: palette.ink[400] },
-  'text-inverse': { light: palette.ink[50], dark: palette.ink[950] },
-  // RETRO: flat electric yellow, black ink on top
-  primary: { light: palette.burgundy[400], dark: palette.burgundy[400] },
-  'primary-pressed': { light: palette.burgundy[500], dark: palette.burgundy[500] },
-  'on-primary': { light: palette.ink[950], dark: palette.ink[950] },
-  accent: { light: palette.ember[500], dark: palette.ember[400] },
-  'accent-pressed': { light: palette.ember[600], dark: palette.ember[500] },
-  'on-accent': { light: palette.ink[950], dark: palette.ink[950] },
-  // RETRO: borders are ink, not grey — the outline IS the design
-  border: { light: palette.ink[950], dark: palette.ink[50] },
-  'border-strong': { light: '#000000', dark: '#FFFDF7' },
-  focus: { light: palette.gold[500], dark: palette.gold[400] },
-  danger: { light: '#D31F2B', dark: '#FF7A85' },
-  'on-danger': { light: palette.white, dark: '#3D0508' },
+  surface: { light: '#EEF0EC', dark: '#0E1412' },
+  'surface-raised': { light: '#FFFFFF', dark: '#171E1B' },
+  'surface-sunken': { light: '#E5E9E5', dark: '#101714' },
+  text: { light: '#171C1A', dark: '#F7F9F7' },
+  'text-muted': { light: '#4D5652', dark: '#AEB8B3' },
+  'text-inverse': { light: '#F7F9F7', dark: '#171C1A' },
+  primary: { light: '#1F4FE0', dark: '#7295FF' },
+  'primary-pressed': { light: '#173DB3', dark: '#91AAFF' },
+  'on-primary': { light: '#FFFFFF', dark: '#0E1412' },
+  accent: { light: '#C8102E', dark: '#FF6B7F' },
+  'accent-pressed': { light: '#A70D27', dark: '#FF8A99' },
+  'on-accent': { light: '#FFFFFF', dark: '#0E1412' },
+  border: { light: '#CBD2CE', dark: '#33403A' },
+  'border-strong': { light: '#7D8983', dark: '#6D7B75' },
+  focus: { light: '#0E8FA3', dark: '#5FD1E1' },
+  danger: { light: '#B4232F', dark: '#FF7A85' },
+  'on-danger': { light: '#FFFFFF', dark: '#3D0508' },
 } as const;
 
 // ---- typography -------------------------------------------------------------
@@ -156,11 +154,11 @@ export const radius = {
   full: '9999px',
 } as const;
 
-// RETRO elevation: hard offset slabs in the border color — no blur, ever.
+// Harlem Mights elevation: quiet depth on light surfaces; geometry and rails carry emphasis.
 export const shadows = {
-  card: '4px 4px 0 0 var(--color-border-strong)',
-  raised: '6px 6px 0 0 var(--color-border-strong)',
-  overlay: '9px 9px 0 0 var(--color-border-strong)',
+  card: '0 1px 2px rgba(23, 28, 26, 0.08), 0 8px 24px rgba(23, 28, 26, 0.05)',
+  raised: '0 10px 30px rgba(23, 28, 26, 0.10)',
+  overlay: '0 18px 54px rgba(23, 28, 26, 0.16)',
 } as const;
 
 export const zIndex = {
