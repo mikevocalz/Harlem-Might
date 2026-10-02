@@ -34,6 +34,7 @@ export function ProductSiteMotion({ children }: { children: React.ReactNode }) {
       refreshOnConnect: true,
     });
 
+    const triggers: Array<ReturnType<typeof attachScrollTrigger>> = [];
     const context = gsap.context(() => {
       gsap.fromTo(
         '[data-site-header]',
@@ -42,7 +43,7 @@ export function ProductSiteMotion({ children }: { children: React.ReactNode }) {
       );
 
       const sections = gsap.utils.toArray<HTMLElement>('[data-motion-section]');
-      const triggers = sections.map((section) => {
+      sections.forEach((section) => {
         const tween = gsap.fromTo(
           section,
           { y: 54, opacity: 0.001 },
@@ -55,12 +56,14 @@ export function ProductSiteMotion({ children }: { children: React.ReactNode }) {
           },
         );
 
-        return attachScrollTrigger(tween, {
-          trigger: section,
-          start: 'top 84%',
-          end: 'top 52%',
-          scrub: 0.55,
-        });
+        triggers.push(
+          attachScrollTrigger(tween, {
+            trigger: section,
+            start: 'top 84%',
+            end: 'top 52%',
+            scrub: 0.55,
+          }),
+        );
       });
 
       const footer = document.querySelector<HTMLElement>('[data-site-footer]');
@@ -80,10 +83,10 @@ export function ProductSiteMotion({ children }: { children: React.ReactNode }) {
         );
       }
 
-      return () => triggers.forEach((trigger) => trigger.kill());
     });
 
     return () => {
+      triggers.forEach((trigger) => trigger.kill());
       context.revert();
       disconnect();
       owned.destroy();
