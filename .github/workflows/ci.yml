@@ -4,16 +4,11 @@ on:
     branches: [main]
   pull_request:
 
-permissions:
-  contents: write
-
 jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
       - name: Fail on committed .env files
         run: |
           if git ls-files | grep -E '(^|/)\.env(\..*)?$' | grep -v '\.env\.example$'; then
@@ -22,28 +17,11 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
+          # Single source of truth for the Node floor (RN 0.87 requires >= 22.13.0).
+          # Bump .nvmrc and the root package.json "engines" together.
           node-version-file: .nvmrc
           cache: pnpm
-      - name: Resolve menu dependency lockfile
-        if: github.event_name == 'pull_request' && github.head_ref == 'feat/restaurant-menu-viewer'
-        run: |
-          pnpm clean --lockfile
-          pnpm install
-      - name: Commit resolved menu lockfile
-        if: github.event_name == 'pull_request' && github.head_ref == 'feat/restaurant-menu-viewer'
-        run: |
-          if git diff --quiet -- pnpm-lock.yaml; then
-            echo "pnpm produced no lockfile changes"
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add pnpm-lock.yaml
-            git commit -m "chore(menus): regenerate pnpm lockfile"
-            git push origin HEAD:${{ github.head_ref }}
-          fi
-      - name: Frozen install
-        if: github.head_ref != 'feat/restaurant-menu-viewer'
-        run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
       - run: pnpm spatial:verify-android
       - run: pnpm spatial:verify-typegpu
       - run: pnpm --filter @acme/spatial test
