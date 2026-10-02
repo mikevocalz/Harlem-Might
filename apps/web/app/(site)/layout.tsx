@@ -1,26 +1,22 @@
 import type { Metadata } from 'next';
-import { View } from '@acme/ui/tw';
 import { Document } from '../Document';
-import { SiteHeader } from '../../components/site/SiteHeader';
-import { SiteFooter } from '../../components/site/SiteFooter';
+import { SiteMotionShell } from '../../components/site/SiteMotionShell';
 import '../rn-globals';
 import '../globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Harlem Might',
+    default: 'Harlem Might — see the block, know the story',
     template: '%s — Harlem Might',
   },
   description:
-    'Harlem Might — a universal spatial app: Expo SDK 58, Next.js, Skia, Rive and Viro/OpenXR.',
+    'Discover Harlem through places, local context, entrance-aware routes and spatial stories that stay attached to the block where they belong.',
 };
 
 export default function SiteLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <Document>
-      <SiteHeader />
-      <View className="min-h-screen flex-1">{children}</View>
-      <SiteFooter />
+      <SiteMotionShell>{children}</SiteMotionShell>
     </Document>
   );
 }
