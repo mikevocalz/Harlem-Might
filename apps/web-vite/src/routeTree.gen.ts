@@ -8,6 +8,7 @@ import { Route as StoriesRouteImport } from './routes/stories'
 import { Route as TodayRouteImport } from './routes/today'
 import { Route as ArRouteImport } from './routes/ar'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminBusinessesRouteImport } from './routes/admin/businesses'
 import { Route as PagesIndexRouteImport } from './routes/pages/index'
@@ -20,6 +21,7 @@ const StoriesRoute = StoriesRouteImport.update({ id: '/stories', path: '/stories
 const TodayRoute = TodayRouteImport.update({ id: '/today', path: '/today', getParentRoute: () => rootRouteImport } as any)
 const ArRoute = ArRouteImport.update({ id: '/ar', path: '/ar', getParentRoute: () => rootRouteImport } as any)
 const AboutRoute = AboutRouteImport.update({ id: '/about', path: '/about', getParentRoute: () => rootRouteImport } as any)
+const ProfileRoute = ProfileRouteImport.update({ id: '/profile', path: '/profile', getParentRoute: () => rootRouteImport } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({ id: '/admin/', path: '/admin/', getParentRoute: () => rootRouteImport } as any)
 const AdminBusinessesRoute = AdminBusinessesRouteImport.update({ id: '/admin/businesses', path: '/admin/businesses', getParentRoute: () => rootRouteImport } as any)
 const PagesIndexRoute = PagesIndexRouteImport.update({ id: '/pages/', path: '/pages/', getParentRoute: () => rootRouteImport } as any)
@@ -33,6 +35,7 @@ export interface FileRoutesByFullPath {
   '/today': typeof TodayRoute
   '/ar': typeof ArRoute
   '/about': typeof AboutRoute
+  '/profile': typeof ProfileRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/businesses': typeof AdminBusinessesRoute
   '/pages/$slug': typeof PagesSlugRoute
@@ -46,6 +49,7 @@ export interface FileRoutesByTo {
   '/today': typeof TodayRoute
   '/ar': typeof ArRoute
   '/about': typeof AboutRoute
+  '/profile': typeof ProfileRoute
   '/admin': typeof AdminIndexRoute
   '/admin/businesses': typeof AdminBusinessesRoute
   '/pages/$slug': typeof PagesSlugRoute
@@ -60,6 +64,7 @@ export interface FileRoutesById {
   '/today': typeof TodayRoute
   '/ar': typeof ArRoute
   '/about': typeof AboutRoute
+  '/profile': typeof ProfileRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/businesses': typeof AdminBusinessesRoute
   '/pages/$slug': typeof PagesSlugRoute
@@ -67,10 +72,10 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/explore' | '/walks' | '/stories' | '/today' | '/ar' | '/about' | '/admin/' | '/admin/businesses' | '/pages/$slug' | '/pages/'
+  fullPaths: '/' | '/explore' | '/walks' | '/stories' | '/today' | '/ar' | '/about' | '/profile' | '/admin/' | '/admin/businesses' | '/pages/$slug' | '/pages/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/explore' | '/walks' | '/stories' | '/today' | '/ar' | '/about' | '/admin' | '/admin/businesses' | '/pages/$slug' | '/pages'
-  id: '__root__' | '/' | '/explore' | '/walks' | '/stories' | '/today' | '/ar' | '/about' | '/admin/' | '/admin/businesses' | '/pages/$slug' | '/pages/'
+  to: '/' | '/explore' | '/walks' | '/stories' | '/today' | '/ar' | '/about' | '/profile' | '/admin' | '/admin/businesses' | '/pages/$slug' | '/pages'
+  id: '__root__' | '/' | '/explore' | '/walks' | '/stories' | '/today' | '/ar' | '/about' | '/profile' | '/admin/' | '/admin/businesses' | '/pages/$slug' | '/pages/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -81,6 +86,7 @@ export interface RootRouteChildren {
   TodayRoute: typeof TodayRoute
   ArRoute: typeof ArRoute
   AboutRoute: typeof AboutRoute
+  ProfileRoute: typeof ProfileRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminBusinessesRoute: typeof AdminBusinessesRoute
   PagesSlugRoute: typeof PagesSlugRoute
@@ -95,6 +101,7 @@ declare module '@tanstack/react-router' {
     '/today': { id: '/today'; path: '/today'; fullPath: '/today'; preLoaderRoute: typeof TodayRouteImport; parentRoute: typeof rootRouteImport }
     '/ar': { id: '/ar'; path: '/ar'; fullPath: '/ar'; preLoaderRoute: typeof ArRouteImport; parentRoute: typeof rootRouteImport }
     '/about': { id: '/about'; path: '/about'; fullPath: '/about'; preLoaderRoute: typeof AboutRouteImport; parentRoute: typeof rootRouteImport }
+    '/profile': { id: '/profile'; path: '/profile'; fullPath: '/profile'; preLoaderRoute: typeof ProfileRouteImport; parentRoute: typeof rootRouteImport }
     '/admin/': { id: '/admin/'; path: '/admin'; fullPath: '/admin/'; preLoaderRoute: typeof AdminIndexRouteImport; parentRoute: typeof rootRouteImport }
     '/admin/businesses': { id: '/admin/businesses'; path: '/admin/businesses'; fullPath: '/admin/businesses'; preLoaderRoute: typeof AdminBusinessesRouteImport; parentRoute: typeof rootRouteImport }
     '/pages/': { id: '/pages/'; path: '/pages'; fullPath: '/pages/'; preLoaderRoute: typeof PagesIndexRouteImport; parentRoute: typeof rootRouteImport }
@@ -109,6 +116,7 @@ const rootRouteChildren: RootRouteChildren = {
   TodayRoute,
   ArRoute,
   AboutRoute,
+  ProfileRoute,
   AdminIndexRoute,
   AdminBusinessesRoute,
   PagesSlugRoute,

@@ -382,3 +382,16 @@ Its `RESPONSIVE_SCREEN_BREAKPOINT = 1024` single boolean and its practice of
 rendering different subtrees per size class were both rejected: this app uses
 four Material window size classes and keeps ONE tree, so panes survive rotation
 and multi-window resize with scroll position, selection and search intact.
+
+
+## Web foldable support
+
+Harlem Mights adds a real `index.web.tsx` implementation.
+
+The web fallback uses ordinary window-size classes everywhere and opportunistically adds:
+- `navigator.devicePosture`
+- `window.viewport.segments`
+
+when the browser exposes them. These APIs are experimental and not Baseline; absence is a supported state, never an error.
+
+See `docs/ADAPTIVE_EXPLORE_LAYOUT.md` for the Master / Map / Detail / Mights Panel responsibilities.

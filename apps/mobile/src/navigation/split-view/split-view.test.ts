@@ -20,6 +20,7 @@ describe('windowSizeClassForWidth', () => {
     assert.equal(windowSizeClassForWidth(WINDOW_SIZE_CLASS_MIN_WIDTH_DP.compact), 'compact');
     assert.equal(windowSizeClassForWidth(WINDOW_SIZE_CLASS_MIN_WIDTH_DP.medium), 'medium');
     assert.equal(windowSizeClassForWidth(WINDOW_SIZE_CLASS_MIN_WIDTH_DP.expanded), 'expanded');
+    assert.equal(windowSizeClassForWidth(WINDOW_SIZE_CLASS_MIN_WIDTH_DP.large), 'large');
     assert.equal(windowSizeClassForWidth(WINDOW_SIZE_CLASS_MIN_WIDTH_DP.extraLarge), 'extraLarge');
   });
 
@@ -29,7 +30,9 @@ describe('windowSizeClassForWidth', () => {
     assert.equal(windowSizeClassForWidth(839), 'medium');
     assert.equal(windowSizeClassForWidth(840), 'expanded');
     assert.equal(windowSizeClassForWidth(1199), 'expanded');
-    assert.equal(windowSizeClassForWidth(1200), 'extraLarge');
+    assert.equal(windowSizeClassForWidth(1200), 'large');
+    assert.equal(windowSizeClassForWidth(1599), 'large');
+    assert.equal(windowSizeClassForWidth(1600), 'extraLarge');
   });
 });
 
@@ -43,14 +46,15 @@ describe('paneVisibility', () => {
     }
   });
 
-  it('gives the three-pane shape sidebar + supplementary + inspector only at extraLarge', () => {
-    const xl = paneVisibility('extraLarge', 2);
-    assert.deepEqual(xl, {
-      primary: true,
-      supplementary: true,
-      inspector: true,
-      primaryNarrow: false,
-    });
+  it('gives large and extra-large three-pane layouts the inspector', () => {
+    for (const sizeClass of ['large', 'extraLarge'] as const) {
+      assert.deepEqual(paneVisibility(sizeClass, 2), {
+        primary: true,
+        supplementary: true,
+        inspector: true,
+        primaryNarrow: false,
+      });
+    }
   });
 
   it('narrows the sidebar to a rail at expanded before dropping it at medium', () => {

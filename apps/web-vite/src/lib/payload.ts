@@ -79,6 +79,12 @@ export interface CmsPlace {
   primaryCategory?: string | null;
   primaryArea?: string | null;
   logo?: string | CmsMedia | null;
+  menus?: Array<{
+    id?: string | null;
+    label?: string | null;
+    format?: 'image_gallery' | 'pdf' | 'web' | null;
+    active?: boolean | null;
+  }> | null;
   dataQuality?: {
     state?: string | null;
     lastReviewedAt?: string | null;
