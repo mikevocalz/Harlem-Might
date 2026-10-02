@@ -111,6 +111,9 @@ export interface InputBaseProps extends P {
   placeholderTextColor?: string;
   numberOfLines?: number;
   autoFocus?: boolean;
+  autoComplete?: React.InputHTMLAttributes<HTMLInputElement>['autoComplete'];
+  autoCapitalize?: React.InputHTMLAttributes<HTMLInputElement>['autoCapitalize'];
+  inputMode?: React.InputHTMLAttributes<HTMLInputElement>['inputMode'];
   onBlur?: () => void;
   onFocus?: () => void;
   role?: string;
