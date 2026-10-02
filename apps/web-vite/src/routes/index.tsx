@@ -1,5 +1,6 @@
 import { Link, createFileRoute } from '@tanstack/react-router';
-import { Card, GridScene, Heading, Text } from '@acme/ui';
+import { Card, GridScene, Heading, MightsParallax, Text } from '@acme/ui';
+import { MightsSightlineHero } from '@acme/spatial';
 import { Main, Section, View } from '@acme/ui/tw';
 import { listPages, type CmsStatus } from '@/lib/payload';
 import { PageCard } from '@/components/page-card';
@@ -58,8 +59,8 @@ function LandingPage() {
           />
         </View>
 
-        <Section className="relative mx-auto w-full max-w-screen-2xl gap-6 px-4 py-20 sm:px-6 sm:py-28 lg:py-36">
-          <View className="max-w-4xl gap-5">
+        <Section className="relative mx-auto w-full max-w-screen-2xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:flex-row lg:items-center lg:py-28">
+          <View className="max-w-3xl flex-1 gap-5">
             <Text className="self-start rounded-full border border-border bg-surface-raised/90 px-3 py-1.5 text-xs font-medium text-text-muted shadow-card">
               A spatial guide to Harlem
             </Text>
@@ -88,6 +89,19 @@ function LandingPage() {
               Built from local knowledge, public records and verified sources.
             </Text>
           </View>
+
+          <MightsParallax className="min-h-[360px] flex-1 lg:min-h-[520px]" distance={88}>
+            <View className="relative min-h-[360px] flex-1 overflow-hidden rounded-[28px] border border-border bg-surface-raised/75 shadow-raised lg:min-h-[520px]">
+              <MightsSightlineHero style={{ flex: 1, minHeight: 360 }} />
+              <View className="pointer-events-none absolute bottom-4 left-4 right-4 flex-row items-center justify-between rounded-xl border border-border bg-surface-raised/90 px-4 py-3 shadow-card">
+                <View className="gap-0.5">
+                  <Text className="text-xs font-semibold text-primary">Mights Sightline</Text>
+                  <Text className="text-xs text-text-muted">Spatial glasses + pocket compute</Text>
+                </View>
+                <Text className="text-xs font-semibold text-text">Map → route → AR</Text>
+              </View>
+            </View>
+          </MightsParallax>
         </Section>
       </View>
 
