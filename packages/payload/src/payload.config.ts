@@ -7,9 +7,13 @@ import { Users } from './collections/Users';
 import { Media } from './collections/Media';
 import { Pages } from './collections/Pages';
 import { Places } from './collections/Places';
+import { Members } from './collections/Members';
+import { SavedPlaces } from './collections/SavedPlaces';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const serverURL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+const webViteURL = process.env.WEB_VITE_URL || 'http://localhost:5173';
+const allowedOrigins = [serverURL, webViteURL];
 
 export default buildConfig({
   admin: {
@@ -22,7 +26,7 @@ export default buildConfig({
   routes: {
     api: '/payload-api',
   },
-  collections: [Users, Media, Pages, Places],
+  collections: [Users, Members, Media, Pages, Places, SavedPlaces],
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URL,
@@ -33,8 +37,8 @@ export default buildConfig({
     push: process.env.PAYLOAD_PUSH === 'true',
     schemaName: 'payload',
   }),
-  cors: [serverURL],
-  csrf: [serverURL],
+  cors: allowedOrigins,
+  csrf: allowedOrigins,
   secret: process.env.PAYLOAD_SECRET || '',
   sharp,
   typescript: {
