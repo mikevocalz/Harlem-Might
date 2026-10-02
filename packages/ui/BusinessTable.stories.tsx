@@ -38,7 +38,7 @@ const COLUMNS: ColumnDef<BusinessRow, unknown>[] = [
     header: 'Status',
     cell: ({ getValue }) => {
       const value = String(getValue());
-      const tone = value === 'Verified' ? 'success' : value === 'Draft' ? 'neutral' : 'warning';
+      const tone = value === 'Verified' ? 'success' : value === 'Draft' ? 'neutral' : 'accent';
       return <Badge label={value} tone={tone} />;
     },
   },
