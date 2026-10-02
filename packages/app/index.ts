@@ -1,7 +1,6 @@
 // @acme/app — universal business/domain logic and shared screens.
 // Screens live in features/* (Solito pattern); add domains alongside them.
 export { HomeScreen } from './features/home/screen';
-export { ExploreScreen } from './features/explore/screen';
 export { NotificationsScreen } from './features/notifications/screen';
 export { ProfileScreen } from './features/profile/screen';
 export { SettingsScreen } from './features/settings/screen';
@@ -18,3 +17,16 @@ export { ErrorScreen } from './features/error/screen';
 export { AppQueryProvider, createQueryClient } from './providers/query-provider';
 export { SafeAreaProvider } from './providers/safe-area';
 export * from './features/editor';
+
+export { ExploreMasterPane } from './features/explore/ExploreMasterPane';
+export { ExploreMapPane } from './features/explore/ExploreMapPane';
+export { ExplorePlaceDetail } from './features/explore/ExplorePlaceDetail';
+export { ExploreEmptyDetail } from './features/explore/ExploreEmptyDetail';
+export { MightsPanel } from './features/explore/MightsPanel';
+export {
+  HARLEM_PLACE_PREVIEWS,
+  HARLEM_CATEGORIES,
+  getHarlemPlacePreview,
+  useExplore,
+  type HarlemPlacePreview,
+} from './features/explore/explore.store';
