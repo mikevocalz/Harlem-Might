@@ -144,3 +144,8 @@ function toNativeInputProps(
 
 export const LabelBase = (props: P) => <Span role={'label' as never} {...props} />;
 export const FormBase = (props: P) => <Div role="form" {...props} />;
+
+
+export const DocumentHtmlBase = ({ children }: P) => <>{children}</>;
+export const DocumentHeadBase = ({ children }: P) => <>{children}</>;
+export const DocumentBodyBase = ({ children }: P) => <>{children}</>;
