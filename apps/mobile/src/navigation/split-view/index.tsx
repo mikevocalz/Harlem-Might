@@ -1,10 +1,7 @@
-// TS resolution anchor — bundlers load the .native/.web forks.
+// TypeScript resolution anchor. Platform bundlers select index.ios.tsx,
+// index.android.tsx, or index.web.tsx.
 //
-// MUST be .tsx, matching the forks' extension. Metro resolves in the order
-// .android.ts | .native.ts | .ts | .android.tsx | .native.tsx | .tsx — so a
-// `.ts` anchor beside `.tsx` forks wins on native and silently ships the WEB
-// build to the device.
-//
-// There is no .web fork: apps/web does not depend on expo-router, so this
-// module is native-only. See README.md.
+// Web now has a real adaptive implementation. It uses the same width-class
+// policy as native and augments it with Device Posture + Viewport Segments when
+// those experimental browser APIs exist.
 export * from './index.ios';
