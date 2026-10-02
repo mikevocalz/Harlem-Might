@@ -12,14 +12,6 @@ importers:
 
 packages:
 
-  '@kishannareshpal/expo-pdf@0.3.2':
-    resolution: {tarball: https://registry.npmjs.org/@kishannareshpal/expo-pdf/-/expo-pdf-0.3.2.tgz}
-    peerDependencies:
-      expo: '*'
-      react: '*'
-      react-native: '*'
-
-
   '@pnpm/exe.android-arm64@12.8.1':
     resolution: {integrity: sha512-siDxcidfz5eM6L2tJfik+i2bbUEw8UC7MZ3Yl2HYdRmqbdhHGAOQACtOOu6QVW4Jul4/w5wVKm+wM8ACtgh1Pg==}
     cpu: [arm64]
@@ -103,13 +95,6 @@ packages:
     hasBin: true
 
 snapshots:
-
-  '@kishannareshpal/expo-pdf@0.3.2(expo@58.0.1)(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)':
-    dependencies:
-      expo: 58.0.1(6b21607a37822b58c7755e7d31a802ba)
-      react: 19.3.0
-      react-native: 0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
-
 
   '@pnpm/exe.android-arm64@12.8.1':
     optional: true
@@ -1325,6 +1310,14 @@ importers:
         version: 6.0.3
 
 packages:
+
+  '@kishannareshpal/expo-pdf@0.3.2':
+    resolution: {tarball: https://registry.npmjs.org/@kishannareshpal/expo-pdf/-/expo-pdf-0.3.2.tgz}
+    peerDependencies:
+      expo: '*'
+      react: '*'
+      react-native: '*'
+
 
   2g@0.4.4:
     resolution: {integrity: sha512-ZwH02IRQicm+92YzJZMS8imSAJaqTPI+VASb1zMnisotnWcEP4e7nb57Mr8C2dGAA5G8ZmialbMmpkGLWgAY/w==}
@@ -9541,6 +9534,13 @@ packages:
         optional: true
 
 snapshots:
+
+  '@kishannareshpal/expo-pdf@0.3.2(expo@58.0.1)(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)':
+    dependencies:
+      expo: 58.0.1(6b21607a37822b58c7755e7d31a802ba)
+      react: 19.3.0
+      react-native: 0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
+
 
   2g@0.4.4(typescript@6.0.3):
     optionalDependencies:
