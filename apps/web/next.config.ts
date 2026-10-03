@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
   // experiments.reactCompiler in app.config.ts.
   reactCompiler: true,
   experimental: {
+    // app/global-not-found.tsx: two root layouts ((site), (payload)) means no
+    // single layout can compose the 404 (not-found.md).
+    globalNotFound: true,
     // NOTE: `viewTransition` was removed in Next 16.3 stable — React's
     // <ViewTransition> now works in the App Router with no configuration
     // (node_modules/next/dist/docs/01-app/02-guides/view-transitions.md).
