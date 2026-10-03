@@ -18,7 +18,7 @@ export function MightsLocationStamp({ name, street, href, tone = 'light', classN
       : 'bg-paper/90 text-text';
   const content = (
     <>
-      <span aria-hidden className="h-2 w-2 shrink-0 rounded-full border-2 border-current" />
+      <span aria-hidden className="h-2 w-2 shrink-0 rotate-45 bg-primary" />
       <span className="font-semibold">{name}</span>
       {street ? <span className="opacity-75">{street}</span> : null}
     </>

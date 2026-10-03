@@ -7,6 +7,7 @@ import { Main, Section, View } from "@acme/ui/tw";
 import {
   MapAttribution,
   MightsAccentFrame,
+  cornerCut,
   MightsButton,
   MightsHeading,
   MightsLocationStamp,
@@ -99,7 +100,8 @@ export function ProductHome() {
               className="pointer-events-auto w-[min(78%,440px)]"
             >
               <MightsAccentFrame className="aspect-square p-3">
-                <View className="h-full w-full overflow-hidden rounded-full border border-rule-rail bg-surface-raised">
+                <View className={`h-full w-full bg-primary p-[2px] ${cornerCut}`}>
+                <View className={`h-full w-full overflow-hidden bg-surface-raised ${cornerCut}`}>
                   <MightsMapImage
                     center={APOLLO.lngLat}
                     zoom={18.4}
@@ -111,6 +113,7 @@ export function ProductHome() {
                     alt="Close view of the Apollo Theater on West 125th Street"
                     priority
                   />
+                </View>
                 </View>
               </MightsAccentFrame>
             </View>
@@ -156,14 +159,9 @@ export function ProductHome() {
               alt="Map of the Apollo Theater, the Studio Museum in Harlem and Sylvia's Restaurant"
             />
           </MightsNotchCard>
-          <View className="grid grid-cols-1 border-t border-rule-rail sm:grid-cols-3">
+          <View className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {BLOCK.map((place) => (
-              <MightsButton
-                key={place.id}
-                href={routes.place(place.id)}
-                variant="ghost"
-                className="border-b border-rule-hairline py-4 sm:border-b-0"
-              >
+              <MightsButton key={place.id} href={routes.place(place.id)} variant="ghost" size="sm" fill>
                 {place.name}
               </MightsButton>
             ))}

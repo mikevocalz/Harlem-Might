@@ -7,6 +7,7 @@ import { MightsButton } from './MightsButton';
 import { MightsWordmark } from './MightsWordmark';
 import { activeSection, primaryNav, routes } from './routes';
 import { useShell } from './store';
+import { expanded } from './geometry';
 
 export interface MightsNavbarProps {
   /** Transparent while a page-top photograph or hero sits under the bar. */
@@ -49,12 +50,12 @@ export function MightsNavbar({ overlay = false, tone = 'iron' }: MightsNavbarPro
                   <Link
                     href={item.href}
                     aria-current={active ? 'page' : undefined}
-                    className="mights-focus group relative flex h-16 items-center px-3 text-[15px] font-medium"
+                    className={`mights-focus group relative flex h-16 items-center px-3.5 text-[14px] font-medium tracking-[0.02em] ${expanded}`}
                   >
                     {item.label}
                     <span
                       aria-hidden
-                      className={`absolute bottom-4 left-3 right-3 h-px origin-left bg-primary transition-transform duration-[120ms] ${
+                      className={`absolute bottom-4 left-3.5 right-3.5 h-[2px] origin-left bg-primary transition-transform duration-[120ms] ${
                         active ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
                       }`}
                     />

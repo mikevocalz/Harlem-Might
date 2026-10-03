@@ -3,9 +3,9 @@
 import { Link } from 'solito/link';
 import { notch } from './geometry';
 
-// The ownable card shape: one notched corner, a 1px rail, photography (or a
-// map) bleeding to the edge, no drop shadow. Hover is a rail-colour change,
-// never a lift.
+// The ownable card shape: centred trapezoid notches top and bottom, a cut
+// corner, a 2px rail, imagery bleeding to the edge, no drop shadow. Hover runs
+// a gold beam along the rail (.mights-beam); it never lifts.
 export interface MightsNotchCardProps {
   href?: string;
   children: React.ReactNode;
@@ -23,9 +23,9 @@ export function MightsNotchCard({
   state = 'rest',
   label,
 }: MightsNotchCardProps) {
-  const rail = state === 'live' ? 'bg-accent' : 'bg-rule-rail/80 group-hover:bg-primary';
+  const rail = state === 'live' ? 'bg-accent' : 'mights-beam';
   const body = (
-    <span className={`relative flex h-full flex-col p-px ${notch} ${rail} transition-colors duration-[120ms]`}>
+    <span className={`relative flex h-full flex-col p-[2px] ${notch} ${rail} transition-colors duration-[120ms]`}>
       <span className={`relative flex h-full flex-col overflow-hidden bg-surface-raised ${notch} ${innerClassName}`}>
         {children}
       </span>

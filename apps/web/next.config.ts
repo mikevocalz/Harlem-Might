@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
   // React Compiler — auto-memoization, same as the mobile app's
   // experiments.reactCompiler in app.config.ts.
   reactCompiler: true,
+  // The floating dev badge sat over the page and read as part of the design.
+  devIndicators: false,
   experimental: {
     // app/global-not-found.tsx: two root layouts ((site), (payload)) means no
     // single layout can compose the 404 (not-found.md).

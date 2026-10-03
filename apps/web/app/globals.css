@@ -155,3 +155,36 @@ dialog.mights-sheet[open] {
 .skip-link:focus {
   top: 0.75rem;
 }
+
+/* Border beam: a gold highlight that travels the card rail while the card is
+   hovered or focused. Resting state is the plain dim-gold rail. */
+@property --beam {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+.mights-beam {
+  background: var(--color-rule-rail);
+}
+.group:hover .mights-beam,
+.group:focus-visible .mights-beam {
+  background: conic-gradient(
+    from var(--beam),
+    var(--color-rule-rail) 0deg 250deg,
+    var(--color-primary) 300deg,
+    var(--color-rule-rail) 350deg 360deg
+  );
+  animation: mights-beam 2.4s linear infinite;
+}
+@keyframes mights-beam {
+  to {
+    --beam: 360deg;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .group:hover .mights-beam,
+  .group:focus-visible .mights-beam {
+    animation: none;
+    background: var(--color-primary);
+  }
+}
