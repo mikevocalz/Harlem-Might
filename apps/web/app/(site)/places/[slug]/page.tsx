@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { HARLEM_PLACE_PREVIEWS, getHarlemPlacePreview, placesNear } from '@acme/app/features/explore/explore.store.ts';
 import { Section, View } from '@acme/ui/tw';
@@ -26,7 +27,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return place ? { title: place.name, description: place.shortDescription } : {};
 }
 
-export default async function PlacePage({ params }: { params: Promise<{ slug: string }> }) {
+// params are awaited inside Suspense so the route can prerender a shell
+// (Cache Components: 'Await params inside <Suspense>').
+export default function PlacePage({ params }: { params: Promise<{ slug: string }> }) {
+  return (
+    <Suspense>
+      <PlacePageContent params={params} />
+    </Suspense>
+  );
+}
+
+async function PlacePageContent({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const place = getHarlemPlacePreview(slug);
   if (!place) notFound();

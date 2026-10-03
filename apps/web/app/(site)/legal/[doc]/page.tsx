@@ -1,38 +1,39 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import { Article, P } from '@acme/ui/tw';
-import { MightsHeading, MightsPage, routes } from '@acme/ui/mights';
+import { View } from '@acme/ui/tw';
+import { MightsFigure, MightsPage, MightsProse, MightsText, type ProseSection, routes } from '@acme/ui/mights';
+import { ACCESSIBILITY, DRAFT_NOTE, LEGAL_UPDATED, PRIVACY, TERMS } from '../../../../content/legal';
+import { companyImage } from '../../../../lib/companyImage';
 
-const DOCS = {
+type Doc = 'privacy' | 'terms' | 'accessibility';
+
+const DOCS: Record<Doc, { title: string; description: string; lead: string; sections: readonly ProseSection[]; alt: string; draft: boolean }> = {
   privacy: {
     title: 'Privacy',
-    description: 'How Harlem Might handles personal information.',
-    body: [
-      'This privacy policy is being prepared and is not yet in effect.',
-      'This page will set out what the site and the app collect, why, and how to ask for your data to be removed.',
-    ],
+    description: 'What Harlem Might collects, what it does not, and how maps are delivered.',
+    lead: 'No accounts, no analytics, no advertising and no tracking on the public site.',
+    sections: PRIVACY,
+    alt: 'Illustration of a quiet Harlem street at night with a single lit window',
+    draft: true,
   },
   terms: {
     title: 'Terms',
-    description: 'Terms of use for Harlem Might.',
-    body: [
-      'These terms of use are being prepared and are not yet in effect.',
-      'This page will set out the conditions for using the site and the app.',
-    ],
+    description: 'The terms for using the Harlem Might website.',
+    lead: 'Use the guide freely, respect the neighborhood, and check details before you travel.',
+    sections: TERMS,
+    alt: 'Illustration of a person on a sidewalk looking up at brownstone façades',
+    draft: true,
   },
   accessibility: {
     title: 'Accessibility',
-    description: 'Accessibility statement for Harlem Might.',
-    body: [
-      'Harlem Might aims to meet the Web Content Accessibility Guidelines (WCAG) 2.2 at level AA.',
-      'Every map on the site has a list alternative, and every page can be used with a keyboard.',
-      'A contact address for reporting barriers is being set up and will be listed here.',
-    ],
+    description: 'How Harlem Might works for people with disabilities, and where it still falls short.',
+    lead: 'Harlem Might aims to meet WCAG 2.2 at level AA, and tells you plainly where it does not yet.',
+    sections: ACCESSIBILITY,
+    alt: 'Illustration of a step-free entrance with a ramp beside a brownstone stoop',
+    draft: false,
   },
-} as const;
-
-type Doc = keyof typeof DOCS;
-const UPDATED = '3 October 2026';
+};
 
 export function generateStaticParams() {
   return Object.keys(DOCS).map((doc) => ({ doc }));
@@ -44,25 +45,36 @@ export async function generateMetadata({ params }: { params: Promise<{ doc: stri
   return entry ? { title: entry.title, description: entry.description } : {};
 }
 
-export default async function LegalPage({ params }: { params: Promise<{ doc: string }> }) {
+// params are awaited inside Suspense so the route can prerender a shell
+// (Cache Components: 'Await params inside <Suspense>').
+export default function LegalPage({ params }: { params: Promise<{ doc: string }> }) {
+  return (
+    <Suspense>
+      <LegalPageContent params={params} />
+    </Suspense>
+  );
+}
+
+async function LegalPageContent({ params }: { params: Promise<{ doc: string }> }) {
   const { doc } = await params;
   const entry = DOCS[doc as Doc];
   if (!entry) notFound();
   return (
     <MightsPage
       title={entry.title}
-      crumbs={[{ label: 'Legal', href: routes.legalIndex() }, { label: entry.title, href: routes.legal(doc as Doc) }]}
+      lead={entry.lead}
+      crumbs={[
+        { label: 'Legal', href: routes.legalIndex() },
+        { label: entry.title, href: routes.legal(doc as Doc) },
+      ]}
     >
-      <Article className="max-w-[80ch] gap-5">
-        <MightsHeading level={2} size="title">
-          Draft, last updated {UPDATED}
-        </MightsHeading>
-        {entry.body.map((line) => (
-          <P key={line} className="font-serif text-[19px] leading-[1.75] text-text">
-            {line}
-          </P>
-        ))}
-      </Article>
+      <MightsFigure src={companyImage(`legal-${doc}`)} alt={entry.alt} priority />
+      {entry.draft ? (
+        <View className="border-l-2 border-primary bg-surface-raised px-5 py-4">
+          <MightsText tone="default">{DRAFT_NOTE}</MightsText>
+        </View>
+      ) : null}
+      <MightsProse sections={entry.sections} updated={LEGAL_UPDATED} />
     </MightsPage>
   );
 }

@@ -16,3 +16,5 @@ export { MightsSearchForm } from './MightsSearchForm';
 export { MightsJsonLd } from './MightsJsonLd';
 export { MightsPage, MightsBand } from './MightsPage';
 export { MightsPlaceBento, type BentoPlace } from './MightsPlaceBento';
+export { MightsFigure } from './MightsFigure';
+export { MightsProse, type ProseSection } from './MightsProse';
