@@ -308,6 +308,9 @@ catalogs:
     expo-asset:
       specifier: 58.0.9
       version: 58.0.9
+    expo-build-properties:
+      specifier: 58.0.10
+      version: 58.0.10
     expo-document-picker:
       specifier: 58.0.3
       version: 58.0.3
@@ -526,6 +529,9 @@ importers:
       '@acme/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@expo-pico/core':
+        specifier: file:../../../expo-pico/packages/expo-pico-core
+        version: file:../expo-pico/packages/expo-pico-core(expo@58.0.1)(react-native-nitro-modules@0.37.1(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
       '@expo/env':
         specifier: 'catalog:'
         version: 2.5.0(supports-color@8.1.1)
@@ -583,6 +589,9 @@ importers:
       expo-asset:
         specifier: 'catalog:'
         version: 58.0.9(expo@58.0.1)(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1)(typescript@6.0.3)
+      expo-build-properties:
+        specifier: 'catalog:'
+        version: 58.0.10(expo@58.0.1)
       expo-drag-drop-content-view:
         specifier: 'catalog:'
         version: 0.9.2(expo@58.0.1)(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
@@ -592,6 +601,9 @@ importers:
       expo-font:
         specifier: 'catalog:'
         version: 58.0.4(expo@58.0.1)(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+      expo-horizon-core:
+        specifier: file:../../../expo-pico/.vendor/expo-horizon/expo-horizon-core
+        version: file:../expo-pico/.vendor/expo-horizon/expo-horizon-core(expo@58.0.1)(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
       expo-image:
         specifier: 'catalog:'
         version: 58.0.8(expo@58.0.1)(react-native-web@0.21.3(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
@@ -616,9 +628,6 @@ importers:
       lucide-react-native:
         specifier: 'catalog:'
         version: 1.48.0(react-native-svg@15.15.5(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
-      nitro-canvas-in-Vision:
-        specifier: link:../../../nitro-canvas-in-Vision
-        version: link:../../../nitro-canvas-in-Vision
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -2378,6 +2387,19 @@ packages:
 
   '@expo-google-fonts/material-symbols@0.4.24':
     resolution: {integrity: sha512-1bJ63Yv2Bn8SN2MjrlbwLwUhnC8COOeejd15H88WjCtw5iNErqEPaBnpvmYyqciVYwudGo5drUIdY9C/5yPGbg==}
+
+  '@expo-pico/core@file:../expo-pico/packages/expo-pico-core':
+    resolution: {directory: ../expo-pico/packages/expo-pico-core, type: directory}
+    hasBin: true
+    peerDependencies:
+      expo: ~57.0.16
+      expo-location: '*'
+      react: 19.3.0
+      react-native: '*'
+      react-native-nitro-modules: '>=0.37.0'
+    peerDependenciesMeta:
+      expo-location:
+        optional: true
 
   '@expo/cli@57.0.16':
     resolution: {integrity: sha512-+HyMY2nAS6QBJb0nSeMz92p11bZ1AtWSRnhWnklznN07IRoQirisnKq2vr18Ayjb/fnb5F/um+n6FRhF0fZm1Q==}
@@ -6231,6 +6253,11 @@ packages:
       react: 19.3.0
       react-native: '*'
 
+  expo-build-properties@58.0.10:
+    resolution: {integrity: sha512-Em8Vjru76RbNiJczohxoTx/b16Ag6PCvqIZWIJeYjIJG6lSxOPtc+54Qw5f+KGIU0WrZCLm+usSN7wbE8tmNNQ==}
+    peerDependencies:
+      expo: '*'
+
   expo-constants@57.0.12:
     resolution: {integrity: sha512-js9qxZw4G9ulSc72GGpYGwtmk/IzFcf6/tTcEG6wB8HTlkunMS4W86R+4e6oHIrIkHA7W6s/79Se+E+DC3RAqA==}
     peerDependencies:
@@ -6283,6 +6310,13 @@ packages:
 
   expo-glass-effect@58.0.3:
     resolution: {integrity: sha512-NoFT5j2uZecNsiDAd47z37PWYTxNJnJMrVYiAU+SggiV9K91Sc0IuIcMsuOM4sUuPBQdSTs8/I9KXk5M0Z2O/w==}
+    peerDependencies:
+      expo: '*'
+      react: 19.3.0
+      react-native: '*'
+
+  expo-horizon-core@file:../expo-pico/.vendor/expo-horizon/expo-horizon-core:
+    resolution: {directory: ../expo-pico/.vendor/expo-horizon/expo-horizon-core, type: directory}
     peerDependencies:
       expo: '*'
       react: 19.3.0
@@ -10564,6 +10598,13 @@ snapshots:
       levn: 0.4.1
 
   '@expo-google-fonts/material-symbols@0.4.24': {}
+
+  '@expo-pico/core@file:../expo-pico/packages/expo-pico-core(expo@58.0.1)(react-native-nitro-modules@0.37.1(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)':
+    dependencies:
+      expo: 58.0.1(6b21607a37822b58c7755e7d31a802ba)
+      react: 19.3.0
+      react-native: 0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
+      react-native-nitro-modules: 0.37.1(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
 
   '@expo/cli@57.0.16(@expo/dom-webview@58.0.2)(@expo/metro-runtime@57.0.11)(expo-constants@57.0.12)(expo-font@57.0.1)(expo@57.0.14)(react-dom@19.3.0(react@19.3.0))(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react-server-dom-webpack@19.2.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(webpack@5.108.4(esbuild@0.25.12)(lightningcss@1.30.1)(postcss@8.5.28)))(react@19.3.0)(supports-color@8.1.1)(typescript@6.0.3)':
     dependencies:
@@ -15681,6 +15722,13 @@ snapshots:
       - supports-color
       - typescript
 
+  expo-build-properties@58.0.10(expo@58.0.1):
+    dependencies:
+      '@expo/schema-utils': 58.0.1
+      expo: 58.0.1(6b21607a37822b58c7755e7d31a802ba)
+      resolve-from: 5.0.0
+      semver: 7.8.5
+
   expo-constants@57.0.12(expo@57.0.14)(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(supports-color@8.1.1):
     dependencies:
       '@expo/env': 2.4.2(supports-color@8.1.1)
@@ -15763,6 +15811,12 @@ snapshots:
       react-native: 0.87.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
 
   expo-glass-effect@58.0.3(expo@58.0.1)(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0):
+    dependencies:
+      expo: 58.0.1(6b21607a37822b58c7755e7d31a802ba)
+      react: 19.3.0
+      react-native: 0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
+
+  expo-horizon-core@file:../expo-pico/.vendor/expo-horizon/expo-horizon-core(expo@58.0.1)(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0):
     dependencies:
       expo: 58.0.1(6b21607a37822b58c7755e7d31a802ba)
       react: 19.3.0

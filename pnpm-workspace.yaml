@@ -84,6 +84,7 @@ catalog:
   "@expo/material-symbols": 0.1.1
   expo-linking: 58.0.9
   expo-router: 58.0.10
+  expo-build-properties: 58.0.10
   expo-splash-screen: 58.0.2
   expo-status-bar: 58.0.2
   expo-system-ui: 58.0.4

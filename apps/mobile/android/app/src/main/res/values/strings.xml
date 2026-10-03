@@ -2,5 +2,7 @@
   <string name="app_name">Harlem Might</string>
   <string name="expo_system_ui_user_interface_style" translatable="false">automatic</string>
   <string name="expo_runtime_version">0.1.0</string>
+  <string name="pico_app_id" translatable="false"/>
+  <string name="pico_spatial_mode" translatable="false">windowed</string>
   <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>
 </resources>

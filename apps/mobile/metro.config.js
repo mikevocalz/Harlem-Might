@@ -63,8 +63,14 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (isBare(moduleName) && isLinked(context.originModulePath)) {
     try {
       return context.resolveRequest({ ...context, originModulePath: APP_ORIGIN }, moduleName, platform);
-    } catch {
-      // Not installed in this app: fall back to the checkout's own copy.
+    } catch (error) {
+      // The fork requires nitro-canvas-in-Vision optionally, inside a try,
+      // for live Rive panels. This app plays baked Rive, so leave it
+      // unresolved: Metro then treats it as a missing optional dependency.
+      if (moduleName === "nitro-canvas-in-Vision" || moduleName.startsWith("nitro-canvas-in-Vision/")) {
+        throw error;
+      }
+      // Anything else not installed here: fall back to the checkout's copy.
     }
   }
   return context.resolveRequest(context, moduleName, platform);

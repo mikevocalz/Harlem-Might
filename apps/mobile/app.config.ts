@@ -33,6 +33,9 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
+    // Quest and PICO run Android 12+; Meta's layout library and
+    // react-native-webgpu's AHardwareBuffer use both need minSdk 29.
+    ['expo-build-properties', { android: { minSdkVersion: 29 } }],
     [
       'expo-splash-screen',
       {
@@ -54,6 +57,17 @@ const config: ExpoConfig = {
     ],
     'expo-image',
     'react-native-webgpu',
+    // Adds the device flavors (mobile, quest) and the Quest manifest: VR
+    // intent category, headtracking, hand tracking and supported devices.
+    // Build with `pnpm --filter mobile android:quest` (questDebug).
+    [
+      'expo-horizon-core',
+      {
+        supportedDevices: 'quest2|questpro|quest3|quest3s',
+        disableVrHeadtracking: false,
+        allowBackup: false,
+      },
+    ],
     [
       '@reactvision/react-viro',
       {
@@ -71,6 +85,32 @@ const config: ExpoConfig = {
           metaVrGlassesCompatible: true,
           questArm64Only: true,
         },
+      },
+    ],
+    // Adds the pico flavor: PICO OS 5 OpenXR loader, manifest and SDK levels.
+    // Build with `pnpm --filter mobile android:pico` (picoDebug).
+    [
+      '@expo-pico/core',
+      {
+        buildVariant: 'pico',
+        xrMode: 'pico-os5',
+        appType: 'mr',
+        targetProfile: 'auto',
+        targetDevices: ['pico-4-ultra'],
+        spatialMode: 'windowed',
+        defaultContainerMode: 'window-container',
+        defaultWidth: '1024dp',
+        defaultHeight: '640dp',
+        handTracking: true,
+        passthrough: true,
+        sceneUnderstanding: false,
+        highSamplingRateSensors: true,
+        refreshRates: [72, 90],
+        ndkAbiFilters: true,
+        openXrLoaderDeclaration: true,
+        developerTools: true,
+        enableEmulatorOptimizations: false,
+        targetSdkVersion: 34,
       },
     ],
   ],

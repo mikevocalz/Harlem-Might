@@ -82,6 +82,33 @@ def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBu
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
 android {
+    // expo-pico-core: 16KB openxr loader overlay
+    packagingOptions {
+        jniLibs {
+            pickFirsts += ["**/libopenxr_loader.so"]
+        }
+    }
+
+    // expo-pico-core: flavor dimensions
+    flavorDimensions += "device"
+    productFlavors {
+        mobile { dimension "device" }
+        pico {
+            dimension "device"
+            minSdkVersion 32
+            targetSdkVersion 34
+            ndk { abiFilters 'arm64-v8a' }
+            missingDimensionStrategy 'device', 'mobile'
+        }
+        quest {
+            dimension "device"
+            minSdkVersion 29
+            targetSdkVersion 34
+            ndk { abiFilters 'arm64-v8a' }
+            missingDimensionStrategy 'device', 'mobile'
+        }
+    }
+
     ndkVersion rootProject.ext.ndkVersion
 
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -198,4 +225,113 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+}
+
+// expo-pico-core: @expo-pico/* module dependencies
+dependencies {
+    implementation project(':expo-pico-core')
+}
+
+
+// expo-pico-core: PICO Platform Service SDK (com.pico.pps:*) deps
+//
+// Declared once, here. No sibling @expo-pico/* package declares a
+// com.pico.pps coordinate of its own, so installing more of them never
+// produces a second declaration of the same artifact.
+//
+// Every service below depends on com.pico.pps:pps_sdk_base. The
+// constraints block pins the whole pinned set — including services this
+// app does not use — so that a declaration added anywhere else resolves
+// to 1.0.0 instead of dragging a second SDK onto the classpath.
+dependencies {
+    constraints {
+        implementation "com.pico.pps:pps_sdk_base:1.0.0"
+        implementation "com.pico.pps:platform-service-achievement:1.0.0"
+        implementation "com.pico.pps:platform-service-auth:1.0.0"
+        implementation "com.pico.pps:platform-service-compliance:1.0.0"
+        implementation "com.pico.pps:platform-service-entitlement:1.0.0"
+        implementation "com.pico.pps:platform-service-friend:1.0.0"
+        implementation "com.pico.pps:platform-service-iap:1.0.0"
+        implementation "com.pico.pps:platform-service-leaderboard:1.0.0"
+        implementation "com.pico.pps:platform-service-push:1.0.0"
+        implementation "com.pico.pps:platform-service-social:1.0.0"
+        implementation "com.pico.pps:platform-service-speech:1.0.0"
+        implementation "com.pico.pps:platform-service-sport:1.0.0"
+    }
+
+    implementation "com.pico.pps:platform-service-achievement:1.0.0"
+    implementation "com.pico.pps:platform-service-auth:1.0.0"
+    implementation "com.pico.pps:platform-service-compliance:1.0.0"
+    implementation "com.pico.pps:platform-service-entitlement:1.0.0"
+    implementation "com.pico.pps:platform-service-friend:1.0.0"
+    implementation "com.pico.pps:platform-service-iap:1.0.0"
+    implementation "com.pico.pps:platform-service-leaderboard:1.0.0"
+    implementation "com.pico.pps:platform-service-push:1.0.0"
+    implementation "com.pico.pps:platform-service-social:1.0.0"
+    implementation "com.pico.pps:platform-service-speech:1.0.0"
+    implementation "com.pico.pps:platform-service-sport:1.0.0"
+}
+
+
+// expo-pico-core: auto-include app/libs/*.aar (PICO Platform SDK)
+//
+// Offline / air-gapped fallback. PICO's integration docs tell you to drop
+// SDK AARs here, so the PPS artifacts resolved from Maven above are
+// excluded by name — a local copy alongside the Maven one is what
+// produces "Duplicate class com.pico.pps.… found in modules".
+dependencies {
+    implementation fileTree(
+        dir: 'libs',
+        include: ['*.aar', '*.jar'],
+        exclude: ['platform-service-*.aar', 'platform-service-*.jar', 'pps_sdk_base*.aar', 'pps_sdk_base*.jar', 'pps_platform_java_base*.aar', 'matrix_psf_api*.aar', 'coreservice.library*.aar', 'sdk.lib.annotations*.jar']
+    )
+}
+
+
+// expo-pico-core: pico sdk config
+def picoAppIdValue = "\"\""
+def picoAppKeyValue = "\"\""
+def picoSpatialModeValue = "\"windowed\""
+def picoTargetProfileValue = "\"pico4ultra\""
+def picoContainerModeValue = "\"window-container\""
+def picoXrModeValue = "\"pico-os5\""
+def picoAppTypeValue = "\"mr\""
+def picoHasPlatformIdentityValue = "false"
+def picoHasIapIdentityValue = "false"
+def picoRefreshRatesValue = "\"72,90\""
+def picoTargetDevicesValue = "\"pico-4-ultra\""
+
+android.defaultConfig {
+    buildConfigField "String", "PICO_APP_ID", picoAppIdValue
+    buildConfigField "String", "PICO_APP_KEY", picoAppKeyValue
+    buildConfigField "String", "PICO_SPATIAL_MODE", picoSpatialModeValue
+    buildConfigField "String", "PICO_TARGET_PROFILE", picoTargetProfileValue
+    buildConfigField "String", "PICO_CONTAINER_MODE", picoContainerModeValue
+    buildConfigField "String", "PICO_XR_MODE", picoXrModeValue
+    buildConfigField "String", "PICO_APP_TYPE", picoAppTypeValue
+    buildConfigField "boolean", "PICO_HAS_PLATFORM_IDENTITY", picoHasPlatformIdentityValue
+    buildConfigField "boolean", "PICO_HAS_IAP_IDENTITY", picoHasIapIdentityValue
+    buildConfigField "boolean", "PICO_EMULATOR_OPTIMIZATIONS", "false"
+    // Capability declarations exposed at runtime so JS code can
+    // ask "did the prebuild flag X?" without re-reading the manifest.
+    buildConfigField "boolean", "PICO_HAND_TRACKING", "true"
+    buildConfigField "boolean", "PICO_PASSTHROUGH", "true"
+    buildConfigField "boolean", "PICO_SCENE_UNDERSTANDING", "false"
+    buildConfigField "boolean", "PICO_EYE_TRACKING", "false"
+    buildConfigField "boolean", "PICO_FACE_TRACKING", "false"
+    buildConfigField "boolean", "PICO_BODY_TRACKING", "false"
+    buildConfigField "boolean", "PICO_SPATIAL_AUDIO", "false"
+    buildConfigField "boolean", "PICO_FOVEATED_RENDERING", "false"
+    buildConfigField "boolean", "PICO_HIGH_SAMPLING_RATE_SENSORS", "true"
+    buildConfigField "boolean", "PICO_BOUNDARY", "false"
+    buildConfigField "boolean", "PICO_SCENE_MESH", "false"
+    buildConfigField "boolean", "PICO_SENSE_CONTROLLER", "false"
+    buildConfigField "boolean", "PICO_MOTION_TRACKER", "false"
+    buildConfigField "boolean", "PICO_CONTROLLER_HAPTICS", "false"
+    buildConfigField "boolean", "PICO_OPENXR_LOADER", "true"
+    buildConfigField "boolean", "PICO_NDK_ABI_FILTERS", "true"
+    buildConfigField "boolean", "PICO_DEVELOPER_TOOLS", "true"
+    buildConfigField "boolean", "PICO_ENTITLEMENT_CHECK", "false"
+    buildConfigField "String", "PICO_REFRESH_RATES", picoRefreshRatesValue
+    buildConfigField "String", "PICO_TARGET_DEVICES", picoTargetDevicesValue
 }

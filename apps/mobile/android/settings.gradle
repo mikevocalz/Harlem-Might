@@ -38,6 +38,19 @@ expoAutolinking.useExpoVersionCatalog()
 include ':app'
 includeBuild(expoAutolinking.reactNativeGradlePlugin)
 
+// expo-pico-core: @expo-pico/* Nitro module inclusion
+//
+// Each @expo-pico/* package is a self-contained Nitro module: it declares
+// no dependency on any sibling Gradle project, so the order these are
+// included in does not matter and none of them can be missing a peer.
+//
+// These lines are only written for projects that are not already included.
+// The names match expo-modules-autolinking's own algorithm exactly, so
+// when that autolinker is active this block stays empty rather than
+// including the same directory a second time.
+include ':expo-pico-core'
+project(':expo-pico-core').projectDir = new File(rootProject.projectDir, '../../../node_modules/@expo-pico/core/android')
+
 include ':react_viro', ':arcore_client', ':gvr_common', ':viro_renderer'
 project(':arcore_client').projectDir = new File('../../../../viro-specs-preview/android/arcore_client')
 project(':gvr_common').projectDir = new File('../../../../viro-specs-preview/android/gvr_common')
