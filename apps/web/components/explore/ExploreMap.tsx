@@ -44,6 +44,7 @@ export function ExploreMap({ places, selectedId, onSelect, rightInset, bottomIns
     const id = selectedRef.current;
     markersRef.current.forEach(({ el }, key) => {
       el.dataset.selected = String(key === id);
+      el.setAttribute('aria-pressed', String(key === id));
     });
     const map = mapRef.current;
     const place = places.find((p) => p.id === id);
@@ -103,7 +104,17 @@ export function ExploreMap({ places, selectedId, onSelect, rightInset, bottomIns
       });
 
       map.once('load', () => applySelection(false));
-      observer = new ResizeObserver(() => map.resize());
+      // A map created inside a hidden pane (view=list on a phone) has no size;
+      // fit the bounds the first time it gets one.
+      let fitted = container.clientWidth > 0;
+      observer = new ResizeObserver(() => {
+        map.resize();
+        if (!fitted && container.clientWidth > 0) {
+          fitted = true;
+          map.fitBounds(bounds, { padding: 96, maxZoom: 15.5, duration: 0 });
+          applySelection(false);
+        }
+      });
       observer.observe(container);
     });
 

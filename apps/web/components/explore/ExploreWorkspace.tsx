@@ -1,11 +1,13 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   HARLEM_CATEGORIES,
   HARLEM_PLACE_PREVIEWS,
   MAPPED_PLACES,
   getHarlemPlacePreview,
+  useExplore,
   type HarlemPlacePreview,
 } from '@acme/app/features/explore/explore.store.ts';
 import { Pressable, ScrollView, Text, TextInput, View } from '@acme/ui/tw';
@@ -41,7 +43,23 @@ export function ExploreWorkspace() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const q = params.get('q') ?? '';
+  // The search draft lives in zustand so typing never fights the router; the
+  // URL is updated with a debounced history.replaceState (no navigation).
+  const q = useExplore((s) => s.query);
+  const setQuery = useExplore((s) => s.setQuery);
+  const urlQ = params.get('q') ?? '';
+  useEffect(() => {
+    setQuery(urlQ);
+    // Seed once from the URL; afterwards the draft leads and the URL follows.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const typing = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (typing.current) clearTimeout(typing.current);
+  }, []);
+  // True once this session pushed a selection, so Close can step back instead
+  // of leaving a duplicate history entry.
+  const pushed = useRef(false);
   const rawCategory = params.get('category');
   const category: Category = (HARLEM_CATEGORIES as readonly string[]).includes(rawCategory ?? '')
     ? (rawCategory as Category)
@@ -59,7 +77,21 @@ export function ExploreWorkspace() {
     return search ? `${pathname}?${search}` : pathname;
   };
   const replace = (patch: Record<string, string | null>) => router.replace(href(patch), { scroll: false });
-  const select = (id: string) => router.push(href({ place: id }), { scroll: false });
+  const select = (id: string) => {
+    pushed.current = true;
+    router.push(href({ place: id }), { scroll: false });
+  };
+  const close = () => {
+    if (pushed.current) {
+      pushed.current = false;
+      router.back();
+    } else replace({ place: null });
+  };
+  const onType = (text: string) => {
+    setQuery(text);
+    if (typing.current) clearTimeout(typing.current);
+    typing.current = setTimeout(() => window.history.replaceState(null, '', href({ q: text || null })), 250);
+  };
 
   const results = HARLEM_PLACE_PREVIEWS.filter((p) => matches(p, q, category));
 
@@ -75,9 +107,9 @@ export function ExploreWorkspace() {
           <TextInput
             aria-label="Search places"
             value={q}
-            onChangeText={(text: string) => replace({ q: text || null })}
+            onChangeText={onType}
             placeholder="Search places, like Apollo"
-            className="h-12 border border-border-strong bg-surface-raised px-4 text-base text-text"
+            className="h-12 border border-border-strong bg-surface-raised px-4 text-base text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           />
         </View>
         <View className="flex-row flex-wrap gap-2" role="group" aria-label="Filter by category">
@@ -88,13 +120,17 @@ export function ExploreWorkspace() {
                 key={c}
                 onPress={() => replace({ category: c === 'All' ? null : c })}
                 aria-pressed={on}
-                className={`mights-focus h-9 justify-center px-4 ${cornerCutSm} ${
-                  on ? 'bg-primary' : 'bg-surface-raised hover:bg-border'
-                }`}
+                className="mights-focus group"
               >
-                <Text className={`text-[13px] font-semibold ${expanded} ${on ? 'text-on-primary' : 'text-text'}`}>
-                  {c}
-                </Text>
+                <View
+                  className={`h-9 justify-center px-4 ${cornerCutSm} ${
+                    on ? 'bg-primary' : 'bg-surface-raised group-hover:bg-border'
+                  }`}
+                >
+                  <Text className={`text-[13px] font-semibold ${expanded} ${on ? 'text-on-primary' : 'text-text'}`}>
+                    {c}
+                  </Text>
+                </View>
               </Pressable>
             );
           })}
@@ -105,7 +141,13 @@ export function ExploreWorkspace() {
         {results.length === 0 ? (
           <View className="gap-2 p-5">
             <MightsText tone="default">No places match {q ? `“${q}”` : 'this filter'}.</MightsText>
-            <Pressable onPress={() => replace({ q: null, category: null })} className="mights-focus self-start">
+            <Pressable
+              onPress={() => {
+                setQuery('');
+                replace({ q: null, category: null });
+              }}
+              className="mights-focus self-start"
+            >
               <Text className="text-[15px] font-semibold text-primary">Clear search and filters</Text>
             </Pressable>
           </View>
@@ -145,7 +187,7 @@ export function ExploreWorkspace() {
             {selected.name}
           </MightsHeading>
           <Pressable
-            onPress={() => replace({ place: null })}
+            onPress={close}
             aria-label={`Close ${selected.name}`}
             className="mights-focus min-h-11 justify-center px-2"
           >
@@ -212,13 +254,13 @@ export function ExploreWorkspace() {
             key={v}
             onPress={() => replace({ view: v === 'map' ? null : 'list' })}
             aria-pressed={view === v}
-            className={`mights-focus h-10 justify-center px-5 ${cornerCutSm} ${
-              view === v ? 'bg-primary' : 'bg-surface-raised'
-            }`}
+            className="mights-focus"
           >
-            <Text className={`text-[14px] font-semibold ${expanded} ${view === v ? 'text-on-primary' : 'text-text'}`}>
-              {v === 'map' ? 'Map' : 'List'}
-            </Text>
+            <View className={`h-10 justify-center px-5 ${cornerCutSm} ${view === v ? 'bg-primary' : 'bg-surface-raised'}`}>
+              <Text className={`text-[14px] font-semibold ${expanded} ${view === v ? 'text-on-primary' : 'text-text'}`}>
+                {v === 'map' ? 'Map' : 'List'}
+              </Text>
+            </View>
           </Pressable>
         ))}
       </View>

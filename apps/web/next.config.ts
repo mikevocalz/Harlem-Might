@@ -67,6 +67,7 @@ const nextConfig: NextConfig = {
       { source: '/notifications', destination: '/', permanent },
       { source: '/profile', destination: '/', permanent },
       { source: '/settings', destination: '/', permanent },
+      { source: '/legal', destination: '/legal/privacy', permanent: false },
     ];
   },
   cacheComponents: true,

@@ -5,12 +5,14 @@ import { MightsButton, MightsPage, MightsText, cornerCut, expanded, routes } fro
 
 // Error boundary for the site. Says what happened and offers a way forward;
 // the raw message is for logs, not visitors.
-export default function ErrorPage({ reset }: { error: Error; reset: () => void }) {
+export default function ErrorPage({ retry }: { error: Error; retry: () => void }) {
   return (
     <MightsPage title="This page didn't load" lead="Something went wrong on our side. Try again, or head back to the map.">
       <View className="flex-row flex-wrap gap-3">
-        <Pressable onPress={reset} className={`mights-focus h-[52px] justify-center bg-primary px-8 ${cornerCut}`}>
-          <Text className={`text-[15px] font-semibold text-on-primary ${expanded}`}>Try again</Text>
+        <Pressable onPress={retry} className="mights-focus">
+          <View className={`h-[52px] justify-center bg-primary px-8 ${cornerCut}`}>
+            <Text className={`text-[15px] font-semibold text-on-primary ${expanded}`}>Try again</Text>
+          </View>
         </Pressable>
         <MightsButton href={routes.explore()} variant="secondary">
           Open the map

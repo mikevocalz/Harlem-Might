@@ -27,6 +27,8 @@ export const routes = {
   about: () => '/about',
   press: () => '/press',
   legal: (doc: 'privacy' | 'terms' | 'accessibility') => `/legal/${doc}`,
+  /** Redirects to the first legal document; exists so the breadcrumb has a target. */
+  legalIndex: () => '/legal',
 } as const;
 
 export const primaryNav = [

@@ -1,4 +1,4 @@
-import { MightsMapImage } from './MightsMapImage';
+import { MapAttribution, MightsMapImage } from './MightsMapImage';
 import { MightsNotchCard } from './MightsNotchCard';
 import { MightsHeading, MightsText } from './MightsType';
 import { routes } from './routes';
@@ -19,6 +19,7 @@ const THREE = ['md:col-span-5', 'md:col-span-4', 'md:col-span-3'];
 export function MightsPlaceBento({ places }: { places: readonly BentoPlace[] }) {
   const spans = places.length === 3 ? THREE : SPANS;
   return (
+    <div className="flex flex-col gap-2">
     <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
       {places.map((place, i) => (
         <MightsNotchCard
@@ -55,6 +56,8 @@ export function MightsPlaceBento({ places }: { places: readonly BentoPlace[] }) 
           </div>
         </MightsNotchCard>
       ))}
+    </div>
+    <MapAttribution />
     </div>
   );
 }

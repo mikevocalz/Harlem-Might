@@ -51,7 +51,7 @@ export default async function LegalPage({ params }: { params: Promise<{ doc: str
   return (
     <MightsPage
       title={entry.title}
-      crumbs={[{ label: 'Legal' }, { label: entry.title, href: routes.legal(doc as Doc) }]}
+      crumbs={[{ label: 'Legal', href: routes.legalIndex() }, { label: entry.title, href: routes.legal(doc as Doc) }]}
     >
       <Article className="max-w-[80ch] gap-5">
         <MightsHeading level={2} size="title">

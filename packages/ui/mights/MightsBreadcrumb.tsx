@@ -9,7 +9,10 @@ export interface Crumb {
 
 // WAI-ARIA breadcrumb + schema.org BreadcrumbList. Separators are hairline
 // ticks, not slashes or chevrons.
-export function MightsBreadcrumb({ items, origin = '' }: { items: Crumb[]; origin?: string }) {
+// Google requires absolute item URLs in BreadcrumbList.
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+
+export function MightsBreadcrumb({ items, origin = SITE }: { items: Crumb[]; origin?: string }) {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -41,7 +44,7 @@ export function MightsBreadcrumb({ items, origin = '' }: { items: Crumb[]; origi
           );
         })}
       </ol>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
     </nav>
   );
 }
