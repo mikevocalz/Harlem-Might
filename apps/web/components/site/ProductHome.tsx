@@ -197,7 +197,7 @@ export function ProductHome() {
               label={`${place.name}, open on the map`}
               className={SPANS[i % SPANS.length]}
             >
-              <View className="aspect-[16/9] border-b border-rule-hairline">
+              <View className="h-56 shrink-0 border-b border-rule-hairline md:h-64">
                 <MightsMapImage
                   center={place.lngLat}
                   zoom={17.2}
@@ -208,7 +208,7 @@ export function ProductHome() {
                   alt={`Map of ${place.name}`}
                 />
               </View>
-              <View className="gap-1 p-5">
+              <View className="flex-1 gap-1 p-5">
                 <MightsHeading level={3} size="card">
                   {place.name}
                 </MightsHeading>

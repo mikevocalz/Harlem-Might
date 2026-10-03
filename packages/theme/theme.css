@@ -1,5 +1,10 @@
 /* GENERATED from tokens.ts — do not edit by hand. `node build-css.mjs` */
 @theme {
+  --color-mights-gold: #F8C626;
+  --color-mights-gold-highlight: #F8D848;
+  --color-mights-gold-shade: #E0A810;
+  --color-mights-gold-dim: #8A6E1F;
+  --color-mights-warm-black: #0B0906;
   --color-mights-limestone: #EEF0EC;
   --color-mights-paper: #FBFBF9;
   --color-mights-raised: #FFFFFF;
@@ -161,28 +166,28 @@
   --breakpoint-lg: 64rem;
   --breakpoint-xl: 80rem;
   --breakpoint-2xl: 96rem;
-  --color-surface: light-dark(#EEF0EC, #0E1412);
-  --color-surface-raised: light-dark(#FFFFFF, #171E1B);
-  --color-surface-sunken: light-dark(#E5E9E5, #101714);
-  --color-paper: light-dark(#FBFBF9, #141B18);
+  --color-surface: light-dark(#EEF0EC, #0B0906);
+  --color-surface-raised: light-dark(#FFFFFF, #15120D);
+  --color-surface-sunken: light-dark(#E5E9E5, #070604);
+  --color-paper: light-dark(#FBFBF9, #110E0A);
   --color-brownstone: light-dark(#6E4636, #C9A08E);
   --color-verdigris: light-dark(#2B7564, #5FB8A4);
   --color-amber: light-dark(#F2A900, #F2A900);
   --color-spatial: light-dark(#0E8FA3, #5FD1E1);
-  --color-rule-hairline: light-dark(rgba(77, 86, 82, 0.2), rgba(174, 184, 179, 0.2));
-  --color-rule-rail: light-dark(#171C1A, #F7F9F7);
-  --color-text: light-dark(#171C1A, #F7F9F7);
-  --color-text-muted: light-dark(#4D5652, #AEB8B3);
-  --color-text-inverse: light-dark(#F7F9F7, #171C1A);
-  --color-primary: light-dark(#1F4FE0, #7295FF);
-  --color-primary-pressed: light-dark(#173DB3, #91AAFF);
-  --color-on-primary: light-dark(#FFFFFF, #0E1412);
+  --color-rule-hairline: light-dark(rgba(77, 86, 82, 0.2), rgba(248, 198, 38, 0.16));
+  --color-rule-rail: light-dark(#171C1A, #8A6E1F);
+  --color-text: light-dark(#171C1A, #F4EEE0);
+  --color-text-muted: light-dark(#4D5652, #A89F8B);
+  --color-text-inverse: light-dark(#F7F9F7, #0B0906);
+  --color-primary: light-dark(#1F4FE0, #F8C626);
+  --color-primary-pressed: light-dark(#173DB3, #F8D848);
+  --color-on-primary: light-dark(#FFFFFF, #0B0906);
   --color-accent: light-dark(#C8102E, #FF6B7F);
   --color-accent-pressed: light-dark(#A70D27, #FF8A99);
-  --color-on-accent: light-dark(#FFFFFF, #0E1412);
-  --color-border: light-dark(#CBD2CE, #33403A);
-  --color-border-strong: light-dark(#7D8983, #6D7B75);
-  --color-focus: light-dark(#1F4FE0, #7295FF);
+  --color-on-accent: light-dark(#FFFFFF, #0B0906);
+  --color-border: light-dark(#CBD2CE, #2A241A);
+  --color-border-strong: light-dark(#7D8983, #5A503E);
+  --color-focus: light-dark(#1F4FE0, #F8C626);
   --color-danger: light-dark(#B4232F, #FF7A85);
   --color-on-danger: light-dark(#FFFFFF, #3D0508);
 }

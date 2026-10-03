@@ -1,9 +1,11 @@
+import { palette, semantic } from '@acme/theme';
+
 // A live Mapbox Static Images render of a real place — the sanctioned stand-in
 // wherever a cleared photograph does not exist yet. Without a token it renders
 // an honest, labelled empty plate; never a gradient.
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-const STYLE = 'mapbox/light-v11';
+const STYLE = 'mapbox/dark-v11';
 
 export interface MapPin {
   lngLat: readonly [number, number];
@@ -24,7 +26,14 @@ export interface MightsMapImageProps {
   priority?: boolean;
 }
 
-const PIN_COLOR = { cobalt: '1f4fe0', live: 'c8102e', iron: '171c1a' } as const;
+
+// Mapbox overlay colours are bare hex: brand gold, live red, warm off-white.
+const hex = (c: string) => c.replace('#', '').toLowerCase();
+const PIN_COLOR = {
+  cobalt: hex(palette.mights.gold),
+  live: hex(semantic.accent.dark),
+  iron: hex(semantic.text.dark),
+} as const;
 
 export function mapboxStaticUrl({ center, zoom, pitch = 0, bearing = 0, width, height, pins = [] }: Omit<MightsMapImageProps, 'alt'>) {
   if (!TOKEN) return null;

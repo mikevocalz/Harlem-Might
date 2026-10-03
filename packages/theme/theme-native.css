@@ -1,5 +1,10 @@
 /* GENERATED from tokens.ts — do not edit by hand. `node build-css.mjs` */
 @theme {
+  --color-mights-gold: #F8C626;
+  --color-mights-gold-highlight: #F8D848;
+  --color-mights-gold-shade: #E0A810;
+  --color-mights-gold-dim: #8A6E1F;
+  --color-mights-warm-black: #0B0906;
   --color-mights-limestone: #EEF0EC;
   --color-mights-paper: #FBFBF9;
   --color-mights-raised: #FFFFFF;
@@ -196,28 +201,28 @@
       --color-on-danger: #FFFFFF;
     }
     @variant dark {
-      --color-surface: #0E1412;
-      --color-surface-raised: #171E1B;
-      --color-surface-sunken: #101714;
-      --color-paper: #141B18;
+      --color-surface: #0B0906;
+      --color-surface-raised: #15120D;
+      --color-surface-sunken: #070604;
+      --color-paper: #110E0A;
       --color-brownstone: #C9A08E;
       --color-verdigris: #5FB8A4;
       --color-amber: #F2A900;
       --color-spatial: #5FD1E1;
-      --color-rule-hairline: rgba(174, 184, 179, 0.2);
-      --color-rule-rail: #F7F9F7;
-      --color-text: #F7F9F7;
-      --color-text-muted: #AEB8B3;
-      --color-text-inverse: #171C1A;
-      --color-primary: #7295FF;
-      --color-primary-pressed: #91AAFF;
-      --color-on-primary: #0E1412;
+      --color-rule-hairline: rgba(248, 198, 38, 0.16);
+      --color-rule-rail: #8A6E1F;
+      --color-text: #F4EEE0;
+      --color-text-muted: #A89F8B;
+      --color-text-inverse: #0B0906;
+      --color-primary: #F8C626;
+      --color-primary-pressed: #F8D848;
+      --color-on-primary: #0B0906;
       --color-accent: #FF6B7F;
       --color-accent-pressed: #FF8A99;
-      --color-on-accent: #0E1412;
-      --color-border: #33403A;
-      --color-border-strong: #6D7B75;
-      --color-focus: #7295FF;
+      --color-on-accent: #0B0906;
+      --color-border: #2A241A;
+      --color-border-strong: #5A503E;
+      --color-focus: #F8C626;
       --color-danger: #FF7A85;
       --color-on-danger: #3D0508;
     }

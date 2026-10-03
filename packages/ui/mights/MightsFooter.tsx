@@ -27,7 +27,7 @@ export function MightsFooter() {
     <footer className="border-t border-rule-hairline bg-surface pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
       <div className="mx-auto grid w-full max-w-screen-2xl gap-8 px-4 py-14 sm:px-6 md:grid-cols-12 md:gap-6">
         <div className="flex flex-col gap-3 md:col-span-5">
-          <MightsWordmark className="text-[32px]" />
+          <MightsWordmark height={56} />
           <p className="max-w-xs text-[15px] leading-6 text-text-muted">Built from local knowledge.</p>
         </div>
         <nav aria-label="Discover" className="flex flex-col gap-3 md:col-span-2">
@@ -58,7 +58,7 @@ export function MightsFooter() {
       </div>
       <div className="border-t border-rule-hairline">
         <div className="mx-auto flex w-full max-w-screen-2xl flex-wrap items-center justify-between gap-2 px-4 py-5 text-[13px] text-text-muted sm:px-6">
-          <span>© 2026 Harlem Mights</span>
+          <span>© 2026 Harlem Might</span>
           <span>Photographs credited on each page</span>
         </div>
       </div>

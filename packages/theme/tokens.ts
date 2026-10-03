@@ -1,7 +1,8 @@
 /**
  * @acme/theme — the single token source (PROMPT-2).
- * Harlem Mights v2 palette (limestone canvas, stoop-iron text, transit-cobalt
- * action, marquee-red live). Light by default; night is opt-in.
+ * Harlem Might brand: logo gold (#F8C626, sampled from the landscape mark) on
+ * the splash's warm black. The public site renders dark; light values remain
+ * for the mobile app's light mode.
  *
  * `build-css.mjs` emits theme.css (web/storybook, Tailwind v4 `@theme` with
  * light-dark()) and theme-native.css (mobile, Uniwind `@variant` theme blocks)
@@ -15,6 +16,13 @@
 export const palette = {
   // Harlem Mights v2 — the only colors public-site surfaces may use.
   mights: {
+    // Brand gold, sampled from Harlem-Might-Logo-landscape.png.
+    gold: '#F8C626',
+    'gold-highlight': '#F8D848',
+    'gold-shade': '#E0A810',
+    'gold-dim': '#8A6E1F',
+    // Warm black from the splash (#070502), lifted one step for the canvas.
+    'warm-black': '#0B0906',
     limestone: '#EEF0EC',
     paper: '#FBFBF9',
     raised: '#FFFFFF',
@@ -105,29 +113,29 @@ export const palette = {
 // Emitted as `light-dark(...)` so system-following is zero-code on every platform.
 
 export const semantic = {
-  surface: { light: '#EEF0EC', dark: '#0E1412' },
-  'surface-raised': { light: '#FFFFFF', dark: '#171E1B' },
-  'surface-sunken': { light: '#E5E9E5', dark: '#101714' },
-  paper: { light: '#FBFBF9', dark: '#141B18' },
+  surface: { light: '#EEF0EC', dark: '#0B0906' },
+  'surface-raised': { light: '#FFFFFF', dark: '#15120D' },
+  'surface-sunken': { light: '#E5E9E5', dark: '#070604' },
+  paper: { light: '#FBFBF9', dark: '#110E0A' },
   brownstone: { light: '#6E4636', dark: '#C9A08E' },
   verdigris: { light: '#2B7564', dark: '#5FB8A4' },
   amber: { light: '#F2A900', dark: '#F2A900' },
   spatial: { light: '#0E8FA3', dark: '#5FD1E1' },
   // 1px hairline = iron-muted @ 20%; rail = stoop-iron at full strength.
-  'rule-hairline': { light: 'rgba(77, 86, 82, 0.2)', dark: 'rgba(174, 184, 179, 0.2)' },
-  'rule-rail': { light: '#171C1A', dark: '#F7F9F7' },
-  text: { light: '#171C1A', dark: '#F7F9F7' },
-  'text-muted': { light: '#4D5652', dark: '#AEB8B3' },
-  'text-inverse': { light: '#F7F9F7', dark: '#171C1A' },
-  primary: { light: '#1F4FE0', dark: '#7295FF' },
-  'primary-pressed': { light: '#173DB3', dark: '#91AAFF' },
-  'on-primary': { light: '#FFFFFF', dark: '#0E1412' },
+  'rule-hairline': { light: 'rgba(77, 86, 82, 0.2)', dark: 'rgba(248, 198, 38, 0.16)' },
+  'rule-rail': { light: '#171C1A', dark: '#8A6E1F' },
+  text: { light: '#171C1A', dark: '#F4EEE0' },
+  'text-muted': { light: '#4D5652', dark: '#A89F8B' },
+  'text-inverse': { light: '#F7F9F7', dark: '#0B0906' },
+  primary: { light: '#1F4FE0', dark: '#F8C626' },
+  'primary-pressed': { light: '#173DB3', dark: '#F8D848' },
+  'on-primary': { light: '#FFFFFF', dark: '#0B0906' },
   accent: { light: '#C8102E', dark: '#FF6B7F' },
   'accent-pressed': { light: '#A70D27', dark: '#FF8A99' },
-  'on-accent': { light: '#FFFFFF', dark: '#0E1412' },
-  border: { light: '#CBD2CE', dark: '#33403A' },
-  'border-strong': { light: '#7D8983', dark: '#6D7B75' },
-  focus: { light: '#1F4FE0', dark: '#7295FF' },
+  'on-accent': { light: '#FFFFFF', dark: '#0B0906' },
+  border: { light: '#CBD2CE', dark: '#2A241A' },
+  'border-strong': { light: '#7D8983', dark: '#5A503E' },
+  focus: { light: '#1F4FE0', dark: '#F8C626' },
   danger: { light: '#B4232F', dark: '#FF7A85' },
   'on-danger': { light: '#FFFFFF', dark: '#3D0508' },
 } as const;
