@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { HARLEM_PLACE_PREVIEWS } from '@acme/app';
+import { HARLEM_PLACE_PREVIEWS } from '@acme/app/features/explore/explore.store.ts';
 import { routes } from '@acme/ui/mights';
 
 const base = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';

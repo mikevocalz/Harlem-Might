@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { MAPPED_PLACES } from '@acme/app';
+import { MAPPED_PLACES } from '@acme/app/features/explore/explore.store.ts';
 import { MightsBand, MightsButton, MightsPage, MightsPlaceBento, MightsText, routes } from '@acme/ui/mights';
 
 export const metadata: Metadata = {

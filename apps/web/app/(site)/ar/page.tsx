@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getHarlemPlacePreview } from '@acme/app';
+import { getHarlemPlacePreview } from '@acme/app/features/explore/explore.store.ts';
 import { Section, View } from '@acme/ui/tw';
 import { MightsAccentFrame, MightsButton, MightsMapImage, MightsPage, MightsText, MapAttribution, routes } from '@acme/ui/mights';
 

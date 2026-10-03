@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { HARLEM_PLACE_PREVIEWS, getHarlemPlacePreview, placesNear } from '@acme/app';
+import { HARLEM_PLACE_PREVIEWS, getHarlemPlacePreview, placesNear } from '@acme/app/features/explore/explore.store.ts';
 import { Section, View } from '@acme/ui/tw';
 import {
   MapAttribution,

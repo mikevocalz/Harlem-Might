@@ -1,4 +1,4 @@
-import { MAPPED_PLACES } from '@acme/app';
+import { MAPPED_PLACES } from '@acme/app/features/explore/explore.store.ts';
 import { MightsBand, MightsPage, MightsPlaceBento, MightsSearchForm } from '@acme/ui/mights';
 
 // One 404 body for unmatched URLs (global-not-found) and notFound() calls.

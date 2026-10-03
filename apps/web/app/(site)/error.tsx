@@ -1,7 +1,22 @@
 'use client';
 
-import { ErrorScreen } from '@acme/app';
+import { Pressable, Text, View } from '@acme/ui/tw';
+import { MightsButton, MightsPage, MightsText, cornerCut, expanded, routes } from '@acme/ui/mights';
 
-export default function ErrorPage({ error }: { error: Error }) {
-  return <ErrorScreen kind="error" detail={error.message} />;
+// Error boundary for the site. Says what happened and offers a way forward;
+// the raw message is for logs, not visitors.
+export default function ErrorPage({ reset }: { error: Error; reset: () => void }) {
+  return (
+    <MightsPage title="This page didn't load" lead="Something went wrong on our side. Try again, or head back to the map.">
+      <View className="flex-row flex-wrap gap-3">
+        <Pressable onPress={reset} className={`mights-focus h-[52px] justify-center bg-primary px-8 ${cornerCut}`}>
+          <Text className={`text-[15px] font-semibold text-on-primary ${expanded}`}>Try again</Text>
+        </Pressable>
+        <MightsButton href={routes.explore()} variant="secondary">
+          Open the map
+        </MightsButton>
+      </View>
+      <MightsText size="small">If this keeps happening, reload the page.</MightsText>
+    </MightsPage>
+  );
 }

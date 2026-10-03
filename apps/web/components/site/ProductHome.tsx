@@ -17,7 +17,7 @@ import {
   MightsText,
   routes,
 } from "@acme/ui/mights";
-import { HARLEM_PLACE_PREVIEWS, type HarlemPlacePreview } from "@acme/app";
+import { HARLEM_PLACE_PREVIEWS, type HarlemPlacePreview } from "@acme/app/features/explore/explore.store.ts";
 
 type MappedPlace = HarlemPlacePreview & { lngLat: readonly [number, number] };
 const MAPPED = HARLEM_PLACE_PREVIEWS.filter((p): p is MappedPlace =>

@@ -7,7 +7,7 @@ import {
   MAPPED_PLACES,
   getHarlemPlacePreview,
   type HarlemPlacePreview,
-} from '@acme/app';
+} from '@acme/app/features/explore/explore.store.ts';
 import { Pressable, ScrollView, Text, TextInput, View } from '@acme/ui/tw';
 import {
   MightsButton,
