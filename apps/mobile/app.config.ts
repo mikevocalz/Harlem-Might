@@ -63,6 +63,10 @@ const config: ExpoConfig = {
     [
       'expo-horizon-core',
       {
+        // Horizon OS opens a 2D app at phone size unless the activity names a
+        // window size; this matches the PICO window below (16:10, landscape).
+        defaultWidth: '1280dp',
+        defaultHeight: '800dp',
         supportedDevices: 'quest2|questpro|quest3|quest3s',
         disableVrHeadtracking: false,
         allowBackup: false,
