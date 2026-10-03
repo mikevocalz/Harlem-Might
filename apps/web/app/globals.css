@@ -10,14 +10,14 @@
 
 /* Token-driven scrollbar — token-driven, no plugin */
 html {
-  scrollbar-color: var(--color-burgundy-600) transparent;
+  scrollbar-color: var(--color-border-strong) transparent;
 }
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-burgundy-600);
+  background: var(--color-border-strong);
   border-radius: 9999px;
   border: 2px solid transparent;
   background-clip: padding-box;
@@ -39,6 +39,8 @@ body main[role='main'] {
 
 body {
   background: var(--color-surface);
+  font-optical-sizing: auto;
+  font-variant-numeric: lining-nums;
   color: var(--color-text);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -96,4 +98,130 @@ body {
     animation-duration: 0s !important;
     animation-delay: 0s !important;
   }
+}
+
+/* ---- Harlem Mights geometry ------------------------------------------------
+   Accent Frame: four 10px corner marks drawn by one pseudo-element. Used for
+   keyboard focus (cobalt, 2px, 4px offset) and for .mights-frame surfaces. */
+.mights-focus {
+  position: relative;
+}
+.mights-focus:focus-visible {
+  outline: none;
+}
+.mights-focus:focus-visible::after,
+.mights-frame::after {
+  --l: 10px;
+  --t: 2px;
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--frame) 0 0) top left / var(--l) var(--t),
+    linear-gradient(var(--frame) 0 0) top left / var(--t) var(--l),
+    linear-gradient(var(--frame) 0 0) top right / var(--l) var(--t),
+    linear-gradient(var(--frame) 0 0) top right / var(--t) var(--l),
+    linear-gradient(var(--frame) 0 0) bottom left / var(--l) var(--t),
+    linear-gradient(var(--frame) 0 0) bottom left / var(--t) var(--l),
+    linear-gradient(var(--frame) 0 0) bottom right / var(--l) var(--t),
+    linear-gradient(var(--frame) 0 0) bottom right / var(--t) var(--l);
+  background-repeat: no-repeat;
+}
+.mights-focus:focus-visible::after {
+  --frame: var(--color-primary);
+  inset: -4px;
+  z-index: 1;
+}
+.mights-frame::after {
+  inset: 0;
+}
+
+/* Bottom sheet: native <dialog> pinned to the bottom edge. */
+dialog.mights-sheet[open] {
+  position: fixed;
+  inset: auto 0 0 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -100px;
+  z-index: 100;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+}
+.skip-link:focus {
+  top: 0.75rem;
+}
+
+/* Border beam: a gold highlight that travels the card rail while the card is
+   hovered or focused. Resting state is the plain dim-gold rail. */
+@property --beam {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+.mights-beam {
+  background: var(--color-rule-rail);
+}
+.group:hover .mights-beam,
+.group:focus-visible .mights-beam {
+  background: conic-gradient(
+    from var(--beam),
+    var(--color-rule-rail) 0deg 250deg,
+    var(--color-primary) 300deg,
+    var(--color-rule-rail) 350deg 360deg
+  );
+  animation: mights-beam 2.4s linear infinite;
+}
+@keyframes mights-beam {
+  to {
+    --beam: 360deg;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .group:hover .mights-beam,
+  .group:focus-visible .mights-beam {
+    animation: none;
+    background: var(--color-primary);
+  }
+}
+
+/* Explore map markers: gold diamonds, the stamp marker at map scale. */
+.mights-marker {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+.mights-marker::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  transform: rotate(45deg);
+  background: var(--color-primary);
+  outline: 2px solid var(--color-surface);
+  transition: width 120ms, height 120ms;
+}
+.mights-marker[data-selected='true']::before {
+  width: 18px;
+  height: 18px;
+  outline-color: var(--color-text);
+}
+.mights-marker:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+/* Mapbox controls on the warm-black canvas. */
+.mapboxgl-ctrl-group {
+  border-radius: 0 !important;
+  background: var(--color-surface-raised) !important;
+}
+.mapboxgl-ctrl-group button .mapboxgl-ctrl-icon {
+  filter: invert(1);
 }

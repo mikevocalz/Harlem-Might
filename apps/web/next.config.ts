@@ -12,7 +12,12 @@ const nextConfig: NextConfig = {
   // React Compiler — auto-memoization, same as the mobile app's
   // experiments.reactCompiler in app.config.ts.
   reactCompiler: true,
+  // The floating dev badge sat over the page and read as part of the design.
+  devIndicators: false,
   experimental: {
+    // app/global-not-found.tsx: two root layouts ((site), (payload)) means no
+    // single layout can compose the 404 (not-found.md).
+    globalNotFound: true,
     // NOTE: `viewTransition` was removed in Next 16.3 stable — React's
     // <ViewTransition> now works in the App Router with no configuration
     // (node_modules/next/dist/docs/01-app/02-guides/view-transitions.md).
@@ -46,6 +51,24 @@ const nextConfig: NextConfig = {
   // `experimental.browserDebugInfoInTerminal` until 16.3.1 moved it here.
   logging: {
     browserToTerminal: true,
+  },
+  // Site map v3 §4.1: retired and alias routes resolve to their nearest parent.
+  async redirects() {
+    const permanent = true;
+    return [
+      { source: '/places', destination: '/explore', permanent },
+      { source: '/tours', destination: '/walks', permanent },
+      { source: '/events', destination: '/today', permanent },
+      { source: '/map', destination: '/explore?view=map', permanent },
+      { source: '/explore/map', destination: '/explore?view=map', permanent },
+      { source: '/app', destination: '/download', permanent },
+      { source: '/schedule', destination: '/today', permanent },
+      { source: '/spatial', destination: '/ar', permanent },
+      { source: '/notifications', destination: '/', permanent },
+      { source: '/profile', destination: '/', permanent },
+      { source: '/settings', destination: '/', permanent },
+      { source: '/legal', destination: '/legal/privacy', permanent: false },
+    ];
   },
   cacheComponents: true,
   partialPrefetching: true,

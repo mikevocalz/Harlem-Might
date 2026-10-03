@@ -20,6 +20,11 @@ export interface HarlemPlacePreview {
     x: number;
     y: number;
   };
+  /** WGS84 [lng, lat] from OpenStreetMap Nominatim (osm id in `osm`), fetched
+   *  2026-10-03. Absent until the catalogue holds a verified point. */
+  lngLat?: readonly [number, number];
+  osm?: string;
+  street?: string;
   menuAvailable?: boolean;
   arCandidate?: boolean;
 }
@@ -27,6 +32,9 @@ export interface HarlemPlacePreview {
 export const HARLEM_PLACE_PREVIEWS: readonly HarlemPlacePreview[] = [
   {
     id: 'apollo-theater',
+    lngLat: [-73.9499948, 40.8100895],
+    osm: 'way/271798914',
+    street: 'West 125th Street',
     name: 'Apollo Theater',
     category: 'Culture',
     area: '125th Street',
@@ -39,6 +47,9 @@ export const HARLEM_PLACE_PREVIEWS: readonly HarlemPlacePreview[] = [
   },
   {
     id: 'red-rooster-harlem',
+    lngLat: [-73.9449105, 40.8079659],
+    osm: 'way/271798850',
+    street: 'Malcolm X Boulevard',
     name: 'Red Rooster Harlem',
     category: 'Food',
     area: 'Central Harlem',
@@ -52,6 +63,9 @@ export const HARLEM_PLACE_PREVIEWS: readonly HarlemPlacePreview[] = [
   },
   {
     id: 'sylvias-restaurant',
+    lngLat: [-73.9445189, 40.8086285],
+    osm: 'node/4231923696',
+    street: 'Malcolm X Boulevard',
     name: "Sylvia's Restaurant",
     category: 'Food',
     area: 'Central Harlem',
@@ -65,6 +79,9 @@ export const HARLEM_PLACE_PREVIEWS: readonly HarlemPlacePreview[] = [
   },
   {
     id: 'schomburg-center',
+    lngLat: [-73.9409874, 40.8146476],
+    osm: 'way/271825823',
+    street: 'Malcolm X Boulevard',
     name: 'Schomburg Center',
     category: 'Books',
     area: 'Central Harlem',
@@ -77,6 +94,9 @@ export const HARLEM_PLACE_PREVIEWS: readonly HarlemPlacePreview[] = [
   },
   {
     id: 'studio-museum-harlem',
+    lngLat: [-73.947616, 40.8084179],
+    osm: 'node/5420936939',
+    street: 'West 125th Street',
     name: 'The Studio Museum in Harlem',
     category: 'Culture',
     area: '125th Street',
@@ -101,6 +121,8 @@ export const HARLEM_PLACE_PREVIEWS: readonly HarlemPlacePreview[] = [
   },
   {
     id: 'marcus-garvey-park',
+    lngLat: [-73.943669, 40.8044856],
+    osm: 'way/199925533',
     name: 'Marcus Garvey Park',
     category: 'Outdoors',
     area: 'Mount Morris Park',
@@ -188,3 +210,24 @@ export function filterHarlemPlacePreviews(
     ].some((value) => value.toLowerCase().includes(normalized));
   });
 }
+
+const toRad = (d: number) => (d * Math.PI) / 180;
+
+/** Great-circle distance in metres between two [lng, lat] points. */
+export function haversine(a: readonly [number, number], b: readonly [number, number]) {
+  const dLat = toRad(b[1] - a[1]);
+  const dLng = toRad(b[0] - a[0]);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a[1])) * Math.cos(toRad(b[1])) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(h));
+}
+
+/** The n mapped places nearest to `placeId`, excluding it. */
+export function placesNear(placeId: string, n = 3) {
+  const origin = getHarlemPlacePreview(placeId)?.lngLat;
+  const mapped = HARLEM_PLACE_PREVIEWS.filter((p) => p.id !== placeId && p.lngLat);
+  if (!origin) return mapped.slice(0, n);
+  return [...mapped].sort((a, b) => haversine(origin, a.lngLat!) - haversine(origin, b.lngLat!)).slice(0, n);
+}
+
+/** Places with coordinates, for map surfaces. */
+export const MAPPED_PLACES = HARLEM_PLACE_PREVIEWS.filter((p) => p.lngLat);

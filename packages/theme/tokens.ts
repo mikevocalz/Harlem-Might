@@ -1,6 +1,8 @@
 /**
  * @acme/theme — the single token source (PROMPT-2).
- * Brand: burgundy, black, pumpkin orange. Warm dark mode + elegant light mode.
+ * Harlem Might brand: logo gold (#F8C626, sampled from the landscape mark) on
+ * the splash's warm black. The public site renders dark; light values remain
+ * for the mobile app's light mode.
  *
  * `build-css.mjs` emits theme.css (web/storybook, Tailwind v4 `@theme` with
  * light-dark()) and theme-native.css (mobile, Uniwind `@variant` theme blocks)
@@ -12,6 +14,30 @@
 // ---- primitive palettes -----------------------------------------------------
 
 export const palette = {
+  // Harlem Mights v2 — the only colors public-site surfaces may use.
+  mights: {
+    // Brand gold, sampled from Harlem-Might-Logo-landscape.png.
+    gold: '#F8C626',
+    'gold-highlight': '#F8D848',
+    'gold-shade': '#E0A810',
+    'gold-dim': '#8A6E1F',
+    // Warm black from the splash (#070502), lifted one step for the canvas.
+    'warm-black': '#0B0906',
+    limestone: '#EEF0EC',
+    paper: '#FBFBF9',
+    raised: '#FFFFFF',
+    'stoop-iron': '#171C1A',
+    'iron-muted': '#4D5652',
+    brownstone: '#6E4636',
+    'marquee-red': '#C8102E',
+    'transit-cobalt': '#1F4FE0',
+    verdigris: '#2B7564',
+    'sodium-amber': '#F2A900',
+    'spatial-cyan': '#0E8FA3',
+    night: '#0E1412',
+  },
+  // ponytail: legacy scales below still back the mobile shell and schedule
+  // demo; delete them with those screens.
   // RETRO primary — electric yellow (scale name kept for class compatibility)
   burgundy: {
     50: '#FFFCEB',
@@ -87,21 +113,29 @@ export const palette = {
 // Emitted as `light-dark(...)` so system-following is zero-code on every platform.
 
 export const semantic = {
-  surface: { light: '#EEF0EC', dark: '#0E1412' },
-  'surface-raised': { light: '#FFFFFF', dark: '#171E1B' },
-  'surface-sunken': { light: '#E5E9E5', dark: '#101714' },
-  text: { light: '#171C1A', dark: '#F7F9F7' },
-  'text-muted': { light: '#4D5652', dark: '#AEB8B3' },
-  'text-inverse': { light: '#F7F9F7', dark: '#171C1A' },
-  primary: { light: '#1F4FE0', dark: '#7295FF' },
-  'primary-pressed': { light: '#173DB3', dark: '#91AAFF' },
-  'on-primary': { light: '#FFFFFF', dark: '#0E1412' },
+  surface: { light: '#EEF0EC', dark: '#0B0906' },
+  'surface-raised': { light: '#FFFFFF', dark: '#15120D' },
+  'surface-sunken': { light: '#E5E9E5', dark: '#070604' },
+  paper: { light: '#FBFBF9', dark: '#110E0A' },
+  brownstone: { light: '#6E4636', dark: '#C9A08E' },
+  verdigris: { light: '#2B7564', dark: '#5FB8A4' },
+  amber: { light: '#F2A900', dark: '#F2A900' },
+  spatial: { light: '#0E8FA3', dark: '#5FD1E1' },
+  // 1px hairline = iron-muted @ 20%; rail = stoop-iron at full strength.
+  'rule-hairline': { light: 'rgba(77, 86, 82, 0.2)', dark: 'rgba(248, 198, 38, 0.16)' },
+  'rule-rail': { light: '#171C1A', dark: '#8A6E1F' },
+  text: { light: '#171C1A', dark: '#F4EEE0' },
+  'text-muted': { light: '#4D5652', dark: '#A89F8B' },
+  'text-inverse': { light: '#F7F9F7', dark: '#0B0906' },
+  primary: { light: '#1F4FE0', dark: '#F8C626' },
+  'primary-pressed': { light: '#173DB3', dark: '#F8D848' },
+  'on-primary': { light: '#FFFFFF', dark: '#0B0906' },
   accent: { light: '#C8102E', dark: '#FF6B7F' },
   'accent-pressed': { light: '#A70D27', dark: '#FF8A99' },
-  'on-accent': { light: '#FFFFFF', dark: '#0E1412' },
-  border: { light: '#CBD2CE', dark: '#33403A' },
-  'border-strong': { light: '#7D8983', dark: '#6D7B75' },
-  focus: { light: '#0E8FA3', dark: '#5FD1E1' },
+  'on-accent': { light: '#FFFFFF', dark: '#0B0906' },
+  border: { light: '#CBD2CE', dark: '#2A241A' },
+  'border-strong': { light: '#7D8983', dark: '#5A503E' },
+  focus: { light: '#1F4FE0', dark: '#F8C626' },
   danger: { light: '#B4232F', dark: '#FF7A85' },
   'on-danger': { light: '#FFFFFF', dark: '#3D0508' },
 } as const;
@@ -109,18 +143,26 @@ export const semantic = {
 // ---- typography -------------------------------------------------------------
 
 export const fontFamilies = {
-  // RETRO: Archivo Black shouts the headlines; Space Grotesk does the work.
-  display: "'Archivo Black', 'Arial Black', sans-serif",
-  sans: "'Space Grotesk', system-ui, -apple-system, sans-serif",
+  // Mona Sans (wght 200–900, wdth 75–125, opsz 0–100): UI, headlines, data.
+  // Display = the same family pushed to the condensed end via font-stretch.
+  display: "var(--font-mona), 'Mona Sans', system-ui, sans-serif",
+  sans: "var(--font-mona), 'Mona Sans', system-ui, -apple-system, sans-serif",
+  // Newsreader (wght 200–800, opsz 6–72): long-form story body only.
+  serif: "var(--font-newsreader), 'Newsreader', Georgia, serif",
 } as const;
 
-/** Display scale for hero/masthead moments; body text uses the Tailwind defaults. */
+/** Modular scale, ratio 1.25 from 16px snapped to 4px:
+ *  16 · 20 · 25 · 32 · 40 · 50 · 64 · 80 · 100 · 128. */
 export const typeScale = {
-  'display-2xl': { size: '4.5rem', lineHeight: '1.05', tracking: '-0.02em' },
-  'display-xl': { size: '3.75rem', lineHeight: '1.05', tracking: '-0.02em' },
-  'display-lg': { size: '3rem', lineHeight: '1.1', tracking: '-0.01em' },
-  'display-md': { size: '2.25rem', lineHeight: '1.15', tracking: '-0.01em' },
-  'display-sm': { size: '1.875rem', lineHeight: '1.2', tracking: '0' },
+  marquee: { size: '8rem', lineHeight: '0.9', tracking: '-0.01em' },
+  'display-2xl': { size: '6.25rem', lineHeight: '0.92', tracking: '-0.01em' },
+  'display-xl': { size: '5rem', lineHeight: '0.95', tracking: '-0.01em' },
+  'display-lg': { size: '4rem', lineHeight: '1', tracking: '-0.005em' },
+  'display-md': { size: '3.125rem', lineHeight: '1.04', tracking: '0' },
+  'display-sm': { size: '2.5rem', lineHeight: '1.1', tracking: '0' },
+  'title-lg': { size: '2rem', lineHeight: '1.15', tracking: '0' },
+  title: { size: '1.5625rem', lineHeight: '1.25', tracking: '0' },
+  lead: { size: '1.25rem', lineHeight: '1.5', tracking: '0' },
 } as const;
 
 // ---- layout -----------------------------------------------------------------
@@ -156,6 +198,8 @@ export const radius = {
 
 // Harlem Mights elevation: quiet depth on light surfaces; geometry and rails carry emphasis.
 export const shadows = {
+  // shadow-stoop: raised sheets and modals only — never under grid cards.
+  stoop: '0 12px 32px rgba(23, 28, 26, 0.12)',
   card: '0 1px 2px rgba(23, 28, 26, 0.08), 0 8px 24px rgba(23, 28, 26, 0.05)',
   raised: '0 10px 30px rgba(23, 28, 26, 0.10)',
   overlay: '0 18px 54px rgba(23, 28, 26, 0.16)',

@@ -20,6 +20,7 @@
     "@acme/spatial": "workspace:*",
     "@acme/theme": "workspace:*",
     "@acme/ui": "workspace:*",
+    "@gsap/react": "catalog:",
     "@next/env": "catalog:",
     "@payloadcms/db-postgres": "catalog:",
     "@payloadcms/next": "catalog:",
@@ -31,6 +32,10 @@
     "@tanstack/react-query": "catalog:",
     "canvaskit-wasm": "catalog:",
     "graphql": "catalog:",
+    "gsap": "catalog:",
+    "kinetrell": "catalog:",
+    "lenis": "catalog:",
+    "mapbox-gl": "catalog:",
     "next": "catalog:",
     "nextjs-toploader": "catalog:",
     "payload": "catalog:",
@@ -44,11 +49,7 @@
     "sharp": "catalog:",
     "solito": "catalog:",
     "zod": "catalog:",
-    "zustand": "catalog:",
-    "@gsap/react": "catalog:",
-    "gsap": "catalog:",
-    "kinetrell": "catalog:",
-    "lenis": "catalog:"
+    "zustand": "catalog:"
   },
   "devDependencies": {
     "@acme/config": "workspace:*",

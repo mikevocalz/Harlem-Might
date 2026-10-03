@@ -41,6 +41,7 @@ const sharedThemeTokens = () => {
   // typography
   out.push(`  --font-display: ${fontFamilies.display};`);
   out.push(`  --font-sans: ${fontFamilies.sans};`);
+  out.push(`  --font-serif: ${fontFamilies.serif};`);
   for (const [name, t] of Object.entries(typeScale)) {
     out.push(`  --text-${name}: ${t.size};`);
     out.push(`  --text-${name}--line-height: ${t.lineHeight};`);
