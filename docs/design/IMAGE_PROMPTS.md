@@ -4,9 +4,9 @@ Generate each image, export it as WebP (JPG or PNG also work) and save it to
 `apps/web/public/images/company/<file>`. It appears as soon as the file
 exists; until then the slot renders nothing.
 
-Each image is captioned "Generated image" on the page. Keep scenes generic:
-no recreation of a specific real landmark or storefront, no real or
-recognisable people, no readable signs. Real places get real photographs.
+Images render without a caption. Keep scenes generic: no recreation of a
+specific real landmark or storefront, no real or recognisable people, no
+readable signs. Pages about a specific real place use real photographs.
 
 ## Shared style (paste in front of every prompt)
 

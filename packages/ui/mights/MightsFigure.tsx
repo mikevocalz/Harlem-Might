@@ -1,8 +1,7 @@
 import { notch } from './geometry';
 
-// A framed editorial image with a caption. Generated images are always
-// captioned as generated so they are never mistaken for documentary
-// photographs of a real place or person. Renders nothing until there is an image.
+// A framed editorial image with an optional caption (use it for credits on
+// documentary or archival photographs). Renders nothing until there is an image.
 export function MightsFigure({
   src,
   alt,
@@ -34,7 +33,7 @@ export function MightsFigure({
           />
         </div>
       </div>
-      <figcaption className="text-[13px] text-text-muted">{caption ?? 'Generated image'}</figcaption>
+      {caption ? <figcaption className="text-[13px] text-text-muted">{caption}</figcaption> : null}
     </figure>
   );
 }
