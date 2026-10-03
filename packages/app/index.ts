@@ -27,6 +27,9 @@ export {
   HARLEM_PLACE_PREVIEWS,
   HARLEM_CATEGORIES,
   getHarlemPlacePreview,
+  placesNear,
+  haversine,
+  MAPPED_PLACES,
   useExplore,
   type HarlemPlacePreview,
 } from './features/explore/explore.store';

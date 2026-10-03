@@ -210,3 +210,24 @@ export function filterHarlemPlacePreviews(
     ].some((value) => value.toLowerCase().includes(normalized));
   });
 }
+
+const toRad = (d: number) => (d * Math.PI) / 180;
+
+/** Great-circle distance in metres between two [lng, lat] points. */
+export function haversine(a: readonly [number, number], b: readonly [number, number]) {
+  const dLat = toRad(b[1] - a[1]);
+  const dLng = toRad(b[0] - a[0]);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a[1])) * Math.cos(toRad(b[1])) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(h));
+}
+
+/** The n mapped places nearest to `placeId`, excluding it. */
+export function placesNear(placeId: string, n = 3) {
+  const origin = getHarlemPlacePreview(placeId)?.lngLat;
+  const mapped = HARLEM_PLACE_PREVIEWS.filter((p) => p.id !== placeId && p.lngLat);
+  if (!origin) return mapped.slice(0, n);
+  return [...mapped].sort((a, b) => haversine(origin, a.lngLat!) - haversine(origin, b.lngLat!)).slice(0, n);
+}
+
+/** Places with coordinates, for map surfaces. */
+export const MAPPED_PLACES = HARLEM_PLACE_PREVIEWS.filter((p) => p.lngLat);

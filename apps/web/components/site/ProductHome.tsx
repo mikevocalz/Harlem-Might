@@ -12,6 +12,7 @@ import {
   MightsLocationStamp,
   MightsMapImage,
   MightsNotchCard,
+  MightsPlaceBento,
   MightsText,
   routes,
 } from "@acme/ui/mights";
@@ -33,16 +34,6 @@ const HERO_CENTER = [
   (APOLLO.lngLat[0] + STUDIO.lngLat[0]) / 2,
   (APOLLO.lngLat[1] + STUDIO.lngLat[1]) / 2,
 ] as const;
-
-// Bento spans follow an uneven bay rhythm; never 4/4/4.
-const SPANS = [
-  "md:col-span-7",
-  "md:col-span-5",
-  "md:col-span-5",
-  "md:col-span-7",
-  "md:col-span-7",
-  "md:col-span-5",
-];
 
 const chapter = "mx-auto w-full max-w-screen-2xl px-4 sm:px-6";
 
@@ -169,7 +160,7 @@ export function ProductHome() {
             {BLOCK.map((place) => (
               <MightsButton
                 key={place.id}
-                href={routes.explore({ place: place.id })}
+                href={routes.place(place.id)}
                 variant="ghost"
                 className="border-b border-rule-hairline py-4 sm:border-b-0"
               >
@@ -189,39 +180,7 @@ export function ProductHome() {
             See every place
           </MightsButton>
         </View>
-        <View className="grid grid-cols-1 gap-4 md:grid-cols-12">
-          {MAPPED.map((place, i) => (
-            <MightsNotchCard
-              key={place.id}
-              href={routes.explore({ place: place.id })}
-              label={`${place.name}, open on the map`}
-              className={SPANS[i % SPANS.length]}
-            >
-              <View className="h-56 shrink-0 border-b border-rule-hairline md:h-64">
-                <MightsMapImage
-                  center={place.lngLat}
-                  zoom={17.2}
-                  pitch={40}
-                  width={720}
-                  height={405}
-                  pins={[{ lngLat: place.lngLat }]}
-                  alt={`Map of ${place.name}`}
-                />
-              </View>
-              <View className="flex-1 gap-1 p-5">
-                <MightsHeading level={3} size="card">
-                  {place.name}
-                </MightsHeading>
-                <MightsText size="small">
-                  {place.street ?? place.area}
-                </MightsText>
-                <MightsText size="small" tone="default" className="mt-2">
-                  {place.shortDescription}
-                </MightsText>
-              </View>
-            </MightsNotchCard>
-          ))}
-        </View>
+        <MightsPlaceBento places={MAPPED} />
       </Section>
 
       {/* Chapter 3 — from the map to the sidewalk */}

@@ -28,7 +28,7 @@ export function MightsFooter() {
       <div className="mx-auto grid w-full max-w-screen-2xl gap-8 px-4 py-14 sm:px-6 md:grid-cols-12 md:gap-6">
         <div className="flex flex-col gap-3 md:col-span-5">
           <MightsWordmark height={56} />
-          <p className="max-w-xs text-[15px] leading-6 text-text-muted">Built from local knowledge.</p>
+          <p className="max-w-xs text-[15px] leading-6 text-text-muted">Built by the block, for the block.</p>
         </div>
         <nav aria-label="Discover" className="flex flex-col gap-3 md:col-span-2">
           <h2 className={heading}>Discover</h2>

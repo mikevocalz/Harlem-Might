@@ -12,3 +12,7 @@ export { MightsDock } from './MightsDock';
 export { MightsFooter } from './MightsFooter';
 export { MightsMapImage, MapAttribution, mapboxStaticUrl, type MapPin, type MightsMapImageProps } from './MightsMapImage';
 export { MightsHeading, MightsText, type MightsHeadingProps } from './MightsType';
+export { MightsSearchForm } from './MightsSearchForm';
+export { MightsJsonLd } from './MightsJsonLd';
+export { MightsPage, MightsBand } from './MightsPage';
+export { MightsPlaceBento, type BentoPlace } from './MightsPlaceBento';
