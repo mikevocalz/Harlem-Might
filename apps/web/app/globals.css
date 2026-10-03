@@ -10,14 +10,14 @@
 
 /* Token-driven scrollbar — token-driven, no plugin */
 html {
-  scrollbar-color: var(--color-burgundy-600) transparent;
+  scrollbar-color: var(--color-border-strong) transparent;
 }
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-burgundy-600);
+  background: var(--color-border-strong);
   border-radius: 9999px;
   border: 2px solid transparent;
   background-clip: padding-box;
@@ -39,6 +39,8 @@ body main[role='main'] {
 
 body {
   background: var(--color-surface);
+  font-optical-sizing: auto;
+  font-variant-numeric: lining-nums;
   color: var(--color-text);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -96,4 +98,60 @@ body {
     animation-duration: 0s !important;
     animation-delay: 0s !important;
   }
+}
+
+/* ---- Harlem Mights geometry ------------------------------------------------
+   Accent Frame: four 10px corner marks drawn by one pseudo-element. Used for
+   keyboard focus (cobalt, 2px, 4px offset) and for .mights-frame surfaces. */
+.mights-focus {
+  position: relative;
+}
+.mights-focus:focus-visible {
+  outline: none;
+}
+.mights-focus:focus-visible::after,
+.mights-frame::after {
+  --l: 10px;
+  --t: 2px;
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--frame) 0 0) top left / var(--l) var(--t),
+    linear-gradient(var(--frame) 0 0) top left / var(--t) var(--l),
+    linear-gradient(var(--frame) 0 0) top right / var(--l) var(--t),
+    linear-gradient(var(--frame) 0 0) top right / var(--t) var(--l),
+    linear-gradient(var(--frame) 0 0) bottom left / var(--l) var(--t),
+    linear-gradient(var(--frame) 0 0) bottom left / var(--t) var(--l),
+    linear-gradient(var(--frame) 0 0) bottom right / var(--l) var(--t),
+    linear-gradient(var(--frame) 0 0) bottom right / var(--t) var(--l);
+  background-repeat: no-repeat;
+}
+.mights-focus:focus-visible::after {
+  --frame: var(--color-primary);
+  inset: -4px;
+  z-index: 1;
+}
+.mights-frame::after {
+  inset: 0;
+}
+
+/* Bottom sheet: native <dialog> pinned to the bottom edge. */
+dialog.mights-sheet[open] {
+  position: fixed;
+  inset: auto 0 0 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -100px;
+  z-index: 100;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+}
+.skip-link:focus {
+  top: 0.75rem;
 }

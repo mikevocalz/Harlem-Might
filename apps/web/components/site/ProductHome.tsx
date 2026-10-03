@@ -1,294 +1,273 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
-import gsap from 'gsap';
-import { Link } from 'solito/link';
-import { attachScrollTrigger, ensureScrollTrigger } from 'kinetrell/web/gsap';
-import { useBrowserReducedMotion } from 'kinetrell/web/react';
-import { Card, GridScene, Heading, Text } from '@acme/ui';
-import { Main, Section, View } from '@acme/ui/tw';
-import { SightlineHeroCanvas } from '@acme/spatial/sightline';
+import { useEffect, useRef } from "react";
+import gsap from "gsap";
+import { useBrowserReducedMotion } from "kinetrell/web/react";
+import { Main, Section, View } from "@acme/ui/tw";
+import {
+  MapAttribution,
+  MightsAccentFrame,
+  MightsButton,
+  MightsHeading,
+  MightsLocationStamp,
+  MightsMapImage,
+  MightsNotchCard,
+  MightsText,
+  routes,
+} from "@acme/ui/mights";
+import { HARLEM_PLACE_PREVIEWS, type HarlemPlacePreview } from "@acme/app";
 
-const CHAPTERS = [
-  {
-    number: '01',
-    eyebrow: 'Discover',
-    title: 'Start with a block.',
-    body: 'Search a place, move the map, and keep the story, source and real entrance attached to the same canonical location.',
-  },
-  {
-    number: '02',
-    eyebrow: 'Walk',
-    title: 'Carry context with you.',
-    body: 'Turn a saved place into an entrance-aware route without collapsing Harlem into a generic directions screen.',
-  },
-  {
-    number: '03',
-    eyebrow: 'Look up',
-    title: 'The history is already there.',
-    body: 'Move from the map into spatial layers and AR stories that belong to the exact corner where they happened.',
-  },
+type MappedPlace = HarlemPlacePreview & { lngLat: readonly [number, number] };
+const MAPPED = HARLEM_PLACE_PREVIEWS.filter((p): p is MappedPlace =>
+  Boolean(p.lngLat),
+);
+const byId = (id: string) => MAPPED.find((p) => p.id === id)!;
+
+const APOLLO = byId("apollo-theater");
+const STUDIO = byId("studio-museum-harlem");
+const SYLVIAS = byId("sylvias-restaurant");
+const BLOCK = [APOLLO, STUDIO, SYLVIAS];
+
+// West 125th Street, between the Apollo and the Studio Museum.
+const HERO_CENTER = [
+  (APOLLO.lngLat[0] + STUDIO.lngLat[0]) / 2,
+  (APOLLO.lngLat[1] + STUDIO.lngLat[1]) / 2,
 ] as const;
 
+// Bento spans follow an uneven bay rhythm; never 4/4/4.
+const SPANS = [
+  "md:col-span-7",
+  "md:col-span-5",
+  "md:col-span-5",
+  "md:col-span-7",
+  "md:col-span-7",
+  "md:col-span-5",
+];
+
+const chapter = "mx-auto w-full max-w-screen-2xl px-4 sm:px-6";
+
 export function ProductHome() {
-  const heroRef = useRef<HTMLElement | null>(null);
-  const heroCopyRef = useRef<HTMLElement | null>(null);
-  const heroObjectRef = useRef<HTMLElement | null>(null);
-  const storyRef = useRef<HTMLElement | null>(null);
-  const chapterRefs = useRef<Array<HTMLElement | null>>([]);
-  const progressRef = useRef(0);
-  const reducedMotion = useBrowserReducedMotion('system');
+  const lensRef = useRef<HTMLElement | null>(null);
+  const reducedMotion = useBrowserReducedMotion("system");
 
+  // The page's one orchestrated moment: the lens resolves over the block.
   useEffect(() => {
-    const hero = heroRef.current;
-    const copy = heroCopyRef.current;
-    const object = heroObjectRef.current;
-    if (!hero || !copy || !object || reducedMotion || !ensureScrollTrigger()) {
-      progressRef.current = reducedMotion ? 0.55 : 0;
-      return;
-    }
-
-    const timeline = gsap.timeline({ paused: true });
-    timeline.fromTo(
-      copy,
-      { y: 0, autoAlpha: 1 },
-      { y: -74, autoAlpha: 0.76, ease: 'none', duration: 1 },
-      0,
-    );
-    timeline.fromTo(
-      object,
-      { y: 70, scale: 0.945 },
-      { y: -26, scale: 1.035, ease: 'none', duration: 1 },
-      0,
-    );
-    timeline.eventCallback('onUpdate', () => {
-      progressRef.current = timeline.progress();
-    });
-
-    const trigger = attachScrollTrigger(timeline, {
-      trigger: hero,
-      start: 'top top',
-      end: 'bottom top',
-      scrub: 0.8,
-    });
-
-    return () => {
-      trigger.kill();
-      timeline.kill();
-    };
-  }, [reducedMotion]);
-
-  useEffect(() => {
-    const story = storyRef.current;
-    const chapters = chapterRefs.current.filter(Boolean);
-    if (!story || chapters.length === 0 || reducedMotion || !ensureScrollTrigger()) return;
-
-    const timeline = gsap.timeline({ paused: true });
-    timeline.fromTo(
-      chapters,
-      { y: 54, autoAlpha: 0.35 },
-      {
-        y: 0,
-        autoAlpha: 1,
-        stagger: 0.16,
-        duration: 1,
-        ease: 'power2.out',
-      },
-    );
-
-    const trigger = attachScrollTrigger(timeline, {
-      trigger: story,
-      start: 'top 84%',
-      end: 'top 38%',
-      scrub: 0.7,
-    });
-
-    return () => {
-      trigger.kill();
-      timeline.kill();
-    };
+    const lens = lensRef.current;
+    if (!lens || reducedMotion) return;
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        lens,
+        { autoAlpha: 0, scale: 0.94 },
+        {
+          autoAlpha: 1,
+          scale: 1,
+          duration: 0.9,
+          ease: "expo.out",
+          delay: 0.15,
+          clearProps: "transform,opacity,visibility",
+        },
+      );
+    }, lens);
+    return () => ctx.revert();
   }, [reducedMotion]);
 
   return (
-    <Main className="flex-1 overflow-hidden bg-surface">
-      <View
-        ref={heroRef as never}
-        className="relative min-h-[138vh] overflow-hidden border-b border-border bg-surface"
-      >
-        <View className="absolute inset-0 opacity-80">
-          <GridScene
-            className="flex-1"
-            horizon={0.57}
-            gap={0}
-            speed={0.18}
-            lineColor="#A9B4AE"
-            glowColor="#0E8FA3"
-            backgroundColor="#EEF0EC"
-            opacity={0.27}
-            showCeiling={false}
-          />
+    <Main className="-mt-16 flex-1 bg-surface">
+      {/* Chapter 1 — the block, through the lens */}
+      <Section className="relative grid grid-cols-1 lg:min-h-[100svh] lg:grid-cols-12">
+        <View className="z-10 flex flex-col justify-end gap-8 px-4 pb-12 pt-28 sm:px-6 lg:col-span-5 lg:pb-20 lg:pl-[max(1.5rem,calc((100vw-96rem)/2+1.5rem))]">
+          <MightsHeading level={1} size="marquee">
+            See the block. Know the story.
+          </MightsHeading>
+          <MightsText size="lead" className="max-w-[34ch]">
+            Places, walks and the history attached to each corner of Harlem, on
+            one map.
+          </MightsText>
+          <View className="flex-row">
+            <MightsButton href={routes.explore()}>Open the map</MightsButton>
+          </View>
         </View>
 
-        <Section className="sticky top-0 mx-auto min-h-screen w-full max-w-screen-2xl px-4 py-16 sm:px-6 sm:py-20 lg:py-24">
-          <View className="grid min-h-[80vh] grid-cols-1 items-center gap-10 lg:grid-cols-[0.88fr_1.12fr] lg:gap-6">
-            <View ref={heroCopyRef as never} className="z-10 max-w-2xl gap-5">
-              <Text className="self-start rounded-full border border-border bg-surface-raised/90 px-3 py-1.5 text-xs font-semibold text-primary shadow-card">
-                Harlem in your sightline
-              </Text>
+        <View className="relative h-[560px] overflow-hidden border-t border-rule-hairline lg:col-span-7 lg:h-auto lg:min-h-[100svh] lg:border-l lg:border-t-0">
+          <View className="absolute inset-0">
+            <MightsMapImage
+              center={HERO_CENTER}
+              zoom={16.2}
+              pitch={50}
+              bearing={-29}
+              width={1280}
+              height={960}
+              alt="Map of West 125th Street in Harlem, from the Apollo Theater to the Studio Museum"
+              priority
+            />
+          </View>
 
-              <Heading
-                level={1}
-                size="display-2xl"
-                className="max-w-3xl tracking-[-0.05em] text-text"
-              >
-                See the block. Know the story.
-              </Heading>
-
-              <Text className="max-w-2xl text-base leading-7 text-text-muted md:text-xl md:leading-9">
-                Harlem Might connects places, local context, walking routes and spatial
-                stories so discovery never loses the neighborhood around it.
-              </Text>
-
-              <View className="mt-2 flex-row flex-wrap gap-3">
-                <Link
-                  href="/explore"
-                  className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-on-primary shadow-card transition-colors duration-200 hover:bg-primary-pressed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/40"
-                >
-                  Explore Harlem
-                </Link>
-                <Link
-                  href="/spatial"
-                  className="rounded-xl border border-border-strong bg-surface-raised px-5 py-3 text-sm font-semibold text-text shadow-card transition-colors duration-200 hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/40"
-                >
-                  Enter the spatial experience
-                </Link>
-              </View>
-
-              <View className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {['Places + context', 'Entrance-aware routes', 'Spatial stories'].map(
-                  (label, index) => (
-                    <View
-                      key={label}
-                      className={`rounded-xl border border-border bg-surface-raised/88 p-3 shadow-card ${
-                        index === 2 ? 'col-span-2 sm:col-span-1' : ''
-                      }`}
-                    >
-                      <Text className="text-[11px] font-semibold tabular-nums text-primary">
-                        0{index + 1}
-                      </Text>
-                      <Text className="mt-1 text-sm text-text-muted">{label}</Text>
-                    </View>
-                  ),
-                )}
-              </View>
-            </View>
-
+          <View className="pointer-events-none absolute inset-0 items-center justify-center">
             <View
-              ref={heroObjectRef as never}
-              className="relative min-h-[410px] overflow-hidden rounded-[30px] border border-border bg-surface-raised/58 shadow-raised backdrop-blur-sm sm:min-h-[540px] lg:min-h-[660px]"
+              ref={lensRef as never}
+              className="pointer-events-auto w-[min(78%,440px)]"
             >
-              <SightlineHeroCanvas
-                getProgress={() => progressRef.current}
-                reducedMotion={reducedMotion}
-                className="absolute inset-0 h-full w-full"
-              />
-
-              <View
-                pointerEvents="none"
-                className="absolute left-4 top-4 rounded-full border border-border bg-surface-raised/92 px-3 py-1.5 shadow-card"
-              >
-                <Text className="text-xs font-semibold text-text">
-                  Mights Sightline · spatial preview
-                </Text>
-              </View>
-
-              <View
-                pointerEvents="none"
-                className="absolute bottom-4 left-4 right-4 gap-1 rounded-2xl border border-border bg-surface-raised/94 p-4 shadow-card"
-              >
-                <Text className="text-xs font-semibold text-primary">Route in context</Text>
-                <Text className="text-sm font-medium text-text">
-                  125th St → Apollo Theater
-                </Text>
-                <Text className="text-xs leading-5 text-text-muted">
-                  Place record → entrance anchor → walking route → spatial story
-                </Text>
-              </View>
+              <MightsAccentFrame className="aspect-square p-3">
+                <View className="h-full w-full overflow-hidden rounded-full border border-rule-rail bg-surface-raised">
+                  <MightsMapImage
+                    center={APOLLO.lngLat}
+                    zoom={18.4}
+                    pitch={58}
+                    bearing={-29}
+                    width={640}
+                    height={640}
+                    pins={[{ lngLat: APOLLO.lngLat }]}
+                    alt="Close view of the Apollo Theater on West 125th Street"
+                    priority
+                  />
+                </View>
+              </MightsAccentFrame>
             </View>
           </View>
-        </Section>
-      </View>
 
+          <View className="absolute bottom-4 left-4 right-4 flex-row flex-wrap items-end justify-between gap-2">
+            <MightsLocationStamp
+              name={APOLLO.name}
+              street={APOLLO.street}
+              href={routes.explore({ place: APOLLO.id })}
+            />
+            <MapAttribution className="bg-paper/80 px-1.5 py-0.5" />
+          </View>
+        </View>
+      </Section>
+
+      {/* Chapter 2 — start with a block */}
       <Section
-        ref={storyRef as never}
-        className="mx-auto w-full max-w-screen-2xl gap-8 px-4 py-20 sm:px-6 md:py-28"
+        className={`${chapter} grid grid-cols-1 gap-10 py-24 md:grid-cols-12 md:gap-6 md:py-32`}
       >
-        <View className="max-w-3xl gap-3">
-          <Text className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-            One continuous experience
-          </Text>
-          <Heading level={2} size="display-sm" className="tracking-[-0.035em] text-text">
-            From discovery to the street without dropping the context.
-          </Heading>
-          <Text className="text-base leading-7 text-text-muted">
-            The product site, map workspace and spatial view now share the same visual
-            and motion language instead of feeling like separate demos.
-          </Text>
+        <View className="gap-6 md:col-span-4">
+          <MightsHeading>Start with a block.</MightsHeading>
+          <MightsText>
+            Three doors on West 125th Street and Malcolm X Boulevard. Pick one
+            and the map keeps everything attached to it: the history, the hours,
+            the way in.
+          </MightsText>
+          <View className="flex-row">
+            <MightsButton href={routes.explore()} variant="secondary">
+              Open the map
+            </MightsButton>
+          </View>
         </View>
 
-        <View className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {CHAPTERS.map((chapter, index) => (
-            <View
-              key={chapter.number}
-              ref={((node: HTMLElement | null) => {
-                chapterRefs.current[index] = node;
-              }) as never}
-              className="min-w-0"
-            >
-              <Card
-                elevation={index === 1 ? 'raised' : 'flat'}
-                className="min-h-72 gap-4 border-border bg-surface-raised p-6"
+        <View className="gap-4 md:col-span-8">
+          <MightsNotchCard className="aspect-[16/10]">
+            <MightsMapImage
+              center={HERO_CENTER}
+              zoom={15.6}
+              width={1200}
+              height={750}
+              pins={BLOCK.map((p) => ({ lngLat: p.lngLat }))}
+              alt="Map of the Apollo Theater, the Studio Museum in Harlem and Sylvia's Restaurant"
+            />
+          </MightsNotchCard>
+          <View className="grid grid-cols-1 border-t border-rule-rail sm:grid-cols-3">
+            {BLOCK.map((place) => (
+              <MightsButton
+                key={place.id}
+                href={routes.explore({ place: place.id })}
+                variant="ghost"
+                className="border-b border-rule-hairline py-4 sm:border-b-0"
               >
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-                    {chapter.eyebrow}
-                  </Text>
-                  <Text className="text-xs font-semibold tabular-nums text-text-muted">
-                    {chapter.number}
-                  </Text>
-                </View>
-                <Heading level={3} size="title" className="text-text">
-                  {chapter.title}
-                </Heading>
-                <Text className="text-sm leading-6 text-text-muted md:text-base md:leading-7">
-                  {chapter.body}
-                </Text>
-              </Card>
-            </View>
+                {place.name}
+              </MightsButton>
+            ))}
+          </View>
+          <MapAttribution />
+        </View>
+      </Section>
+
+      {/* Places on the map — composed bento, every tile a real catalogue place */}
+      <Section className={`${chapter} gap-10 pb-24 md:pb-32`}>
+        <View className="flex-col justify-between gap-4 border-t border-rule-rail pt-6 md:flex-row md:items-end">
+          <MightsHeading>Places on the map</MightsHeading>
+          <MightsButton href={routes.explore({ view: "list" })} variant="ghost">
+            See every place
+          </MightsButton>
+        </View>
+        <View className="grid grid-cols-1 gap-4 md:grid-cols-12">
+          {MAPPED.map((place, i) => (
+            <MightsNotchCard
+              key={place.id}
+              href={routes.explore({ place: place.id })}
+              label={`${place.name}, open on the map`}
+              className={SPANS[i % SPANS.length]}
+            >
+              <View className="aspect-[16/9] border-b border-rule-hairline">
+                <MightsMapImage
+                  center={place.lngLat}
+                  zoom={17.2}
+                  pitch={40}
+                  width={720}
+                  height={405}
+                  pins={[{ lngLat: place.lngLat }]}
+                  alt={`Map of ${place.name}`}
+                />
+              </View>
+              <View className="gap-1 p-5">
+                <MightsHeading level={3} size="card">
+                  {place.name}
+                </MightsHeading>
+                <MightsText size="small">
+                  {place.street ?? place.area}
+                </MightsText>
+                <MightsText size="small" tone="default" className="mt-2">
+                  {place.shortDescription}
+                </MightsText>
+              </View>
+            </MightsNotchCard>
           ))}
         </View>
       </Section>
 
-      <Section className="border-y border-border bg-surface-raised">
-        <View className="mx-auto w-full max-w-screen-2xl gap-6 px-4 py-20 sm:px-6 md:flex-row md:items-end md:justify-between md:py-24">
-          <View className="max-w-3xl gap-3">
-            <Text className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-              Harlem Might
-            </Text>
-            <Heading level={2} size="display-sm" className="tracking-[-0.035em] text-text">
-              The map is the beginning, not the product boundary.
-            </Heading>
-            <Text className="text-base leading-7 text-text-muted">
-              Save places, plan time, open the spatial view and return to the same
-              canonical Harlem record everywhere.
-            </Text>
+      {/* Chapter 3 — from the map to the sidewalk */}
+      <Section className="border-y border-rule-hairline bg-paper">
+        <View
+          className={`${chapter} grid grid-cols-1 items-center gap-10 py-24 md:grid-cols-12 md:gap-6 md:py-32`}
+        >
+          <View className="order-2 md:order-1 md:col-span-7">
+            <MightsAccentFrame tone="cobalt" className="p-3">
+              <View className="aspect-[4/3] overflow-hidden bg-surface-raised">
+                <MightsMapImage
+                  center={SYLVIAS.lngLat}
+                  zoom={18.6}
+                  pitch={60}
+                  bearing={62}
+                  width={960}
+                  height={720}
+                  pins={[{ lngLat: SYLVIAS.lngLat }]}
+                  alt="Street-level map view of Malcolm X Boulevard at Sylvia's Restaurant"
+                />
+              </View>
+            </MightsAccentFrame>
           </View>
-          <Link
-            href="/explore"
-            className="self-start rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-on-primary shadow-card md:self-auto"
-          >
-            Open Explore
-          </Link>
+          <View className="order-1 gap-6 md:order-2 md:col-span-4 md:col-start-9">
+            <MightsHeading>From the map to the sidewalk.</MightsHeading>
+            <MightsText>
+              In the app, the same place record follows you outside. Hold up
+              your phone on the block and the label sits on the building it
+              belongs to.
+            </MightsText>
+            <View className="flex-row">
+              <MightsButton href={routes.ar()} variant="secondary">
+                See how AR works
+              </MightsButton>
+            </View>
+          </View>
+        </View>
+      </Section>
+
+      {/* Chapter 7 — close */}
+      <Section className={`${chapter} gap-8 py-28 md:py-40`}>
+        <MightsHeading size="display-lg" className="max-w-[16ch]">
+          Harlem is not a list of landmarks.
+        </MightsHeading>
+        <View className="flex-row">
+          <MightsButton href={routes.explore()}>Open the map</MightsButton>
         </View>
       </Section>
     </Main>

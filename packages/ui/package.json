@@ -17,7 +17,8 @@
       "react-native": "./icons.native.tsx",
       "default": "./icons.web.ts"
     },
-    "./native": "./native.ts"
+    "./native": "./native.ts",
+    "./mights": "./mights/index.ts"
   },
   "scripts": {
     "lint": "eslint",
