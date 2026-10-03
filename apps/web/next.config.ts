@@ -47,6 +47,23 @@ const nextConfig: NextConfig = {
   logging: {
     browserToTerminal: true,
   },
+  // Site map v3 §4.1: retired and alias routes resolve to their nearest parent.
+  async redirects() {
+    const permanent = true;
+    return [
+      { source: '/places', destination: '/explore', permanent },
+      { source: '/tours', destination: '/walks', permanent },
+      { source: '/events', destination: '/today', permanent },
+      { source: '/map', destination: '/explore?view=map', permanent },
+      { source: '/explore/map', destination: '/explore?view=map', permanent },
+      { source: '/app', destination: '/download', permanent },
+      { source: '/schedule', destination: '/today', permanent },
+      { source: '/spatial', destination: '/ar', permanent },
+      { source: '/notifications', destination: '/', permanent },
+      { source: '/profile', destination: '/', permanent },
+      { source: '/settings', destination: '/', permanent },
+    ];
+  },
   cacheComponents: true,
   partialPrefetching: true,
   // DO NOT add `experimental.scrollRestoration` here. It still exists in the
