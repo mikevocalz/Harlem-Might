@@ -85,12 +85,12 @@ export function ViroExternalTestScene(): React.ReactElement {
             <PanelLabel text={ABOUT} variant="body" wrap />
             <PanelLabel text="Upcoming runs" variant="heading" />
             {RUNS.map((run) => (
-              <PanelSurface key={run.title} width={0.78} height={0.088}>
+              <PanelSurface key={run.title} width={0.74} height={0.088}>
                 <PanelRow gap={0.02}>
                   <PanelImage source={run.image} width={0.07} height={0.07} />
                   <PanelStack gap={0.006}>
-                    <PanelLabel text={run.title} variant="label" width={0.6} />
-                    <PanelLabel text={run.detail} variant="caption" width={0.6} />
+                    <PanelLabel text={run.title} variant="label" width={0.58} />
+                    <PanelLabel text={run.detail} variant="caption" width={0.58} />
                   </PanelStack>
                 </PanelRow>
               </PanelSurface>
