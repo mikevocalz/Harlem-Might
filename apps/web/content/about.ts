@@ -5,6 +5,16 @@ export const ABOUT_LEAD =
 
 export const ABOUT_SECTIONS: readonly ProseSection[] = [
   {
+    id: 'name',
+    title: 'The name',
+    body: [
+      'Say it out loud: Harlem Might. It sounds like Harlemite, the word for someone from Harlem. A Harlemite is the person who knows which bakery sells out by noon, which block throws the best summer cookout, and whose grandmother remembers when the club on the corner had a different name.',
+      'That is who this guide is written for and, as much as possible, who it is written by. The knowledge on these pages belongs to the neighborhood first.',
+      'The second half of the name is deliberate too. Might means strength: the strength it took to build Harlem, to hold onto it, and to keep making culture that the rest of the world borrows. The crown in the logo sits over a skyline of brownstones for the same reason. The power is in the blocks and the people on them.',
+      'Harlem Might is a guide by Harlemites, for anyone who wants to see the neighborhood the way they do.',
+    ],
+  },
+  {
     id: 'why',
     title: 'Why we built it',
     body: [

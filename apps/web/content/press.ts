@@ -9,6 +9,7 @@ export const PRESS_SECTIONS: readonly ProseSection[] = [
     title: 'The story',
     body: [
       'Harlem Might began with a simple frustration: maps tell you what is on a block but almost never why it matters. Harlem is one of the most storied neighborhoods in the world, and its history is not in a museum somewhere else. It is on the corners, in the brownstones and behind the marquees.',
+      'The name is a play on Harlemite, the word for someone from Harlem. It is a guide written from the neighborhood out, with might standing for the strength of Harlem and the people who built it.',
       'Harlem Might gives every place one record that carries its history, its people and what is happening there today, and uses that same record across the map, walking routes, long-form stories and an augmented-reality view that pins labels to the buildings they belong to.',
     ],
   },
@@ -17,7 +18,7 @@ export const PRESS_SECTIONS: readonly ProseSection[] = [
     title: 'Fact sheet',
     body: [
       [
-        'Name: Harlem Might.',
+        'Name: Harlem Might, a play on Harlemite, the word for a Harlem native. Might stands for the strength of the neighborhood and its people, which is why the logo wears a crown.',
         'What it is: a map and guide to Harlem, New York, with place histories, walks, stories and listings.',
         'Where: on the web now; the app for iPhone and Android is in testing and not yet in the stores.',
         'Coverage: Harlem, starting with Central Harlem and expanding block by block.',
