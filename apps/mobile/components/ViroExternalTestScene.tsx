@@ -8,7 +8,6 @@ import React from "react";
 import { Image } from "react-native";
 import {
   ViroAmbientLight,
-  ViroNode,
   ViroScene,
 } from "@reactvision/react-viro";
 import {
@@ -52,70 +51,81 @@ const RUNS = [
   { title: "Youth Clinic", detail: "Sun 10:00 AM  ·  both courts", image: DOG },
 ];
 
+/**
+ * Panels sit on an arc at the 1.5 m design distance, each turned to face the
+ * viewer, slightly below eye level (Meta comfort zone: 1.0-2.0 m, content
+ * within about 30 degrees of centre, no panel wider than 50 degrees).
+ */
+const VIEW_RADIUS = 1.5;
+function onArc(degrees: number, y: number): { position: [number, number, number]; rotation: [number, number, number] } {
+  const rad = (degrees * Math.PI) / 180;
+  return {
+    position: [VIEW_RADIUS * Math.sin(rad), y, -VIEW_RADIUS * Math.cos(rad)],
+    rotation: [0, -degrees, 0],
+  };
+}
+const VIDEO_AT = onArc(-26, -0.12);
+const RIVE_AT = onArc(-26, 0.58);
+const DASHBOARD_AT = onArc(26, -0.02);
+
 export function ViroExternalTestScene(): React.ReactElement {
   return (
     <ViroScene>
       <ViroAmbientLight color="#ffffff" intensity={600} />
-      <ViroNode position={[0, 0, -1.5]}>
-        <ViroNode position={[0, 0.42, 0]}>
-          <PanelLabel text="viro-external on Quest" variant="title" width={1.2} />
-        </ViroNode>
+      <SpatialPanel
+        title="Harlem Courts"
+        subtitle="Pickup games, last 7 days"
+        width={1.3}
+        height={0.95}
+        {...DASHBOARD_AT}
+      >
+        <PanelStack>
+          <PanelRow>
+            <PanelStack gap={0.012}>
+              <PanelImage source={PALACE} width={0.5} height={0.3} />
+              <PanelLabel text="Rucker Park, 155th St" variant="caption" />
+            </PanelStack>
+            <PanelBarChart data={WEEK} width={0.6} height={0.36} />
+          </PanelRow>
+          <PanelRow>
+            <PanelStat value="159" caption="games this week" width={0.36} />
+            <PanelStat value="41" caption="Saturday peak" width={0.36} />
+            <PanelStat value="+18%" caption="vs last week" width={0.36} />
+          </PanelRow>
+          <PanelLabel text="About the courts" variant="heading" />
+          <PanelLabel text={ABOUT} variant="body" wrap />
+          <PanelLabel text="Upcoming runs" variant="heading" />
+          {RUNS.map((run) => (
+            <PanelSurface key={run.title} width={1.1} height={0.13}>
+              <PanelRow gap={0.02}>
+                <PanelImage source={run.image} width={0.1} height={0.1} />
+                <PanelStack gap={0.006}>
+                  <PanelLabel text={run.title} variant="label" width={0.92} />
+                  <PanelLabel text={run.detail} variant="caption" width={0.92} />
+                </PanelStack>
+              </PanelRow>
+            </PanelSurface>
+          ))}
+        </PanelStack>
+      </SpatialPanel>
 
-        <SpatialPanel
-          title="Harlem Courts"
-          subtitle="Pickup games, last 7 days"
-          width={0.9}
-          height={0.6}
-          position={[0.5, 0.02, 0]}
-        >
-          <PanelStack>
-            <PanelRow>
-              <PanelStack gap={0.012}>
-                <PanelImage source={PALACE} width={0.34} height={0.22} />
-                <PanelLabel text="Rucker Park, 155th St" variant="caption" />
-              </PanelStack>
-              <PanelBarChart data={WEEK} width={0.4} height={0.24} />
-            </PanelRow>
-            <PanelRow>
-              <PanelStat value="159" caption="games this week" width={0.24} />
-              <PanelStat value="41" caption="Saturday peak" width={0.24} />
-              <PanelStat value="+18%" caption="vs last week" width={0.24} />
-            </PanelRow>
-            <PanelLabel text="About the courts" variant="heading" />
-            <PanelLabel text={ABOUT} variant="body" wrap />
-            <PanelLabel text="Upcoming runs" variant="heading" />
-            {RUNS.map((run) => (
-              <PanelSurface key={run.title} width={0.74} height={0.088}>
-                <PanelRow gap={0.02}>
-                  <PanelImage source={run.image} width={0.07} height={0.07} />
-                  <PanelStack gap={0.006}>
-                    <PanelLabel text={run.title} variant="label" width={0.58} />
-                    <PanelLabel text={run.detail} variant="caption" width={0.58} />
-                  </PanelStack>
-                </PanelRow>
-              </PanelSurface>
-            ))}
-          </PanelStack>
-        </SpatialPanel>
+      <VideoPlayerPanel
+        title="Courtside"
+        source={{ uri: DEMO_VIDEO }}
+        width={1.1}
+        height={0.78}
+        defaultLoop
+        {...VIDEO_AT}
+      />
 
-        <VideoPlayerPanel
-          title="Courtside"
-          source={{ uri: DEMO_VIDEO }}
-          width={0.6}
-          height={0.4}
-          defaultLoop
-          position={[-0.46, 0.0, 0]}
-        />
-
-        <RivePanel
-          tag="platform-lab-lesson"
-          width={0.56}
-          height={0.35}
-          position={[-0.46, 0.46, 0]}
-          baked={RIVE_BAKES["platform-lab-lesson"]}
-          onButtonPress={(id) => console.log("[viro-external] rive button", id)}
-        />
-      </ViroNode>
+      <RivePanel
+        tag="platform-lab-lesson"
+        width={0.9}
+        height={0.5625}
+        {...RIVE_AT}
+        baked={RIVE_BAKES["platform-lab-lesson"]}
+        onButtonPress={(id) => console.log("[viro-external] rive button", id)}
+      />
     </ViroScene>
   );
 }
