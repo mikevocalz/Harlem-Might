@@ -10,7 +10,6 @@ import {
   ViroAmbientLight,
   ViroNode,
   ViroScene,
-  ViroText,
 } from "@reactvision/react-viro";
 import {
   PanelBarChart,
@@ -58,7 +57,9 @@ export function ViroExternalTestScene(): React.ReactElement {
     <ViroScene>
       <ViroAmbientLight color="#ffffff" intensity={600} />
       <ViroNode position={[0, 0, -1.5]}>
-        <ViroText text="viro-external on Quest" position={[0, 0.42, 0]} width={1.2} height={0.1} />
+        <ViroNode position={[0, 0.42, 0]}>
+          <PanelLabel text="viro-external on Quest" variant="title" width={1.2} />
+        </ViroNode>
 
         <SpatialPanel
           title="Harlem Courts"
