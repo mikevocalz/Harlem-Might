@@ -9,7 +9,7 @@ import { TabletopSessionPanel } from './TabletopSessionPanel';
 import { gridRace } from './gridRaceStore';
 import { tabletopSession, useTabletopSessionStore } from './tabletopSessionStore';
 
-const RIVE_DEMO = 'https://cdn.rive.app/animations/vehicles.riv';
+const RIVE_DEMO = require('./rive/assets/learning-question.riv') as number;
 
 export function SpatialScreen() {
   const capabilities = getSpatialForkCapabilities();
@@ -126,7 +126,7 @@ export function SpatialScreen() {
             <Text className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-200">
               Universal Rive surface
             </Text>
-            <RiveStage source={RIVE_DEMO} />
+            <RiveStage source={RIVE_DEMO} artboard="LearningQuestion" stateMachine="QuestionFlow" />
           </View>
         </ScrollView>
       </GridScene>

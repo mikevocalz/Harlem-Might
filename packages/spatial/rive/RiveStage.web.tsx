@@ -2,6 +2,7 @@
 
 import { useRive } from '@rive-app/react-webgl2';
 import { View } from '@acme/ui/tw';
+import { Asset } from 'expo-asset';
 import type { RiveStageProps } from './RiveStage.types';
 
 export function RiveStage({
@@ -13,7 +14,7 @@ export function RiveStage({
   height = 280,
 }: RiveStageProps) {
   const { RiveComponent } = useRive({
-    src: source,
+    src: typeof source === 'number' ? Asset.fromModule(source).uri : source,
     artboard,
     stateMachines: stateMachine,
     autoplay,

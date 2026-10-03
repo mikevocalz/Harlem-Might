@@ -1171,6 +1171,9 @@ importers:
       '@typegpu/three':
         specifier: 'catalog:'
         version: 0.12.1(@typegpu/gl@0.12.5(typegpu@0.12.6))(three@0.186.1)(typegpu@0.12.6)
+      expo-asset:
+        specifier: 'catalog:'
+        version: 58.0.9(expo@58.0.1)(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1)(typescript@6.0.3)
       react-native-audio-api:
         specifier: 'catalog:'
         version: 1.0.0-nightly-514be71-20261003(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)

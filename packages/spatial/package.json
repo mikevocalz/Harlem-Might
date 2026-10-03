@@ -44,13 +44,14 @@
     "@reactvision/viro-web-renderer": "catalog:",
     "@rive-app/react-native": "catalog:",
     "@rive-app/react-webgl2": "catalog:",
-    "react-native-nitro-modules": "catalog:",
-    "zustand": "catalog:",
     "@typegpu/three": "catalog:",
+    "expo-asset": "catalog:",
+    "react-native-audio-api": "catalog:",
+    "react-native-nitro-modules": "catalog:",
     "react-native-webgpu": "catalog:",
     "three": "catalog:",
     "typegpu": "catalog:",
-    "react-native-audio-api": "catalog:"
+    "zustand": "catalog:"
   },
   "devDependencies": {
     "@acme/config": "workspace:*",
