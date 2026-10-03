@@ -1,54 +1,51 @@
-# Company page images (photoreal)
+# Company page images
 
-Generate each image, export it as WebP (JPG or PNG also work) and save it to
-`apps/web/public/images/company/<file>`. It appears as soon as the file
-exists; until then the slot renders nothing.
+Save each image to `apps/web/public/images/company/<file>` (WebP, JPG or PNG).
+It appears as soon as the file exists. Images render without captions.
 
-Images render without a caption. Keep scenes generic: no recreation of a
-specific real landmark or storefront, no real or recognisable people, no
-readable signs. Pages about a specific real place use real photographs.
+Keep scenes generic: no recreation of a specific real landmark or storefront,
+no recognisable people, no readable signs. Pages about a specific real place
+use real photographs.
+
+## Why the first round looked fake
+
+"Hyper-realistic", "cinematic", "golden hour", "editorial" and "rich
+shadows" push the model toward a glossy, too-perfect look. Real photos
+are believable because of what's wrong with them: flat or mixed light,
+clutter, imperfect framing, sensor noise, a phone's processing. The prompts
+below describe an ordinary photo someone actually took.
 
 ## Shared style (paste in front of every prompt)
 
-> Hyper-realistic documentary street photograph, Harlem, New York. Shot on a full-frame camera with a 35mm prime lens, natural light, true-to-life color, fine film-like grain, shallow-to-moderate depth of field, authentic textures (weathered brownstone, worn stone steps, cast-iron railings, street trees). Warm, dignified, editorial mood, like a magazine photo essay. Rich deep shadows with warm golden highlights. No text, no readable signs or logos, no watermarks, no recognisable real people or celebrities, no recreation of a specific real landmark. Not illustrated, not CGI, not over-processed HDR.
+> A candid, unedited photo taken on an iPhone 15 Pro, main camera, default settings, straight out of the camera. Ordinary real-world light, slightly uneven exposure, a little sensor noise in the shadows, mild lens distortion at the edges, nothing staged. Framing is slightly imperfect, as if taken quickly by a passer-by. Real urban texture and everyday clutter are visible: chipped paint, grime on stone, scuffed steps, black trash bags at the curb, parked cars, a window AC unit, scaffolding or a fire escape somewhere in frame. Colors are natural and a bit muted, not saturated. No text, no readable signs, no logos, no watermark, no recognisable people. Do not make it look cinematic, polished, symmetrical or retouched. No HDR, no glow, no bokeh balls, no dramatic sky.
 
-## Slots
+If an image still looks too clean, add: *"Make it look more like a real phone photo: flatter light, less contrast, more ordinary."*
 
-| File | Page | Size |
-|---|---|---|
-| `about-hero.webp` | About, top | 1600 × 900 |
-| `about-one-place.webp` | About, "One place, one record" | 1200 × 900 |
-| `about-history.webp` | About, "Places that closed still count" | 1200 × 900 |
-| `about-method.webp` | About, "How we research a place" | 1200 × 900 |
-| `about-sources.webp` | About, "Where the facts come from" | 1200 × 900 |
-| `press-hero.webp` | Press, top | 1600 × 900 |
-| `legal-privacy.webp` | Privacy, top | 1600 × 900 |
-| `legal-terms.webp` | Terms, top | 1600 × 900 |
-| `legal-accessibility.webp` | Accessibility, top | 1600 × 900 |
+## Prompts
 
-### about-hero (16:9, 1600×900)
-A long row of 19th-century brownstone townhouses on a tree-lined Harlem street at golden hour. Low sun rakes across the façades, lighting carved cornices and bay windows in warm gold while the sidewalk falls into soft shadow. Stoops with cast-iron railings step down to the sidewalk; a few windows glow from inside. Shot from across the street at eye level, slight perspective down the block. Empty of people except one distant pedestrian, out of focus.
+### about-hero.webp (16:9, 1600×900)
+A block of brownstone row houses on a residential Harlem street on an overcast weekday afternoon. Stoops with black iron railings, a couple of trash cans chained to a railing, a parked delivery van partly cutting into the left edge of the frame, bare-ish street trees with a few leaves, a scaffold on one house further down. Taken from the opposite sidewalk at standing height, phone held slightly tilted. One person far down the block, walking away, small and blurred.
 
-### about-one-place (4:3, 1200×900)
-Close-up over the shoulder of a person standing at the foot of a brownstone stoop, holding a phone that shows a dark-themed street map with a single gold pin. The phone is sharp; the brownstone doorway with its carved stone surround and wrought-iron gate is softly out of focus behind. Late afternoon light. Only the hand and shoulder are visible, no face.
+### about-one-place.webp (4:3, 1200×900)
+A phone held in someone's hand in front of a brownstone stoop, screen showing a dark map app with one yellow pin. The phone and thumb are in focus; the stoop and front door behind are slightly soft. Daylight, a bit of glare on the phone screen, a fingerprint smudge visible. Only a hand and part of a jacket sleeve in frame.
 
-### about-history (4:3, 1200×900)
-An old neighbourhood theater on a Harlem avenue at blue hour, its vintage marquee lit with rows of warm bulbs. The marquee panels are blank, no letters. Art deco details on the façade, a lamppost and wet pavement reflecting the lights in the foreground. Generic theater, not a recreation of any real venue.
+### about-history.webp (4:3, 1200×900)
+An old shuttered neighbourhood movie theater on a busy Harlem avenue at dusk, its vertical blade sign and marquee unlit and blank, metal roll-down gates closed, some faded posters removed leaving empty frames, a bodega awning next door, cars and a bus passing as motion blur. Streetlights just switching on. Ordinary, slightly grainy evening phone photo.
 
-### about-method (4:3, 1200×900)
-Top-down photograph of a wooden research table: a spread of vintage black-and-white photographs of brownstone streets with deckled edges, an open notebook with handwritten notes kept illegible and out of focus, a brass magnifying glass, a folded paper street map with three small gold pins, and a cup of coffee. A desk lamp throws a warm pool of light; the table edges fall into shadow.
+### about-method.webp (4:3, 1200×900)
+Overhead phone photo of a cluttered kitchen table: a pile of old black-and-white photos of city streets (curled, creased, some stained), a spiral notebook with messy handwriting too blurry to read, a folded paper subway map, a pen, a half-finished cup of coffee with a ring stain on the table. Daylight from a window on one side, one corner of the table in shadow.
 
-### about-sources (4:3, 1200×900)
-Interior of a grand public library reading room: long oak tables with brass reading lamps, tall arched windows letting in soft daylight, wooden shelves and rows of grey archive boxes along one wall. Empty, quiet, dust motes in the light. Wide-angle from one end of the room. Not a specific real library.
+### about-sources.webp (4:3, 1200×900)
+Inside a public library reading area on a weekday: long wooden tables, green desk lamps, a few laptops and bags left on chairs, metal shelves with grey archive boxes and binders at the back, fluorescent ceiling lights mixed with daylight from tall windows. A couple of people reading with their backs to the camera, out of focus.
 
-### press-hero (16:9, 1600×900)
-A young woman sitting on a brownstone stoop at golden hour, looking down at her phone, seen from the side at a distance so her face is not identifiable. The street behind her stretches out with trees and parked cars in soft focus. Warm light on the stone steps. Composition leaves the left third open and dark.
+### press-hero.webp (16:9, 1600×900)
+A woman sitting on a brownstone stoop looking at her phone, photographed from across the street so she is small in the frame and her face isn't clear. Tote bag beside her, takeout coffee on the step. A parked car and part of a tree in the foreground, slightly out of focus. Mid-afternoon, partly cloudy.
 
-### legal-privacy (16:9, 1600×900)
-A quiet Harlem side street at night. A row of brownstones, almost all windows dark, one window glowing warm behind a sheer curtain. Old-fashioned street lamps cast pools of amber light on the empty sidewalk; a bicycle locked to a railing. Calm, private, safe. Long exposure, crisp and noise-free.
+### legal-privacy.webp (16:9, 1600×900)
+A Harlem side street at night, photographed handheld on a phone night mode. Brownstones with mostly dark windows, one lit window with a curtain, sodium streetlights giving an orange cast, a parked car with a reflection on its roof, a locked bike on a railing. Visible noise and slight motion softness typical of a night phone photo.
 
-### legal-terms (16:9, 1600×900)
-A man on a wide sidewalk, phone lowered at his side, looking up at ornate brownstone cornices and bay windows, photographed from behind and slightly below so his face is not visible. A low cast-iron fence separates the sidewalk from small front gardens. Bright overcast daylight, natural colours.
+### legal-terms.webp (16:9, 1600×900)
+A man on a sidewalk seen from behind, phone in his hand at his side, looking up at the cornices of a row of brownstones. Low iron fence and small front yards with a few plants and a recycling bin. Flat grey daylight. Taken from a few meters behind him at chest height.
 
-### legal-accessibility (16:9, 1600×900)
-A brownstone entrance with a gentle concrete ramp and handrail beside the stone stoop. A person using a manual wheelchair is rolling up the ramp, seen from behind at a three-quarter angle. On the sidewalk nearby, a person with a white cane walks past a flush curb cut at the corner. Soft morning light, welcoming and dignified, nothing clinical. Faces not identifiable.
+### legal-accessibility.webp (16:9, 1600×900)
+A brownstone building where a concrete wheelchair ramp with a metal handrail runs alongside the original stone stoop. A person in a manual wheelchair is partway up the ramp, seen from behind. At the corner, a curb cut with yellow tactile paving. Cloudy morning, wet pavement, an ordinary everyday scene, nothing posed.
