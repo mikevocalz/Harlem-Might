@@ -41,10 +41,31 @@ const VENDORED_NAVIGATION = {
   ),
 };
 
+/**
+ * Linked checkouts outside this repo: the Viro fork and @viro-external. Metro
+ * must watch their real paths, and their imports must resolve from this app's
+ * node_modules, or each checkout's own react / react-native copies load too.
+ */
+const LINKED_CHECKOUTS = [
+  path.resolve(__dirname, "../../../viro-specs-preview"),
+  path.resolve(__dirname, "../../../viro-external-specs-preview"),
+];
+config.watchFolders = [...(config.watchFolders ?? []), ...LINKED_CHECKOUTS];
+const APP_ORIGIN = path.join(__dirname, "package.json");
+const isLinked = (file) => LINKED_CHECKOUTS.some((dir) => file && file.startsWith(dir + path.sep));
+const isBare = (name) => !name.startsWith(".") && !path.isAbsolute(name);
+
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   const vendored = VENDORED_NAVIGATION[moduleName];
   if (vendored) {
     return { type: "sourceFile", filePath: require.resolve(vendored) };
+  }
+  if (isBare(moduleName) && isLinked(context.originModulePath)) {
+    try {
+      return context.resolveRequest({ ...context, originModulePath: APP_ORIGIN }, moduleName, platform);
+    } catch {
+      // Not installed in this app: fall back to the checkout's own copy.
+    }
   }
   return context.resolveRequest(context, moduleName, platform);
 };

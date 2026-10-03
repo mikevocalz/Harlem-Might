@@ -12,6 +12,10 @@ nodeLinker: hoisted
 # Keep these overrides aligned with the SDK 58 template instead of forcing
 # upstream "latest" versions that Expo has not validated together.
 overrides:
+  # Native Quest/PICO builds use the Viro fork, as assert-viro-fork.mjs
+  # requires; this branch tests @viro-external panels against the fork's
+  # Specs-preview checkout, the same one viro-external links.
+  "@reactvision/react-viro": "link:../viro-specs-preview"
   lightningcss: 1.30.1
   react: 19.3.0
   react-dom: 19.3.0

@@ -215,9 +215,6 @@ catalogs:
     '@react-navigation/native':
       specifier: 7.4.1
       version: 7.4.1
-    '@reactvision/react-viro':
-      specifier: 3.0.2
-      version: 3.0.2
     '@reactvision/viro-web-renderer':
       specifier: 1.0.0
       version: 1.0.0
@@ -499,6 +496,7 @@ catalogs:
       version: 5.0.15
 
 overrides:
+  '@reactvision/react-viro': link:../viro-specs-preview
   lightningcss: 1.30.1
   react: 19.3.0
   react-dom: 19.3.0
@@ -550,8 +548,8 @@ importers:
         specifier: 'catalog:'
         version: 7.4.1(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
       '@reactvision/react-viro':
-        specifier: 'catalog:'
-        version: 3.0.2(@reactvision/viro-web-renderer@1.0.0)(expo@58.0.1)(react-native-web@0.21.3(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+        specifier: link:../../../viro-specs-preview
+        version: link:../../../viro-specs-preview
       '@rive-app/react-native':
         specifier: 'catalog:'
         version: 0.5.0(react-native-nitro-modules@0.37.1(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
@@ -564,6 +562,18 @@ importers:
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.104.0(react@19.3.0)
+      '@viro-external/core':
+        specifier: link:../../../viro-external-specs-preview/packages/viro-external-core
+        version: link:../../../viro-external-specs-preview/packages/viro-external-core
+      '@viro-external/media':
+        specifier: link:../../../viro-external-specs-preview/packages/media
+        version: link:../../../viro-external-specs-preview/packages/media
+      '@viro-external/ui':
+        specifier: link:../../../viro-external-specs-preview/packages/ui
+        version: link:../../../viro-external-specs-preview/packages/ui
+      '@viro-external/xr-contract':
+        specifier: link:../../../viro-external-specs-preview/packages/xr-platform-contract
+        version: link:../../../viro-external-specs-preview/packages/xr-platform-contract
       canvaskit-wasm:
         specifier: 'catalog:'
         version: 0.41.0
@@ -606,6 +616,9 @@ importers:
       lucide-react-native:
         specifier: 'catalog:'
         version: 1.48.0(react-native-svg@15.15.5(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+      nitro-canvas-in-Vision:
+        specifier: link:../../../nitro-canvas-in-Vision
+        version: link:../../../nitro-canvas-in-Vision
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -789,8 +802,8 @@ importers:
         specifier: 'catalog:'
         version: 4.0.0-canary.33(@types/react@19.3.0)(monaco-editor@0.55.1)(payload@4.0.0-canary.33(graphql@16.14.2)(supports-color@8.1.1)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(supports-color@8.1.1)(typescript@6.0.3)
       '@reactvision/react-viro':
-        specifier: 'catalog:'
-        version: 3.0.2(@reactvision/viro-web-renderer@1.0.0)(expo@57.0.14)(react-native-web@0.21.3(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+        specifier: link:../../../viro-specs-preview
+        version: link:../../../viro-specs-preview
       '@reactvision/viro-web-renderer':
         specifier: 'catalog:'
         version: 1.0.0
@@ -1135,8 +1148,8 @@ importers:
         specifier: workspace:*
         version: link:../ui
       '@reactvision/react-viro':
-        specifier: 'catalog:'
-        version: 3.0.2(@reactvision/viro-web-renderer@1.0.0)(expo@58.0.1)(react-native-web@0.21.3(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+        specifier: link:../../../viro-specs-preview
+        version: link:../../../viro-specs-preview
       '@reactvision/viro-web-renderer':
         specifier: 'catalog:'
         version: 1.0.0
@@ -3833,26 +3846,6 @@ packages:
 
   '@react-navigation/routers@7.6.4':
     resolution: {integrity: sha512-GI7eJm8/KsZUQaYcXvEExikKurRZRgEsSzyZ7faENfi65yqJBCXjDMwyN1pF6pNW1MoLH1ErDwDivFxY6BzD3w==}
-
-  '@reactvision/react-viro@3.0.2':
-    resolution: {integrity: sha512-KVkDEivVXCFTm6rEfN36kCe1fr2UiyRzTo85zyTdco5sgKCTGps5Vr/CpBeIeefH3yHIwGESsBeSv7nC10B/AQ==}
-    engines: {react-native: '>=0.86.0 <0.87.0'}
-    peerDependencies:
-      '@reactvision/react-native-visionos': '>=0.86.0 <0.87.0'
-      '@reactvision/viro-web-renderer': ^1.0.1
-      expo: '>=57.0.0 <58.0.0'
-      react: 19.3.0
-      react-native: '>=0.86.0 <0.87.0'
-      react-native-web: '>=0.19.0'
-    peerDependenciesMeta:
-      '@reactvision/react-native-visionos':
-        optional: true
-      '@reactvision/viro-web-renderer':
-        optional: true
-      expo:
-        optional: true
-      react-native-web:
-        optional: true
 
   '@reactvision/viro-web-renderer@1.0.0':
     resolution: {integrity: sha512-Ol5Blc2LLy8GyRpjW7UDMo5gGWzNzUWWPVQzxoWMEKuZENJbGBry3d2J70wR9TczapQL+FMfgmHLkF5Nt+T01A==}
@@ -12795,24 +12788,6 @@ snapshots:
   '@react-navigation/routers@7.6.4':
     dependencies:
       nanoid: 3.3.18
-
-  '@reactvision/react-viro@3.0.2(@reactvision/viro-web-renderer@1.0.0)(expo@57.0.14)(react-native-web@0.21.3(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)':
-    dependencies:
-      react: 19.3.0
-      react-native: 0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
-    optionalDependencies:
-      '@reactvision/viro-web-renderer': 1.0.0
-      expo: 57.0.14(2de63b1cf665d0941433201aba4afa57)
-      react-native-web: 0.21.3(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-
-  '@reactvision/react-viro@3.0.2(@reactvision/viro-web-renderer@1.0.0)(expo@58.0.1)(react-native-web@0.21.3(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)':
-    dependencies:
-      react: 19.3.0
-      react-native: 0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
-    optionalDependencies:
-      '@reactvision/viro-web-renderer': 1.0.0
-      expo: 58.0.1(6b21607a37822b58c7755e7d31a802ba)
-      react-native-web: 0.21.3(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
 
   '@reactvision/viro-web-renderer@1.0.0': {}
 
