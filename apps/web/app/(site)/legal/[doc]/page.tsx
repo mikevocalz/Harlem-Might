@@ -14,7 +14,7 @@ const DOCS: Record<Doc, { title: string; description: string; lead: string; sect
     description: 'What Harlem Might collects, what it does not, and how maps are delivered.',
     lead: 'No accounts, no analytics, no advertising and no tracking on the public site.',
     sections: PRIVACY,
-    alt: 'Illustration of a quiet Harlem street at night with a single lit window',
+    alt: 'A quiet Harlem side street at night with one lit window',
     draft: true,
   },
   terms: {
@@ -22,7 +22,7 @@ const DOCS: Record<Doc, { title: string; description: string; lead: string; sect
     description: 'The terms for using the Harlem Might website.',
     lead: 'Use the guide freely, respect the neighborhood, and check details before you travel.',
     sections: TERMS,
-    alt: 'Illustration of a person on a sidewalk looking up at brownstone façades',
+    alt: 'A person on a sidewalk looking up at brownstone cornices',
     draft: true,
   },
   accessibility: {
@@ -30,7 +30,7 @@ const DOCS: Record<Doc, { title: string; description: string; lead: string; sect
     description: 'How Harlem Might works for people with disabilities, and where it still falls short.',
     lead: 'Harlem Might aims to meet WCAG 2.2 at level AA, and tells you plainly where it does not yet.',
     sections: ACCESSIBILITY,
-    alt: 'Illustration of a step-free entrance with a ramp beside a brownstone stoop',
+    alt: 'A ramp beside a brownstone stoop and a curb cut at the corner',
     draft: false,
   },
 };

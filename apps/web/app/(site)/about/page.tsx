@@ -11,10 +11,10 @@ export const metadata: Metadata = {
 
 // Illustrations attach to sections by id; see docs/design/IMAGE_PROMPTS.md.
 const FIGURES: Record<string, { slug: string; alt: string }> = {
-  'one-place': { slug: 'about-one-place', alt: 'Illustration of a brownstone, a phone map and a walking route linked by one gold line' },
-  history: { slug: 'about-history', alt: 'Illustration of a theater marquee layered over the building that stands there today' },
-  method: { slug: 'about-method', alt: 'Illustration of archival photographs, notes and a street map spread across a research table' },
-  sources: { slug: 'about-sources', alt: 'Illustration of a library reading room with archive boxes and long tables' },
+  'one-place': { slug: 'about-one-place', alt: 'A hand holding a phone with a map in front of a brownstone entrance' },
+  history: { slug: 'about-history', alt: 'An old theater marquee lit at night on a Harlem avenue' },
+  method: { slug: 'about-method', alt: 'Old black-and-white street photographs, a notebook and a map on a wooden table' },
+  sources: { slug: 'about-sources', alt: 'A quiet library reading room with long tables and archive boxes' },
 };
 
 export default function AboutPage() {
@@ -26,7 +26,7 @@ export default function AboutPage() {
     <MightsPage title="About Harlem Might" lead={ABOUT_LEAD}>
       <MightsFigure
         src={companyImage('about-hero')}
-        alt="Illustration of a row of Harlem brownstones at dusk drawn in gold line work"
+        alt="A row of Harlem brownstones at golden hour with stoops and street trees"
         priority
       />
       <MightsProse sections={sections} />

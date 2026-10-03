@@ -19,7 +19,7 @@ export default function PressPage() {
     <MightsPage title="Press" lead={PRESS_BOILERPLATE}>
       <MightsFigure
         src={companyImage('press-hero')}
-        alt="Illustration of a phone showing the Harlem Might map, held up on a brownstone stoop"
+        alt="A person on a brownstone stoop looking at a map on their phone"
         priority
       />
       <MightsProse sections={PRESS_SECTIONS} />

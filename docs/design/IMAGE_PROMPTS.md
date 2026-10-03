@@ -1,13 +1,16 @@
-# Company page illustrations
+# Company page images (photoreal)
 
 Generate each image, export it as WebP (JPG or PNG also work) and save it to
-`apps/web/public/images/company/<file>`. Each one appears on the page as soon
-as the file exists. Until then the slot renders nothing, never a placeholder.
-On the page every image is captioned "Illustration".
+`apps/web/public/images/company/<file>`. It appears as soon as the file
+exists; until then the slot renders nothing.
+
+Each image is captioned "Generated image" on the page. Keep scenes generic:
+no recreation of a specific real landmark or storefront, no real or
+recognisable people, no readable signs. Real places get real photographs.
 
 ## Shared style (paste in front of every prompt)
 
-> Editorial illustration in the style of the Harlem Might logo: bold gold line art (#F8C626, highlights #F8D848, shadows #E0A810) on a warm near-black background (#0B0906). Clean architectural line work with confident strokes, flat fills, subtle depth from layered linework rather than gradients. Harlem brownstone vernacular: stoops, cornices, bay windows, cast-iron railings, street trees. Calm, dignified, timeless. No text, no letters, no logos, no signage with words, no real brand names. No photorealism. No neon glow. No people's faces in detail; figures are simplified silhouettes.
+> Hyper-realistic documentary street photograph, Harlem, New York. Shot on a full-frame camera with a 35mm prime lens, natural light, true-to-life color, fine film-like grain, shallow-to-moderate depth of field, authentic textures (weathered brownstone, worn stone steps, cast-iron railings, street trees). Warm, dignified, editorial mood, like a magazine photo essay. Rich deep shadows with warm golden highlights. No text, no readable signs or logos, no watermarks, no recognisable real people or celebrities, no recreation of a specific real landmark. Not illustrated, not CGI, not over-processed HDR.
 
 ## Slots
 
@@ -23,29 +26,29 @@ On the page every image is captioned "Illustration".
 | `legal-terms.webp` | Terms, top | 1600 × 900 |
 | `legal-accessibility.webp` | Accessibility, top | 1600 × 900 |
 
-### about-hero (16:9)
-A long row of Harlem brownstones at dusk, seen slightly from below across a wide sidewalk. Stoops step down to the street, cornices line up in a strong horizontal rhythm, two street trees frame the composition. A few windows glow warm gold. The street is quiet. Wide cinematic composition with generous dark negative space in the upper third.
+### about-hero (16:9, 1600×900)
+A long row of 19th-century brownstone townhouses on a tree-lined Harlem street at golden hour. Low sun rakes across the façades, lighting carved cornices and bay windows in warm gold while the sidewalk falls into soft shadow. Stoops with cast-iron railings step down to the sidewalk; a few windows glow from inside. Shot from across the street at eye level, slight perspective down the block. Empty of people except one distant pedestrian, out of focus.
 
-### about-one-place (4:3)
-One brownstone in the centre. A single continuous gold line starts at its front door and flows out to connect three small framed vignettes around it: a folded street map with a diamond-shaped pin, a phone screen showing the same building, and a short dotted walking route along a sidewalk. Diagrammatic but warm, like an architectural sketch.
+### about-one-place (4:3, 1200×900)
+Close-up over the shoulder of a person standing at the foot of a brownstone stoop, holding a phone that shows a dark-themed street map with a single gold pin. The phone is sharp; the brownstone doorway with its carved stone surround and wrought-iron gate is softly out of focus behind. Late afternoon light. Only the hand and shoulder are visible, no face.
 
-### about-history (4:3)
-A theatre marquee and façade from the 1930s drawn in fine gold line, overlapping the same building as it stands today drawn in a bolder line, so both eras are visible at once like a double exposure. The marquee has blank panels with no lettering. Sidewalk and lamppost in the foreground.
+### about-history (4:3, 1200×900)
+An old neighbourhood theater on a Harlem avenue at blue hour, its vintage marquee lit with rows of warm bulbs. The marquee panels are blank, no letters. Art deco details on the façade, a lamppost and wet pavement reflecting the lights in the foreground. Generic theater, not a recreation of any real venue.
 
-### about-method (4:3)
-Top-down view of a research table: scattered black-and-white archival photographs of brownstone streets (drawn, not real photos), an open notebook with handwritten-style marks but no legible words, a magnifying glass, and a street map with three diamond pins. A desk lamp casts a pool of gold light.
+### about-method (4:3, 1200×900)
+Top-down photograph of a wooden research table: a spread of vintage black-and-white photographs of brownstone streets with deckled edges, an open notebook with handwritten notes kept illegible and out of focus, a brass magnifying glass, a folded paper street map with three small gold pins, and a cup of coffee. A desk lamp throws a warm pool of light; the table edges fall into shadow.
 
-### about-sources (4:3)
-A grand public library reading room in perspective: long wooden tables, green-shaded reading lamps rendered in gold, tall arched windows, shelves of archive boxes along one wall. Empty and calm. No identifiable real building.
+### about-sources (4:3, 1200×900)
+Interior of a grand public library reading room: long oak tables with brass reading lamps, tall arched windows letting in soft daylight, wooden shelves and rows of grey archive boxes along one wall. Empty, quiet, dust motes in the light. Wide-angle from one end of the room. Not a specific real library.
 
-### press-hero (16:9)
-A hand holding up a phone at eye level on a brownstone stoop. The phone screen shows a simplified dark map with gold diamond pins. Behind it the street continues out of focus as loose gold linework. Composition leaves the left half dark and open.
+### press-hero (16:9, 1600×900)
+A young woman sitting on a brownstone stoop at golden hour, looking down at her phone, seen from the side at a distance so her face is not identifiable. The street behind her stretches out with trees and parked cars in soft focus. Warm light on the stone steps. Composition leaves the left third open and dark.
 
-### legal-privacy (16:9)
-A quiet Harlem side street at night. One window glows gold in an otherwise dark brownstone row. Street lamps, parked bicycles, empty sidewalk. Feeling: calm, private, safe. Lots of dark negative space.
+### legal-privacy (16:9, 1600×900)
+A quiet Harlem side street at night. A row of brownstones, almost all windows dark, one window glowing warm behind a sheer curtain. Old-fashioned street lamps cast pools of amber light on the empty sidewalk; a bicycle locked to a railing. Calm, private, safe. Long exposure, crisp and noise-free.
 
-### legal-terms (16:9)
-A simplified figure on a wide sidewalk, phone lowered, looking up at ornate brownstone cornices and bay windows. A low cast-iron fence separates the sidewalk from the front gardens, making the line between public and private clear.
+### legal-terms (16:9, 1600×900)
+A man on a wide sidewalk, phone lowered at his side, looking up at ornate brownstone cornices and bay windows, photographed from behind and slightly below so his face is not visible. A low cast-iron fence separates the sidewalk from small front gardens. Bright overcast daylight, natural colours.
 
-### legal-accessibility (16:9)
-A brownstone entrance with a gentle ramp beside the stoop, a flush curb cut at the corner, and a simplified figure using a wheelchair heading up the ramp while another figure with a white cane walks along the sidewalk. Even, welcoming light. Dignified, not clinical.
+### legal-accessibility (16:9, 1600×900)
+A brownstone entrance with a gentle concrete ramp and handrail beside the stone stoop. A person using a manual wheelchair is rolling up the ramp, seen from behind at a three-quarter angle. On the sidewalk nearby, a person with a white cane walks past a flush curb cut at the corner. Soft morning light, welcoming and dignified, nothing clinical. Faces not identifiable.

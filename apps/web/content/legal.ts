@@ -147,7 +147,7 @@ export const ACCESSIBILITY: readonly ProseSection[] = [
         'Search, filters and the selected place are kept in the page address, so the back button, reloading and sharing all work as expected.',
         'If your device is set to reduce motion, animations on the site are switched off or replaced with still images.',
         'Text and controls use high-contrast colors on a dark background, and text can be enlarged without losing content.',
-        'Images have text descriptions, and illustrations are captioned as illustrations.',
+        'Images have text descriptions, and generated images are captioned as generated.',
       ],
     ],
   },

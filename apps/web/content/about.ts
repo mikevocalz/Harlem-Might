@@ -82,7 +82,7 @@ export const ABOUT_SECTIONS: readonly ProseSection[] = [
     id: 'images',
     title: 'About the images',
     body: [
-      'Some images on this site are illustrations created for Harlem Might. They are always captioned as illustrations, and they are never presented as photographs of a real place or a real person. Photographs and archival images carry their own credit lines.',
+      'Some images on this site are generated for Harlem Might to set the scene. They are always captioned as generated images, and they never stand in for a photograph of a specific real place or a real person. Documentary photographs and archival images carry their own credit lines with source and date.',
     ],
   },
   {
