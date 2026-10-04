@@ -6,10 +6,21 @@
     "./typescript/*": "./typescript/*",
     "./eslint/*": "./eslint/*",
     "./prettier": "./prettier/index.json",
-    "./jest-rsc-preset.js": "./jest-rsc-preset.js"
+    "./env.server": "./src/env.server.ts",
+    "./env.public": "./src/env.public.ts",
+    "./jest-rsc-preset.cjs": "./jest-rsc-preset.cjs"
   },
   "devDependencies": {
     "eslint": "catalog:",
-    "eslint-config-expo": "catalog:"
-  }
+    "eslint-config-expo": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "type": "module"
 }
