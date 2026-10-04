@@ -140,3 +140,20 @@ These need no decisions and no keys:
 - `provider-research` for NYC Parks, NYC Permitted Events, GeoSearch and NYPL, including live smoke requests and first fixtures
 - the Harlem NTA boundary snapshot
 - the category taxonomy tables for keyless providers
+
+## Decisions recorded 2026-10-03
+
+- **Auth:** Better Auth 1.7.7 is installed as `@acme/auth` (MoyoLearn layout,
+  `better_auth` schema, mounted at `apps/web/app/api/auth/[...all]`). This
+  replaces the Payload-session fallback in stop-and-ask item 2. Its schema
+  is applied once the Supabase project exists.
+- **Env:** `packages/config/src/env.server.ts` / `env.public.ts` (Zod 4) is
+  the validated module. Root `.env.example` lists every key. Resolves item 8.
+- **Supabase:** project `harlem-might` (Fifth Galaxy Studios, `us-east-1`)
+  is approved but blocked on the free-tier two-active-project limit.
+- **Data fetching:** TanStack Query for every client read and mutation
+  (`packages/app/providers/query-provider.tsx`, which must also be mounted
+  in `apps/web` and `apps/web-vite`). On native the transport is
+  `react-native-nitro-fetch` (Margelo skill); on web it is `fetch`. One
+  shared query-key factory per resource.
+- **Payload:** 4.0.0-canary.37.
