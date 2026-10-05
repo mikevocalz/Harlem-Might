@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildConfig } from 'payload';
 import sharp from 'sharp';
+import { bunnyStorage } from '@seshuk/payload-storage-bunny';
 import { Users } from './collections/Users';
 import { Media } from './collections/Media';
 import { Pages } from './collections/Pages';
@@ -41,6 +42,28 @@ export default buildConfig({
   csrf: allowedOrigins,
   secret: process.env.PAYLOAD_SECRET || '',
   sharp,
+  plugins: [
+    ...(process.env.BUNNY_STORAGE_ACCESS_KEY
+      ? [
+          bunnyStorage({
+            collections: {
+              media: {
+                prefix: (process.env.BUNNY_MEDIA_PREFIX ?? 'harlem/').replace(/\/$/, ''),
+                disablePayloadAccessControl: true,
+              },
+            },
+            storage: {
+              apiKey: process.env.BUNNY_STORAGE_ACCESS_KEY,
+              hostname: new URL(
+                process.env.NEXT_PUBLIC_BUNNY_CDN_BASE_URL ?? 'https://example.b-cdn.net',
+              ).host,
+              zoneName: process.env.BUNNY_STORAGE_ZONE_NAME ?? '',
+              region: process.env.BUNNY_STORAGE_REGION,
+            },
+          }),
+        ]
+      : []),
+  ],
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
