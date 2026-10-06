@@ -1,3 +1,4 @@
+import { betterAuthStrategy } from '@delmaredigital/payload-better-auth';
 import type { CollectionConfig } from 'payload';
 
 const isMember = (user: unknown): user is { id: number | string; collection: 'members' } =>
@@ -12,14 +13,17 @@ const isMember = (user: unknown): user is { id: number | string; collection: 'me
 export const Members: CollectionConfig = {
   slug: 'members',
   auth: {
-    tokenExpiration: 60 * 60 * 24 * 30,
+    disableLocalStrategy: true,
+    strategies: [betterAuthStrategy()],
   },
   admin: {
     useAsTitle: 'email',
   },
   access: {
     admin: () => false,
-    create: () => true,
+    // Better Auth writes through the Payload adapter with overrideAccess.
+    // Direct anonymous creation through /members is intentionally closed.
+    create: () => false,
     read: ({ req: { user } }) =>
       isMember(user) ? { id: { equals: user.id } } : false,
     update: ({ req: { user } }) =>
@@ -28,12 +32,10 @@ export const Members: CollectionConfig = {
       isMember(user) ? { id: { equals: user.id } } : false,
   },
   fields: [
-    {
-      name: 'name',
-      type: 'text',
-      required: true,
-      maxLength: 80,
-    },
+    { name: 'email', type: 'email', required: true, unique: true },
+    { name: 'emailVerified', type: 'checkbox', defaultValue: false },
+    { name: 'name', type: 'text', required: true, maxLength: 80 },
+    { name: 'image', type: 'text' },
     {
       name: 'avatar',
       type: 'relationship',

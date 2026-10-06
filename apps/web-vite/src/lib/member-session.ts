@@ -66,7 +66,7 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
 };
 
 const getMember = async () => {
-  const result = await request<{ user?: MemberProfile | null }>('/members/me');
+  const result = await request<{ user?: MemberProfile | null }>('/auth/get-session');
   return result.user ?? null;
 };
 
@@ -117,13 +117,13 @@ export const useMemberSession = create<MemberSessionState>((set, get) => ({
     try {
       if (mode === 'register') {
         if (!name.trim()) throw new Error('Add your name to create an account.');
-        await request('/members', {
+        await request('/auth/sign-up/email', {
           method: 'POST',
           body: JSON.stringify({ email: email.trim(), password, name: name.trim() }),
         });
       }
 
-      const result = await request<{ user: MemberProfile }>('/members/login', {
+      const result = await request<{ user: MemberProfile }>('/auth/sign-in/email', {
         method: 'POST',
         body: JSON.stringify({ email: email.trim(), password }),
       });
@@ -146,7 +146,7 @@ export const useMemberSession = create<MemberSessionState>((set, get) => ({
 
   signOut: async () => {
     try {
-      await request('/members/logout', { method: 'POST' });
+      await request('/auth/sign-out', { method: 'POST' });
     } finally {
       set({
         status: 'signed-out',

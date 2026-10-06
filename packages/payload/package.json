@@ -19,7 +19,10 @@
     "@payloadcms/db-postgres": "catalog:",
     "payload": "catalog:",
     "pg": "catalog:",
-    "sharp": "catalog:"
+    "sharp": "catalog:",
+    "@seshuk/payload-storage-bunny": "3.0.0",
+    "@delmaredigital/payload-better-auth": "catalog:",
+    "better-auth": "catalog:"
   },
   "devDependencies": {
     "@acme/config": "workspace:*",

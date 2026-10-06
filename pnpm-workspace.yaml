@@ -16,6 +16,7 @@ overrides:
   react: 19.3.0
   react-dom: 19.3.0
   "@expo/dom-webview": 58.0.2
+  "@payloadcms/plugin-cloud-storage": 4.0.0-canary.33
 
 # Public Viro is retained only for web/Storybook/CI resolution in this public
 # repository. Native commands hard-require mikevocalz/viro via
@@ -155,11 +156,17 @@ catalog:
   zustand: 5.0.15
   zod: 4.6.5
 
+  # auth
+  # Same Payload 4 Better Auth fork/pin used by NYC-Mon. Keep this pin aligned
+  # with the Payload 4 line below.
+  "@delmaredigital/payload-better-auth": github:mikevocalz/payload-better-auth#5134d0b3b14f4dd5f59acbd0a0c09b2326c48f80
+  better-auth: 1.7.7
+
   # backend / cms
-  payload: 4.0.0-canary.33
-  "@payloadcms/db-postgres": 4.0.0-canary.33
-  "@payloadcms/next": 4.0.0-canary.33
-  "@payloadcms/ui": 4.0.0-canary.33
+  payload: 4.0.0-canary.37
+  "@payloadcms/db-postgres": 4.0.0-canary.37
+  "@payloadcms/next": 4.0.0-canary.37
+  "@payloadcms/ui": 4.0.0-canary.37
   graphql: 16.14.2
   pg: 8.23.0
   sharp: 0.35.5
@@ -192,3 +199,6 @@ catalog:
   "@eslint/eslintrc": ^3.3.7
   babel-plugin-react-compiler: 1.0.0
   turbo: 2.11.5
+
+patchedDependencies:
+  "@seshuk/payload-storage-bunny@3.0.0": patches/@seshuk__payload-storage-bunny@3.0.0.patch
