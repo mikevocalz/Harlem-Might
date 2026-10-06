@@ -505,7 +505,7 @@ overrides:
 packageExtensionsChecksum: sha256-SonmmCdXM6JnkTHIbXf4celmybCgqDZedo/gGFPSVKE=
 
 patchedDependencies:
-  '@seshuk/payload-storage-bunny@3.0.0': 720e655b636b3721a6c96ef9c6110c65952665517ddb26dfae2cebe6abfc5872
+  '@seshuk/payload-storage-bunny@3.0.0': b2486bf2173c458a23f93f68c5837447142958864d8b05c27534c00db5cb7d89
 
 importers:
 
@@ -1100,7 +1100,7 @@ importers:
         version: 4.0.0-canary.33(@electric-sql/pglite@0.5.4)(kysely@0.29.4)(payload@4.0.0-canary.33(graphql@16.14.2)(supports-color@8.1.1)(typescript@6.0.3))(supports-color@8.1.1)
       '@seshuk/payload-storage-bunny':
         specifier: 3.0.0
-        version: 3.0.0(patch_hash=720e655b636b3721a6c96ef9c6110c65952665517ddb26dfae2cebe6abfc5872)(@payloadcms/translations@3.90.2)(monaco-editor@0.55.1)(payload@4.0.0-canary.33(graphql@16.14.2)(supports-color@8.1.1)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sanitize-filename@1.6.4)(supports-color@8.1.1)(typescript@6.0.3)
+        version: 3.0.0(patch_hash=b2486bf2173c458a23f93f68c5837447142958864d8b05c27534c00db5cb7d89)(@payloadcms/translations@3.90.2)(monaco-editor@0.55.1)(payload@4.0.0-canary.33(graphql@16.14.2)(supports-color@8.1.1)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sanitize-filename@1.6.4)(supports-color@8.1.1)(typescript@6.0.3)
       payload:
         specifier: 'catalog:'
         version: 4.0.0-canary.33(graphql@16.14.2)(supports-color@8.1.1)(typescript@6.0.3)
@@ -13135,7 +13135,7 @@ snapshots:
 
   '@rtsao/scc@1.1.0': {}
 
-  '@seshuk/payload-storage-bunny@3.0.0(patch_hash=720e655b636b3721a6c96ef9c6110c65952665517ddb26dfae2cebe6abfc5872)(@payloadcms/translations@3.90.2)(monaco-editor@0.55.1)(payload@4.0.0-canary.33(graphql@16.14.2)(supports-color@8.1.1)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sanitize-filename@1.6.4)(supports-color@8.1.1)(typescript@6.0.3)':
+  '@seshuk/payload-storage-bunny@3.0.0(patch_hash=b2486bf2173c458a23f93f68c5837447142958864d8b05c27534c00db5cb7d89)(@payloadcms/translations@3.90.2)(monaco-editor@0.55.1)(payload@4.0.0-canary.33(graphql@16.14.2)(supports-color@8.1.1)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sanitize-filename@1.6.4)(supports-color@8.1.1)(typescript@6.0.3)':
     dependencies:
       '@clack/prompts': 1.8.1
       '@payloadcms/plugin-cloud-storage': 4.0.0-canary.33(monaco-editor@0.55.1)(payload@4.0.0-canary.33(graphql@16.14.2)(supports-color@8.1.1)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(supports-color@8.1.1)(typescript@6.0.3)

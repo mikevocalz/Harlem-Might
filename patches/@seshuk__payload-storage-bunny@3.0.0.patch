@@ -2,7 +2,7 @@ diff --git a/dist/index.js b/dist/index.js
 index 0f5d9a4d9dd4fb0e85ca0d8148c7c6a4e0a3e9c5..8e52ac25ac4ab8b47354f4ae855b226822ef2477 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -22,7 +22,51 @@ import { translations } from "./shared/translations/index.js";
+@@ -22,7 +22,43 @@ import { translations } from "./shared/translations/index.js";
  import path from "node:path";
  import { fileURLToPath } from "node:url";
  import { cloudStoragePlugin } from "@payloadcms/plugin-cloud-storage";
