@@ -5,10 +5,10 @@ Harlem Mights remains fully browsable without an account. Consumer authenticatio
 ## Identity split
 
 - Payload `users` = CMS/admin identity.
-- Payload `members` = consumer identity.
+- Payload `members` = consumer identity, authenticated by Better Auth through `@delmaredigital/payload-better-auth`.
 - `admin.user` remains `users`.
 - Members cannot enter the Payload Admin Panel.
-- Both collections live in the same Payload-managed Postgres database (Supabase Postgres in deployed environments).
+- Both collections live in the same Payload-managed **Neon Postgres** database. Better Auth sessions/accounts/verifications are generated as Payload collections in that same database.
 
 Payload supports multiple authentication collections specifically for this admins/customers split.
 
@@ -24,8 +24,8 @@ No public exploration route may require a member session.
 
 ## Session transport
 
-Web uses Payload's HTTP-only auth cookie and `credentials: include`.
-Mobile/spatial clients should use the same `members` auth operations but store returned JWTs in an approved secure native store when that client implementation lands; do not put tokens in Zustand persistence, AsyncStorage, query strings, or logs.
+Web uses Better Auth's HTTP-only session cookie and `credentials: include`; Payload authorizes `members` through the Better Auth strategy. The auth API is mounted at `/payload-api/auth` (`/sign-up/email`, `/sign-in/email`, `/get-session`, `/sign-out`).
+Mobile/spatial clients must use the same Better Auth identity and an approved secure native session/token store when their client implementation lands; do not put credentials in Zustand persistence, AsyncStorage, query strings, or logs.
 
 ## Saved places
 
