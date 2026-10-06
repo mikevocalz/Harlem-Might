@@ -23,13 +23,5 @@
   },
   "devDependencies": {
     "turbo": "catalog:"
-  },
-  "pnpm": {
-    "overrides": {
-      "@payloadcms/plugin-cloud-storage": "4.0.0-canary.33"
-    },
-    "patchedDependencies": {
-      "@seshuk/payload-storage-bunny@3.0.0": "patches/@seshuk__payload-storage-bunny@3.0.0.patch"
-    }
   }
 }
