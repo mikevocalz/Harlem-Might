@@ -125,8 +125,8 @@ const config: ExpoConfig = {
     reactCompiler: true,
   },
   runtimeVersion: { policy: 'appVersion' },
-  // @expo-pico/core registers its package in the New Architecture shape.
-  newArchEnabled: true,
+  // @expo-pico/core registers its package in the New Architecture shape,
+  // which is the only architecture in SDK 58.
 };
 
 export default config;

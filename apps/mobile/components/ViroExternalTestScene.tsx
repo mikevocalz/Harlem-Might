@@ -53,8 +53,9 @@ const RUNS = [
 
 /**
  * Panels sit on an arc at the 1.5 m design distance, each turned to face the
- * viewer, slightly below eye level (Meta comfort zone: 1.0-2.0 m, content
- * within about 30 degrees of centre, no panel wider than 50 degrees).
+ * viewer, slightly below eye level (Meta comfort zone: 1.0-2.0 m). The outer
+ * edges stay within about 40 degrees of centre, inside the field both eyes
+ * share on Quest; past it an edge shows in one eye only.
  */
 const VIEW_RADIUS = 1.5;
 function onArc(degrees: number, y: number): { position: [number, number, number]; rotation: [number, number, number] } {
@@ -64,9 +65,9 @@ function onArc(degrees: number, y: number): { position: [number, number, number]
     rotation: [0, -degrees, 0],
   };
 }
-const VIDEO_AT = onArc(-26, -0.12);
-const RIVE_AT = onArc(-26, 0.58);
-const DASHBOARD_AT = onArc(26, -0.02);
+const VIDEO_AT = onArc(-19, -0.1);
+const RIVE_AT = onArc(-19, 0.5);
+const DASHBOARD_AT = onArc(19, -0.04);
 
 export function ViroExternalTestScene(): React.ReactElement {
   return (
@@ -75,33 +76,33 @@ export function ViroExternalTestScene(): React.ReactElement {
       <SpatialPanel
         title="Harlem Courts"
         subtitle="Pickup games, last 7 days"
-        width={1.3}
-        height={0.95}
+        width={1.04}
+        height={0.9}
         {...DASHBOARD_AT}
       >
         <PanelStack>
           <PanelRow>
             <PanelStack gap={0.012}>
-              <PanelImage source={PALACE} width={0.5} height={0.3} />
+              <PanelImage source={PALACE} width={0.4} height={0.26} />
               <PanelLabel text="Rucker Park, 155th St" variant="caption" />
             </PanelStack>
-            <PanelBarChart data={WEEK} width={0.6} height={0.36} />
+            <PanelBarChart data={WEEK} width={0.46} height={0.32} />
           </PanelRow>
           <PanelRow>
-            <PanelStat value="159" caption="games this week" width={0.36} />
-            <PanelStat value="41" caption="Saturday peak" width={0.36} />
-            <PanelStat value="+18%" caption="vs last week" width={0.36} />
+            <PanelStat value="159" caption="games this week" width={0.28} />
+            <PanelStat value="41" caption="Saturday peak" width={0.28} />
+            <PanelStat value="+18%" caption="vs last week" width={0.28} />
           </PanelRow>
           <PanelLabel text="About the courts" variant="heading" />
           <PanelLabel text={ABOUT} variant="body" wrap />
           <PanelLabel text="Upcoming runs" variant="heading" />
           {RUNS.map((run) => (
-            <PanelSurface key={run.title} width={1.1} height={0.13}>
+            <PanelSurface key={run.title} width={0.88} height={0.13}>
               <PanelRow gap={0.02}>
                 <PanelImage source={run.image} width={0.1} height={0.1} />
                 <PanelStack gap={0.006}>
-                  <PanelLabel text={run.title} variant="label" width={0.92} />
-                  <PanelLabel text={run.detail} variant="caption" width={0.92} />
+                  <PanelLabel text={run.title} variant="label" width={0.72} />
+                  <PanelLabel text={run.detail} variant="caption" width={0.72} />
                 </PanelStack>
               </PanelRow>
             </PanelSurface>
@@ -112,16 +113,16 @@ export function ViroExternalTestScene(): React.ReactElement {
       <VideoPlayerPanel
         title="Courtside"
         source={{ uri: DEMO_VIDEO }}
-        width={1.1}
-        height={0.78}
+        width={0.92}
+        height={0.66}
         defaultLoop
         {...VIDEO_AT}
       />
 
       <RivePanel
         tag="platform-lab-lesson"
-        width={0.9}
-        height={0.5625}
+        width={0.8}
+        height={0.5}
         {...RIVE_AT}
         baked={RIVE_BAKES["platform-lab-lesson"]}
         onButtonPress={(id) => console.log("[viro-external] rive button", id)}
