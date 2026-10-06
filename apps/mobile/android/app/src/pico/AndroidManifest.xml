@@ -1,0 +1,56 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+  <queries>
+    <package android:name="com.pico.os.systemui"/>
+    <package android:name="com.pico.platform"/>
+  </queries>
+  <uses-permission android:name="android.permission.CALL_PHONE" tools:node="remove"/>
+  <uses-permission android:name="android.permission.CALL_PRIVILEGED" tools:node="remove"/>
+  <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" tools:node="remove"/>
+  <uses-permission android:name="android.permission.READ_CALL_LOG" tools:node="remove"/>
+  <uses-permission android:name="android.permission.WRITE_CALL_LOG" tools:node="remove"/>
+  <uses-permission android:name="android.permission.READ_PHONE_STATE" tools:node="remove"/>
+  <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" tools:node="remove"/>
+  <uses-permission android:name="android.permission.SEND_SMS" tools:node="remove"/>
+  <uses-permission android:name="android.permission.RECEIVE_SMS" tools:node="remove"/>
+  <uses-permission android:name="android.permission.READ_SMS" tools:node="remove"/>
+  <uses-permission android:name="android.permission.RECEIVE_MMS" tools:node="remove"/>
+  <uses-permission android:name="android.permission.RECEIVE_WAP_PUSH" tools:node="remove"/>
+  <uses-permission android:name="android.permission.ADD_VOICEMAIL" tools:node="remove"/>
+  <uses-permission android:name="android.permission.READ_VOICEMAIL" tools:node="remove"/>
+  <uses-permission android:name="android.permission.WRITE_VOICEMAIL" tools:node="remove"/>
+  <uses-permission android:name="android.permission.BIND_CARRIER_MESSAGING_SERVICE" tools:node="remove"/>
+  <uses-permission android:name="android.permission.BIND_CARRIER_MESSAGING_CLIENT_SERVICE" tools:node="remove"/>
+  <uses-permission android:name="android.permission.SMS_FINANCIAL_TRANSACTIONS" tools:node="remove"/>
+  <uses-permission android:name="android.permission.SEND_RESPOND_VIA_MESSAGE" tools:node="remove"/>
+  <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" tools:node="remove"/>
+  <uses-permission android:name="android.permission.ACCEPT_HANDOVER" tools:node="remove"/>
+  <uses-permission android:name="android.permission.MODIFY_PHONE_STATE" tools:node="remove"/>
+  <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS"/>
+  <uses-feature android:name="android.hardware.vr.headtracking" android:required="true" android:version="1"/>
+  <uses-feature android:name="pico.hardware.handtracking" android:required="false"/>
+  <uses-feature android:name="pico.hardware.passthrough" android:required="false"/>
+  <application android:allowBackup="false" tools:replace="android:allowBackup">
+    <meta-data android:name="com.pico.supportedDevices" android:value="PICO 4 Ultra"/>
+    <meta-data android:name="com.pico.spatial.mode" android:value="windowed"/>
+    <meta-data android:name="com.pico.spatial.containerMode" android:value="window-container"/>
+    <meta-data android:name="com.pico.targetProfile" android:value="pico4ultra"/>
+    <meta-data android:name="com.pico.xrMode" android:value="pico-os5"/>
+    <meta-data android:name="com.pico.developerTools" android:value="true"/>
+    <meta-data android:name="pvr.app.type" android:value="mr"/>
+    <meta-data android:name="com.pico.refreshRates" android:value="72,90"/>
+    <activity android:name=".VRActivity" tools:node="merge">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN"/>
+        <category android:name="com.pico.intent.category.VR"/>
+        <category android:name="com.picovr.intent.category.VR"/>
+        <category android:name="org.khronos.openxr.intent.category.IMMERSIVE_HMD"/>
+      </intent-filter>
+      <meta-data android:name="com.pico.spatial.mode" android:value="full-space"/>
+      <meta-data android:name="pvr.app.type" android:value="vr"/>
+    </activity>
+    <activity android:name=".MainActivity" tools:node="merge">
+      <layout android:defaultWidth="1024dp" android:defaultHeight="640dp"/>
+    </activity>
+    <uses-native-library android:name="libopenxr_loader.so" android:required="false"/>
+  </application>
+</manifest>

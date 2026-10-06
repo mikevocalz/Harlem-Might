@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@acme/app": "workspace:*",
+    "@acme/auth": "workspace:*",
     "@acme/payload": "workspace:*",
     "@acme/spatial": "workspace:*",
     "@acme/theme": "workspace:*",

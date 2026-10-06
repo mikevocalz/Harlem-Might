@@ -1,5 +1,13 @@
-package com.example.solitostarter
+package com.harlemmight.app
 import com.facebook.react.common.assets.ReactFontManager
+
+
+// expo-pico-core: New Architecture flag guard imports
+import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
+import com.facebook.react.internal.featureflags.ReactNativeNewArchitectureFeatureFlagsDefaults
+// expo-pico-core: PicoCorePackage import
+import expo.modules.pico.PicoCorePackage
+import expo.modules.pico.PicoXRPlatform
 import com.viromedia.bridge.ReactViroPackage
 
 import android.app.Application
@@ -23,13 +31,14 @@ class MainApplication : Application(), ReactApplication {
       context = applicationContext,
       packageList =
         PackageList(this).packages.apply {
-          // Viro XR runtimes generated from app.config.ts.
-          add(ReactViroPackage(ReactViroPackage.ViroPlatform.AR))
-          add(ReactViroPackage(ReactViroPackage.ViroPlatform.QUEST))
-          add(ReactViroPackage(ReactViroPackage.ViroPlatform.PICO))
-
           // Packages that cannot be autolinked yet can be added manually here, for example:
           // add(MyReactNativePackage())
+            // expo-pico-core: PicoCorePackage registration
+            add(PicoCorePackage(PicoXRPlatform.PICO_OS5))
+            add(ReactViroPackage(ReactViroPackage.ViroPlatform.AR))
+            add(ReactViroPackage(ReactViroPackage.ViroPlatform.QUEST))
+            add(ReactViroPackage(ReactViroPackage.ViroPlatform.PICO))
+
         }
     )
   }
@@ -45,6 +54,11 @@ class MainApplication : Application(), ReactApplication {
       ReleaseLevel.STABLE
     }
     loadReactNative(this)
+    // expo-pico-core: New Architecture flag guard for the Viro VR activity hop
+    ReactNativeFeatureFlags.dangerouslyForceOverride(
+        object : ReactNativeNewArchitectureFeatureFlagsDefaults() {
+          override fun skipActivityIdentityAssertionOnHostPause(): Boolean = true
+        })
     ApplicationLifecycleDispatcher.onApplicationCreate(this)
   }
 

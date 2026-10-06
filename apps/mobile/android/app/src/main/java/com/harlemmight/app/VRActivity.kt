@@ -1,4 +1,4 @@
-package com.example.solitostarter
+package com.harlemmight.app
 
 import android.app.Activity
 import android.app.Application

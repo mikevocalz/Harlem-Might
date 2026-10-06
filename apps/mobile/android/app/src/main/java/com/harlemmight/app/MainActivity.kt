@@ -1,4 +1,4 @@
-package com.example.solitostarter
+package com.harlemmight.app
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

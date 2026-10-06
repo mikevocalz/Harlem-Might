@@ -64,11 +64,16 @@ export type SupportedTimezones =
 export interface Config {
   auth: {
     users: UserAuthOperations;
+    members: MemberAuthOperations;
   };
   blocks: {};
   collections: {
     users: User;
+    members: Member;
     media: Media;
+    pages: Page;
+    places: Place;
+    'saved-places': SavedPlace;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -77,7 +82,11 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
+    members: MembersSelect<false> | MembersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    pages: PagesSelect<false> | PagesSelect<true>;
+    places: PlacesSelect<false> | PlacesSelect<true>;
+    'saved-places': SavedPlacesSelect<false> | SavedPlacesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -95,13 +104,31 @@ export interface Config {
     'collection-query': CollectionQueryWidget;
     activity: ActivityWidget;
   };
-  user: User;
+  user: User | Member;
   jobs: {
     tasks: unknown;
     workflows: unknown;
   };
 }
 export interface UserAuthOperations {
+  forgotPassword: {
+    email: string;
+    password: string;
+  };
+  login: {
+    email: string;
+    password: string;
+  };
+  registerFirstUser: {
+    email: string;
+    password: string;
+  };
+  unlock: {
+    email: string;
+    password: string;
+  };
+}
+export interface MemberAuthOperations {
   forgotPassword: {
     email: string;
     password: string;
@@ -133,6 +160,7 @@ export interface User {
   resetPasswordExpiration?: string | null;
   salt?: string | null;
   hash?: string | null;
+  resetPasswordRequestedAt?: string | null;
   loginAttempts?: number | null;
   lockUntil?: string | null;
   sessions?:
@@ -144,6 +172,38 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "members".
+ */
+export interface Member {
+  id: number;
+  name: string;
+  avatar?: (number | null) | Media;
+  preferences?: {
+    reducedMotion?: boolean | null;
+    stepFreeDefault?: boolean | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  resetPasswordRequestedAt?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  sessions?:
+    | {
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
+      }[]
+    | null;
+  password?: string | null;
+  collection: 'members';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -163,6 +223,116 @@ export interface Media {
   height?: number | null;
   focalX?: number | null;
   focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages".
+ */
+export interface Page {
+  id: number;
+  title: string;
+  slug: string;
+  summary?: string | null;
+  body?: string | null;
+  published?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "places".
+ */
+export interface Place {
+  id: number;
+  name: string;
+  slug: string;
+  kind: 'business' | 'culture' | 'historic' | 'outdoors' | 'public-art' | 'community';
+  lifecycle: 'open' | 'temporarily_closed' | 'seasonal' | 'permanently_closed' | 'historical_only' | 'unknown';
+  primaryCategory?: string | null;
+  primaryArea?: string | null;
+  logo?: (number | null) | Media;
+  summary?: string | null;
+  /**
+   * @minItems 2
+   * @maxItems 2
+   */
+  location?: [number, number] | null;
+  address?: {
+    formatted?: string | null;
+    neighborhood?: string | null;
+    postalCode?: string | null;
+  };
+  website?: string | null;
+  phone?: string | null;
+  /**
+   * Restaurant/bar menus. Keep image galleries, PDFs, and official menu webpages as separate menu records.
+   */
+  menus?:
+    | {
+        label: string;
+        format: 'image_gallery' | 'pdf' | 'web';
+        mealPeriod?:
+          | ('all_day' | 'breakfast' | 'brunch' | 'lunch' | 'dinner' | 'drinks' | 'dessert' | 'happy_hour' | 'seasonal')
+          | null;
+        language?: string | null;
+        /**
+         * Rights-cleared or venue-supplied menu images uploaded to Harlem Mights.
+         */
+        images?: (number | Media)[] | null;
+        /**
+         * Official remote menu images when we should not re-host the source file.
+         */
+        remoteImages?:
+          | {
+              url: string;
+              alt?: string | null;
+              sourceUrl?: string | null;
+              id?: string | null;
+            }[]
+          | null;
+        /**
+         * Uploaded PDF copy when rights/persistence allow it.
+         */
+        pdf?: (number | null) | Media;
+        /**
+         * Official remote PDF or menu webpage URL. HTTPS strongly preferred.
+         */
+        url?: string | null;
+        /**
+         * Extra exact HTTPS origins the secure in-app browser may follow. The initial URL origin is always added automatically. No wildcards.
+         */
+        allowedOrigins?:
+          | {
+              origin: string;
+              id?: string | null;
+            }[]
+          | null;
+        sourceUrl?: string | null;
+        lastVerifiedAt?: string | null;
+        effectiveFrom?: string | null;
+        effectiveUntil?: string | null;
+        active?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  dataQuality?: {
+    state?: ('unverified' | 'partially_verified' | 'verified' | 'needs_review') | null;
+    lastReviewedAt?: string | null;
+  };
+  featured?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "saved-places".
+ */
+export interface SavedPlace {
+  id: number;
+  member: number | Member;
+  place: number | Place;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -193,14 +363,35 @@ export interface PayloadLockedDocument {
         value: number | User;
       } | null)
     | ({
+        relationTo: 'members';
+        value: number | Member;
+      } | null)
+    | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'pages';
+        value: number | Page;
+      } | null)
+    | ({
+        relationTo: 'places';
+        value: number | Place;
+      } | null)
+    | ({
+        relationTo: 'saved-places';
+        value: number | SavedPlace;
       } | null);
   globalSlug?: string | null;
-  user: {
-    relationTo: 'users';
-    value: number | User;
-  };
+  user:
+    | {
+        relationTo: 'users';
+        value: number | User;
+      }
+    | {
+        relationTo: 'members';
+        value: number | Member;
+      };
   updatedAt: string;
   createdAt: string;
 }
@@ -210,10 +401,15 @@ export interface PayloadLockedDocument {
  */
 export interface PayloadPreference {
   id: number;
-  user: {
-    relationTo: 'users';
-    value: number | User;
-  };
+  user:
+    | {
+        relationTo: 'users';
+        value: number | User;
+      }
+    | {
+        relationTo: 'members';
+        value: number | Member;
+      };
   key?: string | null;
   value?:
     | {
@@ -251,6 +447,38 @@ export interface UsersSelect<T extends boolean = true> {
   resetPasswordExpiration?: T;
   salt?: T;
   hash?: T;
+  resetPasswordRequestedAt?: T;
+  loginAttempts?: T;
+  lockUntil?: T;
+  sessions?:
+    | T
+    | {
+        id?: T;
+        createdAt?: T;
+        expiresAt?: T;
+      };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "members_select".
+ */
+export interface MembersSelect<T extends boolean = true> {
+  name?: T;
+  avatar?: T;
+  preferences?:
+    | T
+    | {
+        reducedMotion?: T;
+        stepFreeDefault?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  email?: T;
+  resetPasswordToken?: T;
+  resetPasswordExpiration?: T;
+  salt?: T;
+  hash?: T;
+  resetPasswordRequestedAt?: T;
   loginAttempts?: T;
   lockUntil?: T;
   sessions?:
@@ -278,6 +506,93 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages_select".
+ */
+export interface PagesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  summary?: T;
+  body?: T;
+  published?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "places_select".
+ */
+export interface PlacesSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  kind?: T;
+  lifecycle?: T;
+  primaryCategory?: T;
+  primaryArea?: T;
+  logo?: T;
+  summary?: T;
+  location?: T;
+  address?:
+    | T
+    | {
+        formatted?: T;
+        neighborhood?: T;
+        postalCode?: T;
+      };
+  website?: T;
+  phone?: T;
+  menus?:
+    | T
+    | {
+        label?: T;
+        format?: T;
+        mealPeriod?: T;
+        language?: T;
+        images?: T;
+        remoteImages?:
+          | T
+          | {
+              url?: T;
+              alt?: T;
+              sourceUrl?: T;
+              id?: T;
+            };
+        pdf?: T;
+        url?: T;
+        allowedOrigins?:
+          | T
+          | {
+              origin?: T;
+              id?: T;
+            };
+        sourceUrl?: T;
+        lastVerifiedAt?: T;
+        effectiveFrom?: T;
+        effectiveUntil?: T;
+        active?: T;
+        id?: T;
+      };
+  dataQuality?:
+    | T
+    | {
+        state?: T;
+        lastReviewedAt?: T;
+      };
+  featured?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "saved-places_select".
+ */
+export interface SavedPlacesSelect<T extends boolean = true> {
+  member?: T;
+  place?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -336,7 +651,7 @@ export interface CollectionsWidget {
 export interface CollectionQueryWidget {
   data?: {
     title?: string | null;
-    relatedCollection: 'users' | 'media';
+    relatedCollection: 'users' | 'members' | 'media' | 'pages' | 'places' | 'saved-places';
     where?:
       | {
           [k: string]: unknown;
@@ -358,7 +673,7 @@ export interface CollectionQueryWidget {
  */
 export interface ActivityWidget {
   data?: {
-    excludedCollections?: ('users' | 'media')[] | null;
+    excludedCollections?: ('users' | 'members' | 'media' | 'pages' | 'places' | 'saved-places')[] | null;
   };
   width: 'x-small' | 'small' | 'medium' | 'large' | 'x-large' | 'full';
 }

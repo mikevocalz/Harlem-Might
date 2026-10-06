@@ -33,6 +33,9 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
+    // Quest and PICO run Android 12+; Meta's layout library and
+    // react-native-webgpu's AHardwareBuffer use both need minSdk 29.
+    ['expo-build-properties', { android: { minSdkVersion: 29 } }],
     [
       'expo-splash-screen',
       {
@@ -54,6 +57,21 @@ const config: ExpoConfig = {
     ],
     'expo-image',
     'react-native-webgpu',
+    // Adds the device flavors (mobile, quest) and the Quest manifest: VR
+    // intent category, headtracking, hand tracking and supported devices.
+    // Build with `pnpm --filter mobile android:quest` (questDebug).
+    [
+      'expo-horizon-core',
+      {
+        // Horizon OS opens a 2D app at phone size unless the activity names a
+        // window size; this matches the PICO window below (16:10, landscape).
+        defaultWidth: '1280dp',
+        defaultHeight: '800dp',
+        supportedDevices: 'quest2|questpro|quest3|quest3s',
+        disableVrHeadtracking: false,
+        allowBackup: false,
+      },
+    ],
     [
       '@reactvision/react-viro',
       {
@@ -73,12 +91,42 @@ const config: ExpoConfig = {
         },
       },
     ],
+    // Adds the pico flavor: PICO OS 5 OpenXR loader, manifest and SDK levels.
+    // Build with `pnpm --filter mobile android:pico` (picoDebug).
+    [
+      '@expo-pico/core',
+      {
+        // PICO Platform Services (account, IAP, social) need the developer-portal app id.
+        picoAppId: process.env.PICO_APP_ID,
+        buildVariant: 'pico',
+        xrMode: 'pico-os5',
+        appType: 'mr',
+        targetProfile: 'auto',
+        targetDevices: ['pico-4-ultra'],
+        spatialMode: 'windowed',
+        defaultContainerMode: 'window-container',
+        defaultWidth: '1024dp',
+        defaultHeight: '640dp',
+        handTracking: true,
+        passthrough: true,
+        sceneUnderstanding: false,
+        highSamplingRateSensors: true,
+        refreshRates: [72, 90],
+        ndkAbiFilters: true,
+        openXrLoaderDeclaration: true,
+        developerTools: true,
+        enableEmulatorOptimizations: false,
+        targetSdkVersion: 34,
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,
     reactCompiler: true,
   },
   runtimeVersion: { policy: 'appVersion' },
+  // @expo-pico/core registers its package in the New Architecture shape,
+  // which is the only architecture in SDK 58.
 };
 
 export default config;

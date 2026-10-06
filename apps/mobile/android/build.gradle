@@ -8,12 +8,32 @@ buildscript {
   dependencies {
     classpath('com.android.tools.build:gradle')
     classpath('com.facebook.react:react-native-gradle-plugin')
-    classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
+    def kotlinVersion = findProperty('android.kotlinVersion')
+    classpath(kotlinVersion ? "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion" : 'org.jetbrains.kotlin:kotlin-gradle-plugin')
   }
 }
 
 allprojects {
   repositories {
+        // expo-pico-core: pico maven repo
+        maven {
+            url "https://developer.pico-interactive.com/maven"
+            content {
+                includeGroup "com.pvr"
+                includeGroup "com.pvr.platform"
+            }
+        }
+        // PICO Platform Service SDK (com.pico.pps:*) — public maven hosted
+        // by Bytedance, referenced from the PPS integration doc at
+        // https://developer.picoxr.com/document/platform_service/integrate-the-pico-platform-service-sdk/
+        maven {
+            url "https://artifact.bytedance.com/repository/Volcengine/"
+            content {
+                includeGroup "com.pico.pps"
+                includeGroup "com.pico"
+            }
+        }
+
     google()
     mavenCentral()
     maven { url 'https://www.jitpack.io' }
@@ -22,3 +42,28 @@ allprojects {
 
 apply plugin: "expo-root-project"
 apply plugin: "com.facebook.react.rootproject"
+
+// expo-pico-core: subprojects missing-dim fallback
+subprojects { sub ->
+    sub.plugins.withId("com.android.library") {
+        sub.android {
+            defaultConfig {
+                missingDimensionStrategy 'device', 'mobile'
+            }
+        }
+    }
+}
+
+// expo-pico-core: single-version pin for com.pico.pps:*
+allprojects {
+    configurations.configureEach {
+        resolutionStrategy.eachDependency { details ->
+            def requested = details.requested
+            if (requested.group == "com.pico.pps" &&
+                (requested.name.startsWith("platform-service-") || requested.name == "pps_sdk_base")) {
+                details.useVersion "1.0.0"
+                details.because "expo-pico-core pins the PICO Platform Service SDK to a single version"
+            }
+        }
+    }
+}

@@ -17,6 +17,7 @@ const MAIN_ITEMS = [
   { label: 'Explore', icon: Compass, href: '/explore' },
   { label: 'Schedule', icon: Calendar, href: '/split' },
   { label: 'Spatial', icon: Compass, href: '/spatial' },
+  { label: 'Viro External', icon: Compass, href: '/viro-external' },
   { label: 'Notifications', icon: Bell, href: '/notifications' },
   { label: 'Profile', icon: User, href: '/profile' },
   { label: 'Settings', icon: Settings, href: '/settings' },
