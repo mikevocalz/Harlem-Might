@@ -1,6 +1,8 @@
 import { postgresAdapter } from '@payloadcms/db-postgres';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { betterAuthCollections, createBetterAuthPlugin, payloadAdapter } from '@delmaredigital/payload-better-auth';
+import { betterAuth } from 'better-auth';
 import { buildConfig } from 'payload';
 import sharp from 'sharp';
 import { bunnyStorage } from '@seshuk/payload-storage-bunny';
@@ -10,11 +12,12 @@ import { Pages } from './collections/Pages';
 import { Places } from './collections/Places';
 import { Members } from './collections/Members';
 import { SavedPlaces } from './collections/SavedPlaces';
+import { AUTH_BASE_PATH, AUTH_ORIGINS, PAYLOAD_API_ROUTE, betterAuthOptions } from './auth/options';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const serverURL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 const webViteURL = process.env.WEB_VITE_URL || 'http://localhost:5173';
-const allowedOrigins = [serverURL, webViteURL];
+const allowedOrigins = [...new Set([serverURL, webViteURL, ...AUTH_ORIGINS])];
 
 export default buildConfig({
   admin: {
@@ -25,7 +28,7 @@ export default buildConfig({
     },
   },
   routes: {
-    api: '/payload-api',
+    api: PAYLOAD_API_ROUTE,
   },
   collections: [Users, Members, Media, Pages, Places, SavedPlaces],
   db: postgresAdapter({
@@ -43,6 +46,23 @@ export default buildConfig({
   secret: process.env.PAYLOAD_SECRET || '',
   sharp,
   plugins: [
+    betterAuthCollections({
+      betterAuthOptions,
+      skipCollections: ['user'],
+      firstUserAdmin: false,
+      acknowledgeRoleGuardDisabled: true,
+    }),
+    createBetterAuthPlugin({
+      authBasePath: AUTH_BASE_PATH,
+      // Better Auth is consumer identity only. Payload `users` remains the
+      // curator/admin login and keeps the stock Payload admin surface.
+      autoInjectAdminComponents: false,
+      createAuth: (payload) =>
+        betterAuth({
+          ...betterAuthOptions,
+          database: payloadAdapter({ payloadClient: payload }),
+        }),
+    }),
     ...(process.env.BUNNY_STORAGE_ACCESS_KEY
       ? [
           bunnyStorage({
