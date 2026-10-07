@@ -225,3 +225,41 @@ dialog.mights-sheet[open] {
 .mapboxgl-ctrl-group button .mapboxgl-ctrl-icon {
   filter: invert(1);
 }
+
+/* ---- react-native-web SSR atom mirrors -------------------------------------
+   RNW's atomic stylesheet injects at hydration; until then SSR'd elements
+   carry atom classnames with no rules and render as bare boxes — the hero
+   lens measured a 0.049 CLS jump when `items-center justify-center` met a
+   parent whose `display:flex` only existed post-hydration. This mirrors the
+   View base atom so first paint matches hydrated layout. Version-pinned to
+   react-native-web's generated rule; Tailwind utilities are `!important`
+   (see the tailwindcss import above) and still win every conflict. */
+.css-g5y9jx {
+  align-content: flex-start;
+  align-items: stretch;
+  background-color: transparent;
+  border: 0 solid black;
+  box-sizing: border-box;
+  display: flex;
+  flex-basis: auto;
+  flex-direction: column;
+  flex-shrink: 0;
+  list-style: none;
+  margin: 0;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  position: relative;
+  text-decoration: none;
+  z-index: 0;
+}
+
+/* ---- Motion arming (components/site/motion.ts) -----------------------------
+   `motion-armed` is set on <html> only after the Kinetrell layer binds, so a
+   no-JS or slow-hydration render keeps the static composition — content is
+   never invisible waiting on JS. Below-fold `mfx-*` entrances pre-hide; hero
+   markers are excluded: the hero holds the LCP image and its entrance is
+   transform-only, so paint is never gated on the bind. */
+.motion-armed [id^='mfx-']:not([id^='mfx-hero-']) {
+  opacity: 0;
+}

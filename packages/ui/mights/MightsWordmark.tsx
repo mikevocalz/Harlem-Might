@@ -9,7 +9,7 @@ export function MightsWordmark({ height = 40, className = '' }: { height?: numbe
   const width = Math.round((height * 2115) / 658);
   return (
     <Link href={routes.home()} aria-label="Harlem Might home" className={`mights-focus shrink-0 ${className}`}>
-      {/* eslint-disable-next-line @next/next/no-img-element -- static brand asset, sized srcset */}
+      {/* Plain <img>: this package lints outside the Next plugin; static brand asset with sized srcset */}
       <img
         src="/brand/harlem-might-landscape-96.webp"
         srcSet="/brand/harlem-might-landscape-48.webp 1x, /brand/harlem-might-landscape-96.webp 2x, /brand/harlem-might-landscape-144.webp 3x"

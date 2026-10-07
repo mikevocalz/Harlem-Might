@@ -7,7 +7,7 @@ export const mona = localFont({
   src: [{ path: '../../../packages/assets/fonts/MonaSans-Variable.woff2', style: 'normal' }],
   variable: '--font-mona',
   weight: '200 900',
-  display: 'swap',
+  display: 'optional',
   adjustFontFallback: 'Arial',
   declarations: [{ prop: 'font-stretch', value: '75% 125%' }],
 });
@@ -17,7 +17,7 @@ export const newsreader = localFont({
   src: [{ path: '../../../packages/assets/fonts/Newsreader-Variable.woff2', style: 'normal' }],
   variable: '--font-newsreader',
   weight: '200 800',
-  display: 'swap',
+  display: 'optional',
   preload: false,
   adjustFontFallback: 'Times New Roman',
 });

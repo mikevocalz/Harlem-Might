@@ -24,3 +24,6 @@ storybook-static
 # Written by `next dev` on every run — agent tooling, not source
 apps/web/AGENTS.md
 apps/web/CLAUDE.md
+
+# turbo writes this agent-rules file on install; not part of the repo
+/AGENTS.md
