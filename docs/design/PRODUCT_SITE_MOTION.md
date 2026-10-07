@@ -32,6 +32,27 @@ RNW/NativeWind `$$css` pipeline — so `id` is the stable target.
 - Under `reduce`: `motion-armed` is never set, every `mfx-*` element renders
   at its final state, and the hero lens is visible immediately.
 
+## Bento group reveal
+
+A bento animates as one unit. Architecture: ADR-05 in `PREMIUM_EXPERIENCE_ARCHITECTURE.md`.
+
+- The bento root carries `trg-bento-<id>` (`<id>` is the register id, e.g. `b1`, `b2`, `b5`).
+- Modules carry `mfx-bento-<id>-<n>` in source order. `n = 0` is the dominant module.
+- `motion.ts` builds one timeline per bento: dominant module first, supports after a short stagger, one `attachScrollTrigger` on the root, plays once. No ScrollTrigger per module, and no scrub.
+- Entrances are opacity plus a small translate. Media inside a module does not get its own parallax.
+- Under reduced motion nothing binds and every module renders at rest, as for the rest of the page.
+
+## Per-route motion budget
+
+| Route | Allowed | Not allowed |
+|---|---|---|
+| `/` | One orchestrated hero reveal (load sequence plus desktop map drift). Restrained image motion in the block chapter. One group reveal per bento (B1, B2). One sidewalk sequence, one-way. Quiet close. | Scrubs that hide content (the sidewalk scrub becomes a one-way entrance), per-card triggers, infinite loops other than the hover/focus beam on the dominant card |
+| `/explore` | Map camera (`flyTo`, `jumpTo` under reduce), sheet transition, selected-state continuity between row and marker | Lenis, GSAP (neither ships on this route), page entrances |
+| `/places/[slug]` | B5 single group reveal, or none | Long-form parallax, scroll-linked image motion |
+| `/walks`, `/stories`, `/today` and detail routes | One group reveal per registered bento (B6 to B10) when data exists | Motion on prose, empty-state animation |
+| `/ar` | One Sightline sequence, progress-driven, below the LCP | A second GPU canvas, autoplaying loops under reduce |
+| `/download`, `/about`, `/press`, `/legal/[doc]` | None beyond shared view transitions | Entrances |
+
 ## LCP-safe pre-hide
 
 `globals.css` contains `.motion-armed [id^="mfx-"] { visibility/opacity }`
