@@ -10,7 +10,7 @@ export { MightsWordmark } from './MightsWordmark';
 export { MightsNavbar, type MightsNavbarProps } from './MightsNavbar';
 export { MightsDock } from './MightsDock';
 export { MightsFooter } from './MightsFooter';
-export { MightsMapImage, MapAttribution, mapboxStaticUrl, type MapPin, type MightsMapImageProps } from './MightsMapImage';
+export { MightsMapImage, MapAttribution, mapboxStaticUrl, mapboxStaticSrcSet, type MapPin, type MightsMapImageProps } from './MightsMapImage';
 export { MightsHeading, MightsText, type MightsHeadingProps } from './MightsType';
 export { MightsSearchForm } from './MightsSearchForm';
 export { MightsJsonLd } from './MightsJsonLd';
