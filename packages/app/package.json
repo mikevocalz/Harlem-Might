@@ -6,11 +6,12 @@
   "types": "./index.ts",
   "exports": {
     ".": "./index.ts",
+    "./content": "./content/index.ts",
     "./features/*": "./features/*"
   },
   "scripts": {
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p content",
     "test": "node --test '**/*.test.ts'"
   },
   "dependencies": {

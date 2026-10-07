@@ -1,4 +1,13 @@
-import type { CollectionConfig } from 'payload';
+import type { CollectionConfig, TextFieldSingleValidation } from 'payload';
+import { isHttpUrl, validateOptionalUrl } from '../fields/provenance';
+
+const requireEntranceSource: TextFieldSingleValidation = (value, { siblingData }) => {
+  const entrance = siblingData as { note?: string | null; location?: unknown } | undefined;
+  if ((entrance?.note || entrance?.location) && !value) {
+    return 'An entrance claim needs a source URL.';
+  }
+  return !value || isHttpUrl(value) ? true : 'Enter a full http(s) URL.';
+};
 
 export const Places: CollectionConfig = {
   slug: 'places',
@@ -50,6 +59,40 @@ export const Places: CollectionConfig = {
     },
     { name: 'summary', type: 'textarea' },
     { name: 'location', type: 'point' },
+    // Audit §7: be honest about how good the pin is. `pending` keeps the
+    // shipped "Location pending verification" behaviour.
+    {
+      name: 'locationAccuracy',
+      type: 'select',
+      required: true,
+      defaultValue: 'pending',
+      index: true,
+      options: [
+        { label: 'Verified (survey or entrance check)', value: 'verified' },
+        { label: 'Approximate (geocoded)', value: 'approx' },
+        { label: 'Pending', value: 'pending' },
+      ],
+    },
+    {
+      name: 'locationSource',
+      type: 'group',
+      fields: [
+        { name: 'url', type: 'text', validate: validateOptionalUrl, admin: { description: 'OSM node/way URL, survey note, or other source for the point.' } },
+        { name: 'verifiedAt', type: 'date' },
+      ],
+    },
+    // Audit §7: no "real entrance" copy ships until this group is filled with
+    // a source. Apollo alone has two entrances (253 and 233 W 125th).
+    {
+      name: 'entrance',
+      type: 'group',
+      fields: [
+        { name: 'note', type: 'text', admin: { description: 'e.g. "Box office door, 253 W 125th St".' } },
+        { name: 'location', type: 'point' },
+        { name: 'sourceUrl', type: 'text', validate: requireEntranceSource },
+        { name: 'verifiedAt', type: 'date' },
+      ],
+    },
     {
       name: 'address',
       type: 'group',
@@ -102,7 +145,7 @@ export const Places: CollectionConfig = {
           relationTo: 'media',
           hasMany: true,
           admin: {
-            description: 'Rights-cleared or venue-supplied menu images uploaded to Harlem Mights.',
+            description: 'Rights-cleared or venue-supplied menu images uploaded to Harlem Might.',
           },
         },
         {

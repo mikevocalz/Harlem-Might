@@ -7,6 +7,7 @@
   "types": "./index.ts",
   "exports": {
     ".": "./index.ts",
+    "./server": "./server.ts",
     "./config": "./src/payload.config.ts"
   },
   "scripts": {
@@ -22,7 +23,9 @@
     "sharp": "catalog:",
     "@seshuk/payload-storage-bunny": "3.0.0",
     "@delmaredigital/payload-better-auth": "catalog:",
-    "better-auth": "catalog:"
+    "better-auth": "catalog:",
+    "@acme/app": "workspace:*",
+    "server-only": "0.0.1"
   },
   "devDependencies": {
     "@acme/config": "workspace:*",
