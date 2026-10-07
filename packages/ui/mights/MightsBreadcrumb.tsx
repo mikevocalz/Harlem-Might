@@ -25,7 +25,7 @@ export function MightsBreadcrumb({ items, origin = SITE }: { items: Crumb[]; ori
   };
   return (
     <nav aria-label="Breadcrumb" className="mx-auto w-full max-w-screen-2xl px-4 pt-4 sm:px-6">
-      <ol className="flex flex-wrap items-center gap-3 text-[13px] text-text-muted">
+      <ol className="flex flex-wrap items-center gap-3 text-label text-text-muted">
         {items.map((item, i) => {
           const last = i === items.length - 1;
           return (

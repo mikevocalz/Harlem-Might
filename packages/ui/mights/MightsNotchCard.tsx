@@ -25,7 +25,7 @@ export function MightsNotchCard({
 }: MightsNotchCardProps) {
   const rail = state === 'live' ? 'bg-accent' : 'mights-beam';
   const body = (
-    <span className={`relative flex h-full flex-col p-[2px] ${notch} ${rail} transition-colors duration-[120ms]`}>
+    <span className={`relative flex h-full flex-col p-rail ${notch} ${rail} transition-colors duration-fast`}>
       <span className={`relative flex h-full flex-col overflow-hidden bg-surface-raised ${notch} ${innerClassName}`}>
         {children}
       </span>
