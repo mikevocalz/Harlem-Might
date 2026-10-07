@@ -9,10 +9,10 @@ export const Route = createFileRoute('/pages/')({
   loader: () => listPages(),
   head: () => ({
     meta: [
-      { title: 'Stories and pages — Harlem Mights' },
+      { title: 'Stories and pages — Harlem Might' },
       {
         name: 'description',
-        content: 'Published stories and editorial pages from the Harlem Mights catalogue.',
+        content: 'Published stories and editorial pages from the Harlem Might catalogue.',
       },
     ],
   }),
@@ -30,7 +30,7 @@ function PagesIndex() {
             Published stories
           </Heading>
           <Text className="max-w-3xl text-base leading-7 text-text-muted">
-            Editorial pages from the Harlem Mights catalogue, with sources and place context kept close to the story.
+            Editorial pages from the Harlem Might catalogue, with sources and place context kept close to the story.
           </Text>
         </View>
 

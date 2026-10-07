@@ -11,7 +11,7 @@ export const Route = createFileRoute('/pages/$slug')({
   },
   head: ({ loaderData }) => ({
     meta: [
-      { title: `${loaderData?.title ?? 'Story'} — Harlem Mights` },
+      { title: `${loaderData?.title ?? 'Story'} — Harlem Might` },
       ...(loaderData?.summary
         ? [{ name: 'description', content: loaderData.summary }]
         : []),

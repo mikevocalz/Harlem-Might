@@ -1172,6 +1172,9 @@ importers:
 
   packages/payload:
     dependencies:
+      '@acme/app':
+        specifier: workspace:*
+        version: link:../app
       '@delmaredigital/payload-better-auth':
         specifier: 'catalog:'
         version: https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/5134d0b3b14f4dd5f59acbd0a0c09b2326c48f80(66b311f51b6cc78a83df1bf864a82d6c)
@@ -1190,6 +1193,9 @@ importers:
       pg:
         specifier: 'catalog:'
         version: 8.23.1
+      server-only:
+        specifier: 0.0.1
+        version: 0.0.1
       sharp:
         specifier: 'catalog:'
         version: 0.35.5(@types/node@26.1.1)

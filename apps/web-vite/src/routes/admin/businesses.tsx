@@ -13,7 +13,7 @@ import { CmsOffline } from '@/components/cms-offline';
 
 export const Route = createFileRoute('/admin/businesses')({
   loader: () => listPlaces(),
-  head: () => ({ meta: [{ title: 'Businesses — Harlem Mights Admin' }] }),
+  head: () => ({ meta: [{ title: 'Businesses — Harlem Might Admin' }] }),
   component: BusinessesAdmin,
 });
 

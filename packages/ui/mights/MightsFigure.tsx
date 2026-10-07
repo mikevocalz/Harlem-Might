@@ -20,8 +20,8 @@ export function MightsFigure({
   if (!src) return null;
   return (
     <figure className={`flex flex-col gap-2 ${className}`}>
-      <div className={`bg-rule-rail p-[2px] ${notch}`}>
-        <div className={`overflow-hidden bg-surface-raised ${notch} ${ratio === 'wide' ? 'aspect-[16/9]' : 'aspect-[4/3]'}`}>
+      <div className={`bg-rule-rail p-rail ${notch}`}>
+        <div className={`overflow-hidden bg-surface-raised ${notch} ${ratio === 'wide' ? 'aspect-video' : 'aspect-4/3'}`}>
           {/* Plain <img>: this package lints outside the Next plugin; static /public file sized by its frame */}
           <img
             src={src}
@@ -33,7 +33,7 @@ export function MightsFigure({
           />
         </div>
       </div>
-      {caption ? <figcaption className="text-[13px] text-text-muted">{caption}</figcaption> : null}
+      {caption ? <figcaption className="text-label text-text-muted">{caption}</figcaption> : null}
     </figure>
   );
 }

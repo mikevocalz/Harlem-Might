@@ -18,7 +18,7 @@
 import { writeFileSync } from 'node:fs';
 import {
   palette, semantic, fontFamilies, typeScale, contentWidths,
-  radius, shadows, zIndex, motion, breakpoints,
+  spacing, radius, shadows, zIndex, motion, breakpoints,
 } from './tokens.ts';
 
 const HEADER = '/* GENERATED from tokens.ts — do not edit by hand. `node build-css.mjs` */';
@@ -53,11 +53,18 @@ const sharedThemeTokens = () => {
     out.push(`  --container-${name}: ${width};`);
   }
 
+  for (const [name, value] of Object.entries(spacing)) {
+    out.push(`  --spacing-${name}: ${value};`);
+  }
   for (const [name, value] of Object.entries(radius)) {
     out.push(`  --radius-${name}: ${value};`);
   }
   for (const [name, value] of Object.entries(shadows)) {
     out.push(`  --shadow-${name}: ${value};`);
+  }
+  // Tailwind v4 resolves `duration-<name>` against --transition-duration-*.
+  for (const [name, value] of Object.entries(motion.duration)) {
+    out.push(`  --transition-duration-${name}: ${value};`);
   }
   for (const [name, value] of Object.entries(motion.easing)) {
     out.push(`  --ease-${name}: ${value};`);

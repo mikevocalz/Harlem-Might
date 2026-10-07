@@ -89,7 +89,7 @@ export function MightsMapImage(props: MightsMapImageProps) {
       <div
         role="img"
         aria-label={`${alt} (map unavailable)`}
-        className={`flex h-full w-full items-end bg-surface-sunken p-4 text-[13px] text-text-muted ${className}`}
+        className={`flex h-full w-full items-end bg-surface-sunken p-4 text-label text-text-muted ${className}`}
       >
         Map unavailable: no Mapbox token configured
       </div>
@@ -116,7 +116,7 @@ export function MightsMapImage(props: MightsMapImageProps) {
 /** Mapbox and OpenStreetMap attribution, required wherever a map renders. */
 export function MapAttribution({ className = '' }: { className?: string }) {
   return (
-    <span className={`text-[11px] text-text-muted ${className}`}>
+    <span className={`text-caption text-text-muted ${className}`}>
       © <a className="hover:underline" href="https://www.mapbox.com/about/maps/" target="_blank" rel="noreferrer">Mapbox</a>{' '}
       © <a className="hover:underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>
     </span>

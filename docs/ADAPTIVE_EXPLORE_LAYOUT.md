@@ -1,6 +1,6 @@
-# Harlem Mights adaptive Explore layout
+# Harlem Might adaptive Explore layout
 
-This document defines the product meaning of SplitView for Harlem Mights. It is not a generic "put three things in three columns" recipe.
+This document defines the product meaning of SplitView for Harlem Might. It is not a generic "put three things in three columns" recipe.
 
 ## The four surfaces
 

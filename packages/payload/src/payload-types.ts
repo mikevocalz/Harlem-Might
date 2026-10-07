@@ -74,6 +74,9 @@ export interface Config {
     pages: Page;
     places: Place;
     'saved-places': SavedPlace;
+    walks: Walk;
+    stories: Story;
+    events: Event;
     sessions: Session;
     accounts: Account;
     verifications: Verification;
@@ -90,6 +93,9 @@ export interface Config {
     pages: PagesSelect<false> | PagesSelect<true>;
     places: PlacesSelect<false> | PlacesSelect<true>;
     'saved-places': SavedPlacesSelect<false> | SavedPlacesSelect<true>;
+    walks: WalksSelect<false> | WalksSelect<true>;
+    stories: StoriesSelect<false> | StoriesSelect<true>;
+    events: EventsSelect<false> | EventsSelect<true>;
     sessions: SessionsSelect<false> | SessionsSelect<true>;
     accounts: AccountsSelect<false> | AccountsSelect<true>;
     verifications: VerificationsSelect<false> | VerificationsSelect<true>;
@@ -250,6 +256,27 @@ export interface Place {
    * @maxItems 2
    */
   location?: [number, number] | null;
+  locationAccuracy: 'verified' | 'approx' | 'pending';
+  locationSource?: {
+    /**
+     * OSM node/way URL, survey note, or other source for the point.
+     */
+    url?: string | null;
+    verifiedAt?: string | null;
+  };
+  entrance?: {
+    /**
+     * e.g. "Box office door, 253 W 125th St".
+     */
+    note?: string | null;
+    /**
+     * @minItems 2
+     * @maxItems 2
+     */
+    location?: [number, number] | null;
+    sourceUrl?: string | null;
+    verifiedAt?: string | null;
+  };
   address?: {
     formatted?: string | null;
     neighborhood?: string | null;
@@ -269,7 +296,7 @@ export interface Place {
           | null;
         language?: string | null;
         /**
-         * Rights-cleared or venue-supplied menu images uploaded to Harlem Mights.
+         * Rights-cleared or venue-supplied menu images uploaded to Harlem Might.
          */
         images?: (number | Media)[] | null;
         /**
@@ -326,6 +353,169 @@ export interface SavedPlace {
   place: number | Place;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "walks".
+ */
+export interface Walk {
+  id: number;
+  title: string;
+  /**
+   * Lowercase words joined by hyphens. Used in the URL.
+   */
+  slug: string;
+  /**
+   * The premise: why walk this route, in two or three sentences.
+   */
+  summary: string;
+  /**
+   * In walking order. Each stop is a catalogue place; its facts live on the place record.
+   */
+  stops: {
+    place: number | Place;
+    /**
+     * What to look at here, on this walk.
+     */
+    note?: string | null;
+    id?: string | null;
+  }[];
+  distanceMeters: number;
+  /**
+   * Expected time at an easy pace, stops included.
+   */
+  durationMinutes: number;
+  /**
+   * Where to begin, e.g. a corner or station exit.
+   */
+  startDescription: string;
+  endDescription: string;
+  /**
+   * Leave empty unless you have a source. Never write "accessible" on its own.
+   */
+  accessibility?: {
+    note?: string | null;
+    sourceUrl?: string | null;
+    verifiedAt?: string | null;
+  };
+  /**
+   * Where the facts on this record come from. Name the source and link it.
+   */
+  sources?:
+    | {
+        label: string;
+        url?: string | null;
+        /**
+         * When the source was last read.
+         */
+        accessedAt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "stories".
+ */
+export interface Story {
+  id: number;
+  title: string;
+  /**
+   * Lowercase words joined by hyphens. Used in the URL.
+   */
+  slug: string;
+  /**
+   * One or two sentences under the headline.
+   */
+  dek?: string | null;
+  body: string;
+  /**
+   * Every place this story is about. Each place page links back.
+   */
+  places?: (number | Place)[] | null;
+  /**
+   * Archival or commissioned images. Every item needs a credit and a rights basis.
+   */
+  archive?:
+    | {
+        media: number | Media;
+        caption?: string | null;
+        credit: string;
+        rights: 'owned' | 'licensed' | 'venue_supplied' | 'open_license' | 'public_domain';
+        rightsHolder?: string | null;
+        /**
+         * e.g. CC BY 4.0, with version.
+         */
+        license?: string | null;
+        sourceUrl?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Where the facts on this record come from. Name the source and link it.
+   */
+  sources?:
+    | {
+        label: string;
+        url?: string | null;
+        /**
+         * When the source was last read.
+         */
+        accessedAt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Byline as printed.
+   */
+  author: string;
+  /**
+   * Curator accountable for corrections.
+   */
+  editorialOwner?: (number | null) | User;
+  publishedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "events".
+ */
+export interface Event {
+  id: number;
+  title: string;
+  /**
+   * Lowercase words joined by hyphens. Used in the URL.
+   */
+  slug: string;
+  startsAt: string;
+  startsAt_tz: 'America/New_York';
+  endsAt: string;
+  endsAt_tz: 'America/New_York';
+  status: 'scheduled' | 'cancelled' | 'postponed';
+  place?: (number | null) | Place;
+  venueName?: string | null;
+  venueUrl?: string | null;
+  /**
+   * The listing this event was copied from (usually the venue page).
+   */
+  sourceUrl: string;
+  /**
+   * When the listing was first read.
+   */
+  fetchedAt: string;
+  /**
+   * When someone last checked the listing still says this.
+   */
+  lastVerifiedAt: string;
+  ticketUrl?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * Auto-generated from Better Auth schema (session)
@@ -425,6 +615,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'saved-places';
         value: number | SavedPlace;
+      } | null)
+    | ({
+        relationTo: 'walks';
+        value: number | Walk;
+      } | null)
+    | ({
+        relationTo: 'stories';
+        value: number | Story;
+      } | null)
+    | ({
+        relationTo: 'events';
+        value: number | Event;
       } | null)
     | ({
         relationTo: 'sessions';
@@ -578,6 +780,21 @@ export interface PlacesSelect<T extends boolean = true> {
   logo?: T;
   summary?: T;
   location?: T;
+  locationAccuracy?: T;
+  locationSource?:
+    | T
+    | {
+        url?: T;
+        verifiedAt?: T;
+      };
+  entrance?:
+    | T
+    | {
+        note?: T;
+        location?: T;
+        sourceUrl?: T;
+        verifiedAt?: T;
+      };
   address?:
     | T
     | {
@@ -637,6 +854,104 @@ export interface SavedPlacesSelect<T extends boolean = true> {
   place?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "walks_select".
+ */
+export interface WalksSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  summary?: T;
+  stops?:
+    | T
+    | {
+        place?: T;
+        note?: T;
+        id?: T;
+      };
+  distanceMeters?: T;
+  durationMinutes?: T;
+  startDescription?: T;
+  endDescription?: T;
+  accessibility?:
+    | T
+    | {
+        note?: T;
+        sourceUrl?: T;
+        verifiedAt?: T;
+      };
+  sources?:
+    | T
+    | {
+        label?: T;
+        url?: T;
+        accessedAt?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "stories_select".
+ */
+export interface StoriesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  dek?: T;
+  body?: T;
+  places?: T;
+  archive?:
+    | T
+    | {
+        media?: T;
+        caption?: T;
+        credit?: T;
+        rights?: T;
+        rightsHolder?: T;
+        license?: T;
+        sourceUrl?: T;
+        id?: T;
+      };
+  sources?:
+    | T
+    | {
+        label?: T;
+        url?: T;
+        accessedAt?: T;
+        id?: T;
+      };
+  author?: T;
+  editorialOwner?: T;
+  publishedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "events_select".
+ */
+export interface EventsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  startsAt?: T;
+  startsAt_tz?: T;
+  endsAt?: T;
+  endsAt_tz?: T;
+  status?: T;
+  place?: T;
+  venueName?: T;
+  venueUrl?: T;
+  sourceUrl?: T;
+  fetchedAt?: T;
+  lastVerifiedAt?: T;
+  ticketUrl?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -738,7 +1053,18 @@ export interface CollectionQueryWidget {
   data?: {
     title?: string | null;
     relatedCollection:
-      'users' | 'members' | 'media' | 'pages' | 'places' | 'saved-places' | 'sessions' | 'accounts' | 'verifications';
+      | 'users'
+      | 'members'
+      | 'media'
+      | 'pages'
+      | 'places'
+      | 'saved-places'
+      | 'walks'
+      | 'stories'
+      | 'events'
+      | 'sessions'
+      | 'accounts'
+      | 'verifications';
     where?:
       | {
           [k: string]: unknown;
@@ -768,6 +1094,9 @@ export interface ActivityWidget {
           | 'pages'
           | 'places'
           | 'saved-places'
+          | 'walks'
+          | 'stories'
+          | 'events'
           | 'sessions'
           | 'accounts'
           | 'verifications'

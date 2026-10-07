@@ -1,6 +1,6 @@
 # Restaurant menus
 
-Harlem Mights treats a restaurant menu as structured place content, not a single opaque URL.
+Harlem Might treats a restaurant menu as structured place content, not a single opaque URL.
 
 ## Menu formats
 
@@ -33,7 +33,7 @@ The viewer:
 - optionally allows additional exact origins curated in `allowedOrigins`;
 - blocks unknown redirects/schemes;
 - exposes back, forward and reload;
-- keeps a separate close action that returns to the Harlem Mights route, similar to X's in-app browser.
+- keeps a separate close action that returns to the Harlem Might route, similar to X's in-app browser.
 
 Do not add wildcard origins just to make a site load. If a restaurant's menu redirects through a provider (Toast, BentoBox, etc.), verify the exact redirect origin and add only that origin to the menu record.
 
@@ -41,7 +41,7 @@ Do not add wildcard origins just to make a site load. If a restaurant's menu red
 
 PDFs do not use a WebView.
 
-The app downloads a temporary cached copy with Expo FileSystem and renders it with `@kishannareshpal/expo-pdf`, which uses native PDF engines. This avoids the unreliable Android-WebView-PDF path while keeping the PDF inside Harlem Mights.
+The app downloads a temporary cached copy with Expo FileSystem and renders it with `@kishannareshpal/expo-pdf`, which uses native PDF engines. This avoids the unreliable Android-WebView-PDF path while keeping the PDF inside Harlem Might.
 
 ### Image menus
 

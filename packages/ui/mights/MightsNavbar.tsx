@@ -33,9 +33,9 @@ export function MightsNavbar({ overlay = false, tone = 'iron' }: MightsNavbarPro
 
   return (
     <header
-      className={`sticky top-0 z-50 h-16 transition-[background-color,border-color] duration-[120ms] ${
+      className={`sticky top-0 z-50 h-16 transition-[background-color,border-color] duration-fast ${
         frosted
-          ? 'border-b border-rule-hairline bg-paper/80 backdrop-blur-[12px]'
+          ? 'border-b border-rule-hairline bg-paper/80 backdrop-blur-md'
           : 'border-b border-transparent bg-transparent'
       } ${ink}`}
     >
@@ -50,12 +50,12 @@ export function MightsNavbar({ overlay = false, tone = 'iron' }: MightsNavbarPro
                   <Link
                     href={item.href}
                     aria-current={active ? 'page' : undefined}
-                    className={`mights-focus group relative flex h-16 items-center px-3.5 text-[14px] font-medium tracking-[0.02em] ${expanded}`}
+                    className={`mights-focus group relative flex h-16 items-center px-3.5 text-small font-medium tracking-[0.02em] ${expanded}`}
                   >
                     {item.label}
                     <span
                       aria-hidden
-                      className={`absolute bottom-4 left-3.5 right-3.5 h-[2px] origin-left bg-primary transition-transform duration-[120ms] ${
+                      className={`absolute bottom-4 left-3.5 right-3.5 h-rail origin-left bg-primary transition-transform duration-fast ${
                         active ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
                       }`}
                     />

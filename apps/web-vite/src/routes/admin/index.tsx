@@ -3,7 +3,7 @@ import { Card, Heading, Text } from '@acme/ui';
 import { Main, Section, View } from '@acme/ui/tw';
 
 export const Route = createFileRoute('/admin/')({
-  head: () => ({ meta: [{ title: 'Admin — Harlem Mights' }] }),
+  head: () => ({ meta: [{ title: 'Admin — Harlem Might' }] }),
   component: AdminHome,
 });
 
@@ -14,7 +14,7 @@ function AdminHome() {
         <View className="max-w-3xl gap-3">
           <Text className="text-sm font-semibold text-primary">Curator workspace</Text>
           <Heading level={1} size="display-md" className="text-text">
-            Harlem Mights admin
+            Harlem Might admin
           </Heading>
           <Text className="text-base leading-7 text-text-muted">
             Review the canonical catalogue, freshness and source quality from the Vite workspace.

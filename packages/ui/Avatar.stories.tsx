@@ -31,7 +31,7 @@ export const PersonFallbacks: Story = {
 export const BusinessLogoAndFallback: Story = {
   render: () => (
     <View className="flex-row items-end gap-4 p-4">
-      <Avatar name="Harlem Mights" imageUri={DEMO_LOGO} entity="business" size="lg" />
+      <Avatar name="Harlem Might" imageUri={DEMO_LOGO} entity="business" size="lg" />
       <Avatar name="Red Rooster Harlem" entity="business" size="lg" />
       <Avatar name="Sylvia's Restaurant" entity="business" size="lg" />
     </View>

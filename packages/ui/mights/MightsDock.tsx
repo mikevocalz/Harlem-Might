@@ -14,7 +14,7 @@ const ICONS = {
 } as const;
 
 const item =
-  'mights-focus relative flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-1 text-[11px] font-medium';
+  'mights-focus relative flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-1 text-caption font-medium';
 
 // Mobile primary navigation (< 768px). "More" is a native <dialog> sheet:
 // showModal() supplies the focus trap, inert backdrop and Escape-to-close.
@@ -27,9 +27,9 @@ export function MightsDock() {
     <>
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-50 border-t border-rule-hairline bg-paper/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-[12px] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-rule-hairline bg-paper/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
       >
-        <ul className="flex h-14 items-stretch px-1">
+        <ul className="flex h-dock items-stretch px-1">
           {primaryNav.map((nav) => {
             const Icon = ICONS[nav.label];
             const active = current === nav.label;
@@ -79,7 +79,7 @@ export function MightsDock() {
             Close
           </button>
         </div>
-        <ul className="pb-[calc(env(safe-area-inset-bottom)+12px)]">
+        <ul className="pb-[calc(env(safe-area-inset-bottom)+--spacing(3))]">
           {secondaryNav.map((link) => (
             <li key={link.label}>
               <Link

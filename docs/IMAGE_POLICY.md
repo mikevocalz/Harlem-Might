@@ -1,4 +1,4 @@
-# Harlem Mights image policy
+# Harlem Might image policy
 
 ## Public-site rule
 
@@ -10,7 +10,7 @@
 ## Place and history records
 
 For actual place detail, Then/Now, historical claims, or source-sensitive stories, use:
-1. commissioned Harlem Mights photography;
+1. commissioned Harlem Might photography;
 2. rights-cleared venue photography;
 3. Wikimedia Commons with compatible licensing;
 4. NYPL / Library of Congress / The Met open material where rights permit.

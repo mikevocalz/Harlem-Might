@@ -12,6 +12,9 @@ import { Pages } from './collections/Pages';
 import { Places } from './collections/Places';
 import { Members } from './collections/Members';
 import { SavedPlaces } from './collections/SavedPlaces';
+import { Walks } from './collections/Walks';
+import { Stories } from './collections/Stories';
+import { Events } from './collections/Events';
 import { AUTH_BASE_PATH, AUTH_ORIGINS, PAYLOAD_API_ROUTE, betterAuthOptions } from './auth/options';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -30,7 +33,7 @@ export default buildConfig({
   routes: {
     api: PAYLOAD_API_ROUTE,
   },
-  collections: [Users, Members, Media, Pages, Places, SavedPlaces],
+  collections: [Users, Members, Media, Pages, Places, SavedPlaces, Walks, Stories, Events],
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URL,

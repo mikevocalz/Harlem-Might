@@ -11,7 +11,7 @@ const heading = tv({
       'display-lg': `text-display-sm md:text-display-md xl:text-display-lg font-bold ${condensed}`,
       'display-md': `text-title-lg md:text-display-sm xl:text-display-md font-bold ${condensed}`,
       title: 'text-title md:text-title-lg font-semibold tracking-[-0.005em]',
-      card: 'text-[20px] leading-7 font-semibold',
+      card: 'text-card font-semibold',
     },
   },
   defaultVariants: { size: 'display-md' },
@@ -38,9 +38,9 @@ const text = tv({
   base: 'font-sans max-w-[75ch] text-pretty',
   variants: {
     size: {
-      lead: 'text-[18px] leading-7 md:text-lead',
-      body: 'text-base leading-7',
-      small: 'text-[14px] leading-6',
+      lead: 'text-lead-sm md:text-lead',
+      body: 'text-body',
+      small: 'text-small',
     },
     tone: { default: 'text-text', muted: 'text-text-muted' },
   },

@@ -14,7 +14,7 @@ import { useMemberSession, type SavedPlaceRecord } from '@/lib/member-session';
 import type { CmsPlace } from '@/lib/payload';
 
 export const Route = createFileRoute('/profile')({
-  head: () => ({ meta: [{ title: 'Profile — Harlem Mights' }] }),
+  head: () => ({ meta: [{ title: 'Profile — Harlem Might' }] }),
   component: ProfilePage,
 });
 
@@ -220,7 +220,7 @@ function SavedPlaceCard({
         </Heading>
         <Text className="text-sm text-text-muted">
           {[place?.primaryCategory, place?.primaryArea].filter(Boolean).join(' · ') ||
-            'Harlem Mights place'}
+            'Harlem Might place'}
         </Text>
       </View>
       <View className="flex-row flex-wrap gap-2">

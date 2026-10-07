@@ -10,7 +10,7 @@ export function NotFound() {
           This route is not on the map.
         </Text>
         <Text className="text-sm leading-6 text-text-muted">
-          Head back to Harlem Mights and choose another place, story or walk.
+          Head back to Harlem Might and choose another place, story or walk.
         </Text>
         <Link
           to="/"

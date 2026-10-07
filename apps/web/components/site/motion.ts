@@ -12,6 +12,9 @@
  *   `mpx-<name>`  transform-only scrub target — never pre-hidden
  *   `trg-<name>`  ScrollTrigger anchor — the section root
  *
+ * Bentos (MightsPlaceBento `motionKey`) add `trg-bento-<key>` and
+ * `mfx-bento-<key>-<n>`; each gets one group reveal, see bentoReveal below.
+ *
  * Reduced motion never reaches a timeline: the caller gates on
  * useBrowserReducedMotion, `motion-armed` is never set, and the static
  * composition renders unchanged.
@@ -25,7 +28,14 @@ import {
   ensureScrollTrigger,
   type GsapTargetMap,
 } from 'kinetrell/web/gsap';
-import { MOTION_MARKER_SELECTOR, parseMotionMarker } from './motion-markers';
+import {
+  MOTION_MARKER_SELECTOR,
+  bentoRevealPlan,
+  countBentoModules,
+  unboundFades,
+  parseBentoTrigger,
+  parseMotionMarker,
+} from './motion-markers';
 
 export const ARMED_CLASS = 'motion-armed';
 
@@ -52,6 +62,9 @@ function collectTargets(root: ParentNode): Targets {
   return { fades, scrubs, triggers };
 }
 
+/** Targets of every motion that bound on this page; anything else pre-hidden gets revealed. */
+const boundTargets = new Set<string>();
+
 /** A motion only binds if every named target exists — logs the missing ids in dev. */
 function bindable(motion: CompiledMotion, map: GsapTargetMap): boolean {
   const ids = new Set([...motion.tracks.map((t) => t.target), ...Object.keys(motion.initial)]);
@@ -59,6 +72,7 @@ function bindable(motion: CompiledMotion, map: GsapTargetMap): boolean {
   if (missing.length && process.env.NODE_ENV !== 'production') {
     console.warn(`[kinetrell] ${motion.id}: missing targets ${missing.join(', ')} — skipped`);
   }
+  if (missing.length === 0) for (const id of ids) boundTargets.add(id);
   return missing.length === 0;
 }
 
@@ -187,6 +201,28 @@ const closeEntrance = compileMotion(
   }),
 );
 
+/**
+ * Bento group reveal: the dominant module, then the supports in source order,
+ * all from one trigger. Built per bento because the module count varies;
+ * the timing lives in motion-markers.ts:bentoRevealPlan so it is unit-tested.
+ */
+function bentoReveal(key: string, moduleCount: number): CompiledMotion {
+  const plan = bentoRevealPlan(key, moduleCount);
+  return compileMotion(
+    defineMotion({
+      id: `hm.bento.${key}.enter`,
+      initial: Object.fromEntries(plan.map((s) => [s.target, { opacity: 0, y: s.fromY }])),
+      tracks: plan.map((s) => ({
+        target: s.target,
+        to: { opacity: 1, y: 0 },
+        atMs: s.atMs,
+        durationMs: s.durationMs,
+        ease: 'power2.out',
+      })),
+    }),
+  );
+}
+
 // ---------------------------------------------------------------------------
 
 const DESKTOP = '(min-width: 768px)';
@@ -234,6 +270,7 @@ export function useHomeMotion(reduced: boolean) {
     if (!ensureScrollTrigger()) return;
     const scope: ParentNode = document;
     const armedHost = document.documentElement;
+    boundTargets.clear();
     armedHost.classList.add(ARMED_CLASS);
     const { fades, scrubs, triggers } = collectTargets(scope);
     const all = { ...fades, ...scrubs };
@@ -288,6 +325,24 @@ export function useHomeMotion(reduced: boolean) {
         trigger: triggers.close,
         start: 'top 78%',
       });
+    }
+
+    // Bentos — one trigger each, never one per module.
+    for (const [name, trigger] of Object.entries(triggers)) {
+      const key = parseBentoTrigger(name);
+      if (!key) continue;
+      const count = countBentoModules(key, Object.keys(fades));
+      if (!count) continue;
+      const reveal = bentoReveal(key, count);
+      if (!bindable(reveal, fades)) continue;
+      attachScrollTrigger(createGsapTimeline(reveal, fades), { trigger, start: 'top 80%' });
+    }
+
+    // `motion-armed` hides every non-hero `mfx-*` marker. One that no motion
+    // claimed (a skipped bind, a bento with a gap in its indices) would stay
+    // invisible, so show it as static content.
+    for (const name of unboundFades(Object.keys(fades), boundTargets)) {
+      gsap.set(fades[name]!, { opacity: 1 });
     }
 
     const offMagnets = armMagnets(scope);
