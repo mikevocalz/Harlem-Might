@@ -11,6 +11,11 @@ export { ViroText } from '@reactvision/react-viro/dist/components/ViroText.web';
 export { ViroVirtualButton } from '@reactvision/react-viro/dist/components/ViroVirtualButton.web';
 export { ViroVirtualJoystick } from '@reactvision/react-viro/dist/components/ViroVirtualJoystick.web';
 export { ViroMaterials } from '@reactvision/react-viro/dist/components/Material/ViroMaterials.web';
+export { StudioSceneNavigator } from '@reactvision/react-viro/dist/components/Studio/StudioSceneNavigator.web';
+export { isStudioApiError } from '@reactvision/react-viro/dist/components/Studio/domain/studioApiError';
+export type { StudioSceneResponse } from '@reactvision/react-viro/dist/components/Studio/types';
+export type { StudioSceneNavigatorWebProps as StudioSceneNavigatorProps } from '@reactvision/react-viro/dist/components/Studio/StudioSceneNavigator.web';
+export type { StudioApiError } from '@reactvision/react-viro/dist/components/Studio/domain/studioApiError';
 
 export const isQuest = false;
 export const isPico = false;

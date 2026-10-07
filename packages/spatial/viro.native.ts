@@ -34,6 +34,14 @@ export {
   transformDirection,
   worldToLocation,
   isQuest,
+  StudioSceneNavigator,
+  isStudioApiError,
+} from '@reactvision/react-viro';
+
+export type {
+  StudioApiError,
+  StudioSceneNavigatorProps,
+  StudioSceneResponse,
 } from '@reactvision/react-viro';
 
 export type ViroOpenXRRuntimeCapabilities = {
