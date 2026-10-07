@@ -55,7 +55,7 @@ export const HARLEM_PLACE_PREVIEWS: readonly HarlemPlacePreview[] = [
     area: 'Central Harlem',
     shortDescription: 'Food, music, and neighborhood energy in the heart of Harlem.',
     whyItMatters:
-      'Harlem Mights can connect a meal here to nearby culture, nightlife, public art, and a walk along the surrounding blocks.',
+      'Harlem Might can connect a meal here to nearby culture, nightlife, public art, and a walk along the surrounding blocks.',
     tags: ['restaurant', 'food', 'music'],
     previewPoint: { x: 61, y: 54 },
     menuAvailable: true,
@@ -87,7 +87,7 @@ export const HARLEM_PLACE_PREVIEWS: readonly HarlemPlacePreview[] = [
     area: 'Central Harlem',
     shortDescription: 'A research and cultural institution centered on Black history and culture.',
     whyItMatters:
-      'It gives Harlem Mights a natural bridge between physical navigation, archival material, exhibitions, books, and deeper research.',
+      'It gives Harlem Might a natural bridge between physical navigation, archival material, exhibitions, books, and deeper research.',
     tags: ['library', 'archives', 'research'],
     previewPoint: { x: 73, y: 31 },
     arCandidate: true,
@@ -159,15 +159,94 @@ export const HARLEM_CATEGORIES = [
 
 export type HarlemCategoryFilter = (typeof HARLEM_CATEGORIES)[number];
 
-interface ExploreState {
+/**
+ * How far the place sheet (mobile) or inspector (desktop) is raised.
+ * `peek` shows the title row, `half` the summary and actions, `full` everything.
+ */
+export type SheetDetent = 'peek' | 'half' | 'full';
+
+/** The detent {@linkcode ExploreState.openSheet} uses when the caller names none. */
+export const DEFAULT_SHEET_DETENT: SheetDetent = 'half';
+
+/**
+ * Visibility of the place sheet or inspector. `detent` survives a close so the
+ * surface can reopen where the user left it when they ask for that explicitly.
+ */
+export interface ExploreSheet {
+  open: boolean;
+  detent: SheetDetent;
+}
+
+/**
+ * What the app knows about device location access.
+ * `unknown` means the user has not been asked (or the platform will prompt),
+ * `unavailable` means the platform has no geolocation at all.
+ */
+export type LocationPermission = 'unknown' | 'granted' | 'denied' | 'unavailable';
+
+/**
+ * Explore state shared by web and mobile.
+ *
+ * Ownership, per platform:
+ * - Web (`apps/web` ExploreWorkspace): the URL owns `view`, `q`, `category`
+ *   and `place`. This store holds only what the URL must not: the search draft
+ *   (typed ahead of the debounced replaceState), sheet/inspector detent,
+ *   location permission and saved ids. Web never reads `category` or
+ *   `selectedPlaceId` from here.
+ * - Mobile (`apps/mobile` explore layout, `ExploreMasterPane`,
+ *   `ExploreMapPane`, `ExplorePlaceDetail`, `MightsPanel`): expo-router has no
+ *   query-string workspace, so `category` and `selectedPlaceId` live here.
+ *   They stay for that reason; removing them breaks five mobile consumers.
+ *
+ * The map camera is never stored here. It stays an imperative ref on the map
+ * instance so pan/zoom frames never re-render React.
+ *
+ * `savedPreviewIds` is in-memory only. Durable saves belong to the member's
+ * Payload `saved-places` rows (docs/AUTH_PROFILE.md), keyed by CMS place id,
+ * not by these fixture slugs.
+ */
+export interface ExploreState {
+  /** Search text as typed. On web it leads the URL `q` by one debounce. */
   query: string;
+  /** Mobile only. Web reads `?category=`. */
   category: HarlemCategoryFilter;
+  /** Mobile only. Web reads `?place=`. */
   selectedPlaceId: string | null;
+  /** Fixture place ids saved this session (not persisted). */
   savedPreviewIds: string[];
+  /** Place sheet (mobile) / inspector (desktop) visibility and detent. */
+  sheet: ExploreSheet;
+  /** Last known location permission. Written by whoever asks the platform. */
+  locationPermission: LocationPermission;
   setQuery: (query: string) => void;
   setCategory: (category: HarlemCategoryFilter) => void;
   selectPlace: (placeId: string | null) => void;
   toggleSavedPreview: (placeId: string) => void;
+  /** Opens the sheet at `detent`, or {@linkcode DEFAULT_SHEET_DETENT}. */
+  openSheet: (detent?: SheetDetent) => void;
+  /** Moves an open sheet; on a closed sheet, sets where it will reopen. */
+  setSheetDetent: (detent: SheetDetent) => void;
+  /** Closes the sheet and keeps its detent. */
+  closeSheet: () => void;
+  setLocationPermission: (permission: LocationPermission) => void;
+}
+
+/** Adds `id` when absent, removes it when present. Returns a new array. */
+export function toggleId(ids: readonly string[], id: string): string[] {
+  return ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
+}
+
+/**
+ * Maps a browser Permissions API state (`navigator.permissions.query({ name:
+ * 'geolocation' })`) to {@linkcode LocationPermission}. Pass `undefined` when
+ * the browser has no geolocation, and `'prompt'` when it will ask.
+ */
+export function locationPermissionFromBrowser(
+  state: 'granted' | 'denied' | 'prompt' | undefined,
+): LocationPermission {
+  if (state === undefined) return 'unavailable';
+  if (state === 'prompt') return 'unknown';
+  return state;
 }
 
 export const useExplore = create<ExploreState>((set) => ({
@@ -175,15 +254,17 @@ export const useExplore = create<ExploreState>((set) => ({
   category: 'All',
   selectedPlaceId: null,
   savedPreviewIds: [],
+  sheet: { open: false, detent: DEFAULT_SHEET_DETENT },
+  locationPermission: 'unknown',
   setQuery: (query) => set({ query }),
   setCategory: (category) => set({ category }),
   selectPlace: (selectedPlaceId) => set({ selectedPlaceId }),
   toggleSavedPreview: (placeId) =>
-    set((state) => ({
-      savedPreviewIds: state.savedPreviewIds.includes(placeId)
-        ? state.savedPreviewIds.filter((id) => id !== placeId)
-        : [...state.savedPreviewIds, placeId],
-    })),
+    set((state) => ({ savedPreviewIds: toggleId(state.savedPreviewIds, placeId) })),
+  openSheet: (detent = DEFAULT_SHEET_DETENT) => set({ sheet: { open: true, detent } }),
+  setSheetDetent: (detent) => set((state) => ({ sheet: { open: state.sheet.open, detent } })),
+  closeSheet: () => set((state) => ({ sheet: { open: false, detent: state.sheet.detent } })),
+  setLocationPermission: (locationPermission) => set({ locationPermission }),
 }));
 
 export function getHarlemPlacePreview(placeId?: string | null) {
