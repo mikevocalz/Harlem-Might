@@ -65,6 +65,8 @@ mobile, and the no-JS layout (nav, hero lens position) matches hydrated.
 
 ## Measured (post-change, production build)
 
+These numbers predate a written protocol. The comparison baseline for later work is section 18 of `PREMIUM_EXPERIENCE_AUDIT.md` (Lighthouse 13.5, 3 runs, medians, `tooling/perf/lighthouse-baseline.sh`).
+
 | Metric | Desktop | Mobile (devtools throttle) |
 | --- | --- | --- |
 | Performance | 95 | 74 |
