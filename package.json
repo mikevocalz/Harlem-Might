@@ -19,7 +19,9 @@
     "skia:prepare-web": "node tooling/copy-skia-web-assets.mjs",
     "postinstall": "node tooling/copy-viro-web-assets.mjs && node tooling/copy-skia-web-assets.mjs",
     "spatial:verify-android": "node tooling/verify-spatial-android.mjs",
-    "spatial:verify-typegpu": "node tooling/verify-typegpu-toolchain.mjs"
+    "spatial:verify-typegpu": "node tooling/verify-typegpu-toolchain.mjs",
+    "perf:tracesift:init": "npx --yes @callstack/tracesift@0.3.1 init",
+    "perf:tracesift": "npx --yes @callstack/tracesift@0.3.1 start"
   },
   "devDependencies": {
     "turbo": "catalog:"
