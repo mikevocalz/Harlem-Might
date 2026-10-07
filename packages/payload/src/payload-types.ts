@@ -74,6 +74,9 @@ export interface Config {
     pages: Page;
     places: Place;
     'saved-places': SavedPlace;
+    sessions: Session;
+    accounts: Account;
+    verifications: Verification;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -87,6 +90,9 @@ export interface Config {
     pages: PagesSelect<false> | PagesSelect<true>;
     places: PlacesSelect<false> | PlacesSelect<true>;
     'saved-places': SavedPlacesSelect<false> | SavedPlacesSelect<true>;
+    sessions: SessionsSelect<false> | SessionsSelect<true>;
+    accounts: AccountsSelect<false> | AccountsSelect<true>;
+    verifications: VerificationsSelect<false> | VerificationsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -179,7 +185,10 @@ export interface User {
  */
 export interface Member {
   id: number;
+  email: string;
+  emailVerified?: boolean | null;
   name: string;
+  image?: string | null;
   avatar?: (number | null) | Media;
   preferences?: {
     reducedMotion?: boolean | null;
@@ -187,22 +196,6 @@ export interface Member {
   };
   updatedAt: string;
   createdAt: string;
-  email: string;
-  resetPasswordToken?: string | null;
-  resetPasswordExpiration?: string | null;
-  salt?: string | null;
-  hash?: string | null;
-  resetPasswordRequestedAt?: string | null;
-  loginAttempts?: number | null;
-  lockUntil?: string | null;
-  sessions?:
-    | {
-        id: string;
-        createdAt?: string | null;
-        expiresAt: string;
-      }[]
-    | null;
-  password?: string | null;
   collection: 'members';
 }
 /**
@@ -335,6 +328,57 @@ export interface SavedPlace {
   createdAt: string;
 }
 /**
+ * Auto-generated from Better Auth schema (session)
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sessions".
+ */
+export interface Session {
+  id: number;
+  expiresAt: string;
+  token: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  user: number | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Auto-generated from Better Auth schema (account)
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "accounts".
+ */
+export interface Account {
+  id: number;
+  accountId: string;
+  providerId: string;
+  user: number | User;
+  accessToken?: string | null;
+  refreshToken?: string | null;
+  idToken?: string | null;
+  accessTokenExpiresAt?: string | null;
+  refreshTokenExpiresAt?: string | null;
+  scope?: string | null;
+  password?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Auto-generated from Better Auth schema (verification)
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "verifications".
+ */
+export interface Verification {
+  id: number;
+  identifier: string;
+  value: string;
+  expiresAt: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -381,6 +425,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'saved-places';
         value: number | SavedPlace;
+      } | null)
+    | ({
+        relationTo: 'sessions';
+        value: number | Session;
+      } | null)
+    | ({
+        relationTo: 'accounts';
+        value: number | Account;
+      } | null)
+    | ({
+        relationTo: 'verifications';
+        value: number | Verification;
       } | null);
   globalSlug?: string | null;
   user:
@@ -463,7 +519,10 @@ export interface UsersSelect<T extends boolean = true> {
  * via the `definition` "members_select".
  */
 export interface MembersSelect<T extends boolean = true> {
+  email?: T;
+  emailVerified?: T;
   name?: T;
+  image?: T;
   avatar?: T;
   preferences?:
     | T
@@ -473,21 +532,6 @@ export interface MembersSelect<T extends boolean = true> {
       };
   updatedAt?: T;
   createdAt?: T;
-  email?: T;
-  resetPasswordToken?: T;
-  resetPasswordExpiration?: T;
-  salt?: T;
-  hash?: T;
-  resetPasswordRequestedAt?: T;
-  loginAttempts?: T;
-  lockUntil?: T;
-  sessions?:
-    | T
-    | {
-        id?: T;
-        createdAt?: T;
-        expiresAt?: T;
-      };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -596,6 +640,48 @@ export interface SavedPlacesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sessions_select".
+ */
+export interface SessionsSelect<T extends boolean = true> {
+  expiresAt?: T;
+  token?: T;
+  ipAddress?: T;
+  userAgent?: T;
+  user?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "accounts_select".
+ */
+export interface AccountsSelect<T extends boolean = true> {
+  accountId?: T;
+  providerId?: T;
+  user?: T;
+  accessToken?: T;
+  refreshToken?: T;
+  idToken?: T;
+  accessTokenExpiresAt?: T;
+  refreshTokenExpiresAt?: T;
+  scope?: T;
+  password?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "verifications_select".
+ */
+export interface VerificationsSelect<T extends boolean = true> {
+  identifier?: T;
+  value?: T;
+  expiresAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv_select".
  */
 export interface PayloadKvSelect<T extends boolean = true> {
@@ -651,7 +737,8 @@ export interface CollectionsWidget {
 export interface CollectionQueryWidget {
   data?: {
     title?: string | null;
-    relatedCollection: 'users' | 'members' | 'media' | 'pages' | 'places' | 'saved-places';
+    relatedCollection:
+      'users' | 'members' | 'media' | 'pages' | 'places' | 'saved-places' | 'sessions' | 'accounts' | 'verifications';
     where?:
       | {
           [k: string]: unknown;
@@ -673,7 +760,19 @@ export interface CollectionQueryWidget {
  */
 export interface ActivityWidget {
   data?: {
-    excludedCollections?: ('users' | 'members' | 'media' | 'pages' | 'places' | 'saved-places')[] | null;
+    excludedCollections?:
+      | (
+          | 'users'
+          | 'members'
+          | 'media'
+          | 'pages'
+          | 'places'
+          | 'saved-places'
+          | 'sessions'
+          | 'accounts'
+          | 'verifications'
+        )[]
+      | null;
   };
   width: 'x-small' | 'small' | 'medium' | 'large' | 'x-large' | 'full';
 }
