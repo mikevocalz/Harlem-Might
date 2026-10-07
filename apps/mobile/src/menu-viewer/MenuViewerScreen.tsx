@@ -38,7 +38,7 @@ export function MenuViewerScreen() {
         <Text className="text-center text-sm leading-6 text-text-muted">
           {status === 'error'
             ? error ?? 'This menu could not be loaded.'
-            : 'Getting the latest menu record from Harlem Mights…'}
+            : 'Getting the latest menu record from Harlem Might…'}
         </Text>
       </View>
     </View>

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { CircuitButton, GlyphCity, GridCard, GridFloor, GridScene } from './index';
 import { Text, View } from './tw';
 
-const meta = { title: 'Harlem Mights/Future Foundations' } satisfies Meta;
+const meta = { title: 'Harlem Might/Future Foundations' } satisfies Meta;
 export default meta;
 type Story = StoryObj;
 

@@ -94,7 +94,7 @@ export function SightlineHeroCanvas({
   return (
     <GpuCanvas
       ref={canvasRef}
-      aria-label="Harlem Mights Sightline spatial glasses and compute puck"
+      aria-label="Harlem Might Sightline spatial glasses and compute puck"
       className={className}
     />
   );

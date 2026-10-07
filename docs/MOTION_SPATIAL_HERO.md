@@ -1,4 +1,4 @@
-# Harlem Mights motion + spatial hero contract
+# Harlem Might motion + spatial hero contract
 
 ## App boundary
 

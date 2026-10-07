@@ -1,6 +1,6 @@
-# Harlem Mights reference roster
+# Harlem Might reference roster
 
-This is a **reference roster**, not a claim that any person, studio, or agency is employed by, endorses, or has reviewed Harlem Mights. It identifies the quality bar and the primary-source documentation to consult for each area of the stack.
+This is a **reference roster**, not a claim that any person, studio, or agency is employed by, endorses, or has reviewed Harlem Might. It identifies the quality bar and the primary-source documentation to consult for each area of the stack.
 
 ## Engineering / rendering
 

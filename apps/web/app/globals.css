@@ -100,7 +100,7 @@ body {
   }
 }
 
-/* ---- Harlem Mights geometry ------------------------------------------------
+/* ---- Harlem Might geometry -------------------------------------------------
    Accent Frame: four 10px corner marks drawn by one pseudo-element. Used for
    keyboard focus (cobalt, 2px, 4px offset) and for .mights-frame surfaces. */
 .mights-focus {

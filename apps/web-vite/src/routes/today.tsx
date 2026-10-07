@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { PublicSectionPage } from '@/components/public-section-page';
 
 export const Route = createFileRoute('/today')({
-  head: () => ({ meta: [{ title: 'Today in Harlem — Harlem Mights' }] }),
+  head: () => ({ meta: [{ title: 'Today in Harlem — Harlem Might' }] }),
   component: TodayPage,
 });
 

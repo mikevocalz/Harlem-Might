@@ -386,7 +386,7 @@ and multi-window resize with scroll position, selection and search intact.
 
 ## Web foldable support
 
-Harlem Mights adds a real `index.web.tsx` implementation.
+Harlem Might adds a real `index.web.tsx` implementation.
 
 The web fallback uses ordinary window-size classes everywhere and opportunistically adds:
 - `navigator.devicePosture`

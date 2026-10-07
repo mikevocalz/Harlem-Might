@@ -1,6 +1,6 @@
 # Member profile and saved places
 
-Harlem Mights remains fully browsable without an account. Consumer authentication exists only to make personal state portable across devices.
+Harlem Might remains fully browsable without an account. Consumer authentication exists only to make personal state portable across devices.
 
 ## Identity split
 

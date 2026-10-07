@@ -1,6 +1,6 @@
 # Explore spatial workspace
 
-Explore is the first production-shaped consumer of Harlem Mights SplitView.
+Explore is the first production-shaped consumer of Harlem Might SplitView.
 
 ## Pane ownership
 

@@ -1,6 +1,6 @@
 # Sightline hero
 
-The Harlem Mights hero is a shared WebGPU scene, not a web-only mockup.
+The Harlem Might hero is a shared WebGPU scene, not a web-only mockup.
 
 ## Rendering stack
 
@@ -13,7 +13,7 @@ The Harlem Mights hero is a shared WebGPU scene, not a web-only mockup.
 
 ## Industrial-design direction
 
-The model is original Harlem Mights hardware:
+The model is original Harlem Might hardware:
 - slim open spatial glasses
 - warm silver / stone metal frame
 - restrained graphite sensor rail
