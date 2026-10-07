@@ -47,6 +47,8 @@ The starter's existing rules still apply:
 
 Use `isMetaHorizonXR` for the runtime family.
 
+React Native on Meta VR Glasses, web AR glasses and how `@viro-external/ui` panels reach each target: [META_VR_GLASSES.md](META_VR_GLASSES.md).
+
 Do not use `Build.MODEL`, `isKnownQuest`, or a reported Quest identity as proof that a feature exists. Meta Horizon compatibility mode can present a Quest-compatible identity on newer hardware.
 
 When an immersive view is active, query `getOpenXRRuntimeCapabilities(viewTag)` for:
