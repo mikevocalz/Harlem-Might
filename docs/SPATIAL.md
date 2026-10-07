@@ -123,6 +123,8 @@ The current private Viro fork treats Meta immersive hardware as one **Meta Horiz
 
 The checked-in Android manifest mirrors the generated config-plugin result so bare/native builds and Expo prebuilds agree.
 
+App config, look-and-pinch input, the testing ladder and open questions for the glasses: [META_VR_GLASSES.md](META_VR_GLASSES.md).
+
 ## System spatial windows
 
 `ForkSpatialLayout` detects optional `ViroSpatialSceneProvider`, `ViroSpatialWindow` and layout-support exports from the mikevocalz Viro fork.
