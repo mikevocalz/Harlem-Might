@@ -8,13 +8,14 @@
  * light-dark()) and theme-native.css (mobile, Uniwind `@variant` theme blocks)
  * from the tokens below. TS consumers (Skia, charts,
  * programmatic color math) import these exports directly.
- * No hex values exist outside this file.
+ * No hex values belong outside this file. Known exception still to migrate:
+ * packages/spatial/sightline (audit §15, contradiction 4).
  */
 
 // ---- primitive palettes -----------------------------------------------------
 
 export const palette = {
-  // Harlem Mights v2 — the only colors public-site surfaces may use.
+  // Harlem Might brand colors — the only colors public-site surfaces may use.
   mights: {
     // Brand gold, sampled from Harlem-Might-Logo-landscape.png.
     gold: '#F8C626',
@@ -37,7 +38,10 @@ export const palette = {
     night: '#0E1412',
   },
   // ponytail: legacy scales below still back the mobile shell and schedule
-  // demo; delete them with those screens.
+  // demo; delete them with those screens. Three names do not match their
+  // colors: `burgundy` is yellow, `ember` is pink, `gold` is blue. They keep
+  // their names because packages/app and packages/ui still use them (consumer
+  // list: docs/design/MIGHTS_REUSE_MATRIX.md). Public-site code must not.
   // RETRO primary — electric yellow (scale name kept for class compatibility)
   burgundy: {
     50: '#FFFCEB',
@@ -81,7 +85,8 @@ export const palette = {
     950: '#0D0C0B',
   },
   white: '#FFFFFF',
-  // choir calendar event-type accents — warm, dignified, readable on light/dark surfaces
+  // choir calendar event-type accents. `gold` here is a BLUE scale; brand
+  // gold is `mights.gold` / semantic `primary`.
   gold: {
     50: '#EEF4FF', 100: '#DCE8FF', 200: '#B8D0FF', 300: '#8AB0FF',
     400: '#5C8AFF', 500: '#3B6DF6', 600: '#2952D9', 700: '#1F3FAD',
@@ -134,7 +139,10 @@ export const semantic = {
   'accent-pressed': { light: '#A70D27', dark: '#FF8A99' },
   'on-accent': { light: '#FFFFFF', dark: '#0B0906' },
   border: { light: '#CBD2CE', dark: '#2A241A' },
-  'border-strong': { light: '#7D8983', dark: '#5A503E' },
+  // The only visible edge of text inputs, so it must reach 3:1 against the
+  // input fill (WCAG 1.4.11). Dark: 3.50:1 on surface-raised #15120D, 3.73:1
+  // on surface. Light: 3.63:1 on surface-raised #FFFFFF, 3.17:1 on surface.
+  'border-strong': { light: '#7D8983', dark: '#756A52' },
   focus: { light: '#1F4FE0', dark: '#F8C626' },
   danger: { light: '#B4232F', dark: '#FF7A85' },
   'on-danger': { light: '#FFFFFF', dark: '#3D0508' },
@@ -163,6 +171,25 @@ export const typeScale = {
   'title-lg': { size: '2rem', lineHeight: '1.15', tracking: '0' },
   title: { size: '1.5625rem', lineHeight: '1.25', tracking: '0' },
   lead: { size: '1.25rem', lineHeight: '1.5', tracking: '0' },
+  // Steps below `lead` sit off the 1.25 ratio on purpose: reading and UI
+  // sizes follow legibility, not the display scale. Each one replaced a
+  // `text-[Npx]` literal in packages/ui/mights (audit §15).
+  /** Card and module headings (MightsHeading size="card"). 20px. */
+  card: { size: '1.25rem', lineHeight: '1.75rem', tracking: '0' },
+  /** Newsreader long-form body (MightsProse). 19px at a loose 1.75 leading. */
+  prose: { size: '1.1875rem', lineHeight: '1.75', tracking: '0' },
+  /** Lead paragraph below 768px, where 20px wraps too early. 18px. */
+  'lead-sm': { size: '1.125rem', lineHeight: '1.75rem', tracking: '0' },
+  /** Default UI and body copy. 16px. */
+  body: { size: '1rem', lineHeight: '1.75rem', tracking: '0' },
+  /** Button labels and footer/contents link lists. 15px. */
+  ui: { size: '0.9375rem', lineHeight: '1.5rem', tracking: '0' },
+  /** Secondary copy: street lines, nav links, metadata. 14px. */
+  small: { size: '0.875rem', lineHeight: '1.5rem', tracking: '0' },
+  /** Captions, breadcrumbs, group headings, status lines. 13px. */
+  label: { size: '0.8125rem', lineHeight: '1.25rem', tracking: '0' },
+  /** Map attribution and dock labels; the floor for any visible text. 11px. */
+  caption: { size: '0.6875rem', lineHeight: '1rem', tracking: '0' },
 } as const;
 
 // ---- layout -----------------------------------------------------------------
@@ -186,6 +213,19 @@ export const contentWidths = {
   'pane-inspector': '20rem',
 } as const;
 
+/**
+ * Named spacing. The 4px Tailwind scale (`--spacing: 0.25rem`) stays the
+ * rhythm for every gap and padding; these names exist only for lengths that
+ * carry meaning across components. Emitted as `--spacing-<name>`, so Tailwind
+ * v4 generates `p-rail`, `h-rail`, `h-dock`, `pb-dock`, etc.
+ */
+export const spacing = {
+  /** The 2px rail: notch-card frame, figure frame, nav underline. */
+  rail: '0.125rem',
+  /** Mobile dock bar height (MightsDock), excluding the safe-area inset. */
+  dock: '3.5rem',
+} as const;
+
 export const radius = {
   xs: '0.125rem',
   sm: '0.25rem',
@@ -196,7 +236,9 @@ export const radius = {
   full: '9999px',
 } as const;
 
-// Harlem Mights elevation: quiet depth on light surfaces; geometry and rails carry emphasis.
+// Elevation. Every value is a stoop-iron shadow, which reads on the mobile
+// app's light surfaces and all but disappears on the site's warm-black dark
+// mode. On the dark site, rails and geometry carry emphasis, not shadows.
 export const shadows = {
   // shadow-stoop: raised sheets and modals only — never under grid cards.
   stoop: '0 12px 32px rgba(23, 28, 26, 0.12)',
@@ -217,6 +259,10 @@ export const zIndex = {
 
 // ---- motion -----------------------------------------------------------------
 
+// build-css.mjs emits durations as `--transition-duration-<name>` inside
+// @theme, so Tailwind v4 generates `duration-fast` etc. (it resolves the
+// `duration-*` utility against that namespace), plus the `--duration-<name>`
+// :root vars for plain CSS.
 export const motion = {
   duration: {
     fast: '120ms',
@@ -242,3 +288,4 @@ export const breakpoints = {
 export type Palette = typeof palette;
 export type SemanticColor = keyof typeof semantic;
 export type ContentWidth = keyof typeof contentWidths;
+export type TypeStep = keyof typeof typeScale;
