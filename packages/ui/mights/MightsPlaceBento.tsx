@@ -36,6 +36,7 @@ export function MightsPlaceBento({ places }: { places: readonly BentoPlace[] }) 
                 pitch={40}
                 width={720}
                 height={405}
+                sizes="(min-width: 768px) 45vw, 100vw"
                 pins={[{ lngLat: place.lngLat }]}
                 alt={`Map of ${place.name}`}
               />

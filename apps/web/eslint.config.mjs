@@ -8,10 +8,7 @@ const rawSemanticTags = [
 ]
 
 const productMotionFiles = [
-  'components/site/ProductHome.tsx',
-  'components/site/SiteMotionShell.tsx',
-  'components/site/SiteHeader.tsx',
-  'components/site/SiteFooter.tsx',
+  'components/site/motion.ts',
 ]
 
 const eslintConfig = defineConfig([

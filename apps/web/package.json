@@ -8,6 +8,7 @@
     "start": "node scripts/next.mjs start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "test": "node --test '**/*.test.ts'",
     "payload": "payload",
     "payload:importmap": "payload generate:importmap",
     "payload:types": "payload generate:types",
