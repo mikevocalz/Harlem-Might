@@ -120,7 +120,9 @@ const treeChecks = [
     'horizonos.permission.IMPORT_EXPORT_IOT_MAP_DATA',
     'HAND_TRACKING',
     'com.oculus.feature.PASSTHROUGH',
-    'android:defaultWidth="1280dp"',
+    // Window size from expo-horizon-core in app.config.ts (S17: 1440x900dp).
+    'android:defaultWidth="1440dp"',
+    'android:defaultHeight="900dp"',
   ]],
   ['app/src/pico/AndroidManifest.xml', [
     'com.picovr.intent.category.VR',
