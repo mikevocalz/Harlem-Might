@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { canUseArNavigation } from './arNavigationEntry.ts';
+import { canUseArNavigation, chooseArExperience } from './arNavigationEntry.ts';
 
 const phone = { isHorizonBuild: false, isMetaHorizonXR: false, isPico: false, isVisionOS: false, platform: 'android' };
 
@@ -19,5 +19,28 @@ describe('canUseArNavigation', () => {
 
   it('never runs on web', () => {
     assert.equal(canUseArNavigation({ ...phone, platform: 'web' }), false);
+  });
+});
+
+describe('chooseArExperience — preserve existing Harlem AR worlds', () => {
+  it('never replaces tabletop when there is no active AR navigation', () => {
+    assert.equal(chooseArExperience({
+      requestedScene: 'tabletop', navigationAvailable: true, navigationSessionInAR: false,
+    }), 'tabletop');
+  });
+
+  it('preserves the street VR world on Quest, Pico and unsupported devices', () => {
+    assert.equal(chooseArExperience({
+      requestedScene: 'street', navigationAvailable: false, navigationSessionInAR: true,
+    }), 'street');
+  });
+
+  it('adds the live route overlay only for an explicit phone AR navigation session', () => {
+    assert.equal(chooseArExperience({
+      requestedScene: 'tabletop', navigationAvailable: true, navigationSessionInAR: true,
+    }), 'navigation');
+    assert.equal(chooseArExperience({
+      requestedScene: 'street', navigationAvailable: false, navigationSessionInAR: false,
+    }), 'street');
   });
 });
