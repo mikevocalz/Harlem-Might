@@ -18,12 +18,15 @@
       "default": "./icons.web.ts"
     },
     "./native": "./native.ts",
-    "./mights": "./mights/index.ts"
+    "./mights": {
+      "react-native": "./mights/index.native.ts",
+      "default": "./mights/index.ts"
+    }
   },
   "scripts": {
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --test 'tv.test.ts'"
+    "test": "node --test 'tv.test.ts' 'mights/geometry.native.test.ts'"
   },
   "dependencies": {
     "@acme/theme": "workspace:*",

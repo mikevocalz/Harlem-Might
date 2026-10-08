@@ -38,10 +38,11 @@ const ASSISTANT_BAR_CLEARANCE = 96;
  * Explore: the map is the permanent centre (design handoff §0, §4).
  *
  * The map always takes the flex region. Discover is a leading pane, drawer or
- * compact screen; Place Detail is a trailing pane, overlay or compact screen
- * that exists only while a place is selected (DECISIONS S5). On a quest
- * build both ask for their own Horizon windows (src/spatial/exploreWorkspace.ts);
- * a promoted pane collapses here and the map takes its width.
+ * compact screen, and always stays in this window (DECISIONS S12). Place
+ * Detail is a trailing pane, overlay or compact screen that exists only while
+ * a place is selected (S5). On a quest build Detail asks for its own Horizon
+ * window (src/spatial/exploreWorkspace.ts); once promoted, its pane collapses
+ * here and the map takes its width.
  *
  * Selection is one store write (`openPlace`). The `[placeId]` route only
  * syncs a deep link into the store, so Detail lives at a fixed tree position
@@ -68,13 +69,11 @@ export default function ExploreRouteLayout() {
 
   const isSpatialAvailable = metaWindows.useSpatialAvailable();
   const workspace = resolveExploreWorkspace({ selectedPlaceId, isSpatialAvailable });
-  const discoverPlacement = metaWindows.usePlacement(EXPLORE_SURFACE.discover);
   const detailPlacement = metaWindows.usePlacement(EXPLORE_SURFACE.placeDetail);
 
   const layout = resolveExploreLayout({
     sizeClass,
     hasSelection: selectedPlaceId != null,
-    discoverPlacement,
     detailPlacement,
     isHorizon: isHorizonBuild,
     compactPane,
@@ -93,7 +92,7 @@ export default function ExploreRouteLayout() {
     leaveCompactDetail();
     // A deep link left /explore/[placeId] in the URL; drop it with the selection.
     if ((segments as string[]).includes('[placeId]')) {
-      router.replace('/(drawer)/(tabs)/explore');
+      router.replace('/explore');
     }
   };
 
@@ -149,13 +148,12 @@ export default function ExploreRouteLayout() {
         <SafeArea edges={['left', 'right']} className="flex-1 bg-surface">
           <View className="flex-1 flex-row">
             <ExplorePane mode={layout.discover} side="leading" restingWidth={EXPLORE_PANE_DP.discover}>
-              <ExploreWorkspaceWindow surfaceId={EXPLORE_SURFACE.discover}>
-                <ExploreMasterPane
-                  padding={windowPadding}
-                  onSelectPlace={(place) => open(place.id, 'discover', rowFocusId(place.id))}
-                  onShowMap={layout.showMapToggle ? showMap : undefined}
-                />
-              </ExploreWorkspaceWindow>
+              {/* Main-window content on every build: never a SpatialWindow (S12). */}
+              <ExploreMasterPane
+                padding={windowPadding}
+                onSelectPlace={(place) => open(place.id, 'discover', rowFocusId(place.id))}
+                onShowMap={layout.showMapToggle ? showMap : undefined}
+              />
             </ExplorePane>
 
             <View

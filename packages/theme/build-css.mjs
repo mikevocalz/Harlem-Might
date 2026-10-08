@@ -17,14 +17,16 @@
 // free, whereas cross-file @import resolution inside a package is not.
 import { writeFileSync } from 'node:fs';
 import {
-  palette, semantic, fontFamilies, typeScale, contentWidths,
+  palette, semantic, fontFamilies, nativeFontFamilies, typeScale, contentWidths,
   spacing, radius, shadows, zIndex, motion, breakpoints,
 } from './tokens.ts';
 
 const HEADER = '/* GENERATED from tokens.ts — do not edit by hand. `node build-css.mjs` */';
 
-// Everything that is theme-independent: identical in both outputs.
-const sharedThemeTokens = () => {
+// Everything that is theme-independent: identical in both outputs, except
+// font families. Web gets the Mona/Newsreader variable stacks; native gets one
+// static TTF per role (React Native takes no fallbacks and no wdth axis).
+const sharedThemeTokens = (fonts) => {
   const out = [];
 
   // primitive palettes
@@ -39,9 +41,9 @@ const sharedThemeTokens = () => {
   }
 
   // typography
-  out.push(`  --font-display: ${fontFamilies.display};`);
-  out.push(`  --font-sans: ${fontFamilies.sans};`);
-  out.push(`  --font-serif: ${fontFamilies.serif};`);
+  for (const [name, value] of Object.entries(fonts)) {
+    out.push(`  --font-${name}: ${value};`);
+  }
   for (const [name, t] of Object.entries(typeScale)) {
     out.push(`  --text-${name}: ${t.size};`);
     out.push(`  --text-${name}--line-height: ${t.lineHeight};`);
@@ -97,7 +99,7 @@ const BODY_TEXT_BASE = `@layer base {
 // ---------------------------------------------------------------- web ------
 
 const web = [HEADER, '@theme {'];
-web.push(...sharedThemeTokens());
+web.push(...sharedThemeTokens(fontFamilies));
 // semantic colors — light-dark() gives system-following for free
 for (const [name, { light, dark }] of Object.entries(semantic)) {
   web.push(`  --color-${name}: light-dark(${light}, ${dark});`);
@@ -134,7 +136,11 @@ writeFileSync(new URL('./theme.css', import.meta.url), web.join('\n'));
 // -------------------------------------------------------------- native -----
 
 const native = [HEADER, '@theme {'];
-native.push(...sharedThemeTokens());
+native.push(
+  ...sharedThemeTokens(
+    Object.fromEntries(Object.entries(nativeFontFamilies).map(([name, file]) => [name, `'${file}'`])),
+  ),
+);
 native.push('}');
 native.push('');
 native.push(`/* Semantic colors. Uniwind resolves themes from these @variant blocks and

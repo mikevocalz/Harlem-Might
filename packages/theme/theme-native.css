@@ -106,9 +106,14 @@
   --color-slate-800: #18181B;
   --color-slate-900: #121215;
   --color-slate-950: #09090B;
-  --font-display: var(--font-mona), 'Mona Sans', system-ui, sans-serif;
-  --font-sans: var(--font-mona), 'Mona Sans', system-ui, -apple-system, sans-serif;
-  --font-serif: var(--font-newsreader), 'Newsreader', Georgia, serif;
+  --font-sans: 'MonaSans-Regular';
+  --font-sans-medium: 'MonaSans-Medium';
+  --font-sans-semibold: 'MonaSans-SemiBold';
+  --font-sans-bold: 'MonaSans-Bold';
+  --font-display: 'MonaSansDisplayCondensed-Bold';
+  --font-ui: 'MonaSansSemiExpanded-SemiBold';
+  --font-serif: 'Newsreader16pt-Regular';
+  --font-serif-italic: 'Newsreader16pt-Italic';
   --text-marquee: 8rem;
   --text-marquee--line-height: 0.9;
   --text-marquee--letter-spacing: -0.01em;
