@@ -71,6 +71,13 @@ describe('useArSession', () => {
     assert.deepEqual(useArSession.getState().street, { user: { eastM: 12.5, northM: -3 }, headingDeg: 270 });
     assert.throws(() => s.teleport({ eastM: Number.POSITIVE_INFINITY, northM: 0 }), RangeError);
   });
+
+  it('teleports with a heading, normalised to [0, 360)', () => {
+    const s = useArSession.getState();
+    s.teleport({ eastM: 1, northM: 2 }, -90);
+    assert.deepEqual(useArSession.getState().street, { user: { eastM: 1, northM: 2 }, headingDeg: 270 });
+    assert.throws(() => s.teleport({ eastM: 0, northM: 0 }, Number.NaN), RangeError);
+  });
 });
 
 describe('sceneModeFor', () => {
