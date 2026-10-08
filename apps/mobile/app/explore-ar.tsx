@@ -1,7 +1,7 @@
 import { useRouter } from 'solito/navigation';
 import { ViroXRSceneNavigator } from '@reactvision/react-viro';
 import { getHarlemPlacePreview, useExplore } from '@acme/app';
-import { MightsButton, MightsHeading, MightsText } from '@acme/ui/mights';
+import { MightsButton, MightsHeading, MightsText, routes } from '@acme/ui/mights';
 import { View } from '@acme/ui/tw';
 import { HarlemTabletopScene } from '../src/ar/HarlemTabletopScene';
 import { useArSession } from '../src/ar/arSession.store';
@@ -16,6 +16,10 @@ const SCENE = { scene: HarlemTabletopScene };
  */
 export default function ExploreArRoute() {
   const router = useRouter();
+  // The root layout is a Slot, not a Stack, so this route replaced the tabs
+  // and back() has no history ("GO_BACK was not handled"). Return to Explore
+  // by replacing; the selected place lives in useExplore and stays open.
+  const exit = () => router.replace(routes.explore());
   const placeId = useArSession((s) => s.requested?.placeId);
   const selectedPlaceId = useExplore((s) => s.selectedPlaceId);
   useTabletopRoute(placeId ?? selectedPlaceId ?? undefined);
@@ -27,12 +31,12 @@ export default function ExploreArRoute() {
       passthroughEnabled
       handTrackingEnabled
       trackingOrigin="floor"
-      onExitViro={() => router.back()}
+      onExitViro={exit}
       renderQuestPanel={(enter) => (
         <TabletopPanel
           placeName={getHarlemPlacePreview(selectedPlaceId ?? placeId)?.name}
           onEnter={enter}
-          onBack={() => router.back()}
+          onBack={exit}
         />
       )}
       style={{ flex: 1 }}
