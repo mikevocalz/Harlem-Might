@@ -1,3 +1,6 @@
+import { useEffect } from 'react';
+import { AppState } from 'react-native';
+import { haptics } from '@acme/ui/haptics';
 import { DarkTheme, Slot, ThemeProvider } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
@@ -42,6 +45,14 @@ const NAV_THEME = {
 };
 
 export default function RootLayout() {
+  useEffect(() => {
+    haptics.setForeground(AppState.currentState === 'active');
+    const listener = AppState.addEventListener('change', state => {
+      haptics.setForeground(state === 'active');
+    });
+    return () => listener.remove();
+  }, []);
+
   return (
     <GestureRoot className="flex-1 bg-surface">
       <StatusBar style="light" />
