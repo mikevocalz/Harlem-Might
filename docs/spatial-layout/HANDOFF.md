@@ -1,8 +1,14 @@
 # Explore handoff: what PR D built
 
-This is the design handoff for Explore on Horizon, tablet, foldable and phone, updated to match what shipped on `feat/spatial-explore-ux`. Each section says where the code is and how it differs from the original spec. The original spec, critique, a11y audit, token audit and copy deck were written before the build. Where this file and those disagree, this file is the current state.
+This is the design handoff for Explore on Horizon, tablet, foldable and phone. It was written for `feat/spatial-explore-ux` (PR D) and updated 2026-10-08 for `feat/mobile-site-parity` P2, which made native Explore look like the site's Explore (`apps/web/components/explore/ExploreWorkspace.tsx`, `docs/design/handoff/EXPLORE.md`). Sections 2, 3 and 5 describe the P2 look; the layout rules in §1 and §4 are unchanged except where noted. Each section says where the code is and how it differs from the original spec. The original spec, critique, a11y audit, token audit and copy deck were written before the build. Where this file and those disagree, this file is the current state.
 
-Decisions referenced: DECISIONS S4 (map stays in the main window), S5 (Detail exists only while a place is selected), S7 (assistant is inline, never a window), S11 (native Mapbox surface, not built yet).
+Decisions referenced: DECISIONS S4 (map stays in the main window), S5 (Detail exists only while a place is selected), S7 (assistant is inline, never a window), S11 (native Mapbox surface, not built yet), S12 (Discover inline, Place Detail the only supporting window), S13 (tab shell from the site's nav), S14 (dark only), S15 (native Mights kit), S16 (street map deferred; schematic map with an honest caption).
+
+### References (Mobbin, pulled 2026-10-08)
+
+- [Sweatpals, dark map with a leading results list](https://mobbin.com/screens/da8712ec-af85-4e31-b2d2-c9064b4d9e08): a count line heads the list, quiet light markers sit on a dark map, and the list stays beside the map instead of covering it. Supports the dark canvas, the summary line and the tiled list.
+- [H&M, store list beside the map](https://mobbin.com/screens/c93aa1a9-66cb-48af-b6b3-a64e5958a404): flat rows split by hairlines, name over address, no cards. Supports the flat `PlaceRow`.
+- [H&M, store detail side panel](https://mobbin.com/screens/8c2cda9c-12dd-4cc2-8e9b-83acda6fb1cf): the panel sits on the map's trailing edge with the name, a close control, the address, one bordered action and "Get directions". Supports the inspector shell and its two actions.
 
 ## 0. One product, one store
 
@@ -20,49 +26,49 @@ Decisions referenced: DECISIONS S4 (map stays in the main window), S5 (Detail ex
 
 ## 1. Horizon workspace
 
-Unchanged from PR C: `EXPLORE_WORKSPACE` in `apps/mobile/src/spatial/exploreWorkspace.ts`. Map is the main window; Discover is a 360x600 start window at priority 10; Place Detail is a 440x600 end window at priority 20 that mounts only while a place is selected. Window sizes now also live in `@acme/theme` as `spatialWindow` and `horizonMainWindow`.
+`EXPLORE_WORKSPACE` in `apps/mobile/src/spatial/exploreWorkspace.ts`. Map is the main window. Since S12 the list pane renders inline in the main window and is never a window; Place Detail is the only supporting window, 440x600, end-anchored, priority 10, inline fallback, mounted only while a place is selected. Window sizes now also live in `@acme/theme` as `spatialWindow` and `horizonMainWindow`.
 
 Placement drives the main window through `resolveExploreLayout` (§4). `spatial` collapses the pane to zero width and the map takes the room. `pending` renders inline. No banner appears for any placement change.
 
 Back (Android hardware back, controller B) goes through `exploreBackAction`: it closes the assistant panel first, then Detail, then a Discover screen or drawer that covers the map, and after that hands Back to the system.
 
-## 2. Discover
+## 2. List pane (was "Discover")
 
-`packages/app/features/explore/ExploreMasterPane.tsx`, `PlaceRow.tsx`, `packages/ui/Chip.tsx`.
+`packages/app/features/explore/ExploreMasterPane.tsx`, `PlaceRow.tsx`, shared copy in `explore-copy.ts`. Mirrors the site's master column.
 
-| Element | Built |
-|---|---|
-| Title | "Discover", `role="heading"`, heading step of the active type scale |
-| Search | `SearchBar`, placeholder "Search places, streets, history", a11y "Search Harlem places", `min-h-target`. The filter now also matches `street` |
-| Chips | new `Chip`: `role="button"` with `accessibilityState.selected`. 48dp min height, `border-border-strong` at rest, `primary` fill when selected, 12dp gaps. The chip row is labelled "Filter by category" |
-| Count | "{n} places", `aria-live` / `accessibilityLiveRegion="polite"` |
-| Row | `PlaceRow`: name and street only. Selected rows get the `bg-selected` fill, a 2dp `rule-rail` leading edge and `accessibilityState.selected`. Resting edge is `border-border-strong`. Unmapped places read "{street}. Not on the map yet". The a11y label is "{name}, {category}, {area}." plus "Selected." when selected |
-| Empty | `EmptyState` with "No places match "{q}"." or "No {category} places yet." and a "Clear search and filters" button |
-| Padding | `px-window` (24dp) on quest builds, 16dp elsewhere |
+| Element | Built (P2) | Site counterpart |
+|---|---|---|
+| Title | "Explore", `MightsHeading level={1} size="display-md"` held at `text-title-lg` (`xr-heading` on quest builds). One name for one place | condensed bold `text-title-lg` |
+| Search | square `TextInput` from `@acme/ui/tw`: `h-12`, `border-border-strong`, `bg-surface-raised`, placeholder "Search places, like Apollo", a11y "Search places". "Clear" (`MightsButton sm outline`, a11y "Clear search") shows while there is a query. Filters on every keystroke; the catalogue is a fixed in-memory list, so the old 180ms debounce is gone | same field and Clear |
+| Categories | one horizontal row of `MightsButton size="sm"`, `primary` + `pressed` when on, `outline` when off, labelled "Filter by category" | same |
+| Summary | `resultsSummary(total, mapped, q, category, 'All')` from `explore-copy.ts`, `text-label` muted, polite live region. "8 places, 6 on the map." | same function |
+| Row | flat: hairline bottom divider, 2dp gold leading rail and `bg-surface-raised` when selected, 10dp diamond (`bg-rule-rail`, gold when selected), name in `font-sans-semibold`, second line `placeRowLine` ("Category, street", plus ", location pending" when unmapped). 48dp minimum, `accessibilityState.selected`, label "{name}, {line}." plus "Selected." | same row, same copy function |
+| Empty | `noResultsCopy` ("Nothing in the catalogue matches “q” in Category. Search looks at names, areas, categories and tags.") and `MightsButton sm secondary` "Clear search and filters" | same |
+| Map toggle | "Map" `MightsButton sm outline` on compact only | the phone Map/List toggle |
+| Padding | `px-window` (24dp) on quest builds, 16dp header / 20dp rows elsewhere | p-4 / px-5 |
 
-Removed: "Explore Harlem", "Search the catalogue…", "Master catalogue preview", description lines, tag pills, the `bg-sky-50/60` selected fill (1.13:1).
-
-Deviation: rows render in a `ScrollView`, not `VirtualList`. Eight places don't need recycling, and the live-region count sits inside the same scroll. Swap in `VirtualList` when the catalogue grows. Rows don't use `BusinessIdentity` because its avatar is a thumbnail, which direction.md removes.
+Removed in P2: the "Discover" title, `SearchBar`, `Chip`, the rounded bordered row cards, the `bg-selected` fill, "N places", the "0" empty glyph and the brownstone street line.
 
 ## 3. Map
 
 `packages/app/features/explore/ExploreMapPane.tsx`, `schematic-map.ts`.
 
-The native Mapbox surface is still not built (S11), and `GridScene` with its light-palette hex literals is gone. Until the native map lands, markers sit on a `bg-map-canvas` surface at their real OpenStreetMap coordinates. `projectSchematic` fits the mapped places' own bounds into the box with north up. Relative positions are true. Distances aren't to scale, because the box's aspect ratio isn't the bounds' aspect ratio.
+The native street map is deferred (S16: blocked on the D2 style and a Horizon-compatible map SDK). The schematic map stays and says what it is. Markers sit on `bg-map-canvas` (`#070604` dark) at their real OpenStreetMap coordinates; `projectSchematic` fits the mapped places' own bounds into the box, north up. Relative positions are true; distances aren't to scale.
 
-| Element | Built |
+| Element | Built (P2) |
 |---|---|
-| Markers | 48dp hit area (`size-target`), 20dp dot (`size-marker`, `bg-map-marker`, gold-dim ring), selected 28dp (`size-marker-selected`, `bg-map-marker-selected`) with a gold label. Name label truncated at 18 characters. a11y: "{name}, {category}. Selected" or "… Show details", plus `selected` state. The `index % 3` colour alternation and the numbers are gone |
-| Unmapped places | no marker; bottom-leading notice "2 places aren't on the map yet", counted from data |
-| Attribution | "Locations © OpenStreetMap contributors", caption step |
-| Places toggle | "Places" (a11y "Show the place list"), only where Discover is hidden (compact, medium) |
-| Insets | `insets` prop: markers lay out inside the map minus overlay panes and the assistant (half the window height when the panel is open, 96dp for the bar). This is the camera-padding contract from the original §3, implemented for the schematic map |
+| Markers | the site's mark: a gold diamond (`bg-primary`, rotated square) inside a 48dp target (`size-target`). Rest: 12dp with a 2dp `border-surface` edge. Selected: 18dp with a 2dp `border-text` ring, and the name appears beside it on `bg-surface-raised` behind a 2dp gold rail (truncated at 18 characters). a11y "{name}, {category}. Selected" or "… Show details", plus `selected` state. Selection is size, ring and label, never colour alone |
+| Caption | "Schematic map. Street map coming." bottom-leading, always shown |
+| Unmapped places | no marker; "2 places aren't on the map yet" under the caption, counted from data |
+| Attribution | "Locations © OpenStreetMap contributors", caption step, bottom-trailing |
+| Places toggle | "Places" `MightsButton sm outline` (a11y "Show the place list"), only where the list is hidden (compact, medium) |
+| Insets | unchanged camera-padding contract: markers lay out inside the map minus overlay panes and the assistant |
 
-Not built, because each needs the native map: zoom +/−, locate, the warm-dark Mapbox style, camera fly, route line, and the "AR (in testing)" entry. The AR entry stays hidden because no AR handoff is wired on this screen (copy.md says hide it where there's no AR path).
+Not built, because each needs the street map: zoom, locate, the Mapbox style, camera fly, route line.
 
 ## 4. Responsive layout
 
-`apps/mobile/src/spatial/exploreLayout.ts` (pure, tested), `ExplorePane.tsx`, `apps/mobile/app/(drawer)/(tabs)/explore/_layout.tsx`.
+`apps/mobile/src/spatial/exploreLayout.ts` (pure, tested), `ExplorePane.tsx`, `apps/mobile/app/(tabs)/explore/_layout.tsx`. The SplitView module was deleted in P2; `src/navigation/split-view/` keeps only `use-window-size-class.ts`, `constants.ts` and `transitions.ts`, which this layout reads.
 
 Explore no longer uses `SplitView`. The old layout put the map in the 294dp `supplementary` column and gave the flex region to the detail route (critique C1). Inverting that inside `SplitView` would have meant a new SplitView API on Android plus a divergence from the native iOS `UISplitViewController`. Instead Explore has its own layout, built from the same pieces: size classes from `useWindowSizeClass`, the `TRANSITIONS.paneWidth` tween, and keep-mounted panes. The map always takes the flex region.
 
@@ -85,11 +91,15 @@ Not built: the compact Discover bottom sheet with a 120dp peek (`BottomSheet` ha
 
 ## 5. Place Detail
 
-`packages/app/features/explore/ExplorePlaceDetail.tsx`.
+`packages/app/features/explore/ExplorePlaceDetail.tsx`. Mirrors the site's inspector.
 
-Top to bottom: 2dp gold rail; header with Close (`IconButton size="lg" variant="ghost"`, "Close details") or, on compact, Back ("Back to map"); title (`role="heading"`, heading step, registered as the focus target); "{street}, {category}" in brownstone; lead; actions ("Show on map" on compact only, "Save"/"Saved", all `min-h-target`); "Why it matters" with Newsreader body; Nearby (three closest mapped places with metric distances from `nearbyPlaces` + `formatDistance`, 48dp rows that select that place, hidden when the place has no coordinates); "Where this comes from" (OSM id and the 3 Oct 2026 check, or "Location not verified yet"; "Description written by Harlem Might"; the one-line photo policy).
+Top to bottom: a 2dp gold rail frame (`bg-primary` + `pl-rail` beside the map, `pt-rail` on compact where Detail covers it); a header on a hairline with the title (`MightsHeading level={2} size="title"`, in a grouped header wrapper that is the focus target) and a text "Close" (`MightsButton sm ghost`, a11y "Close {name}"; "Back" on compact); `MightsLocationStamp` with category and street; `shortDescription`; "Location pending verification." for unmapped places; actions ("Show on map" outline on compact, "Get directions" primary when the place has coordinates, "Open place page" secondary when the build has a site address); Nearby (three closest mapped places with `formatDistance`, 48dp rows); "Where this comes from".
 
-Removed: the TODAY, MENU + TICKETS, STORY and SOURCES placeholder cards, the media placeholder box, the uppercase labels and `display-md` titles. Unknown ids show "We couldn't find that place." with "Back to Discover". "Walk there" doesn't render because no route provider exists. Save sits in the action row only; the spec also put a Save icon in the header, which would have been the same control twice.
+- `shortDescription`, never `whyItMatters`: the fixture's whyItMatters is planning copy about the product, not a fact about the place (same rule as the site).
+- "Get directions" opens `directionsUrl(lngLat)` (Google Maps, app or browser) through solito's `Link`, the same URL the site uses.
+- "Open place page" opens `siteUrl(routes.place(id))` (`apps/mobile/src/site/site-url.ts`, from `EXPO_PUBLIC_APP_URL`) in the browser. With no site address in the build it doesn't render, so it is never a dead button. A native `/places/[slug]` stays deferred.
+- Save is struck until saved places sync to an account (D8), matching the site. `useExplore().savedPreviewIds` stays in the store, unused by any screen.
+- Unknown ids: "We couldn’t find that place." with "Back to Explore".
 
 ## 6. Ask Harlem Might
 
@@ -124,7 +134,7 @@ The only `.riv` in the repo is `packages/spatial/rive/assets/learning-question.r
 |---|---|
 | Spatial windows | no app animation; the OS owns them |
 | Explore panes | width tween `TRANSITIONS.paneWidth` (220ms) |
-| SplitView pane swap, inspector drawer | springs moved to tokens: `motion.spring.pane`, `motion.spring.drawer` |
+| SplitView pane swap, inspector drawer | springs moved to tokens: `motion.spring.pane`, `motion.spring.drawer`. SplitView was deleted in P2; the tokens stay for the next pane animation |
 | Press scale | `PressScale` (native) |
 | Reduced motion | `useReducedMotion()` reads `AccessibilityInfo.isReduceMotionEnabled()` once and follows `reduceMotionChanged`. Panes, SplitView springs and `CollapsiblePane` use `transitionFor(reduce, …)`, which returns an instant transition; `PressScale` drops its tap scale |
 
@@ -134,20 +144,20 @@ The Detail content crossfade, marker grow animation and camera fly were not buil
 
 | a11y.md finding | Status |
 |---|---|
-| P1 selected-row contrast | fixed: `selected` token + rail |
+| P1 selected-row contrast | fixed: raised fill + gold rail + larger gold diamond (P2) |
 | P2 colour-only map selection | fixed: size, label and `selected` state |
 | P3 10dp text | fixed in Explore: no `text-[Npx]` or `text-xs`; flat floor is `text-small` (12.25dp), quest builds use the `xr-*` dp steps |
-| P4 1.29:1 edges | fixed: `border-border-strong` on chips, rows, toggles |
+| P4 1.29:1 edges | fixed: `border-border-strong` on the search field and outline buttons; rows are flat on hairline dividers (P2) |
 | P5 numbered fake pins | fixed: named markers at real coordinates; unmapped places have no marker |
 | P6/P7 caps labels, placeholder media | removed |
-| O1–O3 targets | fixed in Explore: 48dp everywhere, 12dp gaps. Not fixed: `SearchBar`'s clear button is still 24px visual with no hit slop, because it's shared with the web site. Raise it in the kit |
+| O1–O3 targets | fixed in Explore: 48dp everywhere. `MightsButton sm` is 40dp visual with 4dp vertical hit slop (48dp target). The `SearchBar` clear-button gap no longer applies to Explore, which uses the text "Clear" button |
 | O4 reduced motion | fixed (§7) |
 | O5 focus move and return | built: rows and markers register in `focus-registry.ts`; opening Detail focuses its title; closing returns focus to `returnFocusId` after Detail unmounts. Not run under TalkBack |
-| O6 inspector reachable while closed | fixed in `SplitView` (`aria-hidden` + `no-hide-descendants`); Explore no longer uses the inspector |
+| O6 inspector reachable while closed | fixed; collapsed panes are `aria-hidden` + `no-hide-descendants` in `ExplorePane`. SplitView itself was deleted in P2 |
 | O7 zoom buttons | not built (needs the native map) |
 | U1 dead buttons, U2 developer copy | removed |
 | U3 count live region | fixed |
-| R1 chips as tabs | fixed (`Chip`) |
+| R1 chips as tabs | fixed: category toggles are `MightsButton` with `accessibilityState.selected` (P2) |
 | R2 selected state on rows and markers | fixed |
 
 ## 9. Tokens added (`packages/theme/tokens.ts`, regenerated with `node build-css.mjs`)
@@ -166,3 +176,10 @@ The Detail content crossfade, marker grow animation and camera fly were not buil
 Verified on the branch: `pnpm --filter @acme/app test` (134 pass), `pnpm --filter mobile test` (all new tests pass; the one failure is the existing `pane-overrides.test.ts` case, untouched), `pnpm --filter mobile typecheck` (only the 9 known `viro-external-test` errors), `pnpm turbo build typecheck lint --filter='!mobile'` 26/26, `pnpm spatial:verify-android`, and `npx expo export --platform android`. The exported Hermes bundle contains the new copy and none of the removed developer strings.
 
 Not verified: anything on a device. No TalkBack pass, no Quest 3S run, no tablet or foldable run, and no check that a `<SpatialWindow>` inside a zero-width, `aria-hidden` pane promotes the same way it did inside the old `CollapsiblePane` (the old code used the same pattern). Uniwind rendering of the new token classes (`size-target`, `w-assistant-panel`, `bg-selected`) was checked in the bundle build only, not on screen.
+
+### P2 (2026-10-08, `feat/mobile-site-parity`)
+
+Verified with real exit codes: `apps/mobile` `tsc --noEmit` (only the 9 known `viro-external-test` errors), `pnpm --filter mobile test` (21 pass), `pnpm --filter @acme/app test` (105 pass, including `explore-copy.test.ts`), `pnpm --filter @acme/ui test` (12 pass), `pnpm turbo build typecheck lint --filter='!mobile'` 26/26, `pnpm spatial:verify-android`, and `npx expo export --platform android` (exit 0). The export's sourcemap has 0 `lucide-react` (web) modules: `@acme/ui/mights` now resolves to `mights/index.native.ts` under the `react-native` condition, which leaves out `MightsDock`, `MightsNavbar`, `MightsFooter` and `MightsMapImage`. The Hermes bundle contains "Schematic map. Street map coming.", "Search places, like Apollo", "Get directions" and "Open place page".
+
+Not verified: any of it on screen. No Quest 3S, emulator or phone run, no TalkBack pass, and no side-by-side screenshot against the site at the same width, which the parity audit names as the gate for each phase.
+

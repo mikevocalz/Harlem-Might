@@ -3,20 +3,6 @@
 @source '../../packages/ui';
 @source '../../packages/spatial';
 
-@font-face {
-  font-family: 'Archivo Black';
-  src: url('../../packages/assets/fonts/ArchivoBlack-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Space Grotesk';
-  src: url('../../packages/assets/fonts/SpaceGrotesk-Variable.ttf') format('truetype');
-  font-weight: 100 900;
-  font-display: swap;
-}
-
 :root {
   color-scheme: light;
 }

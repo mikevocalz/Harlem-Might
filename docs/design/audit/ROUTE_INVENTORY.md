@@ -96,4 +96,5 @@ Count: 2 of 24 target routes exist (`/`, `/explore`); 5 existing routes are off-
 ## 7. Related surfaces outside `apps/web`
 
 - `apps/web-vite/src/routes/` already has `about.tsx`, `ar.tsx`, `explore.tsx`, `stories.tsx`, `today.tsx`, `walks.tsx`, `pages/$slug.tsx`. Not audited here; worth checking before rebuilding those pages from zero in `apps/web`.
-- The spec says the web labels match "the app tabs". The mobile tabs today are `Grid`, `Explore`, `Alerts`, `Profile` (`apps/mobile/app/(drawer)/(tabs)/_layout.tsx:38-41`). Only `Explore` matches. The web and app need to change together or the "same words" rule is false on day one. 🟡
+- The spec says the web labels match "the app tabs". At this audit (2026-10-03) the mobile tabs were `Grid`, `Explore`, `Alerts`, `Profile` under a drawer, and only `Explore` matched. 🟡
+- Update 2026-10-08 (branch `feat/mobile-site-parity`): the drawer and the demo tabs are gone (DECISIONS S13). The tabs are `Explore`, `Walks`, `Stories`, `Today`, `More`, built from `primaryNav` plus More in `apps/mobile/src/site/app-tabs.ts` and rendered by `apps/mobile/app/(tabs)/_layout.tsx`. Explore lives at `app/(tabs)/explore/` (`index`, `[placeId]` deep link), More at `app/(tabs)/(more)/` (`/more`, `/ar`), and `app/index.tsx` redirects to `/explore`. Labels now match the site. 🟢

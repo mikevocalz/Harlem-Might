@@ -13,7 +13,6 @@ import {
 const BASE: ExploreLayoutInput = {
   sizeClass: 'large',
   hasSelection: false,
-  discoverPlacement: 'inline',
   detailPlacement: 'inline',
   isHorizon: false,
   compactPane: 'map',
@@ -64,16 +63,16 @@ describe('resolveExploreLayout: Detail exists only with a selection (S5, M3)', (
     }
   });
 
-  it('collapses a promoted pane so the map takes its width', () => {
-    const resolved = layout({ hasSelection: true, discoverPlacement: 'spatial', detailPlacement: 'spatial' });
-    assert.deepEqual(resolved.discover, { kind: 'promoted' });
+  it('collapses a promoted Detail so the map takes its width, while Discover stays tiled (S12)', () => {
+    const resolved = layout({ hasSelection: true, isHorizon: true, detailPlacement: 'spatial' });
     assert.deepEqual(resolved.detail, { kind: 'promoted' });
-    assert.equal(paneRowWidth(resolved.discover) + paneRowWidth(resolved.detail), 0);
+    assert.deepEqual(resolved.discover, { kind: 'tiled', width: EXPLORE_PANE_DP.discover });
+    assert.equal(paneRowWidth(resolved.detail), 0);
     assert.equal(resolved.showMap, true);
   });
 
   it('renders a pending window inline so a slow promotion never blanks it', () => {
-    const resolved = layout({ hasSelection: true, discoverPlacement: 'pending', detailPlacement: 'pending' });
+    const resolved = layout({ hasSelection: true, detailPlacement: 'pending' });
     assert.equal(resolved.discover.kind, 'tiled');
     assert.equal(resolved.detail?.kind, 'tiled');
   });
@@ -88,11 +87,17 @@ describe('resolveExploreLayout: compact', () => {
     assert.equal(resolved.assistant, 'sheet');
   });
 
-  it('never drops Discover when the window shrinks, so its Horizon window stays registered', () => {
-    for (const compactPane of ['map', 'discover', 'detail'] as const) {
-      for (const hasSelection of [false, true]) {
-        const resolved = layout({ sizeClass: 'compact', compactPane, hasSelection, discoverPlacement: 'spatial' });
-        assert.deepEqual(resolved.discover, { kind: 'promoted' }, `${compactPane}/${hasSelection}`);
+  it('keeps Discover mounted in the main window at every size class and placement (S12)', () => {
+    for (const sizeClass of SIZE_CLASSES) {
+      for (const detailPlacement of PLACEMENTS) {
+        for (const hasSelection of [false, true]) {
+          const resolved = layout({ sizeClass, detailPlacement, hasSelection, isHorizon: true });
+          assert.notEqual(
+            (resolved.discover as { kind: string }).kind,
+            'promoted',
+            `${sizeClass}/${detailPlacement}/${hasSelection}`,
+          );
+        }
       }
     }
   });

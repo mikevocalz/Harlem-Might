@@ -2,113 +2,77 @@
 // from this stable export; do not reach into expo-router/build internals.
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { Pressable, Text, View } from '@acme/ui/tw';
-import { Home, Compass, Bell, User } from '@acme/ui/icons';
-import { MenuButton } from '@acme/app';
+import { BookOpen, CalendarClock, Ellipsis, Footprints, MapPinned } from '@acme/ui/icons';
 import { haptics } from '@acme/ui/haptics';
+import { APP_TABS, TAB_SCREEN, type AppTabRoute } from '@/src/site/app-tabs';
 
-/** Material 3 navigation rail: 80dp wide, 56dp items. */
-export const RAIL_WIDTH = 80;
-const RAIL_ITEM_HEIGHT = 56;
-/** Gap between the menu button and the bottom edge, per the brief. */
-const MENU_BOTTOM_GAP = 10;
+/** Material 3 navigation rail width. Items keep the 48dp target floor. */
+export const RAIL_WIDTH = 88;
 
-const ICONS = {
-  index: Home,
-  explore: Compass,
-  notifications: Bell,
-  profile: User,
-} as const;
+// The same glyphs as the site's dock (packages/ui/mights/MightsDock.tsx).
+const ICONS: Record<AppTabRoute, typeof MapPinned> = {
+  explore: MapPinned,
+  walks: Footprints,
+  stories: BookOpen,
+  today: CalendarClock,
+  more: Ellipsis,
+};
 
-const LABELS = {
-  index: 'Grid',
-  explore: 'Explore',
-  notifications: 'Alerts',
-  profile: 'Profile',
-} as const;
+const LABELS = Object.fromEntries(APP_TABS.map((tab) => [tab.route, tab.label])) as Record<AppTabRoute, string>;
 
-type RouteName = keyof typeof ICONS;
+/** Screen name (`(more)`) back to the tab it belongs to. */
+const TAB_BY_SCREEN = new Map(APP_TABS.map((tab) => [TAB_SCREEN[tab.route], tab.route]));
 
 /**
- * The tab bar, drawn from the app's own primitives.
+ * The app's primary navigation, drawn in the site dock's likeness
+ * (MightsDock): a paper bar under a hairline rule, muted items, and the
+ * current one marked by a gold rail plus gold label. No pill and no fill, so
+ * the selection reads the same as on the site.
  *
- * WHY CUSTOM: react-navigation's built-in bar is Material 3 — a tinted stadium
- * pill behind the icon on a hairline surface. Recolouring that pill is not
- * enough, because the *shape* is what makes it foreign: everything else on
- * screen is a rounded-md slab with a 2px ink border and a hard 4px offset
- * shadow (chips, buttons, cards). Its `uikit` variant also renders the leading
- * position as a wide ~20%-of-window sidebar rather than a rail. Owning the
- * render gives the app's slab language, true M3 rail metrics, and somewhere to
- * put the menu button.
+ * Bottom bar below 600dp. From 600dp up (tablets, the 1280dp Horizon window)
+ * it becomes a leading rail, where the gold marker moves to the item's
+ * leading edge.
  */
 export function AppTabBar({ state, emitter, navigateToTab, insets, rail }: BottomTabBarProps & { rail: boolean }) {
-  const gridMode = state.routes[state.index]?.name === 'index';
-
   const items = state.routes.map((route, index) => {
+    const tab = TAB_BY_SCREEN.get(route.name);
+    if (!tab) return null;
     const focused = state.index === index;
-    const name = route.name as RouteName;
-    const Icon = ICONS[name];
-    if (!Icon) return null;
+    const Icon = ICONS[tab];
+    const label = LABELS[tab];
 
     const onPress = () => {
       haptics.selection();
       const event = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-      if (!focused && !event.defaultPrevented) {
-        navigateToTab(route.key);
-      }
+      if (!focused && !event.defaultPrevented) navigateToTab(route.key);
     };
 
     return (
       <Pressable
         key={route.key}
-        aria-label={LABELS[name]}
+        role="tab"
+        aria-label={label}
         aria-selected={focused}
         onPress={onPress}
-        className={rail ? 'w-full' : 'flex-1'}
+        className={`relative min-h-target min-w-target items-center justify-center gap-1 active:bg-surface-sunken ${
+          rail ? 'w-full py-2' : 'flex-1'
+        }`}
       >
-        {/* The selected slab is the same treatment as the "All" chip and the
-            "New booking" button. Unselected items keep a transparent 2px border
-            so selection does not shift anything by the border's width. */}
-        <View
-          style={rail ? { height: RAIL_ITEM_HEIGHT } : undefined}
-          className={`items-center justify-center gap-0.5 rounded-md border-2 transition-colors duration-fast motion-reduce:transition-none ${
-            rail ? 'px-1' : 'px-3 py-1.5'
-          } ${
-            focused
-              ? gridMode
-                ? 'border-cyan-300/40 bg-cyan-300/10 shadow-card'
-                : 'border-border bg-primary shadow-card hover:bg-primary-pressed'
-              : gridMode
-                ? 'border-transparent hover:bg-white/5'
-                : 'border-transparent hover:bg-surface-sunken'
+        {focused ? (
+          <View
+            aria-hidden
+            className={rail ? 'absolute bottom-2 left-0 top-2 w-rail bg-primary' : 'absolute top-0 h-rail w-8 bg-primary'}
+          />
+        ) : null}
+        <Icon size={rail ? 24 : 20} strokeWidth={focused ? 2.25 : 1.75} className={focused ? 'text-primary' : 'text-text-muted'} />
+        <Text
+          numberOfLines={1}
+          className={`font-sans font-medium ${rail ? 'text-label' : 'text-caption'} ${
+            focused ? 'text-primary' : 'text-text-muted'
           }`}
         >
-          <Icon
-            size={24}
-            className={
-              gridMode
-                ? focused
-                  ? 'text-cyan-200'
-                  : 'text-white/55'
-                : focused
-                  ? 'text-on-primary'
-                  : 'text-text-muted'
-            }
-          />
-          <Text
-            numberOfLines={1}
-            className={`text-xs font-semibold md:text-sm ${
-              gridMode
-                ? focused
-                  ? 'text-cyan-100'
-                  : 'text-white/55'
-                : focused
-                  ? 'text-on-primary'
-                  : 'text-text-muted'
-            }`}
-          >
-            {LABELS[name]}
-          </Text>
-        </View>
+          {label}
+        </Text>
       </Pressable>
     );
   });
@@ -116,39 +80,22 @@ export function AppTabBar({ state, emitter, navigateToTab, insets, rail }: Botto
   if (!rail) {
     return (
       <View
+        role="tablist"
         style={{ paddingBottom: insets.bottom }}
-        className={`flex-row items-center gap-1 px-2 pt-1 ${
-          gridMode
-            ? 'border-t border-cyan-300/25 bg-[#020407]/95'
-            : 'border-t-2 border-border bg-surface'
-        }`}
+        className="flex-row border-t border-rule-hairline bg-paper px-1"
       >
-        {items}
+        <View className="h-dock flex-1 flex-row items-stretch">{items}</View>
       </View>
     );
   }
 
   return (
     <View
-      style={{
-        width: RAIL_WIDTH,
-        paddingTop: insets.top + 12,
-        paddingBottom: insets.bottom + MENU_BOTTOM_GAP,
-      }}
-      className={`h-full items-center gap-2 px-1.5 ${
-        gridMode ? 'bg-[#020407]' : 'bg-surface'
-      }`}
+      role="tablist"
+      style={{ width: RAIL_WIDTH, paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }}
+      className="h-full items-center gap-target-gap border-r border-rule-hairline bg-paper"
     >
       {items}
-      {/* No trailing rule: the rail shares the screen's surface colour, so the
-          selected slab alone carries the edge. A border here read as a seam
-          between two panels that are actually one background.
-
-          The drawer toggle lives at the foot of the rail on wide screens — a
-          rail has vertical room the bottom bar never did, and the bottom edge
-          is the reachable corner on a tablet held two-handed. */}
-      <View className="flex-1" />
-      <MenuButton className="h-14 w-14" outerClassName="self-center" iconSize={24} />
     </View>
   );
 }

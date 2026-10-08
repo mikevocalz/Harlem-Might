@@ -11,6 +11,8 @@ export type ExploreTypeScale = 'flat' | 'xr';
 const CLASSES = {
   flat: {
     caption: 'text-small',
+    summary: 'text-label',
+    paneTitle: 'text-title-lg md:text-title-lg xl:text-title-lg',
     label: 'text-body',
     body: 'text-body',
     title: 'text-lead',
@@ -19,6 +21,8 @@ const CLASSES = {
   },
   xr: {
     caption: 'text-xr-caption',
+    summary: 'text-xr-caption',
+    paneTitle: 'text-xr-heading md:text-xr-heading xl:text-xr-heading',
     label: 'text-xr-label',
     body: 'text-xr-body',
     title: 'text-xr-title',

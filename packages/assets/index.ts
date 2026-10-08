@@ -1,10 +1,7 @@
 // @acme/assets — typed exports for brand assets; no magic string paths in app code.
-declare const require: (path: string) => number;
-
-// Retro fonts (OFL): Archivo Black = display slab, Space Grotesk = workhorse sans.
-// Native embedding happens via the expo-font config plugin (apps/mobile/app.config.ts);
-// web loads them with next/font localFont (apps/web/app/fonts.ts).
-export const fonts = {
-  archivoBlack: require('./fonts/ArchivoBlack-Regular.ttf') as number,
-  spaceGroteskVariable: require('./fonts/SpaceGrotesk-Variable.ttf') as number,
-} as const;
+//
+// Brand fonts live in ./fonts: the Mona Sans and Newsreader variable woff2
+// files for the web (next/font localFont, apps/web/app/fonts.ts) and their
+// static TTF instances in ./fonts/native for the app (expo-font plugin,
+// apps/mobile/app.config.ts). Neither loader imports through this module.
+export {};

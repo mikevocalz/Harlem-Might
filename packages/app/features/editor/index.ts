@@ -47,4 +47,3 @@ export { EditorToolbar } from './EditorToolbar.tsx';
 export { NoteBody } from './NoteBody.tsx';
 export { YouTubeEmbed } from './YouTubeEmbed';
 export { splitNoteSegments, youTubeVideoId, type NoteSegment } from './youtube.ts';
-export { EditorSettingsScreen } from './EditorSettingsScreen.tsx';

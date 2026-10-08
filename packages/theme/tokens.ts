@@ -172,6 +172,32 @@ export const fontFamilies = {
   serif: "var(--font-newsreader), 'Newsreader', Georgia, serif",
 } as const;
 
+/**
+ * Native font families (theme-native.css only). React Native cannot pick a
+ * width or weight from a variable font by family name, and takes one family
+ * with no fallbacks, so each role names one static TTF from
+ * packages/assets/fonts/native (file name = PostScript name, which is what
+ * both iOS and Android resolve). Pair these with no `font-bold`-style weight
+ * class: the weight lives in the file, and a weight class on top makes
+ * Android synthesise a second bold.
+ *
+ * Web keeps `fontFamilies` above and gets width from font-stretch.
+ */
+export const nativeFontFamilies = {
+  // Body and data: Mona Sans at wdth 100.
+  sans: 'MonaSans-Regular',
+  'sans-medium': 'MonaSans-Medium',
+  'sans-semibold': 'MonaSans-SemiBold',
+  'sans-bold': 'MonaSans-Bold',
+  // Display headlines: wdth 75, wght 700, opsz 72 (web: font-stretch 75%).
+  display: 'MonaSansDisplayCondensed-Bold',
+  // UI labels (buttons, nav): wdth 112.5, wght 600 (web: font-stretch 112.5%).
+  ui: 'MonaSansSemiExpanded-SemiBold',
+  // Story prose: Newsreader at its 16pt optical size.
+  serif: 'Newsreader16pt-Regular',
+  'serif-italic': 'Newsreader16pt-Italic',
+} as const;
+
 /** Modular scale, ratio 1.25 from 16px snapped to 4px:
  *  16 · 20 · 25 · 32 · 40 · 50 · 64 · 80 · 100 · 128. */
 export const typeScale = {

@@ -12,14 +12,14 @@ ADRs: [0001 quest-only SDK linkage](adr/0001-quest-only-layout-sdk-linkage.md), 
 | # | Integration point | Was | Now | Evidence |
 |---|---|---|---|---|
 | Q1 | Scene provider | missing (Explore); dead path in SpatialScreen | **wired**, JS build-tested | One `<metaWindows.SceneProvider>` around `<Slot />` in `apps/mobile/app/_layout.tsx`, initializer `createWindowScene({ fallback: 'inline' })` built once in `src/spatial/metaWindowsCore.ts:createMetaWindows`. The SpatialScreen provider is gone (`packages/spatial/ForkSpatialLayout.native.tsx`, S6). Bundle sourcemap: 7 `@metavr/layout-compat` modules. |
-| Q2 | Explore panes instantiate `SpatialWindow` | missing | **wired**, JS build-tested | `ExploreWorkspaceWindow` wraps `ExploreMasterPane` (label `discover`) in `explore/_layout.tsx` and `ExplorePlaceDetail` (label `place-detail`) in `explore/[placeId].tsx`. Bundle: 14 `@metavr/layout-window-compat` modules. |
+| Q2 | Explore panes instantiate `SpatialWindow` | missing | **wired** for Place Detail only, JS build-tested | Updated 2026-10-08 (S12): Discover renders inline in the main window and is never a window. `ExploreWorkspaceWindow` wraps only `ExplorePlaceDetail` (label `place-detail`), mounted in `app/(tabs)/explore/_layout.tsx` while a place is selected; `[placeId].tsx` only syncs the deep link into the store. Bundle: 14 `@metavr/layout-window-compat` modules (PR C count). |
 | Q3 | `@viro-external/meta-layout` consumed | missing | **wired**, unit-tested | `link:../../../viro-external/packages/meta-layout`; `src/spatial/exploreWorkspace.ts` calls `resolveMetaWorkspace`. `pnpm --filter mobile test`: 5/5 in `exploreWorkspace.test.ts`. |
 | Q4 | Semantic config to React elements | missing | **wired** | `resolveExploreWorkspace` → `MetaWorkspaceEntry`; `kind: 'window'` entries render `<SpatialWindow {...entry.window}>` through the facade, others render inline. |
 | Q5 | Gradle: BOM and both artifacts | build-tested (questDebug 2026-10-03), all flavors | **implemented, quest only**; plugin output verified, Gradle not built | `app/build.gradle` `questImplementation` block, classpath exclusion, stubs in `app/src/metaLayoutStub/java`, `tools:overrideLibrary` in the main manifest. Copied from `expo prebuild --platform android` of `app.config.ts` (`@expo-pico/core` `metaLayoutSdk: true`, Viro `metaSpatialLayout: false`). `pnpm spatial:verify-android` passes and fails on the old flavor-wide lines. |
 | Q6 | Autolinking and codegen | build-tested (2026-10-03 APK) | unchanged, **not re-built** | No `assemble*` ran (disk budget). |
 | Q7 | Platform detection | not wired | **wired** (build gate) | `src/spatial/horizonBuild.ts` reads `ExpoHorizon.isHorizonBuild` via `requireOptionalNativeModule`; the facade loads `@metavr/*` only when it is true. |
 | Q8 | Horizon OS 207+ on the test device | missing | Quest 3S `340YC10GC3014S` reports `ro.vros.build.version` 207 (DECISIONS evidence line). **Promotion itself: not device-verified** | Device and Meta XR Simulator are shared with another session; nothing was installed or launched. |
-| Q9 | Silent inline fallback | confirmed | **struck** for SpatialScreen; Explore falls back by design | Inline is now an intended layout: `useSpatialWindowState` drives `PanePromotionContext`, so a promoted pane collapses and an unpromoted one stays in its SplitView slot. |
+| Q9 | Silent inline fallback | confirmed | **struck**; SpatialScreen left the app (S13), Explore falls back by design | Inline is an intended layout: when Detail is promoted to its window, its pane collapses in the main window (`src/spatial/exploreLayout.ts`, `ExplorePane`); unpromoted, it stays the trailing pane. The SplitView module was deleted 2026-10-08; only `use-window-size-class.ts`, `constants.ts` and `transitions.ts` remain in `src/navigation/split-view/`. |
 | Q10 | Main window size | not a cause (source) | unchanged | 1280x800 dp. |
 
 | Trace link | Now |
@@ -28,7 +28,7 @@ ADRs: [0001 quest-only SDK linkage](adr/0001-quest-only-layout-sdk-linkage.md), 
 | Runtime capability detection | wired: `isHorizonBuild` (build) and `useSpatialScene().isSpatialAvailable` (runtime) feed the resolver |
 | Native dependency registration | implemented quest-only; Gradle not built since the change |
 | Scene provider | wired, one, at the root |
-| Spatial window creation | wired for Discover and Place Detail |
+| Spatial window creation | wired for Place Detail (Discover inline, S12) |
 | Platform window manager | not reached in any test run |
 | Actual placement | not device-verified |
 
@@ -42,7 +42,7 @@ ADRs: [0001 quest-only SDK linkage](adr/0001-quest-only-layout-sdk-linkage.md), 
 - **Fork plugin cannot load (blocker for any Expo command).** `~/viro` `dist/plugins/*.js` is ES module output with extensionless imports (`e44b7f11`, 2026-10-05). `app.plugin.js` fails with `ERR_MODULE_NOT_FOUND: .../dist/plugins/withViroAndroid`, so `expo start`, `expo prebuild` and `expo export` all fail with the fork linked. PR C's prebuild and export ran with a verification-only require hook that loaded an esbuild CommonJS build of the same `plugins/*.ts`. Fix in the fork.
 - **Residual prebuild drift (not taken in PR C).** A full prebuild of today's config also moves Quest manifest entries from `main` to the `quest` flavor manifest (fork PR #65), scopes PICO PPS deps to `picoImplementation`, swaps `missingDimensionStrategy` for `matchingFallbacks`, adds an AGP 9 BuildConfig block for expo-horizon-core and drops the explicit `:expo-pico-core` include. These change what `spatial:verify-android` asserts and need a Gradle build to trust, so they stay a separate re-sync.
 - **`@viro-external/ui` main lacks the test route's exports.** `/viro-external` (`components/ViroExternalTestScene.tsx`, `assets/viro-external-test/rive/index.ts`) imports `PanelStack`, `PanelStat`, `PanelBarChart`, `PanelLabel`, `PanelRow`, `PanelSurface`, `RivePanel` and `RiveBaked`, which exist only on viro-external's unmerged `codex/specs-generated-preview`. Typecheck still fails on the same three statements as before the relink.
-- **Compact width on Horizon.** In the collapsed (compact) SplitView only the active column is mounted, so resizing the main window below the expanded size class unmounts the Discover window. Not handled in PR C.
+- **Compact width on Horizon.** In the collapsed (compact) SplitView only the active column is mounted, so resizing the main window below the expanded size class unmounts the Discover window. Not handled in PR C. Superseded 2026-10-08: Discover is no longer a window (S12) and SplitView is gone; `resolveExploreLayout` owns compact behaviour.
 
 ## Original audit (2026-10-08, read-only, before PR C)
 

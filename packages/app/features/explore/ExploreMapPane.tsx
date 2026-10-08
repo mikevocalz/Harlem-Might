@@ -1,8 +1,8 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Text } from '@acme/ui';
-import { Pressable, View } from '@acme/ui/tw';
+import { MightsButton } from '@acme/ui/mights';
+import { Text, View } from '@acme/ui/tw';
 import {
   HARLEM_PLACE_PREVIEWS,
   UNMAPPED_PLACES,
@@ -44,11 +44,14 @@ const POINTS = projectSchematic(HARLEM_PLACE_PREVIEWS);
 /**
  * The map region (handoff §3), the permanent centre of Explore.
  *
- * Until the native Mapbox surface exists (DECISIONS S11), markers sit on a
- * plain map canvas at their real OpenStreetMap coordinates, fitted to the
- * box. Each marker is a 48dp target with a 20dp dot and its name; the
- * selected one grows to 28dp in gold and announces "Selected". Places with
- * no coordinates get no marker, and a notice counts them.
+ * A schematic, not a street map (DECISIONS S16: the native street map waits
+ * on the D2 style and a Horizon-compatible map SDK), and the caption says so.
+ * Markers sit on the dark map canvas at their real OpenStreetMap coordinates,
+ * fitted to the box. Each is a 48dp target around a gold diamond, the same
+ * mark the site's Mapbox markers draw (ExploreMap.tsx). Selection grows the
+ * diamond, rings it in the text colour, shows the name beside it and sets the
+ * `selected` state, so it never rests on colour alone. Places with no
+ * coordinates get no marker, and a notice counts them.
  */
 export function ExploreMapPane({ onSelectPlace, onShowPlaces, insets, children }: ExploreMapPaneProps) {
   const type = useExploreType();
@@ -63,13 +66,9 @@ export function ExploreMapPane({ onSelectPlace, onShowPlaces, insets, children }
     >
       {onShowPlaces ? (
         <View className="absolute left-4 top-4 z-10">
-          <Pressable
-            onPress={onShowPlaces}
-            aria-label="Show the place list"
-            className="min-h-target min-w-target items-center justify-center rounded-card border border-border-strong bg-surface-raised px-4"
-          >
-            <Text className={type.label + ' font-semibold text-text'}>Places</Text>
-          </Pressable>
+          <MightsButton size="sm" variant="outline" onPress={onShowPlaces} aria-label="Show the place list">
+            Places
+          </MightsButton>
         </View>
       ) : null}
 
@@ -105,22 +104,18 @@ export function ExploreMapPane({ onSelectPlace, onShowPlaces, insets, children }
               <View className="size-target items-center justify-center">
                 <View
                   className={
-                    'rounded-full border-2 ' +
-                    (selected
-                      ? 'size-marker-selected border-on-primary bg-map-marker-selected'
-                      : 'size-marker border-rule-rail bg-map-marker')
+                    'rotate-45 border-2 bg-primary ' + (selected ? 'size-4.5 border-text' : 'size-3 border-surface')
                   }
                 />
               </View>
-              <Text
-                className={
-                  type.label +
-                  ' -ml-2 rounded-sm px-1 font-semibold ' +
-                  (selected ? 'bg-primary text-on-primary' : 'bg-map-canvas text-text')
-                }
-              >
-                {markerLabel(place.name)}
-              </Text>
+              {selected ? (
+                <Text
+                  numberOfLines={1}
+                  className={type.caption + ' -ml-2 border-l-2 border-primary bg-surface-raised px-2 font-sans-semibold text-text'}
+                >
+                  {markerLabel(place.name)}
+                </Text>
+              ) : null}
             </FocusPressable>
           );
         })}
@@ -131,14 +126,17 @@ export function ExploreMapPane({ onSelectPlace, onShowPlaces, insets, children }
         style={{ left: pad.left, right: pad.right, bottom: pad.bottom + 8 }}
         pointerEvents="box-none"
       >
-        {unmapped > 0 ? (
-          <Text className={type.caption + ' rounded-sm bg-surface-raised px-2 py-1 text-text-muted'}>
-            {unmapped === 1 ? "1 place isn't" : `${unmapped} places aren't`} on the map yet
+        <View className="shrink gap-1">
+          <Text className={type.caption + ' self-start bg-surface-raised px-2 py-1 font-sans text-text'}>
+            Schematic map. Street map coming.
           </Text>
-        ) : (
-          <View />
-        )}
-        <Text className={type.caption + ' text-text-muted'}>Locations © OpenStreetMap contributors</Text>
+          {unmapped > 0 ? (
+            <Text className={type.caption + ' self-start bg-surface-raised px-2 py-1 font-sans text-text-muted'}>
+              {unmapped === 1 ? "1 place isn't" : `${unmapped} places aren't`} on the map yet
+            </Text>
+          ) : null}
+        </View>
+        <Text className={type.caption + ' font-sans text-text-muted'}>Locations © OpenStreetMap contributors</Text>
       </View>
 
       {children}

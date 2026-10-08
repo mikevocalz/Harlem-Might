@@ -7,11 +7,7 @@
   "exports": {
     ".": "./index.ts",
     "./theme.css": "./theme.css",
-    "./theme-native.css": "./theme-native.css",
-    "./switch": {
-      "react-native": "./switch.native.ts",
-      "default": "./switch.ts"
-    }
+    "./theme-native.css": "./theme-native.css"
   },
   "scripts": {
     "lint": "eslint",
