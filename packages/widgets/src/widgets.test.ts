@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { beginWalk, confirmStop, pauseWalk, resumeWalk, reconcileWalkSessions, nextStopId } from './walk-session.js';
-import { buildWidgetSnapshot, harlemDay } from './snapshot.js';
-import { toMobileDeepLink, widgetPaths } from './deep-links.js';
+import { beginWalk, confirmStop, pauseWalk, resumeWalk, reconcileWalkSessions, nextStopId } from './walk-session.ts';
+import { buildWidgetSnapshot, harlemDay } from './snapshot.ts';
+import { toMobileDeepLink, widgetPaths } from './deep-links.ts';
 
 const walk = {
   id: 'w1', slug: 'harlem-renaissance', title: 'Harlem Renaissance Walk',
