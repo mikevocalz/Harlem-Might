@@ -16,7 +16,15 @@ export type MetaLayoutModules = {
     createWindowScene: (options?: { fallback?: 'inline' | 'drop' }) => unknown;
     useSpatialWindowState: (label?: string) => { placement: MetaWindowPlacement };
   };
+  /**
+   * Wraps every window's content. On Android it gives the promoted window the
+   * activity's view-tree owners, without which Compose views (`@expo/ui`)
+   * throw on attach. See `modules/spatial-window-owners`.
+   */
+  windowOwners: ComponentType<{ style?: { flex: number }; children?: ReactNode }>;
 };
+
+const FILL = { flex: 1 } as const;
 
 /**
  * The app's Meta window facade. Built once by {@linkcode createMetaWindows}.
@@ -27,7 +35,8 @@ export type MetaWindows = {
   /** Wraps the app once. A fragment when the SDK is not linked. */
   SceneProvider: (props: { children?: ReactNode }) => ReactElement;
   /**
-   * `<SpatialWindow>` with the props spread through unchanged. When the SDK
+   * `<SpatialWindow>` with the props spread through unchanged and the content
+   * wrapped in {@linkcode MetaLayoutModules.windowOwners}. When the SDK
    * is not linked, the children render where the element is declared, which
    * is what Meta's `fallback="inline"` does too.
    */
@@ -69,7 +78,7 @@ export function createMetaWindows(enabled: boolean, load: () => MetaLayoutModule
     };
   }
 
-  const { layout, window } = modules;
+  const { layout, window, windowOwners } = modules;
   // Meta's provider refuses configless initialization and throws if the
   // initializer type changes after mount, so build exactly one per app.
   const initializer = window.createWindowScene({ fallback: 'inline' });
@@ -78,7 +87,8 @@ export function createMetaWindows(enabled: boolean, load: () => MetaLayoutModule
     linked: true,
     SceneProvider: ({ children }) =>
       createElement(layout.SpatialSceneProvider, { initializer }, children),
-    Window: ({ window: props, children }) => createElement(window.SpatialWindow, props, children),
+    Window: ({ window: props, children }) =>
+      createElement(window.SpatialWindow, props, createElement(windowOwners, { style: FILL }, children)),
     usePlacement: (label) => window.useSpatialWindowState(label).placement,
     useSpatialAvailable: () => layout.useSpatialScene().isSpatialAvailable,
   };
