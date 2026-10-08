@@ -9,7 +9,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "test": "node --test 'src/**/*.test.ts'",
+    "test": "node --conditions=react-native --import ./scripts/node-test-resolve.mjs --test 'src/**/*.test.ts'",
     "viro:assert-fork": "node scripts/assert-viro-fork.mjs",
     "prebuild": "node scripts/assert-viro-fork.mjs && expo prebuild",
     "android:quest": "node scripts/assert-viro-fork.mjs && expo run:android --variant questDebug",
