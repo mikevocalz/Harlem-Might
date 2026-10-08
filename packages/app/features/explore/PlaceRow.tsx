@@ -39,13 +39,13 @@ export function PlaceRow({ place, selected, onPress, padding = 'pane' }: PlaceRo
       }
     >
       <View className={'w-rail ' + (selected ? 'bg-primary' : 'bg-transparent')} />
-      <View className={'flex-1 flex-row items-start gap-4 py-4 ' + (padding === 'window' ? 'px-window' : 'px-5')}>
+      <View className={'flex-1 flex-row items-start gap-4 ' + type.row + ' ' + (padding === 'window' ? 'px-window' : 'px-5')}>
         <View className="size-5 items-center justify-center">
           <View className={'size-2.5 rotate-45 ' + (selected ? 'bg-primary' : 'bg-rule-rail')} />
         </View>
         <View className="min-w-0 flex-1 gap-0.5">
           <Text className={type.body + ' font-sans-semibold text-text'}>{place.name}</Text>
-          <Text className={type.caption + ' font-sans text-text-muted'}>{line}</Text>
+          <Text numberOfLines={1} className={type.meta + ' font-sans text-text-muted'}>{line}</Text>
         </View>
       </View>
     </FocusPressable>
