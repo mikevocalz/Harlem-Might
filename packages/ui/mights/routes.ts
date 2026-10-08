@@ -16,12 +16,14 @@ export const routes = {
   explore: (q?: ExploreQuery) => withQuery('/explore', q),
   place: (slug: string) => `/places/${slug}`,
   walks: () => '/walks',
+  /** A position inside a walk is `walk(slug) + '#stop-' + n`; a stop's own page is its place. */
   walk: (slug: string) => `/walks/${slug}`,
-  walkStop: (slug: string, n: number) => `/walks/${slug}/stops/${n}`,
   stories: () => '/stories',
   story: (slug: string) => `/stories/${slug}`,
-  today: (date?: string) => (date ? `/today/${date}` : '/today'),
-  event: (slug: string) => `/events/${slug}`,
+  // /today/[date] is deferred until listings exist (audit §11), so the builder
+  // takes no date. Events have no page of their own: a row links to the
+  // venue's site and to the venue's place page.
+  today: () => '/today',
   ar: () => '/ar',
   download: () => '/download',
   about: () => '/about',
@@ -35,7 +37,7 @@ export const primaryNav = [
   { label: 'Explore', href: routes.explore(), matches: [/^\/explore(\/|$)/, /^\/places(\/|$)/] },
   { label: 'Walks', href: routes.walks(), matches: [/^\/walks(\/|$)/] },
   { label: 'Stories', href: routes.stories(), matches: [/^\/stories(\/|$)/] },
-  { label: 'Today', href: routes.today(), matches: [/^\/today(\/|$)/, /^\/events(\/|$)/] },
+  { label: 'Today', href: routes.today(), matches: [/^\/today(\/|$)/] },
 ] as const;
 
 export type PrimaryNavLabel = (typeof primaryNav)[number]['label'];

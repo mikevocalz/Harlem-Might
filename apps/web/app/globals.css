@@ -197,34 +197,7 @@ dialog.mights-sheet[open] {
   }
 }
 
-/* Explore map markers: gold diamonds, the stamp marker at map scale. */
-.mights-marker {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  background: transparent;
-  border: 0;
-}
-.mights-marker::before {
-  content: '';
-  width: 12px;
-  height: 12px;
-  transform: rotate(45deg);
-  background: var(--color-primary);
-  outline: 2px solid var(--color-surface);
-  transition: width 120ms, height 120ms;
-}
-.mights-marker[data-selected='true']::before {
-  width: 18px;
-  height: 18px;
-  outline-color: var(--color-text);
-}
-.mights-marker:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
+/* Explore map markers are styled with utilities in ExploreMap.tsx. */
 /* Mapbox controls on the warm-black canvas. */
 .mapboxgl-ctrl-group {
   border-radius: 0 !important;

@@ -1,10 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { usePathname } from 'solito/navigation';
-import { connectGsapLenis } from 'kinetrell/web/gsap-lenis';
-import { createKinetrellLenis } from 'kinetrell/web/lenis';
-import { useBrowserReducedMotion } from 'kinetrell/web/react';
 import { View } from '@acme/ui/tw';
 import { MightsDock, MightsFooter, MightsNavbar, routes } from '@acme/ui/mights';
 
@@ -14,30 +11,58 @@ import { MightsDock, MightsFooter, MightsNavbar, routes } from '@acme/ui/mights'
  * Kinetrell owns Lenis and the GSAP clock for the entire public Next.js site.
  * Screens attach their one orchestrated moment to that clock; the shell itself
  * adds no route-entrance animation.
+ *
+ * Lenis and the GSAP bridge are imported inside the effect, so routes that
+ * never smooth-scroll (Explore, and every route under reduced motion) don't
+ * download them. Content never waits on that import: nothing is pre-hidden
+ * until motion.ts arms the page, and with JS off the shell is static.
  */
+// Same reading as kinetrell's useBrowserReducedMotion('system'), without its
+// module: kinetrell/web/react imports gsap at the top level, which put GSAP in
+// every route's initial JS, Explore included.
+const REDUCE = '(prefers-reduced-motion: reduce)';
+const subscribeReduced = (onChange: () => void) => {
+  const media = window.matchMedia(REDUCE);
+  media.addEventListener('change', onChange);
+  return () => media.removeEventListener('change', onChange);
+};
+const readReduced = () => window.matchMedia(REDUCE).matches;
+const serverReduced = () => false;
+
 export function SiteMotionShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? '/';
-  const reducedMotion = useBrowserReducedMotion('system');
+  const reducedMotion = useSyncExternalStore(subscribeReduced, readReduced, serverReduced);
   // Explore is a full-viewport map workspace: no footer under it.
   const workspace = pathname.startsWith(routes.explore());
 
   useEffect(() => {
     if (reducedMotion || workspace) return;
 
-    const owned = createKinetrellLenis({
-      autoRaf: false,
-      lerp: 0.085,
-      smoothWheel: true,
-      wheelMultiplier: 0.92,
-    });
-    const disconnect = connectGsapLenis(owned.lenis, {
-      clock: 'kinetrell',
-      refreshOnConnect: true,
-    });
+    let cancelled = false;
+    let teardown: (() => void) | null = null;
+    void Promise.all([import('kinetrell/web/lenis'), import('kinetrell/web/gsap-lenis')]).then(
+      ([{ createKinetrellLenis }, { connectGsapLenis }]) => {
+        if (cancelled) return;
+        const owned = createKinetrellLenis({
+          autoRaf: false,
+          lerp: 0.085,
+          smoothWheel: true,
+          wheelMultiplier: 0.92,
+        });
+        const disconnect = connectGsapLenis(owned.lenis, {
+          clock: 'kinetrell',
+          refreshOnConnect: true,
+        });
+        teardown = () => {
+          disconnect();
+          owned.destroy();
+        };
+      },
+    );
 
     return () => {
-      disconnect();
-      owned.destroy();
+      cancelled = true;
+      teardown?.();
     };
   }, [reducedMotion, workspace]);
 

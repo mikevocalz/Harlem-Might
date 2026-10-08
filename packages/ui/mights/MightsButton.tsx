@@ -18,6 +18,9 @@ const outer = tv({
       primary: 'bg-primary group-hover:bg-primary-pressed',
       secondary: 'bg-primary/70 p-px group-hover:bg-primary',
       ghost: 'bg-primary/10 group-hover:bg-primary/20',
+      // Quiet toggle at rest: a border-strong rail (3.73:1 on surface, WCAG
+      // 1.4.11) instead of ghost's 10% gold fill, which measures 1.06:1.
+      outline: 'bg-border-strong p-px group-hover:bg-primary/70',
     },
     size: { md: cornerCut, sm: cornerCutSm },
   },
@@ -30,6 +33,7 @@ const inner = tv({
       primary: 'text-on-primary',
       secondary: 'bg-surface text-primary transition-colors duration-fast group-hover:bg-surface-raised',
       ghost: 'text-primary',
+      outline: 'bg-surface text-text transition-colors duration-fast group-hover:bg-surface-raised',
     },
     size: {
       md: `h-13 px-8 text-ui ${cornerCut}`,
@@ -43,7 +47,7 @@ const glow =
 
 interface MightsButtonBaseProps {
   children: React.ReactNode;
-  variant?: 'primary' | 'secondary' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'outline';
   size?: 'md' | 'sm';
   className?: string;
   /** Stretch to fill the parent (grid cells, sheets). */
@@ -86,7 +90,7 @@ export function MightsButton(props: MightsButtonProps) {
   );
   const disabled = props.href === undefined && props.disabled === true;
   const cls = `mights-focus group ${fill ? 'flex w-full' : 'inline-flex shrink-0'} select-none ${
-    variant === 'ghost' || disabled ? '' : glow
+    variant === 'ghost' || variant === 'outline' || disabled ? '' : glow
   } ${className ?? ''}`;
 
   if (props.href === undefined) {
