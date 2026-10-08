@@ -47,8 +47,12 @@ final class HarlemWatchStore: ObservableObject {
     }
 
     private func isFresh(_ timestamp: String) -> Bool {
+        // JSON ISO timestamps include fractional seconds; parse both representations.
         let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: timestamp) else { return false }
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let withFractionalSeconds = formatter.date(from: timestamp)
+        formatter.formatOptions = [.withInternetDateTime]
+        guard let date = withFractionalSeconds ?? formatter.date(from: timestamp) else { return false }
         return date > Date()
     }
 
