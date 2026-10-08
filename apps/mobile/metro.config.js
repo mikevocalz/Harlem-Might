@@ -64,6 +64,7 @@ const isBare = (name) => !name.startsWith(".") && !path.isAbsolute(name);
  */
 const isViro = (name) =>
   name === "@reactvision/react-viro" || name.startsWith("@reactvision/react-viro/");
+const LEGACY_ASSET_REGISTRY = "react-native/Libraries/Image/AssetRegistry";
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   const vendored = VENDORED_NAVIGATION[moduleName];
@@ -72,6 +73,17 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   }
   if (isViro(moduleName)) {
     return context.resolveRequest({ ...context, originModulePath: APP_ORIGIN }, moduleName, platform);
+  }
+  // The fork's ViroMaterials imports the asset registry by its pre-0.88 deep
+  // path, which React Native 0.88 replaced with `react-native/asset-registry`.
+  // Left alone it resolves to the fork's own RN copy, a second registry the
+  // app's Image never reads. Point it at the app's registry.
+  if (moduleName === LEGACY_ASSET_REGISTRY) {
+    return context.resolveRequest(
+      { ...context, originModulePath: APP_ORIGIN },
+      "react-native/asset-registry",
+      platform,
+    );
   }
   if (isBare(moduleName) && isLinked(context.originModulePath)) {
     try {
