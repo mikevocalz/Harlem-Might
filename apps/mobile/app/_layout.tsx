@@ -8,6 +8,7 @@ import { AppQueryProvider, SafeAreaProvider } from "@acme/app";
 import { BookingSheet } from "../components/BookingSheet";
 import { AttachSheet, AudioRecorderSheet, UrlSheet } from "@acme/app";
 import { Toaster } from "@acme/ui";
+import { metaWindows } from "../src/spatial/metaWindows";
 import "../global.css";
 
 // className-capable gesture root (third-party component → withUniwind).
@@ -33,7 +34,14 @@ export default function RootLayout() {
       <KeyboardProvider>
         <SafeAreaProvider>
           <AppQueryProvider>
-            <Slot />
+            {/*
+              The app's only Meta spatial scene. Explore's Discover and Place
+              Detail windows register under it; the main window stays the
+              activity. A fragment off the quest flavor.
+            */}
+            <metaWindows.SceneProvider>
+              <Slot />
+            </metaWindows.SceneProvider>
             {/* Global overlays/sheets are mounted once at the app root. */}
             <BookingSheet />
             <AttachSheet />
