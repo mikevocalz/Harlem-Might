@@ -260,10 +260,12 @@ function ModuleCard({
     return (
       <MightsNotchCard href={module.href} label={`${module.label}: ${module.value}`} className="flex-1">
         <div className="flex flex-1 flex-col gap-1 p-5">
+          {/* A fact is a label and a value, not a section: no heading, so a
+              facts strip doesn't add four headings to the outline. */}
           <MightsText size="small">{module.label}</MightsText>
-          <MightsHeading level={level} size={dominant ? 'title' : 'card'}>
+          <MightsText tone="default" className={`font-semibold ${dominant ? 'text-title-lg' : 'text-card'}`}>
             {module.value}
-          </MightsHeading>
+          </MightsText>
           {module.note ? (
             <MightsText size="small" className="mt-2">
               {module.note}
