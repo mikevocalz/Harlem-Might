@@ -31,6 +31,7 @@ import { ExploreWorkspaceContext, ExploreWorkspaceWindow } from '@/src/spatial/E
 import { isHorizonBuild } from '@/src/spatial/horizonBuild';
 import { ViewInArButton } from '@/src/ar/ViewInArButton';
 import { metaWindows } from '@/src/spatial/metaWindows';
+import { usePlaceDetailPanel } from '@/src/spatial/usePlaceDetailPanel';
 
 
 /**
@@ -38,10 +39,12 @@ import { metaWindows } from '@/src/spatial/metaWindows';
  *
  * The map always takes the flex region. Discover is a leading column, drawer
  * or single-column screen, and always stays in this window (DECISIONS S12).
- * Place Detail is a trailing column, overlay or screen that exists only while
- * a place is selected (S5). On a quest build all three share one 1440x900dp
- * window, Discover 360 | map | Detail 400, and Detail pushes the map narrower
- * instead of covering it (S17). Breakpoints come from the window's width,
+ * Place Detail exists only while a place is selected (S5). On a quest build it
+ * opens as its own Horizon OS panel to the right of this window (S20,
+ * `usePlaceDetailPanel`); if the panel cannot open, Discover 360 | map |
+ * Detail 400 share this 1440x900dp window and Detail pushes the map narrower
+ * instead of covering it (S17). Elsewhere it is a trailing column, overlay or
+ * screen. Breakpoints come from the window's width,
  * which the user can resize (src/spatial/exploreLayout.ts).
  *
  * Selection is one store write (`openPlace`). The `[placeId]` route only
@@ -65,7 +68,14 @@ export default function ExploreRouteLayout() {
 
   const isSpatialAvailable = metaWindows.useSpatialAvailable();
   const workspace = resolveExploreWorkspace({ selectedPlaceId, isSpatialAvailable });
-  const detailPlacement = metaWindows.usePlacement(EXPLORE_SURFACE.placeDetail);
+
+  // Quest: Detail is its own panel right of this window (S20); `inline`
+  // falls back to the S17 column. `dismissDetail` is defined below and only
+  // runs from the panel's close event, never during render.
+  const detailPlacement = usePlaceDetailPanel({
+    selectedPlaceId,
+    onClosedByUser: () => dismissDetail(),
+  });
 
   const layout = resolveExploreLayout({
     windowWidth,
@@ -171,7 +181,9 @@ export default function ExploreRouteLayout() {
               </ExploreMapPane>
             </View>
 
-            {selectedPlaceId != null && layout.detail ? (
+            {/* A promoted Detail is the separate panel (PlaceDetailPanel), so the
+                main window renders no second copy of it. */}
+            {selectedPlaceId != null && layout.detail && layout.detail.kind !== 'promoted' ? (
               <ExplorePane mode={layout.detail} side="trailing" restingWidth={EXPLORE_PANE_DP.detail}>
                 <ExploreWorkspaceWindow surfaceId={EXPLORE_SURFACE.placeDetail}>
                   <ExplorePlaceDetail
