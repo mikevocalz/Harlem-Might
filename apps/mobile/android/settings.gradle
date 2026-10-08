@@ -52,8 +52,8 @@ include ':expo-pico-core'
 project(':expo-pico-core').projectDir = new File(rootProject.projectDir, '../../../node_modules/@expo-pico/core/android')
 
 include ':react_viro', ':arcore_client', ':gvr_common', ':viro_renderer'
-project(':arcore_client').projectDir = new File('../../../../viro-specs-preview/android/arcore_client')
-project(':gvr_common').projectDir = new File('../../../../viro-specs-preview/android/gvr_common')
-project(':viro_renderer').projectDir = new File('../../../../viro-specs-preview/android/viro_renderer')
-project(':react_viro').projectDir = new File('../../../../viro-specs-preview/android/react_viro')
+project(':arcore_client').projectDir = new File('../../../../viro/android/arcore_client')
+project(':gvr_common').projectDir = new File('../../../../viro/android/gvr_common')
+project(':viro_renderer').projectDir = new File('../../../../viro/android/viro_renderer')
+project(':react_viro').projectDir = new File('../../../../viro/android/react_viro')
     

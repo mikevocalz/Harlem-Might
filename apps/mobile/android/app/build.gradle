@@ -196,10 +196,6 @@ dependencies {
     implementation 'com.google.protobuf.nano:protobuf-javanano:3.1.0'
     // Required for ARCore Geospatial API
     implementation 'com.google.android.gms:play-services-location:21.0.1'
-    // Meta VR Layout SDK (React Native spatial windows)
-    implementation platform('com.meta.metavrx:metavrx-bom:1.2026.0.0')
-    implementation 'com.meta.metavrx.layout:layout-react-compat'
-    implementation 'com.meta.metavrx.layout:layout-window-react-compat'
     // ========================================================================
 
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
@@ -226,6 +222,28 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+// expo-pico-core: Meta VR Layout SDK (quest only)
+// Versions come from the BOM. Both artifacts are quest-only: see
+// @expo-pico/core plugin/src/withQuestMetaLayout.ts for why the autolinked
+// @metavr/* projects are filtered out of every other flavor below.
+dependencies {
+    questImplementation platform("com.meta.metavrx:metavrx-bom:1.2026.0.0")
+    questImplementation "com.meta.metavrx.layout:layout-react-compat"
+    questImplementation "com.meta.metavrx.layout:layout-window-react-compat"
+}
+configurations.configureEach { c ->
+    if (!c.name.startsWith("quest") && (c.name.endsWith("CompileClasspath") || c.name.endsWith("RuntimeClasspath"))) {
+        c.exclude group: "com.meta.metavrx.layout"
+    }
+}
+android.productFlavors.configureEach { flavor ->
+    if (flavor.name != "quest") {
+        android.sourceSets.maybeCreate(flavor.name).java.srcDirs += "src/metaLayoutStub/java"
+    }
+}
+// expo-pico-core: end Meta VR Layout SDK
+
 
 // expo-pico-core: @expo-pico/* module dependencies
 dependencies {
