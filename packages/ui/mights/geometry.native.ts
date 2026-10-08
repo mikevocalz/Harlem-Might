@@ -17,9 +17,10 @@ export interface Size {
 
 /**
  * Diagonal cut at the bottom-right corner, in dp. Matches `cornerCut` (md
- * button, 20px) and `cornerCutSm` (compact controls, 12px) on the web.
+ * button, 20px) and `cornerCutSm` (compact controls, 12px) on the web. The
+ * Horizon sizes reuse them: `xr` takes the small cut, `xr-primary` the md one.
  */
-export const CORNER_CUT = { md: 20, sm: 12 } as const;
+export const CORNER_CUT = { md: 20, sm: 12, xr: 12, 'xr-primary': 20 } as const;
 
 /**
  * Card silhouette from the web `notch` clip-path: trapezoid notches centred on

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { MightsButton, MightsHeading, MightsLocationStamp, MightsText } from '@acme/ui/mights';
 import { Pressable, ScrollView, Text, View } from '@acme/ui/tw';
 import { directionsUrl } from './explore-copy';
@@ -30,6 +30,12 @@ export interface ExplorePlaceDetailProps {
   placePageUrl?: string;
   /** `window` (24dp) in a Horizon window or pane, `pane` (16dp) elsewhere. */
   padding?: 'window' | 'pane';
+  /**
+   * Platform actions appended to the action row after "Open place page",
+   * such as the Quest app's "View on a table". Each one hides itself where it
+   * does not apply.
+   */
+  actions?: ReactNode;
 }
 
 /** OSM's fetch date for the seed coordinates (explore.store.ts). */
@@ -58,6 +64,7 @@ export function ExplorePlaceDetail({
   onSelectNearby,
   placePageUrl,
   padding = 'pane',
+  actions,
 }: ExplorePlaceDetailProps) {
   const type = useExploreType();
   const place = getHarlemPlacePreview(placeId);
@@ -87,15 +94,15 @@ export function ExplorePlaceDetail({
   if (!place) {
     return (
       <View className={'flex-1 bg-primary ' + frame}>
-        <View className={'flex-1 gap-4 bg-surface-raised py-5 ' + pad}>
+        <View className={'flex-1 bg-surface-raised py-5 ' + type.stackGap + ' ' + pad}>
           <View className="flex-row items-start justify-between gap-4">
             {title('We couldn’t find that place.')}
-            <MightsButton size="sm" variant="ghost" onPress={onClose} aria-label={`${dismissLabel} details`}>
+            <MightsButton size={type.buttons.primary} variant="ghost" onPress={onClose} aria-label={`${dismissLabel} details`}>
               {dismissLabel}
             </MightsButton>
           </View>
           <MightsText>It may have been renamed or removed.</MightsText>
-          <MightsButton size="sm" variant="secondary" onPress={onClose}>
+          <MightsButton size={type.buttons.control} variant="secondary" onPress={onClose}>
             Back to Explore
           </MightsButton>
         </View>
@@ -108,11 +115,11 @@ export function ExplorePlaceDetail({
   return (
     <View className={'flex-1 bg-primary ' + frame} aria-label={`Details: ${place.name}`}>
       <View className="flex-1 bg-surface-raised">
-        <View className={'border-b border-rule-hairline py-4 ' + pad}>
-          <View className="flex-row items-start justify-between gap-4">
+        <View className={'justify-center border-b border-rule-hairline ' + type.header + ' ' + pad}>
+          <View className="flex-row items-center justify-between gap-4">
             {title(place.name)}
             <MightsButton
-              size="sm"
+              size={type.buttons.primary}
               variant="ghost"
               onPress={onClose}
               aria-label={dismissKind === 'back' ? `Back to the map from ${place.name}` : `Close ${place.name}`}
@@ -124,10 +131,10 @@ export function ExplorePlaceDetail({
 
         <ScrollView
           className="flex-1"
-          contentContainerClassName={'max-w-content-prose gap-5 py-5 pb-12 ' + pad}
+          contentContainerClassName={'max-w-content-prose py-5 pb-12 ' + type.sectionGap + ' ' + pad}
           showsVerticalScrollIndicator={false}
         >
-          <MightsLocationStamp name={place.category} street={placeStreetLine(place)} />
+          <MightsLocationStamp name={place.category} street={placeStreetLine(place)} size={type.buttons.stamp} />
           <MightsText tone="default" className={type.body}>
             {place.shortDescription}
           </MightsText>
@@ -137,26 +144,29 @@ export function ExplorePlaceDetail({
             </MightsText>
           )}
 
-          <View className="flex-row flex-wrap gap-3">
+          {/* The main actions sit right under the description, never at the
+              window's bottom edge, where Horizon draws its Control Bar. */}
+          <View className={'flex-row flex-wrap ' + type.stackGap}>
             {onShowOnMap ? (
-              <MightsButton size="sm" variant="outline" onPress={onShowOnMap}>
+              <MightsButton size={type.buttons.control} variant="outline" onPress={onShowOnMap}>
                 Show on map
               </MightsButton>
             ) : null}
             {place.lngLat ? (
-              <MightsButton size="sm" href={directionsUrl(place.lngLat)} external>
+              <MightsButton size={type.buttons.primary} href={directionsUrl(place.lngLat)} external>
                 Get directions
               </MightsButton>
             ) : null}
             {placePageUrl ? (
-              <MightsButton size="sm" variant="secondary" href={placePageUrl} external>
+              <MightsButton size={type.buttons.primary} variant="secondary" href={placePageUrl} external>
                 Open place page
               </MightsButton>
             ) : null}
+            {actions}
           </View>
 
           {near.length > 0 ? (
-            <View className="gap-1 border-t border-rule-hairline pt-5">
+            <View className={'gap-1 border-t border-rule-hairline ' + type.sectionTop}>
               <MightsHeading level={3} size="card" className={type.title}>
                 Nearby
               </MightsHeading>
@@ -169,13 +179,13 @@ export function ExplorePlaceDetail({
                 >
                   <View className="size-2 rotate-45 bg-rule-rail" />
                   <Text className={type.body + ' flex-1 font-sans text-text'}>{other.name}</Text>
-                  <Text className={type.caption + ' font-sans text-text-muted'}>{formatDistance(meters)}</Text>
+                  <Text className={type.meta + ' font-sans text-text-muted'}>{formatDistance(meters)}</Text>
                 </Pressable>
               ))}
             </View>
           ) : null}
 
-          <View className="gap-1 border-t border-rule-hairline pt-5">
+          <View className={'gap-1 border-t border-rule-hairline ' + type.sectionTop}>
             <MightsHeading level={3} size="card" className={type.title}>
               Where this comes from
             </MightsHeading>

@@ -18,6 +18,11 @@ export interface ExploreMasterPaneProps {
   /** Shows the map. Pass only where this pane covers the map (compact). */
   onShowMap?: () => void;
   /**
+   * Folds this pane back behind the map's "Places" toggle. Pass only where it
+   * was opened from that toggle beside the map (a narrow Horizon window).
+   */
+  onClose?: () => void;
+  /**
    * Content padding: `window` (24dp) inside a Horizon window or pane, `pane`
    * (16dp) on phones and tablets.
    */
@@ -34,7 +39,7 @@ export interface ExploreMasterPaneProps {
  * Search filters on every keystroke: the catalogue is a fixed in-memory list,
  * so there is nothing to debounce.
  */
-export function ExploreMasterPane({ onSelectPlace, onShowMap, padding = 'pane' }: ExploreMasterPaneProps) {
+export function ExploreMasterPane({ onSelectPlace, onShowMap, onClose, padding = 'pane' }: ExploreMasterPaneProps) {
   const type = useExploreType();
   const query = useExplore((state) => state.query);
   const category = useExplore((state) => state.category);
@@ -53,19 +58,24 @@ export function ExploreMasterPane({ onSelectPlace, onShowMap, padding = 'pane' }
 
   return (
     <View className="flex-1 bg-surface">
-      <View className={'gap-3 border-b border-rule-hairline py-4 ' + pad}>
+      <View className={type.stackGap + ' border-b border-rule-hairline py-4 ' + pad}>
         <View className="min-h-target flex-row items-center justify-between gap-target-gap">
           <MightsHeading level={1} size="display-md" className={type.paneTitle}>
             Explore
           </MightsHeading>
           {onShowMap ? (
-            <MightsButton size="sm" variant="outline" onPress={onShowMap} aria-label="Show the map">
+            <MightsButton size={type.buttons.control} variant="outline" onPress={onShowMap} aria-label="Show the map">
               Map
+            </MightsButton>
+          ) : null}
+          {onClose ? (
+            <MightsButton size={type.buttons.primary} variant="ghost" onPress={onClose} aria-label="Close the place list">
+              Close
             </MightsButton>
           ) : null}
         </View>
 
-        <View className="flex-row items-center gap-2">
+        <View className={type.inlineGap + ' flex-row items-center'}>
           <TextInput
             aria-label="Search places"
             value={query}
@@ -74,11 +84,11 @@ export function ExploreMasterPane({ onSelectPlace, onShowMap, padding = 'pane' }
             placeholder="Search places, like Apollo"
             className={
               type.label +
-              ' h-12 min-w-0 flex-1 border border-border-strong bg-surface-raised px-4 font-sans text-text placeholder:text-text-muted'
+              ' ' + type.search + ' min-w-0 flex-1 border border-border-strong bg-surface-raised px-4 font-sans text-text placeholder:text-text-muted'
             }
           />
           {query ? (
-            <MightsButton size="sm" variant="outline" aria-label="Clear search" onPress={() => setQuery('')}>
+            <MightsButton size={type.buttons.control} variant="outline" aria-label="Clear search" onPress={() => setQuery('')}>
               Clear
             </MightsButton>
           ) : null}
@@ -88,14 +98,14 @@ export function ExploreMasterPane({ onSelectPlace, onShowMap, padding = 'pane' }
           horizontal
           showsHorizontalScrollIndicator={false}
           accessibilityLabel="Filter by category"
-          contentContainerClassName="flex-row gap-2 py-1"
+          contentContainerClassName={type.inlineGap + ' flex-row py-1'}
         >
           {HARLEM_CATEGORIES.map((item) => {
             const on = item === category;
             return (
               <MightsButton
                 key={item}
-                size="sm"
+                size={type.buttons.control}
                 pressed={on}
                 variant={on ? 'primary' : 'outline'}
                 onPress={() => setCategory(item)}
@@ -113,9 +123,9 @@ export function ExploreMasterPane({ onSelectPlace, onShowMap, padding = 'pane' }
 
       <ScrollView className="flex-1" contentContainerClassName="pb-24" showsVerticalScrollIndicator={false}>
         {places.length === 0 ? (
-          <View className={'items-start gap-3 py-5 ' + pad}>
+          <View className={'items-start py-5 ' + type.stackGap + ' ' + pad}>
             <MightsText tone="default">{noResultsCopy(query, category, 'All')}</MightsText>
-            <MightsButton size="sm" variant="secondary" onPress={clearAll}>
+            <MightsButton size={type.buttons.control} variant="secondary" onPress={clearAll}>
               Clear search and filters
             </MightsButton>
           </View>

@@ -66,7 +66,7 @@ export function ExploreMapPane({ onSelectPlace, onShowPlaces, insets, children }
     >
       {onShowPlaces ? (
         <View className="absolute left-4 top-4 z-10">
-          <MightsButton size="sm" variant="outline" onPress={onShowPlaces} aria-label="Show the place list">
+          <MightsButton size={type.buttons.control} variant="outline" onPress={onShowPlaces} aria-label="Show the place list">
             Places
           </MightsButton>
         </View>

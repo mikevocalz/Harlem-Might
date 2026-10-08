@@ -235,17 +235,19 @@ export const typeScale = {
   // size to 14/16 of itself. Px literals pass through unscaled, so these
   // render at exactly these dp in a Horizon window. Used by Explore on quest
   // builds; the flat scale above stays for phones and the web.
-  /** Map attribution, source lines, timestamps. */
+  /** The floor for any visible text: map attribution, source lines, timestamps. */
   'xr-caption': { size: '14px', lineHeight: '20px', tracking: '0' },
-  /** Chips, marker labels, metadata, status. */
+  /** Secondary copy: list meta, addresses, chips, button labels, status. */
   'xr-label': { size: '16px', lineHeight: '22px', tracking: '0' },
-  /** Street lines, list detail, assistant text. */
-  'xr-body': { size: '18px', lineHeight: '28px', tracking: '0' },
-  /** Row names, section headings. */
-  'xr-title': { size: '22px', lineHeight: '28px', tracking: '0' },
-  /** Window titles and the place name in a 440dp Detail window. */
-  'xr-heading': { size: '30px', lineHeight: '36px', tracking: '0' },
-  /** Newsreader story body at viewing distance. */
+  /** Reading copy: descriptions, Detail body, row names. Meta's 18px comfort size. */
+  'xr-body': { size: '18px', lineHeight: '26px', tracking: '0' },
+  /** Section headings inside a pane. */
+  'xr-title': { size: '20px', lineHeight: '26px', tracking: '0' },
+  /** The place name in Detail. */
+  'xr-headline': { size: '24px', lineHeight: '30px', tracking: '0' },
+  /** One per window: the "Explore" pane title. */
+  'xr-heading': { size: '32px', lineHeight: '40px', tracking: '0' },
+  /** Newsreader story body at viewing distance. Roman only: no italics on Horizon. */
   'xr-prose': { size: '20px', lineHeight: '34px', tracking: '0' },
 } as const;
 
@@ -274,7 +276,12 @@ export const contentWidths = {
   'pane-discover': '320px',
   'pane-discover-narrow': '280px',
   'pane-detail': '360px',
-  'pane-detail-xr': '440px',
+  // Horizon main window (DECISIONS S17): Discover 360 | map | Detail 400 in
+  // one 1440x900dp window. The map never drops below `pane-map-min-xr`; when
+  // it would, Discover folds behind a toggle instead.
+  'pane-discover-xr': '360px',
+  'pane-detail-xr': '400px',
+  'pane-map-min-xr': '600px',
   // Assistant (handoff §6): the collapsed bar caps at 560, the panel is 400.
   'assistant-bar': '560px',
   'assistant-panel': '400px',
@@ -297,8 +304,18 @@ export const spacing = {
   target: '48px',
   /** Minimum gap between adjacent targets; gaze jitter needs the margin. */
   'target-gap': '12px',
+  /** Primary actions on Horizon (Close, Get directions, Search): Meta's 60dp hand-tracking size. */
+  'target-primary': '60px',
   /** Content padding inside a SpatialWindow or Horizon pane. */
   window: '24px',
+  /** Horizon pane rhythm (DECISIONS S17): between sections, stacked items, inline items. */
+  'xr-section': '24px',
+  'xr-stack': '12px',
+  'xr-inline': '8px',
+  /** Horizon Discover row: a title line plus one meta line. */
+  'xr-row': '72px',
+  /** Horizon Detail header: the place name beside a 60dp Close. */
+  'xr-header': '64px',
   /** Focus ring width; a 2px ring is hard to see at headset distance. */
   'focus-ring': '3px',
   /** Map marker dot at rest, and selected (design-system.md §6). */

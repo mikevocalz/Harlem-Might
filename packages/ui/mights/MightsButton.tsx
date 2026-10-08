@@ -22,7 +22,7 @@ const outer = tv({
       // 1.4.11) instead of ghost's 10% gold fill, which measures 1.06:1.
       outline: 'bg-border-strong p-px group-hover:bg-primary/70',
     },
-    size: { md: cornerCut, sm: cornerCutSm },
+    size: { md: cornerCut, sm: cornerCutSm, xr: cornerCutSm, 'xr-primary': cornerCut },
   },
 });
 
@@ -38,6 +38,8 @@ const inner = tv({
     size: {
       md: `h-13 px-8 text-ui ${cornerCut}`,
       sm: `h-10 px-5 text-small ${cornerCutSm}`,
+      xr: `h-target min-w-target px-5 text-xr-label ${cornerCutSm}`,
+      'xr-primary': `h-target-primary min-w-target-primary px-6 text-xr-body ${cornerCut}`,
     },
   },
 });
@@ -48,7 +50,13 @@ const glow =
 interface MightsButtonBaseProps {
   children: React.ReactNode;
   variant?: 'primary' | 'secondary' | 'ghost' | 'outline';
-  size?: 'md' | 'sm';
+  /**
+   * `xr` (48dp) and `xr-primary` (60dp) are the Horizon sizes: Meta's minimum
+   * target and its hand-tracking size for primary actions, in absolute px so
+   * the native rem polyfill cannot shrink them.
+   * @default 'md'
+   */
+  size?: 'md' | 'sm' | 'xr' | 'xr-primary';
   className?: string;
   /** Stretch to fill the parent (grid cells, sheets). */
   fill?: boolean;
