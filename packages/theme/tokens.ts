@@ -146,6 +146,19 @@ export const semantic = {
   focus: { light: '#1F4FE0', dark: '#F8C626' },
   danger: { light: '#B4232F', dark: '#FF7A85' },
   'on-danger': { light: '#FFFFFF', dark: '#3D0508' },
+  // ---- Explore / spatial (design-system.md §6) ----
+  // Selected row or chip fill. Pairs with a 2px `rule-rail` leading edge, so
+  // selection never relies on fill alone, and differs from `focus`, which is
+  // also gold in dark mode.
+  selected: { light: 'rgba(31, 79, 224, 0.10)', dark: 'rgba(248, 198, 38, 0.12)' },
+  // Map marker at rest: a limestone dot with a gold-dim ring (rule-rail).
+  'map-marker': { light: '#171C1A', dark: '#F4EEE0' },
+  // Selected marker fill; its glyph and label sit on it in `on-primary`.
+  'map-marker-selected': { light: '#1F4FE0', dark: '#F8C626' },
+  // Walking route line. Dark 11.07:1 on surface.
+  route: { light: '#0E8FA3', dark: '#5FD1E1' },
+  // Map canvas behind the markers (= surface-sunken), the warm-dark basemap land.
+  'map-canvas': { light: '#E5E9E5', dark: '#070604' },
 } as const;
 
 // ---- typography -------------------------------------------------------------
@@ -190,6 +203,24 @@ export const typeScale = {
   label: { size: '0.8125rem', lineHeight: '1.25rem', tracking: '0' },
   /** Map attribution and dock labels; the floor for any visible text. 11px. */
   caption: { size: '0.6875rem', lineHeight: '1rem', tracking: '0' },
+
+  // Spatial steps (design-system.md §2). ABSOLUTE px, not rem: the native rem
+  // polyfill is 14 (apps/mobile/metro.config.js), which would shrink a rem
+  // size to 14/16 of itself. Px literals pass through unscaled, so these
+  // render at exactly these dp in a Horizon window. Used by Explore on quest
+  // builds; the flat scale above stays for phones and the web.
+  /** Map attribution, source lines, timestamps. */
+  'xr-caption': { size: '14px', lineHeight: '20px', tracking: '0' },
+  /** Chips, marker labels, metadata, status. */
+  'xr-label': { size: '16px', lineHeight: '22px', tracking: '0' },
+  /** Street lines, list detail, assistant text. */
+  'xr-body': { size: '18px', lineHeight: '28px', tracking: '0' },
+  /** Row names, section headings. */
+  'xr-title': { size: '22px', lineHeight: '28px', tracking: '0' },
+  /** Window titles and the place name in a 440dp Detail window. */
+  'xr-heading': { size: '30px', lineHeight: '36px', tracking: '0' },
+  /** Newsreader story body at viewing distance. */
+  'xr-prose': { size: '20px', lineHeight: '34px', tracking: '0' },
 } as const;
 
 // ---- layout -----------------------------------------------------------------
@@ -211,6 +242,16 @@ export const contentWidths = {
   'pane-primary-narrow': '16rem',
   'pane-supplementary': '21rem',
   'pane-inspector': '20rem',
+
+  // Explore panes (handoff.md §4). Absolute px so the rem-14 polyfill cannot
+  // shrink them; the map takes whatever is left and must stay the widest pane.
+  'pane-discover': '320px',
+  'pane-discover-narrow': '280px',
+  'pane-detail': '360px',
+  'pane-detail-xr': '440px',
+  // Assistant (handoff §6): the collapsed bar caps at 560, the panel is 400.
+  'assistant-bar': '560px',
+  'assistant-panel': '400px',
 } as const;
 
 /**
@@ -224,6 +265,19 @@ export const spacing = {
   rail: '0.125rem',
   /** Mobile dock bar height (MightsDock), excluding the safe-area inset. */
   dock: '3.5rem',
+  // Absolute px, like the xr-* type steps, so the rem-14 polyfill cannot
+  // shrink a hit area below Meta's 48dp floor (design-system.md §4).
+  /** Minimum hit area for anything pressable in Explore. */
+  target: '48px',
+  /** Minimum gap between adjacent targets; gaze jitter needs the margin. */
+  'target-gap': '12px',
+  /** Content padding inside a SpatialWindow or Horizon pane. */
+  window: '24px',
+  /** Focus ring width; a 2px ring is hard to see at headset distance. */
+  'focus-ring': '3px',
+  /** Map marker dot at rest, and selected (design-system.md §6). */
+  marker: '20px',
+  'marker-selected': '28px',
 } as const;
 
 export const radius = {
@@ -269,11 +323,24 @@ export const motion = {
     base: '200ms',
     slow: '300ms',
     slower: '500ms',
+    /** Map camera fly on selection (web uses Mapbox `speed 1.4`). */
+    camera: '600ms',
   },
   easing: {
     standard: 'cubic-bezier(0.2, 0, 0, 1)',
     emphasized: 'cubic-bezier(0.3, 0, 0, 1)',
     exit: 'cubic-bezier(0.4, 0, 1, 1)',
+  },
+  /**
+   * Legend Motion springs, previously literals in the SplitView. Not emitted
+   * to CSS. Under reduced motion every spring becomes an instant change
+   * (`@acme/ui` `useReducedMotion`).
+   */
+  spring: {
+    /** Pane swaps and width changes. */
+    pane: { damping: 22, stiffness: 320 },
+    /** Drawers and the assistant panel. */
+    drawer: { damping: 32, stiffness: 140, mass: 1.1 },
   },
 } as const;
 
@@ -283,6 +350,35 @@ export const breakpoints = {
   lg: '64rem',
   xl: '80rem',
   '2xl': '96rem',
+} as const;
+
+/**
+ * Native window-size classes in dp (Material 3 width bands). The SplitView and
+ * the Explore layout read these; web layout uses `breakpoints` above.
+ */
+export const windowClass = {
+  extraLarge: 1600,
+  large: 1200,
+  expanded: 840,
+  medium: 600,
+  compact: 0,
+} as const;
+
+/**
+ * Meta Horizon OS window sizes in dp (handoff.md §1, decision H-1). Discover
+ * and Detail share a 600dp height so their edges line up around the 800dp
+ * main window.
+ */
+export const spatialWindow = {
+  discover: { width: 360, height: 600 },
+  detail: { width: 440, height: 600 },
+} as const;
+
+/** The Horizon main window's default size and narrowest reflow width, in dp. */
+export const horizonMainWindow = {
+  width: 1280,
+  height: 800,
+  minWidth: 360,
 } as const;
 
 export type Palette = typeof palette;

@@ -160,6 +160,24 @@
   --text-caption: 0.6875rem;
   --text-caption--line-height: 1rem;
   --text-caption--letter-spacing: 0;
+  --text-xr-caption: 14px;
+  --text-xr-caption--line-height: 20px;
+  --text-xr-caption--letter-spacing: 0;
+  --text-xr-label: 16px;
+  --text-xr-label--line-height: 22px;
+  --text-xr-label--letter-spacing: 0;
+  --text-xr-body: 18px;
+  --text-xr-body--line-height: 28px;
+  --text-xr-body--letter-spacing: 0;
+  --text-xr-title: 22px;
+  --text-xr-title--line-height: 28px;
+  --text-xr-title--letter-spacing: 0;
+  --text-xr-heading: 30px;
+  --text-xr-heading--line-height: 36px;
+  --text-xr-heading--letter-spacing: 0;
+  --text-xr-prose: 20px;
+  --text-xr-prose--line-height: 34px;
+  --text-xr-prose--letter-spacing: 0;
   --container-content-form: 28rem;
   --container-content-feed: 38rem;
   --container-content-prose: 65ch;
@@ -171,8 +189,20 @@
   --container-pane-primary-narrow: 16rem;
   --container-pane-supplementary: 21rem;
   --container-pane-inspector: 20rem;
+  --container-pane-discover: 320px;
+  --container-pane-discover-narrow: 280px;
+  --container-pane-detail: 360px;
+  --container-pane-detail-xr: 440px;
+  --container-assistant-bar: 560px;
+  --container-assistant-panel: 400px;
   --spacing-rail: 0.125rem;
   --spacing-dock: 3.5rem;
+  --spacing-target: 48px;
+  --spacing-target-gap: 12px;
+  --spacing-window: 24px;
+  --spacing-focus-ring: 3px;
+  --spacing-marker: 20px;
+  --spacing-marker-selected: 28px;
   --radius-xs: 0.125rem;
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;
@@ -188,6 +218,7 @@
   --transition-duration-base: 200ms;
   --transition-duration-slow: 300ms;
   --transition-duration-slower: 500ms;
+  --transition-duration-camera: 600ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
@@ -220,6 +251,11 @@
   --color-focus: light-dark(#1F4FE0, #F8C626);
   --color-danger: light-dark(#B4232F, #FF7A85);
   --color-on-danger: light-dark(#FFFFFF, #3D0508);
+  --color-selected: light-dark(rgba(31, 79, 224, 0.10), rgba(248, 198, 38, 0.12));
+  --color-map-marker: light-dark(#171C1A, #F4EEE0);
+  --color-map-marker-selected: light-dark(#1F4FE0, #F8C626);
+  --color-route: light-dark(#0E8FA3, #5FD1E1);
+  --color-map-canvas: light-dark(#E5E9E5, #070604);
 }
 
 :root {
@@ -235,6 +271,7 @@
   --duration-base: 200ms;
   --duration-slow: 300ms;
   --duration-slower: 500ms;
+  --duration-camera: 600ms;
 }
 
 /* user override (persisted): data-theme wins over system */
