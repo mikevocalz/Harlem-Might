@@ -17,7 +17,8 @@ import { Children, isValidElement, useImperativeHandle, type ReactNode } from 'r
 import { Slot } from 'expo-router';
 import { View } from '@acme/ui/tw';
 import { Aside, Main, Section } from '@acme/ui/primitives';
-import { SafeArea, MotionView } from '@acme/ui';
+import { SafeArea, MotionView, transitionFor, useReducedMotion } from '@acme/ui';
+import { motion } from '@acme/theme';
 import { isCollapsed, PANE_WIDTH_CLASS } from './constants';
 import { resolvePaneVisibility } from './pane-overrides';
 import { CollapsiblePane } from './CollapsiblePane';
@@ -75,6 +76,7 @@ function SplitViewNavigator({
   const direction = useSplitViewStore((state) => state.direction);
   const paneOverrides = usePaneOverrideStore((state) => state.overrides);
   const promotion = usePanePromotion();
+  const reduceMotion = useReducedMotion();
 
   const all = Children.toArray(children);
   const columns = all.filter((child) => isValidElement(child) && child.type === SplitViewColumn);
@@ -146,7 +148,7 @@ function SplitViewNavigator({
           className="flex-1"
           initial={{ x: direction === 'forward' ? PANE_TRAVEL : -PANE_TRAVEL }}
           animate={{ x: 0 }}
-          transition={{ type: 'spring', damping: 22, stiffness: 320 }}
+          transition={transitionFor(reduceMotion, { type: 'spring', ...motion.spring.pane })}
         >
           {activeColumn === 'primary' && columns[0] ? (
             <Aside className="flex-1">{columns[0]}</Aside>
@@ -242,9 +244,13 @@ function SplitViewNavigator({
       {inspectorPane ? (
         <MotionView
           pointerEvents={inspectorOpen ? 'auto' : 'none'}
+          // Parked off-screen is not hidden to TalkBack: without these its
+          // buttons stay reachable while the drawer is closed (a11y.md O6).
+          aria-hidden={!inspectorOpen}
+          importantForAccessibility={inspectorOpen ? 'auto' : 'no-hide-descendants'}
           className={`absolute bottom-0 right-0 top-0 ${PANE_WIDTH_CLASS.inspector} border-l ${PANE_DIVIDER} bg-surface shadow-overlay`}
           animate={{ x: inspectorOpen ? 0 : INSPECTOR_TRAVEL }}
-          transition={{ type: 'spring', damping: 32, stiffness: 140, mass: 1.1 }}
+          transition={transitionFor(reduceMotion, { type: 'spring', ...motion.spring.drawer })}
         >
           <Aside className="flex-1">{inspectorPane}</Aside>
         </MotionView>

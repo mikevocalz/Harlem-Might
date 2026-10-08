@@ -6,14 +6,11 @@
  * extraLarge >=1600.
  *
  * useWindowDimensions() reports dp/points on native and CSS px on web.
+ * The values live in `@acme/theme` (`windowClass`) so the theme owns them.
  */
-export const WINDOW_SIZE_CLASS_MIN_WIDTH_DP = {
-  extraLarge: 1600,
-  large: 1200,
-  expanded: 840,
-  medium: 600,
-  compact: 0,
-} as const;
+import { windowClass } from '@acme/theme';
+
+export const WINDOW_SIZE_CLASS_MIN_WIDTH_DP = windowClass;
 
 export type WindowSizeClass = keyof typeof WINDOW_SIZE_CLASS_MIN_WIDTH_DP;
 
