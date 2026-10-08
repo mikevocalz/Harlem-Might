@@ -4,6 +4,7 @@
 **Date:** 2026-10-08
 **Deciders:** Mike Allen (repo owner)
 **Decision record:** DECISIONS S18. Supersedes the placement part of ADR 0004.
+**Later:** ADR 0006 (S20) moves Detail into a second Activity panel and strikes More on Horizon. It also measured the rail window with no offset sitting flush with the main window (gap −0.4dp), not 20dp out. The 160dp rule below held for the `z: 1` trials only.
 
 ## Context
 

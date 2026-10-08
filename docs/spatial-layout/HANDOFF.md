@@ -2,7 +2,7 @@
 
 This is the design handoff for Explore on Horizon, tablet, foldable and phone. It was written for `feat/spatial-explore-ux` (PR D) and updated 2026-10-08 for `feat/mobile-site-parity` P2, which made native Explore look like the site's Explore (`apps/web/components/explore/ExploreWorkspace.tsx`, `docs/design/handoff/EXPLORE.md`). Sections 2, 3 and 5 describe the P2 look; the layout rules in §1 and §4 are unchanged except where noted. Each section says where the code is and how it differs from the original spec. The original spec, critique, a11y audit, token audit and copy deck were written before the build. Where this file and those disagree, this file is the current state.
 
-Decisions referenced: DECISIONS S4 (map stays in the main window), S5 (Detail exists only while a place is selected), S7 (assistant is inline, never a window), S11 (native Mapbox surface, not built yet), S12 (Discover inline; its Place Detail window is superseded by S17), S13 (tab shell from the site's nav), S14 (dark only), S15 (native Mights kit), S16 (street map deferred; schematic map with an honest caption), S17 (one 1440x900dp window, three columns; Detail window deferred, ADR 0004), S18 (rail as its own window, windows rendered at the surface origin, Detail still in the main window; ADR 0005).
+Decisions referenced: DECISIONS S4 (map stays in the main window), S5 (Detail exists only while a place is selected), S7 (assistant is inline, never a window), S11 (native Mapbox surface, not built yet), S12 (Discover inline; its Place Detail window is superseded by S17), S13 (tab shell from the site's nav), S14 (dark only), S15 (native Mights kit), S16 (street map deferred; schematic map with an honest caption), S17 (one 1440x900dp window, three columns; Detail window deferred, ADR 0004), S18 (rail as its own window, windows rendered at the surface origin, Detail still in the main window; ADR 0005), S20 (More struck on Horizon; Place Detail as a second Activity panel, S17 column as the fallback; ADR 0006).
 
 ### References (Mobbin, pulled 2026-10-08)
 
@@ -209,3 +209,13 @@ Verified with real exit codes: `apps/mobile` `tsc --noEmit` (only the 9 known `v
 
 Not verified: any of it on screen. No Quest 3S, emulator or phone run, no TalkBack pass, and no side-by-side screenshot against the site at the same width, which the parity audit names as the gate for each phase.
 
+
+### S20 (2026-10-08, `feat/spatial-panels`, ADR 0006)
+
+What changed: More is struck from the rail on Horizon builds (`HORIZON_STRUCK_TABS`, `src/site/tabVisibility.ts`); the rail window is 140x288dp. Selecting a place from the map or Discover opens Place Detail as its own Horizon OS panel (`modules/spatial-panels`, `SpatialPanelActivity`, registered as `PlaceDetailPanel` in `apps/mobile/index.ts`), 400x600dp. The panel shares the JS runtime, so a new selection updates it in place. Its Close clears the selection. If the launch throws, the S17 column shows Detail in the main window. solito works inside the panel through `PanelNavigationProvider`, and its routes run in the main window (`MainRouteRelay`).
+
+Verified with real exit codes: `apps/mobile` `tsc --noEmit` (only the 9 known `viro-external-test` errors, after `pnpm install --frozen-lockfile` repaired a node_modules that had drifted from the lockfile), `pnpm --filter mobile test` (123 pass), `pnpm turbo build typecheck lint --filter='!mobile'` 26/26, `pnpm spatial:verify-android` (against the regenerated tree), `npx expo export --platform android` (bundled from `apps/mobile/index.ts`), and `pnpm --filter mobile quest --install --serial 340YC10GC3014S` (exit 0).
+
+On the Quest 3S: the panel opens to the right of the main window, vertically centred, at 400x600dp, with its inner edge 158.8dp from the main window's right edge, 28dp toward the user, turned 45° (three runs; vrshell `placementType: slot`). The selection change, Close and "View on a table" were driven with `adb shell input`. A Layout SDK window with no offset overlapped by 240dp (option b, rejected). The rail window sits flush (−0.4dp), not 20dp out.
+
+Not verified: controller and hand presses on the panel and the rail, a screenshot of the panel (captures were blank while the headset was off; the one worn capture showed a Metro error from another branch's `nitro-mapbox-ar` work), and the requested 20dp same-depth placement, which no public API provides.
