@@ -85,7 +85,7 @@ Explore no longer uses `SplitView`. The old layout put the map in the 294dp `sup
 
 Nothing is drawn over the map at any width: no overlays, map insets are 0. Detail pushes the map narrower. Columns meet on 1dp `border-border-strong` dividers. The 1200–1359 band is the one place the spec's "≥1200 three columns" bends: there the 600dp map minimum wins (ADR 0004).
 
-Pane rhythm on quest builds: padding 24 (`px-window`), gaps 24/12/8 (`gap-xr-section`, `gap-xr-stack`, `gap-xr-inline`), list rows 72 (`min-h-xr-row`), Detail header 64 (`min-h-xr-header`). Every control is at least 48x48 (`MightsButton size="xr"`); Close, Get directions, Open place page and the search field are 60 (`xr-primary`, `h-target-primary`). Type: body 18/26, secondary 16/22, headings 20/24/32, floor 14, all Mona Sans roman; Explore sets no italic face. The scale lives in `useExploreType()` (`packages/app/features/explore/explore-type.ts`).
+Pane rhythm on quest builds: padding 24 (`px-window`), gaps 24/12/8 (`gap-xr-section`, `gap-xr-stack`, `gap-xr-inline`), list rows 72 (`min-h-xr-row`), Detail header 64 (`min-h-xr-header`). Every control is at least 48x48 (`MightsButton size="xr"`); Close, Get directions, Open place page, "View on a table" and the search field are 60 (`xr-primary`, `h-target-primary`). "View on a table" (`apps/mobile/src/ar/ViewInArButton.tsx`, PR #28) reaches Detail's action row through its `actions` slot and hides itself unless the build is quest, the runtime is Meta Horizon and the place has coordinates. Type: body 18/26, secondary 16/22, headings 20/24/32, floor 14, all Mona Sans roman; Explore sets no italic face. The scale lives in `useExploreType()` (`packages/app/features/explore/explore-type.ts`).
 
 ### Phones, tablets, PICO (unchanged)
 

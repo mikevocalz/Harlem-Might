@@ -29,6 +29,7 @@ import { useExploreLayoutStore } from '@/src/spatial/exploreLayout.store';
 import { ExplorePane } from '@/src/spatial/ExplorePane';
 import { ExploreWorkspaceContext, ExploreWorkspaceWindow } from '@/src/spatial/ExploreWorkspaceWindow';
 import { isHorizonBuild } from '@/src/spatial/horizonBuild';
+import { ViewInArButton } from '@/src/ar/ViewInArButton';
 import { metaWindows } from '@/src/spatial/metaWindows';
 
 
@@ -177,6 +178,7 @@ export default function ExploreRouteLayout() {
                     placeId={selectedPlaceId}
                     placePageUrl={siteUrl(routes.place(selectedPlaceId))}
                     padding={windowPadding}
+                    actions={<ViewInArButton placeId={selectedPlaceId} />}
                     dismissKind={layout.detailDismiss}
                     onClose={dismissDetail}
                     onShowOnMap={layout.showOnMapInDetail ? () => setCompactPane('map') : undefined}

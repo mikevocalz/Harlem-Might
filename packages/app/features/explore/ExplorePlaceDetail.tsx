@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { MightsButton, MightsHeading, MightsLocationStamp, MightsText } from '@acme/ui/mights';
 import { Pressable, ScrollView, Text, View } from '@acme/ui/tw';
 import { directionsUrl } from './explore-copy';
@@ -30,6 +30,12 @@ export interface ExplorePlaceDetailProps {
   placePageUrl?: string;
   /** `window` (24dp) in a Horizon window or pane, `pane` (16dp) elsewhere. */
   padding?: 'window' | 'pane';
+  /**
+   * Platform actions appended to the action row after "Open place page",
+   * such as the Quest app's "View on a table". Each one hides itself where it
+   * does not apply.
+   */
+  actions?: ReactNode;
 }
 
 /** OSM's fetch date for the seed coordinates (explore.store.ts). */
@@ -58,6 +64,7 @@ export function ExplorePlaceDetail({
   onSelectNearby,
   placePageUrl,
   padding = 'pane',
+  actions,
 }: ExplorePlaceDetailProps) {
   const type = useExploreType();
   const place = getHarlemPlacePreview(placeId);
@@ -155,6 +162,7 @@ export function ExplorePlaceDetail({
                 Open place page
               </MightsButton>
             ) : null}
+            {actions}
           </View>
 
           {near.length > 0 ? (
