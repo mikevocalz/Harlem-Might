@@ -20,7 +20,7 @@
     "@acme/spatial": "workspace:*",
     "@acme/theme": "workspace:*",
     "@acme/ui": "workspace:*",
-    "@expo-pico/core": "file:../../../expo-pico/packages/expo-pico-core",
+    "@expo-pico/core": "github:mikevocalz/expo-pico#release/core",
     "@expo/env": "catalog:",
     "@expo/metro-runtime": "catalog:",
     "@expo/ui": "catalog:",

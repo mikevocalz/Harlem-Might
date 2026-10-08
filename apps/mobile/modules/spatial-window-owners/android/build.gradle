@@ -1,0 +1,26 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.harlemmight.spatialwindowowners'
+version = '1.0.0'
+
+android {
+  namespace "com.harlemmight.spatialwindowowners"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  // ComponentActivity and ViewTreeOnBackPressedDispatcherOwner.
+  implementation 'androidx.activity:activity:1.11.0'
+  // ViewTreeLifecycleOwner.
+  implementation 'androidx.lifecycle:lifecycle-runtime:2.10.0'
+  // ViewTreeViewModelStoreOwner.
+  implementation 'androidx.lifecycle:lifecycle-viewmodel:2.10.0'
+  // ViewTreeSavedStateRegistryOwner.
+  implementation 'androidx.savedstate:savedstate:1.4.0'
+}

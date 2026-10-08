@@ -9,6 +9,7 @@ export const metaWindows = createMetaWindows(isHorizonBuild, () => {
   /* eslint-disable @typescript-eslint/no-require-imports */
   const layout = require('@metavr/layout-compat');
   const window = require('@metavr/layout-window-compat');
+  const owners = require('../../modules/spatial-window-owners');
   /* eslint-enable @typescript-eslint/no-require-imports */
   return {
     layout: {
@@ -20,5 +21,6 @@ export const metaWindows = createMetaWindows(isHorizonBuild, () => {
       createWindowScene: window.createWindowScene,
       useSpatialWindowState: window.useSpatialWindowState,
     },
+    windowOwners: owners.SpatialWindowOwners,
   } as MetaLayoutModules;
 });
