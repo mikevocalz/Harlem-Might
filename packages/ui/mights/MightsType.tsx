@@ -1,4 +1,4 @@
-import { tv } from 'tailwind-variants';
+import { tv } from '../tv';
 import { condensed } from './geometry';
 
 // Type roles on the 1.25 modular scale. Display sizes run Mona Sans at the

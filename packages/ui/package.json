@@ -22,7 +22,8 @@
   },
   "scripts": {
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --test 'tv.test.ts'"
   },
   "dependencies": {
     "@acme/theme": "workspace:*",

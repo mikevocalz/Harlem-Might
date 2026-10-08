@@ -1,5 +1,5 @@
 'use client';
-import { tv, type VariantProps } from 'tailwind-variants';
+import { tv, type VariantProps } from './tv';
 import { haptics } from './haptics';
 import { PressScale } from './press-scale';
 

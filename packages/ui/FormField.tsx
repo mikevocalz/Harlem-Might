@@ -1,4 +1,4 @@
-import { tv } from 'tailwind-variants';
+import { tv } from './tv';
 import { View } from './tw';
 import { Label } from './primitives';
 import { Text } from './Text';

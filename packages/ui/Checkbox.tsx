@@ -1,5 +1,5 @@
 'use client';
-import { tv } from 'tailwind-variants';
+import { tv } from './tv';
 import { Host, Checkbox as ExpoCheckbox } from '@expo/ui';
 import { haptics } from './haptics';
 // Native control tint comes from theme tokens — the platform toolkit

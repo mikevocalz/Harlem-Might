@@ -1,5 +1,5 @@
 'use client';
-import { tv, type VariantProps } from 'tailwind-variants';
+import { tv, type VariantProps } from './tv';
 import { ActivityIndicator } from 'react-native';
 import { PressScale } from './press-scale';
 import { Text } from './tw';

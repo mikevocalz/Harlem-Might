@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { tv } from 'tailwind-variants';
+import { tv } from './tv';
 import { DropSurface } from './html/dom.web';
 import { View } from './tw';
 import { CloudUpload } from './icons';
