@@ -200,7 +200,7 @@ export type LocationPermission = 'unknown' | 'granted' | 'denied' | 'unavailable
  *   location permission and saved ids. Web never reads `category` or
  *   `selectedPlaceId` from here.
  * - Mobile (`apps/mobile` explore layout, `ExploreMasterPane`,
- *   `ExploreMapPane`, `ExplorePlaceDetail`, `MightsPanel`): expo-router has no
+ *   `ExploreMapPane`, `ExplorePlaceDetail`, `MightsAssistant`): expo-router has no
  *   query-string workspace, so `category` and `selectedPlaceId` live here.
  *   They stay for that reason; removing them breaks five mobile consumers.
  *
@@ -227,6 +227,14 @@ export interface ExploreState {
   setQuery: (query: string) => void;
   setCategory: (category: HarlemCategoryFilter) => void;
   selectPlace: (placeId: string | null) => void;
+  /**
+   * Selects a place and records the control that opened it (a row or a map
+   * marker id from `focus-registry.ts`), so closing can return focus there.
+   * One write per intent: layouts derive which pane or window shows it.
+   */
+  openPlace: (placeId: string, returnFocusId?: string | null) => void;
+  /** Clears the selection and keeps `sheet.returnFocusId` for focus restore. */
+  closePlace: () => void;
   toggleSavedPreview: (placeId: string) => void;
   /**
    * Opens the sheet at `detent`, or {@linkcode DEFAULT_SHEET_DETENT}, and
@@ -269,6 +277,13 @@ export const useExplore = create<ExploreState>((set) => ({
   setQuery: (query) => set({ query }),
   setCategory: (category) => set({ category }),
   selectPlace: (selectedPlaceId) => set({ selectedPlaceId }),
+  openPlace: (placeId, returnFocusId = null) =>
+    set((state) => ({
+      selectedPlaceId: placeId,
+      sheet: { ...state.sheet, open: true, returnFocusId },
+    })),
+  closePlace: () =>
+    set((state) => ({ selectedPlaceId: null, sheet: { ...state.sheet, open: false } })),
   toggleSavedPreview: (placeId) =>
     set((state) => ({ savedPreviewIds: toggleId(state.savedPreviewIds, placeId) })),
   openSheet: (detent = DEFAULT_SHEET_DETENT, returnFocusId = null) =>
@@ -296,6 +311,7 @@ export function filterHarlemPlacePreviews(
     return [
       place.name,
       place.area,
+      place.street ?? '',
       place.category,
       place.shortDescription,
       ...place.tags,
@@ -323,3 +339,47 @@ export function placesNear(placeId: string, n = 3) {
 
 /** Places with coordinates, for map surfaces. */
 export const MAPPED_PLACES = HARLEM_PLACE_PREVIEWS.filter((p) => p.lngLat);
+
+/** Places the catalogue has no verified point for. Lists say "Not on the map yet". */
+export const UNMAPPED_PLACES = HARLEM_PLACE_PREVIEWS.filter((p) => !p.lngLat);
+
+/** The street when the record has one, else the neighbourhood. */
+export function placeStreetLine(place: HarlemPlacePreview): string {
+  return place.street ?? place.area;
+}
+
+/**
+ * A walking distance for display: metres under 1 km (rounded to 10 m),
+ * kilometres with one decimal above. Uses `Intl.NumberFormat` units, falling
+ * back to a plain "m"/"km" suffix where the engine lacks unit formatting.
+ */
+export function formatDistance(meters: number, locale?: string): string {
+  const km = meters >= 1000;
+  const value = km ? Math.round(meters / 100) / 10 : Math.round(meters / 10) * 10;
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'unit',
+      unit: km ? 'kilometer' : 'meter',
+      unitDisplay: 'short',
+      maximumFractionDigits: 1,
+    }).format(value);
+  } catch {
+    return `${value} ${km ? 'km' : 'm'}`;
+  }
+}
+
+/**
+ * The `n` mapped places nearest to `placeId` with their distance. Empty when
+ * the place itself has no coordinates: a distance from an unverified point
+ * would be made up.
+ */
+export function nearbyPlaces(
+  placeId: string,
+  n = 3,
+): { place: HarlemPlacePreview; meters: number }[] {
+  const origin = getHarlemPlacePreview(placeId)?.lngLat;
+  if (!origin) return [];
+  return placesNear(placeId, n).flatMap((place) =>
+    place.lngLat ? [{ place, meters: haversine(origin, place.lngLat) }] : [],
+  );
+}

@@ -1,5 +1,5 @@
 'use client';
-import { MotionView } from '@acme/ui';
+import { MotionView, transitionFor, useReducedMotion } from '@acme/ui';
 import { View } from '@acme/ui/tw';
 import { TRANSITIONS } from './transitions.ts';
 
@@ -38,10 +38,11 @@ export interface CollapsiblePaneProps {
  * than reflowed internally.
  */
 export function CollapsiblePane({ width, open, fill = false, children, className }: CollapsiblePaneProps) {
+  const reduceMotion = useReducedMotion();
   return (
     <MotionView
       animate={{ width: open ? width : 0 }}
-      transition={TRANSITIONS.paneWidth}
+      transition={transitionFor(reduceMotion, TRANSITIONS.paneWidth)}
       style={{ flexGrow: fill ? 1 : 0 }}
       className={`overflow-hidden ${className ?? ''}`}
     >

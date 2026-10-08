@@ -69,6 +69,13 @@ export {
   type MotionViewProps, type MotionTextProps, type MotionPresetProps,
 } from './motion';
 export { PressScale, type PressScaleProps } from './press-scale';
+export {
+  useReducedMotion,
+  useReducedMotionStore,
+  transitionFor,
+  INSTANT_TRANSITION,
+} from './reduced-motion';
+export { Chip, type ChipProps } from './Chip';
 export { useInstanceStore, useStore } from './use-instance-store';
 export * from './audio';
 

@@ -8,6 +8,7 @@
 import { Motion } from '@legendapp/motion';
 import { css } from './html/css';
 import { MotionView } from './motion';
+import { useReducedMotion } from './reduced-motion';
 
 const CssMotionPressable = css(
   Motion.Pressable as React.ComponentType<object>,
@@ -31,6 +32,9 @@ export interface PressScaleProps {
 export function PressScale({
   children, className, outerClassName, onPress, disabled, role, ...a11y
 }: PressScaleProps) {
+  // Under reduced motion the press keeps its hit area and a11y state but
+  // drops the spring scale (design handoff §7).
+  const reduceMotion = useReducedMotion();
   return (
     <CssMotionPressable
       role={(role ?? 'button') as never}
@@ -40,7 +44,7 @@ export function PressScale({
     >
       <MotionView
         className={className}
-        whileTap={{ scale: 0.96, opacity: 0.9 }}
+        whileTap={reduceMotion ? undefined : { scale: 0.96, opacity: 0.9 }}
         transition={{ type: 'spring', damping: 22, stiffness: 500 }}
       >
         {children}

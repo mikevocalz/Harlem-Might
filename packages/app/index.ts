@@ -21,8 +21,10 @@ export * from './features/editor';
 export { ExploreMasterPane } from './features/explore/ExploreMasterPane';
 export { ExploreMapPane } from './features/explore/ExploreMapPane';
 export { ExplorePlaceDetail } from './features/explore/ExplorePlaceDetail';
-export { ExploreEmptyDetail } from './features/explore/ExploreEmptyDetail';
-export { MightsPanel } from './features/explore/MightsPanel';
+export { MightsAssistant, type MightsAssistantProps } from './features/explore/MightsAssistant';
+export { ExploreTypeContext, useExploreType, type ExploreTypeScale } from './features/explore/explore-type';
+export { moveFocusTo, rowFocusId, markerFocusId } from './features/explore/focus-registry';
+export type { MapInsets } from './features/explore/ExploreMapPane';
 export {
   HARLEM_PLACE_PREVIEWS,
   HARLEM_CATEGORIES,
@@ -30,6 +32,12 @@ export {
   placesNear,
   haversine,
   MAPPED_PLACES,
+  UNMAPPED_PLACES,
   useExplore,
   type HarlemPlacePreview,
 } from './features/explore/explore.store';
+export {
+  useMightsAssistant,
+  ASSISTANT_RIVE_ACTIVITY,
+  type AssistantActivity,
+} from './features/explore/mights-assistant.store';
