@@ -33,6 +33,7 @@
     "@shopify/react-native-skia": "catalog:",
     "@tanstack/react-query": "catalog:",
     "canvaskit-wasm": "catalog:",
+    "expo": "catalog:",
     "graphql": "catalog:",
     "gsap": "catalog:",
     "kinetrell": "catalog:",
