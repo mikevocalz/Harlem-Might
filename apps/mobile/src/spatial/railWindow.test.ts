@@ -37,9 +37,9 @@ describe('RAIL_WINDOW', () => {
     assert.equal(outwardWindowGapDp(RAIL_WINDOW_DP.width), 20);
   });
 
-  it('fits five 60dp items with 8dp between them and 12dp padding', () => {
+  it('fits four 60dp items (no More, DECISIONS S20) with 8dp between them and 12dp padding', () => {
     assert.equal(RAIL_WINDOW_DP.item, 60);
-    assert.equal(RAIL_WINDOW.windowHeight, 5 * 60 + 4 * 8 + 2 * 12);
+    assert.equal(RAIL_WINDOW.windowHeight, 4 * 60 + 3 * 8 + 2 * 12);
   });
 
   it('outranks content windows for a slot and never draws inline', () => {

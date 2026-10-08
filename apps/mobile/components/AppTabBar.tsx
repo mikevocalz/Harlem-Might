@@ -5,6 +5,8 @@ import { Pressable, Text, View } from '@acme/ui/tw';
 import { BookOpen, CalendarClock, Ellipsis, Footprints, MapPinned } from '@acme/ui/icons';
 import { haptics } from '@acme/ui/haptics';
 import { APP_TABS, TAB_SCREEN, type AppTabRoute } from '@/src/site/app-tabs';
+import { isTabShown } from '@/src/site/tabVisibility';
+import { isHorizonBuild } from '@/src/spatial/horizonBuild';
 import { RAIL_WINDOW_DP } from '@/src/spatial/railWindow';
 
 /** Material 3 navigation rail width. Items keep the 48dp target floor. */
@@ -55,7 +57,9 @@ export function AppTabBar({
   const xr = layout === 'window';
   const items = state.routes.map((route, index) => {
     const tab = TAB_BY_SCREEN.get(route.name);
-    if (!tab) return null;
+    // More is struck on Horizon builds, in the rail window and the in-window
+    // fallback alike (DECISIONS S20, `HORIZON_STRUCK_TABS`).
+    if (!tab || !isTabShown(tab, isHorizonBuild)) return null;
     const focused = state.index === index;
     const Icon = ICONS[tab];
     const label = LABELS[tab];

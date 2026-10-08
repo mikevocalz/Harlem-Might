@@ -1,5 +1,6 @@
 import { contentWidths, spacing } from '@acme/theme';
 import type { MetaWindowProps } from '@viro-external/meta-layout';
+import { HORIZON_TAB_COUNT } from '../site/tabVisibility.ts';
 
 /**
  * Where Horizon OS 207 puts the far edge of a window attached OUTSIDE the
@@ -8,7 +9,10 @@ import type { MetaWindowProps } from '@viro-external/meta-layout';
  * `{parent:'start', child:'end'}` the child's far edge sat 0.152 m (160dp)
  * past the main window's edge for widths 300, 400 and 440dp and heights
  * 400 and 600dp. The window grows back toward the main window from there,
- * so anything wider than 160dp overlaps it. Meta's offsets cannot correct
+ * so anything wider than 160dp overlaps it. Measured with `z: 1` only: with
+ * no offset the rail window sits flush with the main window (gap −0.4dp,
+ * ADR 0006), so this rule needs re-measuring before it is relied on.
+ * Meta's offsets cannot correct
  * this: the SDK clamps them to ±5 steps, and 5 horizontal steps measured
  * 9.9 mm.
  */
@@ -33,7 +37,8 @@ export const RAIL_WINDOW_DP = (() => {
   const item = px(spacing['target-primary']);
   const gap = px(spacing['xr-inline']);
   const padding = px(spacing['xr-stack']);
-  const items = 5;
+  // Explore, Walks, Stories, Today: More is struck on Horizon (DECISIONS S20).
+  const items = HORIZON_TAB_COUNT;
   return {
     width: px(contentWidths['rail-window-xr']),
     item,
