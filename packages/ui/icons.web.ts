@@ -90,5 +90,12 @@ export {
   CalendarClock,
   Ellipsis,
   ExternalLink,
+  CornerUpLeft,
+  CornerUpRight,
+  ArrowUpLeft,
+  ArrowUpRight,
+  RotateCw,
+  LocateFixed,
+  MapPin,
 } from 'lucide-react';
 export type { LucideProps as IconProps } from 'lucide-react';

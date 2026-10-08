@@ -8,7 +8,9 @@ reroutes, and publishes all of it through one Zustand session.
 
 Map UI is Phase 2 and the phone AR view (Viro) is Phase 3. Both read this
 domain; neither recomputes a route or draws a straight line to the
-destination.
+destination. The map screens are described in
+[AR_NAVIGATION_UX.md](AR_NAVIGATION_UX.md), and what runs on which platform
+in [NAVIGATION_PLATFORM_MATRIX.md](NAVIGATION_PLATFORM_MATRIX.md).
 
 ## Flow
 
