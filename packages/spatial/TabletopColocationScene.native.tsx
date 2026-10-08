@@ -27,6 +27,7 @@ import {
   useViroReplicatedState,
   worldToLocation,
 } from './viro';
+import { acceptsGameSurface } from './arSurface';
 import { LIGHTCYCLE_REPLICATION_IDS } from './lightcycle/sessionProtocol';
 import { TabletopRaceRuntime } from './TabletopRaceRuntime.native';
 import { TabletopRiveScoreboard } from './TabletopRiveScoreboard.native';
@@ -108,24 +109,6 @@ function sameVec3(a: unknown, b: Vec3) {
     current[0] === b[0] &&
     current[1] === b[1] &&
     current[2] === b[2]
-  );
-}
-
-function acceptsGameSurface(plane: any) {
-  if (plane?.type !== 'plane') return false;
-  const alignment = String(plane.alignment ?? '');
-  if (alignment && !alignment.includes('Horizontal')) return false;
-
-  const classification = String(plane.classification ?? 'Unknown');
-  if (isQuest) {
-    return classification === 'Floor' || classification === 'Table';
-  }
-
-  return (
-    classification === 'Floor' ||
-    classification === 'Table' ||
-    classification === 'Unknown' ||
-    classification === 'None'
   );
 }
 
@@ -929,7 +912,7 @@ export function TabletopColocationScene({
           hideOverlayOnSelection={false}
           useActualShape
           onPlaneDetected={(plane: any) => {
-            if (!acceptsGameSurface(plane)) return false;
+            if (!acceptsGameSurface(plane, isQuest)) return false;
             if (!detectedPlaneIds.current.has(plane.anchorId)) {
               detectedPlaneIds.current.add(plane.anchorId);
               setDetectedSurfaceCount(detectedPlaneIds.current.size);
