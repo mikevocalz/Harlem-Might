@@ -43,6 +43,15 @@ allprojects {
 apply plugin: "expo-root-project"
 apply plugin: "com.facebook.react.rootproject"
 
+// expo-pico-core: Expo Horizon AGP 9 BuildConfig compatibility
+subprojects { sub ->
+    if (sub.name == "expo-horizon-core") {
+        sub.plugins.withId("com.android.library") {
+            sub.android.buildFeatures.buildConfig = true
+        }
+    }
+}
+
 // expo-pico-core: subprojects missing-dim fallback
 subprojects { sub ->
     sub.plugins.withId("com.android.library") {

@@ -98,14 +98,14 @@ android {
             minSdkVersion 32
             targetSdkVersion 34
             ndk { abiFilters 'arm64-v8a' }
-            missingDimensionStrategy 'device', 'mobile'
+            matchingFallbacks = ['mobile']
         }
         quest {
             dimension "device"
             minSdkVersion 29
             targetSdkVersion 34
             ndk { abiFilters 'arm64-v8a' }
-            missingDimensionStrategy 'device', 'mobile'
+            matchingFallbacks = ['mobile']
         }
     }
 
@@ -277,17 +277,17 @@ dependencies {
         implementation "com.pico.pps:platform-service-sport:1.0.0"
     }
 
-    implementation "com.pico.pps:platform-service-achievement:1.0.0"
-    implementation "com.pico.pps:platform-service-auth:1.0.0"
-    implementation "com.pico.pps:platform-service-compliance:1.0.0"
-    implementation "com.pico.pps:platform-service-entitlement:1.0.0"
-    implementation "com.pico.pps:platform-service-friend:1.0.0"
-    implementation "com.pico.pps:platform-service-iap:1.0.0"
-    implementation "com.pico.pps:platform-service-leaderboard:1.0.0"
-    implementation "com.pico.pps:platform-service-push:1.0.0"
-    implementation "com.pico.pps:platform-service-social:1.0.0"
-    implementation "com.pico.pps:platform-service-speech:1.0.0"
-    implementation "com.pico.pps:platform-service-sport:1.0.0"
+    picoImplementation "com.pico.pps:platform-service-achievement:1.0.0"
+    picoImplementation "com.pico.pps:platform-service-auth:1.0.0"
+    picoImplementation "com.pico.pps:platform-service-compliance:1.0.0"
+    picoImplementation "com.pico.pps:platform-service-entitlement:1.0.0"
+    picoImplementation "com.pico.pps:platform-service-friend:1.0.0"
+    picoImplementation "com.pico.pps:platform-service-iap:1.0.0"
+    picoImplementation "com.pico.pps:platform-service-leaderboard:1.0.0"
+    picoImplementation "com.pico.pps:platform-service-push:1.0.0"
+    picoImplementation "com.pico.pps:platform-service-social:1.0.0"
+    picoImplementation "com.pico.pps:platform-service-speech:1.0.0"
+    picoImplementation "com.pico.pps:platform-service-sport:1.0.0"
 }
 
 
