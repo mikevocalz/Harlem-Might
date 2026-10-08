@@ -129,19 +129,27 @@ Required fork capabilities:
   process.exit(1);
 }
 
-if (
-  !nitroPackageJsonPath ||
-  !hasNitroRiveGpuBridge ||
-  !hasNitroRiveNativeModule ||
-  !hasNitroRiveJsRuntime
-) {
+// The Viro fork loads nitro-canvas-in-Vision lazily (CanvasPanel/nitroCanvas.ts)
+// and only ViroRivePanel, ViroGpuPanel and ViroThreeJSPanel need it. No
+// Harlem Might route mounts one of those yet (SpatialRivePanel and
+// TabletopRiveScoreboard are exported but unused), so a missing package is a
+// warning, not a build blocker.
+// DEFER (2026-10-08): make this exit 1 again in the same change that mounts
+// SpatialRivePanel in an app route, and add the package to mobile then.
+const nitroReady =
+  Boolean(nitroPackageJsonPath) &&
+  hasNitroRiveGpuBridge &&
+  hasNitroRiveNativeModule &&
+  hasNitroRiveJsRuntime;
+
+if (!nitroReady) {
   console.error(`
-[Spatial] Native/headset Rive panels require the private Nitro canvas package.
+[Spatial] warning: Rive, GPU and three.js Viro panels need the private Nitro canvas package.
 
 The Viro fork is present, but ViroRivePanel loads nitro-canvas-in-Vision lazily;
 it is not bundled transitively by @reactvision/react-viro.
 
-Install/link the current private package before running a native/headset build:
+Install it before an app route mounts one of those panels:
 
   pnpm --filter mobile add "nitro-canvas-in-Vision@github:mikevocalz/nitro-canvas-in-Vision#decax9-three-panel"
 
@@ -151,15 +159,15 @@ Required Nitro capabilities:
   NitroRiveCanvas native control module
   GPU frame presentation into the AHardwareBuffer Viro samples
 
-Public web/CI clones do not need this private package unless they invoke a
-native/headset command.
+The build continues: no Harlem Might route mounts those panels yet.
 `);
-  process.exit(1);
 }
 
 console.log(
   `[Viro] Native fork verified: ${pkg.version} (${packageJsonPath})`,
 );
-console.log(
-  `[Spatial] Nitro Rive GPU bridge verified: ${nitroPackageJsonPath}`,
-);
+if (nitroReady) {
+  console.log(
+    `[Spatial] Nitro Rive GPU bridge verified: ${nitroPackageJsonPath}`,
+  );
+}
