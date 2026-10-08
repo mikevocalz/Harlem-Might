@@ -11,7 +11,7 @@ import {
   ViroPolyline,
   ViroQuad,
   ViroScene,
-  ViroSkyBox,
+  Viro360Image,
   ViroText,
   exitVRScene,
 } from '@reactvision/react-viro';
@@ -39,7 +39,17 @@ import {
 } from './streetNavigation';
 import type { ManualOrigin } from './streetNavigationPort';
 import { estimatedHeightCount, useStreetMap } from './streetMap.store';
-import { manualOriginLabel, panelLines } from './streetPanel';
+import { STREET_PANEL, manualOriginLabel, panelLines } from './streetPanel';
+import {
+  ASPHALT,
+  BUILDING_TONES,
+  BUILDING_VARIATION_SURFACE,
+  GRID_LINE,
+  HAZE_FRAGMENT,
+  SKY_FILL,
+  SUN,
+  buildingMaterialFor,
+} from './streetLook';
 import { useStreetNavigation } from './useStreetNavigation';
 import {
   LABEL_FONT_PT,
@@ -84,41 +94,56 @@ const labelHeightM = (distanceM: number) =>
 /** Where the wearer stands relative to a place they jump to: just south, facing north. */
 const PLACE_STANCE: EnuGround = { eastM: 0, northM: -4 };
 /** Scene-fixed control panel: below eye line, inside 1.0 to 2.0 m. */
-const PANEL_POSITION: Vec3 = [0, 1.0, -1.25];
-const PANEL_ROTATION: Vec3 = [-20, 0, 0];
-const PANEL_W_M = 0.9;
-const PANEL_H_M = 0.58;
+const PANEL_POSITION: Vec3 = [...STREET_PANEL.position];
+const PANEL_ROTATION: Vec3 = [STREET_PANEL.tiltXDeg, 0, 0];
+const PANEL_W_M = STREET_PANEL.widthM;
+const PANEL_H_M = STREET_PANEL.heightM;
 /** 22 pt at 0.1 is about 2.6 cm, one degree at 1.5 m (HarlemTabletopScene). */
 const PANEL_TEXT_SCALE: Vec3 = [0.1, 0.1, 0.1];
-/** Buttons are 26 x 8 cm: above Meta's 48 mm ray and 64 mm pinch minimums. */
-const BUTTON_W_M = 0.26;
-const BUTTON_H_M = 0.08;
-const BUTTON_COLUMNS = [-0.29, 0, 0.29] as const;
+const BUTTON_W_M = STREET_PANEL.button.widthM;
+const BUTTON_H_M = STREET_PANEL.button.heightM;
+const BUTTON_COLUMNS = STREET_PANEL.columns;
+const [ROW_1_Y, ROW_2_Y] = STREET_PANEL.rows;
 const FADE_MS = 120;
 
 const GOLD = palette.mights.gold;
 const GOLD_DIM = palette.mights['gold-dim'];
 const INK = palette.mights['warm-black'];
 const PAPER = palette.mights.paper;
-const LIMESTONE = palette.mights.limestone;
-/** A night sky a step above the ground, so the horizon stays visible. */
-const SKY = '#1A1510';
+/** Harlem at dusk, as an equirectangular gradient (streetLook.ts). */
+const DUSK_SKY = require('../../assets/images/harlem-dusk-sky.png');
+const HAZE = { fragment: HAZE_FRAGMENT };
 
 ViroMaterials.createMaterials({
-  harlemStreetGround: { diffuseColor: INK, lightingModel: 'Constant', cullMode: 'None' },
-  harlemStreetGrid: { diffuseColor: '#3A2F1C', lightingModel: 'Constant' },
+  harlemStreetGround: { diffuseColor: ASPHALT, lightingModel: 'Constant', cullMode: 'None', shaderModifiers: HAZE },
+  harlemStreetGrid: { diffuseColor: GRID_LINE, lightingModel: 'Constant', shaderModifiers: HAZE },
   harlemStreetGold: { diffuseColor: GOLD, lightingModel: 'Constant' },
   harlemStreetGoldDim: { diffuseColor: GOLD_DIM, lightingModel: 'Constant' },
+  // Place pillars draw additively, as beams of light: they glow against the
+  // dusk sky, and the street behind a near pillar stays visible.
+  harlemStreetBeacon: { diffuseColor: '#A87C12', lightingModel: 'Constant', blendMode: 'Add', writesToDepthBuffer: false },
+  harlemStreetBeaconDim: { diffuseColor: '#4A3A12', lightingModel: 'Constant', blendMode: 'Add', writesToDepthBuffer: false },
   harlemStreetChevron: { diffuseColor: GOLD, lightingModel: 'Constant', cullMode: 'None' },
-  // Lit by the scene's ambient + directional lights, so walls read apart.
-  harlemStreetBuilding: { diffuseColor: LIMESTONE, lightingModel: 'Lambert' },
+  // Lit by the sky fill and the low sun, so walls facing it glow warm and
+  // the rest fall to violet; streetLook.ts shades each block apart and hazes
+  // the far ones into the horizon.
+  ...Object.fromEntries(
+    BUILDING_TONES.map((tone, i) => [
+      `harlemStreetBuilding${i}`,
+      {
+        diffuseColor: tone,
+        lightingModel: 'Lambert' as const,
+        shaderModifiers: { surface: BUILDING_VARIATION_SURFACE, fragment: HAZE_FRAGMENT },
+      },
+    ]),
+  ),
   harlemStreetPanel: { diffuseColor: INK, lightingModel: 'Constant', cullMode: 'None' },
   harlemStreetButton: { diffuseColor: '#2A231A', lightingModel: 'Constant', cullMode: 'None' },
   harlemStreetButtonHover: { diffuseColor: GOLD_DIM, lightingModel: 'Constant', cullMode: 'None' },
 });
 
 // Comfort blink for teleport. Viro has no camera fade, so the world root's
-// opacity animates to the sky colour and back (ViroAnimations `opacity`,
+// opacity animates to the sky and back (ViroAnimations `opacity`,
 // ~/viro/components/Animation/ViroAnimations.ts; VRONode multiplies opacity
 // down the tree, ~/virocore/ViroRenderer/VRONode.cpp:363).
 ViroAnimations.registerAnimations({
@@ -263,11 +288,11 @@ export function HarlemStreetScene() {
 
   return (
     <ViroScene>
-      <ViroSkyBox color={SKY} />
-      {/* Lambert buildings need light: a soft fill plus a low sun from the
-          south-west so facing walls read differently. */}
-      <ViroAmbientLight color="#FFFFFF" intensity={450} />
-      <ViroDirectionalLight color="#FFF4E0" direction={[0.45, -0.7, -0.55]} intensity={700} />
+      <Viro360Image source={DUSK_SKY} />
+      {/* Dusk: a cool fill from the sky and a warm, low sun from the
+          west-north-west, so walls facing it glow and the rest turn violet. */}
+      <ViroAmbientLight color={SKY_FILL.color} intensity={SKY_FILL.intensity} />
+      <ViroDirectionalLight color={SUN.color} direction={[...SUN.direction]} intensity={SUN.intensity} />
 
       <ViroNode
         position={root.position}
@@ -312,6 +337,7 @@ export function HarlemStreetScene() {
                 points.length >= 2 ? (
                   <ViroPolyline
                     key={`grid-${i}`}
+                    ignoreEventHandling
                     points={points as Vec3[]}
                     thickness={GRID_THICKNESS_M}
                     materials={['harlemStreetGrid']}
@@ -324,7 +350,10 @@ export function HarlemStreetScene() {
               <MapboxViroBuildings
                 key={`${mesh.tile.z}/${mesh.tile.x}/${mesh.tile.y}`}
                 mesh={mesh}
-                materials="harlemStreetBuilding"
+                materials={buildingMaterialFor(mesh.tile)}
+                // A tile's box spans every building in it, so as a hit target
+                // it would swallow ground clicks across the whole tile.
+                geometryProps={{ ignoreEventHandling: true }}
               />
             ))}
 
@@ -336,6 +365,7 @@ export function HarlemStreetScene() {
                   fallbackAltitude={DIORAMA_ALTITUDE_M}
                   thickness={ROUTE_THICKNESS_M}
                   materials="harlemStreetGold"
+                  polylineProps={{ ignoreEventHandling: true }}
                 />
               </ViroNode>
             ) : tabletopRoute ? (
@@ -346,6 +376,7 @@ export function HarlemStreetScene() {
                   fallbackAltitude={DIORAMA_ALTITUDE_M}
                   thickness={ROUTE_THICKNESS_M}
                   materials={tabletopRoute.kind === 'walking' ? 'harlemStreetGold' : 'harlemStreetGoldDim'}
+                  polylineProps={{ ignoreEventHandling: true }}
                 />
               </ViroNode>
             ) : null}
@@ -353,6 +384,7 @@ export function HarlemStreetScene() {
             {chevrons && chevrons.indices.length > 0 ? <GroundMeshView mesh={chevrons} material="harlemStreetChevron" /> : null}
             {turnAhead ? (
               <ViroPolyline
+                ignoreEventHandling
                 points={turnIndicator(turnAhead, TURN_LIFT_M) as Vec3[]}
                 thickness={TURN_THICKNESS_M}
                 materials={['harlemStreetGold']}
@@ -363,6 +395,7 @@ export function HarlemStreetScene() {
                 position={[nextStep.at.eastM, BADGE_HEIGHT_M, -nextStep.at.northM]}
                 scale={[0.3, 0.3, 0.3]}
                 transformBehaviors={['billboardY']}
+                ignoreEventHandling
               >
                 <ViroQuad width={2.6} height={0.7} materials={['harlemStreetPanel']} position={[0, 0, -0.01]} />
                 <ViroText
@@ -388,7 +421,7 @@ export function HarlemStreetScene() {
                     width={PILLAR_WIDTH_M}
                     height={PILLAR_HEIGHT_M}
                     length={PILLAR_WIDTH_M}
-                    materials={[isSelected ? 'harlemStreetGold' : 'harlemStreetGoldDim']}
+                    materials={[isSelected ? 'harlemStreetBeacon' : 'harlemStreetBeaconDim']}
                   />
                   <ViroNode
                     position={[0, labelHeightM(groundDistanceM(pillar, pose.user)) + 0.35 * labelScale, 0]}
@@ -418,9 +451,21 @@ export function HarlemStreetScene() {
       {/* Scene-fixed, outside the world root: it stays in front after a
           teleport or a turn, at a fixed distance, never head-locked. */}
       <ViroNode position={PANEL_POSITION} rotation={PANEL_ROTATION}>
-        <ViroQuad width={PANEL_W_M} height={PANEL_H_M} materials={['harlemStreetPanel']} position={[0, 0, -0.005]} />
+        {/* Viro picks by bounding box unless highAccuracyEvents is set, and
+            this tilted backplate's box reaches 10 cm in front of the buttons
+            (xrHitTest.test.ts), so every button press landed on the plate.
+            Tested against its two triangles it still catches a press that
+            misses a button, so a miss never teleports through the panel. */}
+        <ViroQuad
+          width={PANEL_W_M}
+          height={PANEL_H_M}
+          materials={['harlemStreetPanel']}
+          position={[0, 0, STREET_PANEL.backplateZ]}
+          highAccuracyEvents
+        />
         <ViroText
           text={lines.title}
+          ignoreEventHandling
           position={[0, 0.22, 0]}
           scale={PANEL_TEXT_SCALE}
           width={8.4}
@@ -429,6 +474,7 @@ export function HarlemStreetScene() {
         />
         <ViroText
           text={lines.detail}
+          ignoreEventHandling
           position={[0, 0.15, 0]}
           scale={PANEL_TEXT_SCALE}
           width={8.4}
@@ -437,15 +483,16 @@ export function HarlemStreetScene() {
         />
         <ViroText
           text={lines.status}
+          ignoreEventHandling
           position={[0, 0.095, 0]}
           scale={PANEL_TEXT_SCALE}
           width={8.4}
           height={0.5}
           style={{ fontSize: 18, color: PAPER, textAlign: 'center', textAlignVertical: 'center' }}
         />
-        <PanelButton x={BUTTON_COLUMNS[0]} y={0.02} label="Turn left" onPress={() => useArSession.getState().snapTurn('left')} />
-        <PanelButton x={BUTTON_COLUMNS[1]} y={0.02} label="Turn right" onPress={() => useArSession.getState().snapTurn('right')} />
-        <PanelButton x={BUTTON_COLUMNS[2]} y={0.02} label="Back to Explore" onPress={exitToExplore} />
+        <PanelButton x={BUTTON_COLUMNS[0]} y={ROW_1_Y} label="Turn left" onPress={() => useArSession.getState().snapTurn('left')} />
+        <PanelButton x={BUTTON_COLUMNS[1]} y={ROW_1_Y} label="Turn right" onPress={() => useArSession.getState().snapTurn('right')} />
+        <PanelButton x={BUTTON_COLUMNS[2]} y={ROW_1_Y} label="Back to Explore" onPress={exitToExplore} />
         <NavigationButtons
           status={navigation.status}
           canGoBack={stepIndex > 0}
@@ -460,6 +507,7 @@ export function HarlemStreetScene() {
         />
         <ViroText
           text={lines.attribution}
+          ignoreEventHandling
           position={[0, -0.215, 0]}
           scale={[0.07, 0.07, 0.07]}
           width={12}
@@ -471,7 +519,6 @@ export function HarlemStreetScene() {
   );
 }
 
-const ROW_2_Y = -0.09;
 
 function NavigationButtons(props: {
   status: ReturnType<typeof useStreetNavigation>['view']['status'];
@@ -537,6 +584,7 @@ function GroundMeshView({ mesh, material }: { mesh: GroundMesh; material: string
       texcoords={mesh.texcoords}
       triangleIndices={triangleIndices}
       materials={[material]}
+      ignoreEventHandling
     />
   );
 }
@@ -568,10 +616,12 @@ function PanelButton({
         width={BUTTON_W_M}
         height={BUTTON_H_M}
         materials={[lit ? 'harlemStreetButtonHover' : 'harlemStreetButton']}
-        position={[0, 0, -0.002]}
+        position={[0, 0, STREET_PANEL.button.z]}
+        highAccuracyEvents
       />
       <ViroText
         text={label}
+        ignoreEventHandling
         scale={PANEL_TEXT_SCALE}
         width={2.5}
         height={0.7}

@@ -87,3 +87,21 @@ export function mapLine(status: StreetMapStatus, estimatedHeights: number): stri
       return 'Click the ground to move';
   }
 }
+
+/**
+ * The scene-fixed control panel: below eye line, 1.25 m out, tilted back like
+ * a lectern. Shared by HarlemStreetScene and the hit-test check in
+ * streetPanel.test.ts, so a layout change is checked against Viro's picking.
+ */
+export const STREET_PANEL = {
+  position: [0, 1.0, -1.25] as const,
+  tiltXDeg: -20,
+  widthM: 0.9,
+  heightM: 0.58,
+  /** The backplate sits just behind the buttons. */
+  backplateZ: -0.005,
+  /** Buttons are 26 x 8 cm: above Meta's 48 mm ray and 64 mm pinch minimums. */
+  button: { widthM: 0.26, heightM: 0.08, z: -0.002 },
+  columns: [-0.29, 0, 0.29] as const,
+  rows: [0.02, -0.09] as const,
+} as const;
