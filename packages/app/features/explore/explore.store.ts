@@ -53,7 +53,7 @@ export const HARLEM_PLACE_PREVIEWS: readonly HarlemPlacePreview[] = [
     name: 'Red Rooster Harlem',
     category: 'Food',
     area: 'Central Harlem',
-    shortDescription: 'Food, music, and neighborhood energy in the heart of Harlem.',
+    shortDescription: 'A restaurant and bar on Malcolm X Boulevard.',
     whyItMatters:
       'Harlem Might can connect a meal here to nearby culture, nightlife, public art, and a walk along the surrounding blocks.',
     tags: ['restaurant', 'food', 'music'],

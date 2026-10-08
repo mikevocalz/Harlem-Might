@@ -64,16 +64,19 @@ export function PlaceHero({ place }: { place: HarlemPlacePreview }) {
           </View>
         </MightsNotchCard>
         <View className="flex-row flex-wrap gap-3">
-          <MightsButton href={routes.explore({ place: place.id })} variant="secondary" size="sm">
-            See it on the map
-          </MightsButton>
+          {/* A place without coordinates has no pin to open on the map. */}
+          {lngLat ? (
+            <MightsButton href={routes.explore({ place: place.id })} variant="secondary" size="sm">
+              See it on the map
+            </MightsButton>
+          ) : null}
           <MightsButton href={routes.explore({ category: place.category })} variant="secondary" size="sm">
             {`${place.category} on the map`}
           </MightsButton>
         </View>
       </View>
       <View className="gap-2 md:col-span-7">
-        <MightsNotchCard className="aspect-video">
+        <MightsNotchCard className={lngLat ? 'aspect-video' : undefined}>
           <View className="relative h-full">
             {lngLat ? (
               <MightsMapImage
@@ -89,7 +92,7 @@ export function PlaceHero({ place }: { place: HarlemPlacePreview }) {
                 priority
               />
             ) : (
-              <View className="h-full items-start bg-surface-sunken p-5">
+              <View className="items-start bg-surface-sunken p-5 pb-20">
                 <MightsText size="small">Location pending verification</MightsText>
               </View>
             )}
