@@ -20,6 +20,7 @@
       "default": "./rive-fx/index.web.ts"
     },
     "./mcp": "./mcp/index.ts",
+    "./arSurface": "./arSurface.ts",
     "./audio": {
       "react-native": "./audio/index.native.ts",
       "default": "./audio/index.web.ts"

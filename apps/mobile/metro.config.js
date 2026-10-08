@@ -43,13 +43,16 @@ const VENDORED_NAVIGATION = {
 
 /**
  * Linked checkouts outside this repo (package.json `link:` deps): the Viro
- * fork at ../../../viro and @viro-external at ../../../viro-external. Metro
+ * fork at ../../../viro, @viro-external at ../../../viro-external and
+ * nitro-mapbox-ar at ../../../nitro-mapbox-ar. Metro
  * must watch their real paths, and their imports must resolve from this app's
  * node_modules, or each checkout's own react / react-native copies load too.
  */
 const LINKED_CHECKOUTS = [
   path.resolve(__dirname, "../../../viro"),
   path.resolve(__dirname, "../../../viro-external"),
+  // nitro-mapbox-ar: the ReactVision adapter and the Directions client.
+  path.resolve(__dirname, "../../../nitro-mapbox-ar"),
 ];
 config.watchFolders = [...(config.watchFolders ?? []), ...LINKED_CHECKOUTS];
 const APP_ORIGIN = path.join(__dirname, "package.json");

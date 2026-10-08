@@ -27,6 +27,8 @@
     "@expo/metro-runtime": "catalog:",
     "@expo/ui": "catalog:",
     "@kishannareshpal/expo-pdf": "catalog:",
+    "@mapbox/react-native-mapbox-ar": "link:../../../nitro-mapbox-ar",
+    "@mapbox/react-native-mapbox-ar-reactvision": "link:../../../nitro-mapbox-ar/packages/reactvision",
     "@metavr/layout-compat": "catalog:",
     "@metavr/layout-window-compat": "catalog:",
     "@react-navigation/native": "catalog:",
