@@ -10,7 +10,7 @@ import { HarlemTabletopScene } from '../src/ar/HarlemTabletopScene';
 import { sceneModeFor, useArSession, type ArSceneMode } from '../src/ar/arSession.store';
 import { useTabletopRoute } from '../src/ar/useTabletopRoute';
 import { HarlemNavigationAr } from '../src/ar/HarlemNavigationAr';
-import { canUseArNavigation } from '../src/ar/arNavigationEntry';
+import { canUseArNavigation, chooseArExperience } from '../src/ar/arNavigationEntry';
 import { isArNavigationScreen } from '../src/ar/navAr';
 import { getNavigationController } from '../src/ar/navigationRuntime';
 import { isHorizonBuild } from '../src/spatial/horizonBuild';
@@ -47,11 +47,19 @@ export default function ExploreArRoute() {
   const selectedPlaceId = useExplore((s) => s.selectedPlaceId);
   // A walk in an AR phase opens phone AR navigation on the same session; it
   // never requests a route of its own, so the tabletop route is skipped too.
-  const isNavigatingInAr = useNavigationStore(
-    (s) => AR_NAVIGATION_SUPPORTED && isArNavigationScreen(selectSession(s), selectArTracking(s)),
+  const navigationSessionInAR = useNavigationStore(
+    (s) => isArNavigationScreen(selectSession(s), selectArTracking(s)),
   );
+  const experience = chooseArExperience({
+    requestedScene: sceneMode,
+    navigationAvailable: AR_NAVIGATION_SUPPORTED,
+    navigationSessionInAR,
+  });
+  const isNavigatingInAr = experience === 'navigation';
+  // Only the phone navigation layer reads the shared trip. Existing table
+  // and street worlds, their place routes, and their controls stay untouched.
   useTabletopRoute(isNavigatingInAr ? undefined : (placeId ?? selectedPlaceId ?? undefined));
-  const street = sceneMode === 'street';
+  const street = experience === 'street';
 
   if (isNavigatingInAr) {
     return (
