@@ -48,7 +48,7 @@ export const PRIVACY: readonly ProseSection[] = [
     id: 'app',
     title: 'The Harlem Might app',
     body: [
-      'The Harlem Might app for iPhone and Android is still in testing. Features such as walking directions and AR use your device’s location and camera, and the app will ask your permission before using either. The app will have its own section in this policy, describing exactly what it collects, before it is released.',
+      'The Harlem Might app for iPhone and Android has not been released. When it is, walking directions will use your device’s location and any AR feature will use the camera, and the app will ask your permission before using either. The app will have its own section in this policy, describing exactly what it collects, before it is released.',
     ],
   },
   {
@@ -87,7 +87,7 @@ export const TERMS: readonly ProseSection[] = [
     id: 'street',
     title: 'Out on the street',
     body: [
-      'Walks and AR are meant to be used outside, so please look up from your screen often:',
+      'Walks, and AR once it exists, are meant to be used outside, so please look up from your screen often:',
       [
         'Stay aware of traffic, cyclists and other people on the sidewalk.',
         'Never enter private property. Many historic places in Harlem are homes, and some places on the map are best seen from a public viewpoint.',
@@ -158,7 +158,7 @@ export const ACCESSIBILITY: readonly ProseSection[] = [
       'We would rather tell you about a gap than hide it:',
       [
         'The interactive map itself is a visual canvas. Its markers can be reached by keyboard and are labelled, but the list next to it is the most reliable way to browse with a screen reader.',
-        'The AR experience runs in the app and depends on a camera and the ability to hold up a phone. Everything shown in AR is also available as text on the place’s page.',
+        'There is no AR view yet; it is a concept. If we build it, it will need a camera and the ability to hold up a phone, so everything it shows will also be available as text on the place’s page.',
         'Some controls inside the map are provided by Mapbox and follow its own accessibility support.',
       ],
     ],

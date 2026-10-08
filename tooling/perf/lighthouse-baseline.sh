@@ -15,7 +15,7 @@ for preset in mobile desktop; do
     for i in $(seq 1 "$runs"); do
       extra=()
       [[ $preset == desktop ]] && extra=(--preset=desktop)
-      npx -y lighthouse@13 "$base$path" "${extra[@]}" --quiet \
+      npx -y lighthouse@13 "$base$path" ${extra[@]+"${extra[@]}"} --quiet \
         --output=json --output-path="$out/$preset-$name-$i.json" \
         --chrome-flags="--headless=new --incognito --no-first-run"
     done

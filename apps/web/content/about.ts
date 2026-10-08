@@ -19,7 +19,7 @@ export const ABOUT_SECTIONS: readonly ProseSection[] = [
     title: 'Why we built it',
     body: [
       'Most maps answer one question: what is here? Harlem deserves more than that. A block on Lenox Avenue can hold a soul food kitchen, a church that anchored a movement, a building where a poet once lived, and a mural painted last summer. Generic map apps flatten all of that into a pin and a star rating.',
-      'Harlem Might starts from the opposite direction. Every place on the map carries the reasons it matters: what happened there, who is connected to it, what the block looked like before, and what is happening there today. The map is how you find a place. The record behind it is why you go.',
+      'Harlem Might starts from the opposite direction. Each place record is built to carry the reasons it matters: what happened there, who is connected to it, what the block looked like before, and what is on there today. We fill those in as each one is researched and sourced. The map is how you find a place. The record behind it is why you go.',
       'We want a visitor planning their first walk, a teacher building a field trip, and someone who has lived on the same street for forty years to each find something true and useful in the same place.',
     ],
   },
@@ -27,7 +27,7 @@ export const ABOUT_SECTIONS: readonly ProseSection[] = [
     id: 'what',
     title: 'What you will find here',
     body: [
-      'Harlem Might covers the whole life of the neighborhood, not just its landmarks:',
+      'Harlem Might is meant to cover the life of the neighborhood, not just its landmarks. The map starts small and grows into these:',
       [
         'Culture: theaters, museums, galleries, archives and performance spaces.',
         'Food and drink: the restaurants, cafés, bakeries and bars that feed the neighborhood.',
@@ -36,15 +36,15 @@ export const ABOUT_SECTIONS: readonly ProseSection[] = [
         'Architecture: brownstone rows, historic districts and the details worth looking up from the sidewalk to notice.',
         'Faith and community: the churches, mosques and institutions that carried Harlem through every era.',
       ],
-      'Walks connect places into routes, stories carry the deeper history, and Today shows what is on right now. All of it points back to the same place records, so a story, a walk stop and a map pin about the same building never disagree.',
+      'Walks will connect places into routes, stories will carry the deeper history, and Today will list what is on. All of it points back to the same place records, so a story, a walk stop and a map pin about the same building never disagree.',
     ],
   },
   {
     id: 'one-place',
     title: 'One place, one record',
     body: [
-      'Each place in Harlem Might has exactly one record, and that record powers everything: the pin on the map, the detail page, walking directions, a stop on a walk, a story, and the label you see through your phone in AR. We do not keep a separate copy for the app, another for the website and another for AR. When a record is corrected, it is corrected everywhere at once.',
-      'That single record is also where we keep the parts other maps leave out: the real entrance rather than the middle of the roof, an accessible entrance where one exists, and the best public spot to stand if you want to see a façade properly.',
+      'Each place in Harlem Might has exactly one record, and that record powers everything: the pin on the map, the detail page, walking directions, a stop on a walk and a story. The AR view we are designing would read its labels from the same record. We do not keep a separate copy for the app and another for the website. When a record is corrected, it is corrected everywhere at once.',
+      'That record is built to hold the parts other maps leave out, such as the real entrance rather than the middle of the roof. Those fields exist now; they stay empty until each one is checked and sourced.',
     ],
   },
   {

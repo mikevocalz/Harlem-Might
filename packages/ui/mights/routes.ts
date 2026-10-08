@@ -46,9 +46,12 @@ export function activeSection(pathname: string): PrimaryNavLabel | null {
   return primaryNav.find((item) => item.matches.some((re) => re.test(pathname)))?.label ?? null;
 }
 
+// Labels match what exists: the app is not released (download page) and AR is
+// a concept (home ch.3 "About the AR concept"), so neither label promises a
+// download or a working preview.
 export const secondaryNav = [
-  { label: 'Preview AR', href: routes.ar() },
-  { label: 'Get the app', href: routes.download() },
+  { label: 'The app', href: routes.download() },
+  { label: 'AR concept', href: routes.ar() },
   { label: 'About', href: routes.about() },
   { label: 'Press', href: routes.press() },
   { label: 'Accessibility', href: routes.legal('accessibility') },

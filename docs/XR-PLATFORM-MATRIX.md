@@ -1,22 +1,37 @@
 # XR platform matrix
 
-**Synchronized:** October 1, 2026.
+**Synchronized:** October 7, 2026 (status words mapped onto the five-word vocabulary).
 
 This starter uses **capability-first routing**. Product/device names select only the broad runtime family; negotiated runtime facts decide features.
 
 ## Current lanes
 
-| Target | Primary runtime | Starter status | Important boundary |
+Status words follow `docs/META_VR_GLASSES.md`, one meaning each:
+
+| Word | Meaning |
+| --- | --- |
+| preview | code exists on an unmerged branch or behind a flag |
+| concept | design only, no code |
+| integration path | code is merged and builds; nothing has run on the target |
+| in testing | running on a simulator or a stand-in device |
+| verified | passed the 8-point bar under "Verification language" on the real device |
+
+No lane is verified: no row has the 8-point record below. Public copy (`/ar`, `/download`) uses these words only.
+
+| Target | Primary runtime | Status | Important boundary |
 | --- | --- | --- | --- |
-| iOS / Android phone + tablet | Expo / React Native | integrated | non-headset Viro previews and AR stay available |
-| Web | Next.js + Viro Web + Skia/WebGPU | integrated | ordinary browser remains the baseline fallback |
-| Meta Quest | Viro Android OpenXR / Horizon OS | integrated | use runtime capability probes instead of model-name feature gates |
-| Meta VR Glasses | same Meta Horizon/OpenXR family | integrated build + Store targeting; physical-device verification still required | `metaVrGlassesCompatible` targets Meta's current `quest3+` delivery family |
-| PICO native | Viro Android OpenXR | integrated scene route | PICO app launcher/tooling belongs to `expo-pico`, not Viro's Meta manifest path |
-| PICO OS 6 spatial web | WebSpatial 2.x adapter in `mikevocalz/viro-external` | adapter foundation merged | spatial DOM/window presentation is separate from Viro native OpenXR |
-| visionOS / Vision Pro | Viro visionOS renderer | integrated fork lane | use the current visionOS shared-space and input capabilities |
-| Meta AI glasses | Meta Wearables DAT adapter in `mikevocalz/viro-external` | integration foundation merged | companion-phone wearable APIs are not an immersive Viro renderer |
-| Snap Specs / Spectacles | portable-scene adapter in `mikevocalz/viro-external` | adapter foundation merged | Lens Studio/Snap OS owns rendering; do not boot ViroCore on the glasses |
+| iOS / Android phone + tablet | Expo / React Native | integration path | builds, not released (`apps/mobile/eas.json`: internal distribution, empty `submit.production`); Viro runtime only. Harlem place-label AR is a **concept**: the only AR scene is the tabletop race |
+| Web | Next.js + Viro Web + Skia/WebGPU | integration path | ordinary browser remains the baseline fallback; `/ar` never requests the camera |
+| Meta Quest | Viro Android OpenXR / Horizon OS | in testing (floor and controller work only) | use runtime capability probes instead of model-name feature gates |
+| Meta VR Glasses | same Meta Horizon/OpenXR family | integration path | `metaVrGlassesCompatible` targets Meta's current `quest3+` delivery family; nothing has run on the glasses |
+| PICO native | Viro Android OpenXR | integration path | PICO app launcher/tooling belongs to `expo-pico`, not Viro's Meta manifest path |
+| PICO OS 6 spatial web | WebSpatial 2.x adapter in `mikevocalz/viro-external` | integration path | spatial DOM/window presentation is separate from Viro native OpenXR |
+| visionOS / Vision Pro | Viro visionOS renderer | integration path | use the current visionOS shared-space and input capabilities |
+| Meta AI glasses | Meta Wearables DAT adapter in `mikevocalz/viro-external` | integration path | companion-phone wearable APIs are not an immersive Viro renderer |
+| Snap Specs / Spectacles | portable-scene adapter in `mikevocalz/viro-external` | preview (`specs:scene`, unmerged `codex/specs-generated-preview`); WebView route: concept | Lens Studio/Snap OS owns rendering; do not boot ViroCore on the glasses |
+| Sightline (Harlem Might glasses) | Three.js WebGPU render on `/ar` | concept | a render of hardware that does not exist (`docs/adr/0004-sightline-placement.md`) |
+
+Old labels map as follows: "integrated", "integrated build", "integrated scene route", "integrated fork lane", "adapter foundation merged" and "integration foundation merged" all become **integration path** (merged and builds, not run on the target). The Specs row was labelled "adapter foundation merged", but the scene export itself sits on an unmerged branch, so it is **preview**.
 
 ## One shared application contract
 
@@ -111,7 +126,7 @@ Lens Studio remains responsible for SceneObjects, UI Kit/SIK, hand/gaze input, S
 
 Do not label an adapter foundation, simulator result, or successful build as physical-device proof.
 
-For a target to move from **foundation** to **verified**, record:
+For a target to move from **integration path** or **in testing** to **verified**, record:
 
 1. exact device/runtime version;
 2. build artifact/commit;

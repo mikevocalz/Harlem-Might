@@ -1,6 +1,8 @@
-# Sightline hero
+# Sightline concept render
 
-The Harlem Might hero is a shared WebGPU scene, not a web-only mockup.
+Sightline is a concept render of original Harlem Might glasses and a compute puck. The hardware does not exist and no place-label AR build has passed the bar in `docs/XR-PLATFORM-MATRIX.md`, so every surface that shows it calls it a concept render.
+
+It mounts on `/ar` only, as a lazy island below the page's LCP element (`docs/adr/0004-sightline-placement.md`). It is not the homepage hero.
 
 ## Rendering stack
 
@@ -25,14 +27,15 @@ It may reference the product category established by modern glasses + compute-pu
 
 ## Performance budget
 
-Hero target:
+Target:
 - one WebGPU device
 - one Three renderer
 - one TypeGPU root
 - no React rerender per animation frame
 - procedural geometry until an approved GLB beats it visually within budget
 - cap browser DPR at 2
-- reduced-motion freezes the ambient pulse and snaps scroll interpolation
+- reduced motion renders one static frame and runs no loop (resize redraws that frame)
+- no adapter, a failed init or a lost device calls `onUnavailable`, so the host swaps in its text fallback instead of a blank canvas
 - dispose every geometry/material/renderer/root on unmount
 
 When a production GLB replaces procedural geometry, run the required game-asset-production, visual-debugging and performance-optimization skills before admission.
