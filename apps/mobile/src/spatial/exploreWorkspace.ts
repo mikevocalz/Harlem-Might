@@ -2,7 +2,7 @@ import type { WorkspaceDefinition } from '@viro-external/xr-contract';
 import {
   META_OFFSET_STEPS,
   resolveMetaWorkspace,
-  type MetaLogicalOffset,
+  type MetaNeutralOffset,
   type MetaWorkspaceEntry,
   type MetaWorkspaceResolution,
 } from '@viro-external/meta-layout';
@@ -18,19 +18,13 @@ export const EXPLORE_SURFACE = {
 export const PLACE_SELECTION = 'place';
 
 /**
- * Place Detail's offset: one step outward from the main window's end edge (a
- * negative `start` moves an end-anchored window away from start) and one step
- * toward the user, which is Meta's own example for an end window.
- *
- * `WorkspaceAnchorIntent` in viro-external has `depth` but no horizontal gap
- * tier, so the resolver emits `{ z: 1 }` only. Until that contract grows a
- * gap, this app passes Meta's exact prop here. Both keys are logical, so the
- * SDK logs no ModeMismatch (LAYOUT_RESEARCH.md §1.2, §5).
+ * Place Detail's offset: one step toward the user and no horizontal shift.
+ * The anchor pair already puts the window outside the main window's end edge;
+ * on a Quest 3S (Horizon OS 207) an extra `start: -OffsetNear` pulled the
+ * window back over the map, so only depth is kept (Meta's "fully outside the
+ * parent" example).
  */
-export const PLACE_DETAIL_OFFSET: MetaLogicalOffset = {
-  // -OffsetNear. TypeScript widens a negated constant to number, so the step is
-  // spelled out; the test pins it to -META_OFFSET_STEPS.near.
-  start: -1,
+export const PLACE_DETAIL_OFFSET: MetaNeutralOffset = {
   z: META_OFFSET_STEPS.near,
 };
 
