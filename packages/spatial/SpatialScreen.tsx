@@ -19,7 +19,9 @@ export function SpatialScreen() {
   const tools = (
     <GridCard eyebrow="Runtime" title="Spatial backend">
       <Text className="text-sm text-white/70">
-        {capabilities.metaSpatialWindows ? 'Meta Layout spatial window' : 'Inline / Viro spatial fallback'}
+        {capabilities.metaSpatialWindows
+          ? 'Meta spatial windows: available, used by Explore'
+          : 'Meta spatial windows: not available on this build'}
       </Text>
       <Text className="text-xs text-white/50">
         Viro Rive surface: {capabilities.viroRivePanel ? 'fork bridge detected' : 'stock fallback'}
