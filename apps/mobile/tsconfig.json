@@ -11,6 +11,9 @@
     "customConditions": [
       "react-native",
       "react-native-legacy-deep-imports"
+    ],
+    "types": [
+      "node"
     ]
   },
   "include": [
