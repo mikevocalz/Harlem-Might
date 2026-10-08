@@ -129,6 +129,8 @@ ViroAnimations.registerAnimations({
 interface Jump {
   readonly user: EnuGround;
   readonly headingDeg?: number;
+  /** Runs when the teleport lands, behind the blink. */
+  readonly onLand?: () => void;
 }
 
 const raster = (() => {
@@ -179,6 +181,9 @@ export function HarlemStreetScene() {
   const guiding = navigation.status === 'navigating' || navigation.status === 'paused';
   const current = guiding ? steps[stepIndex] : undefined;
   const nextStep = guiding ? steps[stepIndex + 1] : undefined;
+  // The wearer stands short of the current step's manoeuvre (stanceForStep),
+  // so that is the turn to mark; chevrons then run along the street after it.
+  const turnAhead = current && current.kind !== 'depart' && current.kind !== 'arrive' ? current : undefined;
   const chevrons = useMemo(() => (current ? chevronMesh(current.path, CHEVRON_LIFT_M) : null), [current]);
   const tabletopRoute = routeState.status === 'ready' ? routeState.route : null;
   const imageryOn = raster !== null && map.imageryTiles.length > 0;
@@ -226,15 +231,15 @@ export function HarlemStreetScene() {
   const goToStep = (index: number) => {
     const target = steps[index];
     if (!target || fade.phase !== 'idle') return;
-    commands.goToStep(index);
-    jump(stanceForStep(target));
+    // The session moves to the step when the wearer lands there, so the
+    // panel and chevrons never show a step the wearer is not standing at.
+    jump({ ...stanceForStep(target), onLand: () => commands.goToStep(index) });
   };
 
   const startGuidance = () => {
     const first = steps[0];
     if (!first || fade.phase !== 'idle') return;
-    commands.start();
-    jump(stanceForStep(first));
+    jump({ ...stanceForStep(first), onLand: () => commands.start() });
   };
 
   const exitToExplore = () => {
@@ -273,7 +278,10 @@ export function HarlemStreetScene() {
           loop: false,
           onFinish: () => {
             if (fade.phase === 'out') {
-              if (fade.to) useArSession.getState().teleport(fade.to.user, fade.to.headingDeg);
+              if (fade.to) {
+                useArSession.getState().teleport(fade.to.user, fade.to.headingDeg);
+                fade.to.onLand?.();
+              }
               setFade({ phase: 'in', to: null });
             } else {
               setFade({ phase: 'idle', to: null });
@@ -343,9 +351,9 @@ export function HarlemStreetScene() {
             ) : null}
 
             {chevrons && chevrons.indices.length > 0 ? <GroundMeshView mesh={chevrons} material="harlemStreetChevron" /> : null}
-            {nextStep && nextStep.kind !== 'arrive' ? (
+            {turnAhead ? (
               <ViroPolyline
-                points={turnIndicator(nextStep, TURN_LIFT_M) as Vec3[]}
+                points={turnIndicator(turnAhead, TURN_LIFT_M) as Vec3[]}
                 thickness={TURN_THICKNESS_M}
                 materials={['harlemStreetGold']}
               />
