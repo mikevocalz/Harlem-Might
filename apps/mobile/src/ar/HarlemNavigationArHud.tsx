@@ -225,7 +225,15 @@ export function HarlemNavigationArHud({ onBackToMap, onExplorePlace }: HarlemNav
               <MightsButton variant="primary" onPress={() => onExplorePlace(placeId)}>
                 Explore place
               </MightsButton>
-              <MightsButton variant="ghost" onPress={() => controller.cancel()}>
+              <MightsButton
+                variant="ghost"
+                onPress={() => {
+                  // Cancel the shared trip, then close the AR route. Otherwise this
+                  // same screen silently reopens the unrelated tabletop scene.
+                  controller.cancel();
+                  onBackToMap();
+                }}
+              >
                 End navigation
               </MightsButton>
             </View>
