@@ -1,7 +1,7 @@
 'use client';
 
 import { Link } from 'solito/link';
-import { tv } from 'tailwind-variants';
+import { tv } from '../tv';
 import { cornerCut, cornerCutSm, expanded } from './geometry';
 
 // One visual recipe, two elements. With `href` it navigates and renders <a>

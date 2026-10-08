@@ -1,5 +1,6 @@
 import { MapAttribution, MightsMapImage, type MapPin } from './MightsMapImage';
 import { MightsFigure } from './MightsFigure';
+import { MightsLocationStamp, type MightsLocationStampProps } from './MightsLocationStamp';
 import { MightsNotchCard } from './MightsNotchCard';
 import { MightsHeading, MightsText } from './MightsType';
 import { routes } from './routes';
@@ -57,6 +58,8 @@ export interface BentoMapLead {
   pins?: MapPin[];
   alt: string;
   caption?: string;
+  /** Names the block or place the map shows; sits on the map's bottom-left edge. */
+  stamp?: Pick<MightsLocationStampProps, 'name' | 'street' | 'href'>;
 }
 
 /** Dominant editorial image for `story-dominant` (B3, B8, B9). */
@@ -146,7 +149,8 @@ const DOMINANT = 'md:col-span-7 md:row-span-2';
 const BESIDE_DOMINANT = 'md:col-span-5';
 /** Modules after the first row pair up 5/7, 7/5. An odd tail of three closes on 5/4/3; a lone tail takes the row. */
 const AFTER = ['md:col-span-5', 'md:col-span-7'];
-const TAIL_OF_THREE = ['md:col-span-5', 'md:col-span-4', 'md:col-span-3'];
+// md (768–1023) is too narrow for a 3-column card, so the tail goes 6/6/12 there.
+const TAIL_OF_THREE = ['md:col-span-6 lg:col-span-5', 'md:col-span-6 lg:col-span-4', 'md:col-span-12 lg:col-span-3'];
 
 /** The map lead spans as many rows as there are modules stacked beside it. */
 const MAP_LEAD_ROWS = ['md:row-span-1', 'md:row-span-1', 'md:row-span-2', 'md:row-span-3'];
@@ -171,8 +175,13 @@ function afterSpan(i: number, total: number) {
 
 /** `sizes` for a map raster, matched to the module's md+ width. */
 function sizesFor(span: string) {
-  const cols = Number(/md:col-span-(\d+)/.exec(span)?.[1] ?? 12);
-  return `(min-width: 768px) ${Math.round((cols / 12) * 100)}vw, 100vw`;
+  const vw = (bp: 'md' | 'lg') => {
+    const cols = new RegExp(`${bp}:col-span-(\\d+)`).exec(span)?.[1];
+    return cols ? Math.round((Number(cols) / 12) * 100) : undefined;
+  };
+  const md = vw('md') ?? 100;
+  const lg = vw('lg') ?? md;
+  return `(min-width: 1024px) ${lg}vw, (min-width: 768px) ${md}vw, 100vw`;
 }
 
 // ---- modules ----------------------------------------------------------------
@@ -275,7 +284,7 @@ function LeadCard({ lead }: { lead: BentoLead }) {
   if (lead.kind === 'map') {
     return (
       <MightsNotchCard className="flex-1">
-        <div className="h-72 shrink-0 md:h-auto md:min-h-96 md:flex-1">
+        <div className="relative h-72 shrink-0 md:h-auto md:min-h-96 md:flex-1">
           <MightsMapImage
             center={lead.center}
             zoom={lead.zoom}
@@ -286,6 +295,7 @@ function LeadCard({ lead }: { lead: BentoLead }) {
             pins={lead.pins}
             alt={lead.alt}
           />
+          {lead.stamp ? <MightsLocationStamp {...lead.stamp} className="absolute bottom-4 left-4" /> : null}
         </div>
         {lead.caption ? (
           <div className="border-t border-rule-hairline p-5">

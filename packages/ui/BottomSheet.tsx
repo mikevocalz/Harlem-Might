@@ -1,5 +1,5 @@
 'use client';
-import { tv } from 'tailwind-variants';
+import { tv } from './tv';
 import { BottomSheet as ExpoBottomSheet } from '@expo/ui';
 import { ScrollView, View, Text, Pressable } from './tw';
 

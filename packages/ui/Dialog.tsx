@@ -1,5 +1,5 @@
 'use client';
-import { tv } from 'tailwind-variants';
+import { tv } from './tv';
 import { Modal } from 'react-native';
 import { View, Text, Pressable } from './tw';
 import { ScaleIn } from './motion';

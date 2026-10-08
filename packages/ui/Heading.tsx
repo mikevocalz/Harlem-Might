@@ -1,4 +1,4 @@
-import { tv, type VariantProps } from 'tailwind-variants';
+import { tv, type VariantProps } from './tv';
 import {
   Heading as PrimitiveHeading,
   type HeadingProps as PrimitiveHeadingProps,

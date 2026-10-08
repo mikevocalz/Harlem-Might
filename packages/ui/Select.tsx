@@ -1,5 +1,5 @@
 'use client';
-import { tv } from 'tailwind-variants';
+import { tv } from './tv';
 import { View } from './tw';
 import { Select as PrimitiveSelect, Label } from './primitives';
 import { Text } from './Text';

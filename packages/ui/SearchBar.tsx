@@ -1,6 +1,6 @@
 'use client';
 import { useEffect } from 'react';
-import { tv } from 'tailwind-variants';
+import { tv } from './tv';
 import { useDebouncedCallback } from '@tanstack/react-pacer';
 import { useInstanceStore, useStore } from './use-instance-store';
 import { View, Text, Pressable } from './tw';

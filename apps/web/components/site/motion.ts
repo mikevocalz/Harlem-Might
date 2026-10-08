@@ -94,7 +94,6 @@ const heroEntrance = compileMotion(
       'hero-title': { y: 28 },
       'hero-lead': { y: 16 },
       'hero-cta': { y: 12 },
-      'hero-stamp': { y: 10 },
       'hero-lens': { opacity: 0, scale: 0.94 },
     },
     tracks: [
@@ -108,14 +107,13 @@ const heroEntrance = compileMotion(
         durationMs: 900,
         ease: 'power2.out',
       },
-      { target: 'hero-stamp', to: { y: 0 }, atMs: 500, durationMs: 480, ease: 'power2.out' },
     ],
   }),
 );
 
 /**
  * Hero scroll-out: the map drifts up inside its frame as the chapter leaves.
- * The frame bleeds 8% past its bounds (`-inset-y-[8%]`) so the drift never
+ * The frame bleeds 1/12 past its bounds (`-inset-y-1/12`) so the drift never
  * opens a gap.
  */
 const heroDrift = compileMotion(
@@ -126,45 +124,28 @@ const heroDrift = compileMotion(
   }),
 );
 
-/** Chapter 2 — "Start with a block": copy, then the map card, then its doors. */
-const blockEntrance = compileMotion(
-  defineMotion({
-    id: 'hm.block.enter',
-    initial: {
-      'block-copy': { opacity: 0, y: 24 },
-      'block-map': { opacity: 0, y: 28 },
-      'block-place-0': { opacity: 0, y: 14 },
-      'block-place-1': { opacity: 0, y: 14 },
-      'block-place-2': { opacity: 0, y: 14 },
-    },
-    tracks: [
-      { target: 'block-copy', to: { opacity: 1, y: 0 }, atMs: 0, durationMs: 560, ease: 'power2.out' },
-      { target: 'block-map', to: { opacity: 1, y: 0 }, atMs: 140, durationMs: 640, ease: 'power2.out' },
-      { target: 'block-place-0', to: { opacity: 1, y: 0 }, atMs: 360, durationMs: 420, ease: 'power2.out' },
-      { target: 'block-place-1', to: { opacity: 1, y: 0 }, atMs: 460, durationMs: 420, ease: 'power2.out' },
-      { target: 'block-place-2', to: { opacity: 1, y: 0 }, atMs: 560, durationMs: 420, ease: 'power2.out' },
-    ],
-  }),
-);
+/**
+ * A chapter's copy column rises in on its own trigger. Used by the block
+ * chapter (its bento reveals separately as group `b2`) and the prose chapter.
+ */
+function copyEntrance(name: string): CompiledMotion {
+  return compileMotion(
+    defineMotion({
+      id: `hm.${name}.enter`,
+      initial: { [name]: { opacity: 0, y: 24 } },
+      tracks: [{ target: name, to: { opacity: 1, y: 0 }, atMs: 0, durationMs: 560, ease: 'power2.out' }],
+    }),
+  );
+}
+const blockCopy = copyEntrance('block-copy');
+const storyCopy = copyEntrance('story-copy');
 
-/** Places index: the header line, then the grid settles as one plate. */
-const placesEntrance = compileMotion(
-  defineMotion({
-    id: 'hm.places.enter',
-    initial: {
-      'places-head': { opacity: 0, y: 22 },
-      'places-grid': { opacity: 0, y: 24 },
-    },
-    tracks: [
-      { target: 'places-head', to: { opacity: 1, y: 0 }, atMs: 0, durationMs: 560, ease: 'power2.out' },
-      { target: 'places-grid', to: { opacity: 1, y: 0 }, atMs: 160, durationMs: 640, ease: 'power2.out' },
-    ],
-  }),
-);
+/** Places index: the header line. The grid below is bento group `b1`. */
+const placesEntrance = copyEntrance('places-head');
 
 /**
- * Sidewalk chapter: the cobalt frame settles like a device reveal — scrubbed
- * so it lands with the scroll — while the copy resolves alongside.
+ * Sidewalk chapter: the frame settles, the copy follows. Plays once: a scrub
+ * reverses on scroll-up and leaves the chapter blank above its start.
  */
 const sidewalkReveal = compileMotion(
   defineMotion({
@@ -192,10 +173,12 @@ const closeEntrance = compileMotion(
     id: 'hm.close.enter',
     initial: {
       'close-title': { opacity: 0, y: 26 },
+      'close-lead': { opacity: 0, y: 18 },
       'close-cta': { opacity: 0, y: 14 },
     },
     tracks: [
       { target: 'close-title', to: { opacity: 1, y: 0 }, atMs: 0, durationMs: 640, ease: 'power2.out' },
+      { target: 'close-lead', to: { opacity: 1, y: 0 }, atMs: 140, durationMs: 520, ease: 'power2.out' },
       { target: 'close-cta', to: { opacity: 1, y: 0 }, atMs: 240, durationMs: 480, ease: 'power2.out' },
     ],
   }),
@@ -257,8 +240,9 @@ function armMagnets(root: ParentNode): () => void {
 }
 
 /**
- * All home choreography, bound once when ProductHome mounts. Marker ids are
- * unique to the home page, so the document is a safe query scope. The caller
+ * All home choreography, bound once when the HomeMotion island mounts.
+ * Marker ids are unique to the home page, so the document is a safe query
+ * scope. The caller
  * passes `reduced`; under reduced motion nothing binds and `motion-armed`
  * is never set — the page is its own static composition.
  */
@@ -293,12 +277,12 @@ export function useHomeMotion(reduced: boolean) {
       });
     }
 
-    // Chapter 2 — the block.
-    if (triggers.block && bindable(blockEntrance, all)) {
-      attachScrollTrigger(createGsapTimeline(blockEntrance, all), {
-        trigger: triggers.block,
-        start: 'top 78%',
-      });
+    // Chapter copy columns: the block and the prose chapter.
+    if (triggers.block && bindable(blockCopy, all)) {
+      attachScrollTrigger(createGsapTimeline(blockCopy, all), { trigger: triggers.block, start: 'top 78%' });
+    }
+    if (triggers.story && bindable(storyCopy, all)) {
+      attachScrollTrigger(createGsapTimeline(storyCopy, all), { trigger: triggers.story, start: 'top 78%' });
     }
 
     // Places index.
@@ -309,13 +293,12 @@ export function useHomeMotion(reduced: boolean) {
       });
     }
 
-    // Sidewalk — the frame settles with scroll.
+    // Sidewalk — plays once and stays.
     if (triggers.sidewalk && bindable(sidewalkReveal, all)) {
       attachScrollTrigger(createGsapTimeline(sidewalkReveal, all), {
         trigger: triggers.sidewalk,
         start: 'top 82%',
-        end: 'center 55%',
-        scrub: 0.5,
+        once: true,
       });
     }
 

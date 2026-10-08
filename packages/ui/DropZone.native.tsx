@@ -1,5 +1,5 @@
 'use client';
-import { tv } from 'tailwind-variants';
+import { tv } from './tv';
 import {
   DragDropContentView,
   type DragDropContentViewProps,

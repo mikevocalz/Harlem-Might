@@ -1,4 +1,4 @@
-import { tv } from 'tailwind-variants';
+import { tv } from './tv';
 import { View } from './tw';
 import { FadeIn, ScaleIn } from './motion';
 import { Text } from './Text';
