@@ -1,9 +1,0 @@
-com.harlemmight.spatialwindowowners.spatial-window-owners-pngs-0 /Users/mikevocalz/Harlem-Might/apps/mobile/modules/spatial-window-owners/android/build/generated/res/pngs/debug
-com.harlemmight.spatialwindowowners.spatial-window-owners-updated_navigation_xml-1 /Users/mikevocalz/Harlem-Might/apps/mobile/modules/spatial-window-owners/android/build/generated/updated_navigation_xml/debug
-com.harlemmight.spatialwindowowners.spatial-window-owners-mergeDebugResources-2 /Users/mikevocalz/Harlem-Might/apps/mobile/modules/spatial-window-owners/android/build/intermediates/incremental/debug/mergeDebugResources/merged.dir
-com.harlemmight.spatialwindowowners.spatial-window-owners-mergeDebugResources-3 /Users/mikevocalz/Harlem-Might/apps/mobile/modules/spatial-window-owners/android/build/intermediates/incremental/debug/mergeDebugResources/stripped.dir
-com.harlemmight.spatialwindowowners.spatial-window-owners-debug-4 /Users/mikevocalz/Harlem-Might/apps/mobile/modules/spatial-window-owners/android/build/intermediates/merged_res/debug/mergeDebugResources
-com.harlemmight.spatialwindowowners.spatial-window-owners-debug-5 /Users/mikevocalz/Harlem-Might/apps/mobile/modules/spatial-window-owners/android/build/intermediates/packaged_res/debug/packageDebugResources
-com.harlemmight.spatialwindowowners.spatial-window-owners-debug-6 /Users/mikevocalz/Harlem-Might/apps/mobile/modules/spatial-window-owners/android/src/debug/res
-com.harlemmight.spatialwindowowners.spatial-window-owners-main-7 /Users/mikevocalz/Harlem-Might/apps/mobile/modules/spatial-window-owners/android/src/main/res
-gradleHome-0 /Users/mikevocalz/.gradle
