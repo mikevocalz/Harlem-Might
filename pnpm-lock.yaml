@@ -569,8 +569,8 @@ importers:
         specifier: 'catalog:'
         version: 7.4.1(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
       '@reactvision/react-viro':
-        specifier: 'catalog:'
-        version: 3.0.2(@reactvision/viro-web-renderer@1.0.1)(expo@58.0.1)(react-native-web@0.21.3(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+        specifier: link:../../../viro
+        version: link:../../../viro
       '@rive-app/react-native':
         specifier: 'catalog:'
         version: 0.5.2(react-native-nitro-modules@0.37.1(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.0-rc.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
@@ -584,17 +584,20 @@ importers:
         specifier: 'catalog:'
         version: 5.104.1(react@19.3.0)
       '@viro-external/core':
-        specifier: link:../../../viro-external-specs-preview/packages/viro-external-core
-        version: link:../../../viro-external-specs-preview/packages/viro-external-core
+        specifier: link:../../../viro-external/packages/viro-external-core
+        version: link:../../../viro-external/packages/viro-external-core
       '@viro-external/media':
-        specifier: link:../../../viro-external-specs-preview/packages/media
-        version: link:../../../viro-external-specs-preview/packages/media
+        specifier: link:../../../viro-external/packages/media
+        version: link:../../../viro-external/packages/media
+      '@viro-external/meta-layout':
+        specifier: link:../../../viro-external/packages/meta-layout
+        version: link:../../../viro-external/packages/meta-layout
       '@viro-external/ui':
-        specifier: link:../../../viro-external-specs-preview/packages/ui
-        version: link:../../../viro-external-specs-preview/packages/ui
+        specifier: link:../../../viro-external/packages/ui
+        version: link:../../../viro-external/packages/ui
       '@viro-external/xr-contract':
-        specifier: link:../../../viro-external-specs-preview/packages/xr-platform-contract
-        version: link:../../../viro-external-specs-preview/packages/xr-platform-contract
+        specifier: link:../../../viro-external/packages/xr-platform-contract
+        version: link:../../../viro-external/packages/xr-platform-contract
       canvaskit-wasm:
         specifier: 'catalog:'
         version: 0.41.0

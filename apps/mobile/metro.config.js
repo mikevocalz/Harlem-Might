@@ -42,23 +42,36 @@ const VENDORED_NAVIGATION = {
 };
 
 /**
- * Linked checkouts outside this repo: the Viro fork and @viro-external. Metro
+ * Linked checkouts outside this repo (package.json `link:` deps): the Viro
+ * fork at ../../../viro and @viro-external at ../../../viro-external. Metro
  * must watch their real paths, and their imports must resolve from this app's
  * node_modules, or each checkout's own react / react-native copies load too.
  */
 const LINKED_CHECKOUTS = [
-  path.resolve(__dirname, "../../../viro-specs-preview"),
-  path.resolve(__dirname, "../../../viro-external-specs-preview"),
+  path.resolve(__dirname, "../../../viro"),
+  path.resolve(__dirname, "../../../viro-external"),
 ];
 config.watchFolders = [...(config.watchFolders ?? []), ...LINKED_CHECKOUTS];
 const APP_ORIGIN = path.join(__dirname, "package.json");
 const isLinked = (file) => LINKED_CHECKOUTS.some((dir) => file && file.startsWith(dir + path.sep));
 const isBare = (name) => !name.startsWith(".") && !path.isAbsolute(name);
 
+/**
+ * This app links the Viro fork; web and the shared packages keep the public
+ * catalog release, which the hoisted root node_modules holds. A
+ * packages/spatial import would otherwise reach that public copy, so every
+ * Viro import in this bundle resolves from the app, which is the fork.
+ */
+const isViro = (name) =>
+  name === "@reactvision/react-viro" || name.startsWith("@reactvision/react-viro/");
+
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   const vendored = VENDORED_NAVIGATION[moduleName];
   if (vendored) {
     return { type: "sourceFile", filePath: require.resolve(vendored) };
+  }
+  if (isViro(moduleName)) {
+    return context.resolveRequest({ ...context, originModulePath: APP_ORIGIN }, moduleName, platform);
   }
   if (isBare(moduleName) && isLinked(context.originModulePath)) {
     try {
