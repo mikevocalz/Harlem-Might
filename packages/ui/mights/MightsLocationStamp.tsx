@@ -9,9 +9,15 @@ export interface MightsLocationStampProps {
   href?: string;
   tone?: 'light' | 'dark';
   className?: string;
+  /**
+   * `xr` sets the text at the Horizon secondary step (16/22), above Meta's
+   * 14px floor; `sm` is the site's 14px stamp.
+   * @default 'sm'
+   */
+  size?: 'sm' | 'xr';
 }
 
-export function MightsLocationStamp({ name, street, href, tone = 'light', className = '' }: MightsLocationStampProps) {
+export function MightsLocationStamp({ name, street, href, tone = 'light', className = '', size = 'sm' }: MightsLocationStampProps) {
   const color =
     tone === 'dark'
       ? 'bg-mights-night/70 text-white'
@@ -23,7 +29,8 @@ export function MightsLocationStamp({ name, street, href, tone = 'light', classN
       {street ? <span className="opacity-75">{street}</span> : null}
     </>
   );
-  const cls = `inline-flex items-center gap-2 px-2.5 py-1 text-sm backdrop-blur-md ${color} ${className}`;
+  const textSize = size === 'xr' ? 'text-xr-label' : 'text-sm';
+  const cls = `inline-flex items-center gap-2 px-2.5 py-1 ${textSize} backdrop-blur-md ${color} ${className}`;
   return href ? (
     <Link href={href} className={`mights-focus ${cls} hover:underline`}>
       {content}

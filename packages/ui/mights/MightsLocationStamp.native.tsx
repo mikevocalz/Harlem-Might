@@ -9,7 +9,9 @@ import { PressableLink } from './MightsShape.native';
 // hover underline becomes a pressed underline.
 
 /** Names the real place in an image and, with `href`, links to it. */
-export function MightsLocationStamp({ name, street, href, tone = 'light', className = '' }: MightsLocationStampProps) {
+export function MightsLocationStamp({ name, street, href, tone = 'light', className = '', size = 'sm' }: MightsLocationStampProps) {
+  // text-sm is 12.25dp under the native rem-14 polyfill; xr is absolute 16dp.
+  const textSize = size === 'xr' ? 'text-xr-label' : 'text-sm';
   const surface = tone === 'dark' ? 'bg-mights-night/70' : 'bg-paper/90';
   const ink = tone === 'dark' ? 'text-white' : 'text-text';
   const row = `flex-row items-center gap-2 self-start px-2.5 py-1 ${surface} ${className}`;
@@ -17,8 +19,8 @@ export function MightsLocationStamp({ name, street, href, tone = 'light', classN
   const content = (underline: boolean) => (
     <>
       <View aria-hidden className="h-2 w-2 shrink-0 rotate-45 bg-primary" />
-      <Text className={`font-sans-semibold text-sm ${ink} ${underline ? 'underline' : ''}`}>{name}</Text>
-      {street ? <Text className={`font-sans text-sm opacity-75 ${ink}`}>{street}</Text> : null}
+      <Text className={`font-sans-semibold ${textSize} ${ink} ${underline ? 'underline' : ''}`}>{name}</Text>
+      {street ? <Text className={`font-sans ${textSize} opacity-75 ${ink}`}>{street}</Text> : null}
     </>
   );
 

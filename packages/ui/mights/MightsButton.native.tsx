@@ -19,7 +19,12 @@ type Size = NonNullable<MightsButtonProps['size']>;
 const box = tv({
   base: 'relative flex-row items-center justify-center',
   variants: {
-    size: { md: 'h-13 px-8', sm: 'h-10 px-5' },
+    size: {
+      md: 'h-13 px-8',
+      sm: 'h-10 px-5',
+      xr: 'h-target min-w-target px-5',
+      'xr-primary': 'h-target-primary min-w-target-primary px-6',
+    },
   },
 });
 
@@ -32,7 +37,7 @@ const label = tv({
       ghost: 'text-primary',
       outline: 'text-text',
     },
-    size: { md: 'text-ui', sm: 'text-small' },
+    size: { md: 'text-ui', sm: 'text-small', xr: 'text-xr-label', 'xr-primary': 'text-xr-body' },
   },
 });
 
@@ -60,6 +65,8 @@ function layersFor(variant: Variant, pressed: boolean, c: MightsColors): ShapeLa
 const HIT_SLOP: Record<Size, { top: number; bottom: number } | undefined> = {
   md: undefined,
   sm: { top: 4, bottom: 4 },
+  xr: undefined,
+  'xr-primary': undefined,
 };
 
 /**
