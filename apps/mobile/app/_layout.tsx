@@ -9,6 +9,7 @@ import { Toaster } from "@acme/ui";
 import { palette, semantic } from "@acme/theme";
 import { metaWindows } from "../src/spatial/metaWindows";
 import { SpatialWindowHost } from "../src/spatial/SpatialWindowHost";
+import { MainRouteRelay } from "../src/spatial/MainRouteRelay";
 import "../global.css";
 
 // className-capable gesture root (third-party component → withUniwind).
@@ -66,6 +67,8 @@ export default function RootLayout() {
             <metaWindows.SceneProvider>
               <Slot />
               <SpatialWindowHost />
+              {/* Routes that Horizon panels ask for, performed here with solito. */}
+              <MainRouteRelay />
             </metaWindows.SceneProvider>
             <Toaster />
           </AppQueryProvider>
