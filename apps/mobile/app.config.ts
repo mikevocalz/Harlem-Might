@@ -84,8 +84,10 @@ const config: ExpoConfig = {
           questAppId:
             process.env.EXPO_PUBLIC_META_QUEST_APP_ID ??
             process.env.META_QUEST_APP_ID,
-          metaSpatialLayout: true,
-          metaSpatialLayoutBomVersion: '1.2026.0.0',
+          // The Meta VR Layout SDK is linked by @expo-pico/core below
+          // (metaLayoutSdk), quest flavor only. Viro's option would add it to
+          // every flavor, so it stays off: one owner for the BOM.
+          metaSpatialLayout: false,
           metaVrGlassesCompatible: true,
           questArm64Only: true,
         },
@@ -117,6 +119,11 @@ const config: ExpoConfig = {
         developerTools: true,
         enableEmulatorOptimizations: false,
         targetSdkVersion: 34,
+        // Meta VR Layout SDK (@metavr/layout-compat + layout-window-compat):
+        // BOM and both artifacts as questImplementation, excluded from the
+        // pico and mobile classpaths, with stub ReactPackages there so the
+        // shared PackageList compiles. JS gates on isHorizonBuild.
+        metaLayoutSdk: true,
       },
     ],
   ],

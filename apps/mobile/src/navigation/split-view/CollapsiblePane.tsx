@@ -7,6 +7,12 @@ export interface CollapsiblePaneProps {
   /** Width in dp when open. */
   width: number;
   open: boolean;
+  /**
+   * Grow into the free width of the row, with `width` as the minimum. Set when
+   * a neighbouring pane moved into its own spatial window. Toggling it never
+   * remounts the children.
+   */
+  fill?: boolean;
   children: React.ReactNode;
   className?: string;
 }
@@ -31,11 +37,12 @@ export interface CollapsiblePaneProps {
  * does not re-wrap on every frame of the collapse — the pane is clipped rather
  * than reflowed internally.
  */
-export function CollapsiblePane({ width, open, children, className }: CollapsiblePaneProps) {
+export function CollapsiblePane({ width, open, fill = false, children, className }: CollapsiblePaneProps) {
   return (
     <MotionView
       animate={{ width: open ? width : 0 }}
       transition={TRANSITIONS.paneWidth}
+      style={{ flexGrow: fill ? 1 : 0 }}
       className={`overflow-hidden ${className ?? ''}`}
     >
       {/*
@@ -48,7 +55,7 @@ export function CollapsiblePane({ width, open, children, className }: Collapsibl
         survive the collapse.
       */}
       <View
-        style={{ width }}
+        style={fill ? undefined : { width }}
         className="flex-1"
         aria-hidden={!open}
         pointerEvents={open ? 'auto' : 'none'}

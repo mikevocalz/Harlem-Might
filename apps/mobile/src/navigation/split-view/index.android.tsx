@@ -23,6 +23,7 @@ import { resolvePaneVisibility } from './pane-overrides';
 import { CollapsiblePane } from './CollapsiblePane';
 import { PANE_WIDTH_DP } from './pane-widths';
 import { usePaneOverrideStore } from './pane-overrides.store';
+import { usePanePromotion } from './pane-promotion';
 import { useWindowSizeClass } from './use-window-size-class';
 import { useSplitViewStore } from './store';
 import { useSplitViewBack } from './use-split-view-back';
@@ -73,6 +74,7 @@ function SplitViewNavigator({
   const primaryWidth = useSplitViewStore((state) => state.primaryWidth);
   const direction = useSplitViewStore((state) => state.direction);
   const paneOverrides = usePaneOverrideStore((state) => state.overrides);
+  const promotion = usePanePromotion();
 
   const all = Children.toArray(children);
   const columns = all.filter((child) => isValidElement(child) && child.type === SplitViewColumn);
@@ -166,6 +168,9 @@ function SplitViewNavigator({
     ? PANE_WIDTH_CLASS.primaryNarrow
     : PANE_WIDTH_CLASS.primary;
   const resizedWidth = visible.primaryNarrow ? null : primaryWidth;
+  // A pane shown in its own Horizon window collapses here but stays mounted,
+  // so its <SpatialWindow> keeps its tree position (pane-promotion.ts).
+  const primaryOpen = visible.primary && !promotion.primary;
 
   return (
     <SafeArea edges={['left', 'right']} className="flex-1">
@@ -180,7 +185,7 @@ function SplitViewNavigator({
         {columns[0] ? (
           <>
             <CollapsiblePane
-              open={visible.primary}
+              open={primaryOpen}
               width={
                 visible.primaryNarrow
                   ? PANE_WIDTH_DP.primaryNarrow
@@ -189,7 +194,7 @@ function SplitViewNavigator({
             >
               <Aside className="flex-1">{columns[0]}</Aside>
             </CollapsiblePane>
-            {visible.primary ? (
+            {primaryOpen ? (
               <PaneDivider width={resizedWidth ?? DEFAULT_PRIMARY_WIDTH} />
             ) : null}
           </>
@@ -198,6 +203,7 @@ function SplitViewNavigator({
         {columns[1] ? (
           <CollapsiblePane
             open={visible.supplementary}
+            fill={promotion.detail}
             width={PANE_WIDTH_DP.supplementary}
             className={visible.supplementary ? `border-r ${PANE_DIVIDER}` : undefined}
           >
@@ -205,9 +211,15 @@ function SplitViewNavigator({
           </CollapsiblePane>
         ) : null}
 
-        <Main className="flex-1">
-          <Slot />
-        </Main>
+        <View
+          className={promotion.detail ? 'w-0 overflow-hidden' : 'flex-1'}
+          aria-hidden={promotion.detail}
+          pointerEvents={promotion.detail ? 'none' : 'auto'}
+        >
+          <Main className="flex-1">
+            <Slot />
+          </Main>
+        </View>
       </View>
 
       {/*

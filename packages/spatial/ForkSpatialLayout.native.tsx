@@ -3,21 +3,7 @@
 import type { ComponentType, ReactNode } from 'react';
 import * as Viro from '@reactvision/react-viro';
 
-type ProviderProps = { children?: ReactNode; [key: string]: unknown };
-type WindowProps = {
-  children?: ReactNode;
-  label: string;
-  windowWidth: number;
-  windowHeight: number;
-  fallback?: 'inline' | 'drop';
-  priority?: number;
-  anchor?: unknown;
-  [key: string]: unknown;
-};
-
 type ForkExports = {
-  ViroSpatialSceneProvider?: ComponentType<ProviderProps>;
-  ViroSpatialWindow?: ComponentType<WindowProps>;
   getViroSpatialLayoutSupport?: () => {
     platform: string;
     nativeSpatialLayoutAvailable: boolean;
@@ -37,11 +23,12 @@ export function getSpatialForkCapabilities() {
 }
 
 /**
- * One layout contract across all hosts.
+ * Lays out the Spatial screen and its tools panel inline, in one window.
  *
- * - User fork + Meta Horizon OS: delegates to Meta VR Layout SDK.
- * - Pico/OpenXR, ordinary Android/iOS and web: children remain inline and the
- *   immersive Viro scene owns spatial placement.
+ * The tools panel used to request its own Meta window here under a second
+ * scene provider. Struck 2026-10-08 (DECISIONS S6): the app mounts one
+ * provider in apps/mobile/app/_layout.tsx and the two window slots belong to
+ * Explore's Discover and Place Detail.
  */
 export function ForkSpatialLayout({
   children,
@@ -50,27 +37,5 @@ export function ForkSpatialLayout({
   children: ReactNode;
   panel?: ReactNode;
 }) {
-  const Provider = fork.ViroSpatialSceneProvider;
-  const SpatialWindow = fork.ViroSpatialWindow;
-
-  if (!Provider || !SpatialWindow) {
-    return <>{children}{panel}</>;
-  }
-
-  return (
-    <Provider>
-      {children}
-      {panel ? (
-        <SpatialWindow
-          label="harlem-might-tools"
-          windowWidth={420}
-          windowHeight={560}
-          fallback="inline"
-          priority={1}
-        >
-          {panel}
-        </SpatialWindow>
-      ) : null}
-    </Provider>
-  );
+  return <>{children}{panel}</>;
 }

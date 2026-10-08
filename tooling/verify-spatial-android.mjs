@@ -38,9 +38,18 @@ const checks = [
   ['app/build.gradle', [
     "implementation project(path: ':react_viro')",
     "implementation project(path: ':viro_renderer')",
-    'com.meta.metavrx:metavrx-bom:1.2026.0.0',
-    'layout-react-compat',
-    'layout-window-react-compat',
+    // Meta VR Layout SDK, quest flavor only (@expo-pico/core metaLayoutSdk).
+    'questImplementation platform("com.meta.metavrx:metavrx-bom:1.2026.0.0")',
+    'questImplementation "com.meta.metavrx.layout:layout-react-compat"',
+    'questImplementation "com.meta.metavrx.layout:layout-window-react-compat"',
+    'c.exclude group: "com.meta.metavrx.layout"',
+    'src/metaLayoutStub/java',
+  ]],
+  ['app/src/metaLayoutStub/java/metavrx/layout/react/SpatialScenePackage.java', [
+    'public final class SpatialScenePackage implements ReactPackage',
+  ]],
+  ['app/src/metaLayoutStub/java/metavrx/layout/window/react/SpatialWindowPackage.java', [
+    'public final class SpatialWindowPackage implements ReactPackage',
   ]],
   ['gradle.properties', [
     'reactNativeArchitectures=arm64-v8a',
@@ -76,6 +85,18 @@ for (const [relativePath, needles] of checks) {
   const body = read(relativePath);
   for (const needle of needles) {
     if (!body.includes(needle)) failures.push(`${relativePath}: missing ${needle}`);
+  }
+}
+
+// The SDK and its volumetric-window permission must never reach the pico or
+// mobile APKs, so no flavor-wide declaration of the Meta layout artifacts.
+if (existsSync(join(android, 'app/build.gradle'))) {
+  const gradle = read('app/build.gradle');
+  const unscoped = gradle
+    .split('\n')
+    .filter((line) => /^\s*implementation\b.*com\.meta\.metavrx/.test(line));
+  for (const line of unscoped) {
+    failures.push(`app/build.gradle: Meta VR Layout SDK declared for every flavor: ${line.trim()}`);
   }
 }
 
