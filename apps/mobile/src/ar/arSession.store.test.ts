@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, it } from 'node:test';
-import { useArSession } from './arSession.store.ts';
+import { sceneModeFor, useArSession } from './arSession.store.ts';
 
 const ROUTE = {
   kind: 'straight' as const,
@@ -51,5 +51,34 @@ describe('useArSession', () => {
     const state = useArSession.getState();
     assert.equal(state.placement?.anchorId, 'plane-1');
     assert.equal(state.resolved?.mode, 'tabletop');
+  });
+
+  it('starts a street session just south of the place, facing north', () => {
+    const s = useArSession.getState();
+    s.teleport({ eastM: 40, northM: 12 });
+    s.snapTurn('right');
+    s.request({ mode: 'street', placeId: 'apollo-theater' });
+    const next = useArSession.getState();
+    assert.deepEqual(next.street, { user: { eastM: 0, northM: -4 }, headingDeg: 0 });
+    assert.equal(sceneModeFor(next.requested), 'street');
+  });
+
+  it('teleports and snap-turns in the street scene', () => {
+    const s = useArSession.getState();
+    s.teleport({ eastM: 12.5, northM: -3 });
+    s.snapTurn('left');
+    s.snapTurn('left');
+    assert.deepEqual(useArSession.getState().street, { user: { eastM: 12.5, northM: -3 }, headingDeg: 270 });
+    assert.throws(() => s.teleport({ eastM: Number.POSITIVE_INFINITY, northM: 0 }), RangeError);
+  });
+});
+
+describe('sceneModeFor', () => {
+  it('is tabletop for every request except street', () => {
+    assert.equal(sceneModeFor(null), 'tabletop');
+    for (const mode of ['tabletop', 'room', 'preview'] as const) {
+      assert.equal(sceneModeFor({ mode }), 'tabletop');
+    }
+    assert.equal(sceneModeFor({ mode: 'street' }), 'street');
   });
 });
