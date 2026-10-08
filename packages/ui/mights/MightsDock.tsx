@@ -16,12 +16,18 @@ const ICONS = {
 const item =
   'mights-focus relative flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-1 text-caption font-medium';
 
+const marker = 'absolute top-0 h-rail w-8 bg-primary';
+
 // Mobile primary navigation (< 768px). "More" is a native <dialog> sheet:
-// showModal() supplies the focus trap, inert backdrop and Escape-to-close.
+// showModal() supplies the focus trap, inert backdrop and Escape-to-close,
+// and close() returns focus to the More button.
 export function MightsDock() {
   const pathname = usePathname() ?? '/';
   const current = activeSection(pathname);
   const sheet = useRef<HTMLDialogElement | null>(null);
+  // No dock tab matches /about, /download or the legal pages, so More carries
+  // the you-are-here state for the routes that live in its sheet.
+  const inSheet = secondaryNav.some((link) => pathname === link.href || pathname.startsWith(`${link.href}/`));
 
   return (
     <>
@@ -40,7 +46,7 @@ export function MightsDock() {
                   aria-current={active ? 'page' : undefined}
                   className={`${item} ${active ? 'text-primary' : 'text-text-muted'}`}
                 >
-                  {active ? <span aria-hidden className="absolute top-0 h-px w-8 bg-primary" /> : null}
+                  {active ? <span aria-hidden className={marker} /> : null}
                   <Icon size={20} strokeWidth={active ? 2.25 : 1.75} aria-hidden />
                   {nav.label}
                 </Link>
@@ -52,9 +58,10 @@ export function MightsDock() {
               type="button"
               aria-haspopup="dialog"
               onClick={() => sheet.current?.showModal()}
-              className={`${item} text-text-muted`}
+              className={`${item} ${inSheet ? 'text-primary' : 'text-text-muted'}`}
             >
-              <Ellipsis size={20} strokeWidth={1.75} aria-hidden />
+              {inSheet ? <span aria-hidden className={marker} /> : null}
+              <Ellipsis size={20} strokeWidth={inSheet ? 2.25 : 1.75} aria-hidden />
               More
             </button>
           </li>
@@ -63,34 +70,42 @@ export function MightsDock() {
 
       <dialog
         ref={sheet}
-        aria-label="More"
+        aria-labelledby="mights-more-title"
         onClick={(e) => {
           if (e.target === e.currentTarget) e.currentTarget.close();
         }}
         className="mights-sheet m-0 mt-auto w-full max-w-none bg-paper p-0 text-text shadow-stoop backdrop:bg-mights-night/40 md:hidden"
       >
         <div className="flex items-center justify-between border-b border-rule-hairline px-5 py-4">
-          <span className="text-base font-semibold">More</span>
+          <span id="mights-more-title" className="text-base font-semibold">
+            More
+          </span>
           <button
             type="button"
             onClick={() => sheet.current?.close()}
-            className="mights-focus min-h-11 px-2 text-sm font-medium text-primary"
+            className="mights-focus min-h-11 min-w-11 px-2 text-small font-medium text-primary"
           >
             Close
           </button>
         </div>
         <ul className="pb-[calc(env(safe-area-inset-bottom)+--spacing(3))]">
-          {secondaryNav.map((link) => (
-            <li key={link.label}>
-              <Link
-                href={link.href}
-                onClick={() => sheet.current?.close()}
-                className="mights-focus flex min-h-12 items-center border-b border-rule-hairline px-5 text-base"
-              >
-                {link.label}
-              </Link>
-            </li>
-          ))}
+          {secondaryNav.map((link) => {
+            const here = pathname === link.href || pathname.startsWith(`${link.href}/`);
+            return (
+              <li key={link.label}>
+                <Link
+                  href={link.href}
+                  aria-current={here ? 'page' : undefined}
+                  onClick={() => sheet.current?.close()}
+                  className={`mights-focus flex min-h-12 items-center border-b border-rule-hairline px-5 text-base ${
+                    here ? 'font-semibold text-primary' : ''
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </dialog>
     </>

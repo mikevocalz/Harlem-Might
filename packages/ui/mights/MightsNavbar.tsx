@@ -65,12 +65,18 @@ export function MightsNavbar({ overlay = false, tone = 'iron' }: MightsNavbarPro
             })}
           </ul>
         </nav>
-        <div className="ml-auto hidden items-center gap-3 md:flex lg:ml-0">
-          <MightsButton href={routes.ar()} variant="secondary" size="sm">
-            Preview AR
-          </MightsButton>
-          <MightsButton href={routes.download()} size="sm">
-            Get the app
+        {/* One button. "Get the app" led to a page saying there is no app, so
+            it is "The app", outline weight, not a filled call to action.
+            "Preview AR" claimed a preview that does not run; the AR concept
+            stays reachable from the footer and the dock's More sheet. */}
+        <div className="ml-auto hidden items-center md:flex lg:ml-0">
+          <MightsButton
+            href={routes.download()}
+            variant="outline"
+            size="sm"
+            aria-current={pathname === routes.download() ? 'page' : undefined}
+          >
+            The app
           </MightsButton>
         </div>
       </div>
