@@ -25,6 +25,7 @@ jobs:
       - run: pnpm spatial:verify-android
       - run: pnpm spatial:verify-typegpu
       - run: pnpm --filter @acme/spatial test
+      - run: pnpm --filter @acme/app test
       # DEFER (2026-10-07): mobile is left out until its /viro-external headset
       # test route resolves in CI. That route imports PanelStack, PanelStat and
       # friends, which exist only on viro-external's unmerged
