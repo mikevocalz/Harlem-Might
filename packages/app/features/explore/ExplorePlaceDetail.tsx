@@ -23,6 +23,11 @@ export interface ExplorePlaceDetailProps {
   /** A Nearby row was chosen. */
   onSelectNearby: (place: HarlemPlacePreview) => void;
   /**
+   * Opens in-app directions for the place (the shared navigation session).
+   * When omitted, "Get directions" links out to Google Maps instead.
+   */
+  onDirections?: () => void;
+  /**
    * Absolute URL of the place's page on the site. Omit when the build has no
    * site address; the "Open place page" action is then left out rather than
    * shown dead.
@@ -62,6 +67,7 @@ export function ExplorePlaceDetail({
   dismissKind = 'close',
   onShowOnMap,
   onSelectNearby,
+  onDirections,
   placePageUrl,
   padding = 'pane',
   actions,
@@ -152,7 +158,11 @@ export function ExplorePlaceDetail({
                 Show on map
               </MightsButton>
             ) : null}
-            {place.lngLat ? (
+            {place.lngLat && onDirections ? (
+              <MightsButton size={type.buttons.primary} onPress={onDirections}>
+                Directions
+              </MightsButton>
+            ) : place.lngLat ? (
               <MightsButton size={type.buttons.primary} href={directionsUrl(place.lngLat)} external>
                 Get directions
               </MightsButton>
