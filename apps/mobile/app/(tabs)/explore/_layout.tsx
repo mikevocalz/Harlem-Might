@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { BackHandler } from 'react-native';
+import { BackHandler, useWindowDimensions } from 'react-native';
 import { Slot } from 'expo-router';
 import { useRouter } from 'solito/navigation';
 import { routes } from '@acme/ui/mights';
@@ -17,7 +17,6 @@ import {
 } from '@acme/app';
 import { SafeArea } from '@acme/ui';
 import { View } from '@acme/ui/tw';
-import { useWindowSizeClass } from '@/src/navigation/split-view/use-window-size-class';
 import { siteUrl } from '@/src/site/site-url';
 import { EXPLORE_SURFACE, resolveExploreWorkspace } from '@/src/spatial/exploreWorkspace';
 import {
@@ -36,12 +35,13 @@ import { metaWindows } from '@/src/spatial/metaWindows';
 /**
  * Explore: the map is the permanent centre (design handoff §0, §4).
  *
- * The map always takes the flex region. Discover is a leading pane, drawer or
- * compact screen, and always stays in this window (DECISIONS S12). Place
- * Detail is a trailing pane, overlay or compact screen that exists only while
- * a place is selected (S5). On a quest build Detail asks for its own Horizon
- * window (src/spatial/exploreWorkspace.ts); once promoted, its pane collapses
- * here and the map takes its width.
+ * The map always takes the flex region. Discover is a leading column, drawer
+ * or single-column screen, and always stays in this window (DECISIONS S12).
+ * Place Detail is a trailing column, overlay or screen that exists only while
+ * a place is selected (S5). On a quest build all three share one 1440x900dp
+ * window, Discover 360 | map | Detail 400, and Detail pushes the map narrower
+ * instead of covering it (S17). Breakpoints come from the window's width,
+ * which the user can resize (src/spatial/exploreLayout.ts).
  *
  * Selection is one store write (`openPlace`). The `[placeId]` route only
  * syncs a deep link into the store, so Detail lives at a fixed tree position
@@ -49,7 +49,7 @@ import { metaWindows } from '@/src/spatial/metaWindows';
  */
 export default function ExploreRouteLayout() {
   const router = useRouter();
-  const sizeClass = useWindowSizeClass();
+  const { width: windowWidth } = useWindowDimensions();
 
   const selectedPlaceId = useExplore((state) => state.selectedPlaceId);
   const openPlace = useExplore((state) => state.openPlace);
@@ -67,19 +67,20 @@ export default function ExploreRouteLayout() {
   const detailPlacement = metaWindows.usePlacement(EXPLORE_SURFACE.placeDetail);
 
   const layout = resolveExploreLayout({
-    sizeClass,
+    windowWidth,
     hasSelection: selectedPlaceId != null,
     detailPlacement,
     isHorizon: isHorizonBuild,
     compactPane,
     discoverDrawerOpen,
   });
-  const compact = sizeClass === 'compact';
+  const single = layout.arrangement === 'single';
 
   const open = (placeId: string, origin: 'map' | 'discover', focusId: string | null) => {
     openPlace(placeId, focusId);
-    if (compact) showCompactDetail(origin);
-    if (sizeClass === 'medium') setDiscoverDrawerOpen(false);
+    if (single) showCompactDetail(origin);
+    // A Discover opened from "Places" folds away so Detail can take its place.
+    setDiscoverDrawerOpen(false);
   };
 
   const dismissDetail = () => {
@@ -129,8 +130,8 @@ export default function ExploreRouteLayout() {
     return () => subscription.remove();
   }, []);
 
-  const showPlaces = () => (compact ? setCompactPane('discover') : setDiscoverDrawerOpen(true));
-  const showMap = () => (compact ? setCompactPane('map') : setDiscoverDrawerOpen(false));
+  const showPlaces = () => (single ? setCompactPane('discover') : setDiscoverDrawerOpen(true));
+  const showMap = () => (single ? setCompactPane('map') : setDiscoverDrawerOpen(false));
   const windowPadding = isHorizonBuild ? 'window' : 'pane';
 
   return (
@@ -143,7 +144,8 @@ export default function ExploreRouteLayout() {
               <ExploreMasterPane
                 padding={windowPadding}
                 onSelectPlace={(place) => open(place.id, 'discover', rowFocusId(place.id))}
-                onShowMap={layout.showMapToggle ? showMap : undefined}
+                onShowMap={layout.discoverDismiss === 'show-map' ? showMap : undefined}
+                onClose={layout.discoverDismiss === 'close' ? showMap : undefined}
               />
             </ExplorePane>
 

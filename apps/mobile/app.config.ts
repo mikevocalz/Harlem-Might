@@ -75,9 +75,12 @@ const config: ExpoConfig = {
       'expo-horizon-core',
       {
         // Horizon OS opens a 2D app at phone size unless the activity names a
-        // window size; this matches the PICO window below (16:10, landscape).
-        defaultWidth: '1280dp',
-        defaultHeight: '800dp',
+        // window size. 1440x900dp (16:10) fits Explore's three columns,
+        // Discover 360 | map | Detail 400, in one window (DECISIONS S17);
+        // 1440 is Meta's documented maximum panel width. The PICO window
+        // below keeps its own size.
+        defaultWidth: '1440dp',
+        defaultHeight: '900dp',
         supportedDevices: 'quest2|questpro|quest3|quest3s',
         disableVrHeadtracking: false,
         allowBackup: false,
