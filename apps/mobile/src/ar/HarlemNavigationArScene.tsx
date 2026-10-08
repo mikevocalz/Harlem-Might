@@ -75,6 +75,8 @@ const PAPER = palette.mights.paper;
 const TICK_MS = 250;
 /** ARCore Earth pose polling. */
 const GEOSPATIAL_POLL_MS = 1000;
+/** Anchor creation costs battery and network; throttle attempts, not only accepted solutions. */
+const GEOSPATIAL_RESOLVE_MIN_INTERVAL_MS = 10000;
 /** Heading samples older than this are not paired with a camera pose. */
 const MAX_HEADING_AGE_MS = 400;
 /** Feed ARCore Earth fixes into the shared pipeline only when they beat typical GPS. */
@@ -179,6 +181,7 @@ export function HarlemNavigationArScene(props: { arSceneNavigator?: ReactVisionG
     let cancelled = false;
     let inFlight = false;
     let interval: ReturnType<typeof setInterval> | undefined;
+    let lastGeospatialSolveAttempt: { routeKey: string; atMs: number } | undefined;
 
     const solveFromAnchors = async (latitude: number, longitude: number, altitude: number, yaw68: number, r68: number) => {
       const state = useNavAr.getState().world;
@@ -231,11 +234,19 @@ export function HarlemNavigationArScene(props: { arSceneNavigator?: ReactVisionG
           });
         }
         const current = useNavAr.getState().world;
+        const now = Date.now();
         const due =
           current !== undefined &&
           (current.target === undefined ||
-            shouldResolvePlacement({ current: current.target, alongM: useNavAr.getState().alongM, nowMs: Date.now() }));
-        if (due && yaw68 <= MAX_GEOSPATIAL_SOLVE_YAW_DEG && r68 <= MAX_GEOSPATIAL_SOLVE_R68_M) {
+            shouldResolvePlacement({ current: current.target, alongM: useNavAr.getState().alongM, nowMs: now }));
+        const routeKey = current ? `${current.frame.routeId}#${current.frame.generation}` : undefined;
+        const cooledDown = !lastGeospatialSolveAttempt ||
+          lastGeospatialSolveAttempt.routeKey !== routeKey ||
+          now - lastGeospatialSolveAttempt.atMs >= GEOSPATIAL_RESOLVE_MIN_INTERVAL_MS;
+        if (due && cooledDown && routeKey &&
+            yaw68 <= MAX_GEOSPATIAL_SOLVE_YAW_DEG && r68 <= MAX_GEOSPATIAL_SOLVE_R68_M) {
+          // Mark BEFORE awaiting anchors: rejected solves must not cause new anchors every second.
+          lastGeospatialSolveAttempt = { routeKey, atMs: now };
           await solveFromAnchors(pose.latitude, pose.longitude, pose.altitude, yaw68, r68);
         }
       } catch {
@@ -312,7 +323,9 @@ export function HarlemNavigationArScene(props: { arSceneNavigator?: ReactVisionG
           headingAccuracyDeg: yawAccuracyDeg,
           cameraEnuOffset: (() => {
             const p = localPointOf(current.frame.origin, fixes.match.coordinate);
-            return { eastM: p[0], northM: -p[2], upM: 0 };
+            // GPS is ground-projected; the tracked camera is above the road surface.
+            // Without this vertical offset the entire walking route floats at eye level.
+            return { eastM: p[0], northM: -p[2], upM: EYE_HEIGHT_M };
           })(),
           horizontalAccuracyM,
         });
