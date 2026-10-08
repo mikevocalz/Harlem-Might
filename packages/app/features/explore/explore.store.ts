@@ -175,6 +175,12 @@ export const DEFAULT_SHEET_DETENT: SheetDetent = 'half';
 export interface ExploreSheet {
   open: boolean;
   detent: SheetDetent;
+  /**
+   * The control that opened the sheet (a list row or a map marker), so focus
+   * can go back to it on close. An opaque id owned by the caller; `null` when
+   * the sheet opened from a reload or shared link.
+   */
+  returnFocusId: string | null;
 }
 
 /**
@@ -222,11 +228,15 @@ export interface ExploreState {
   setCategory: (category: HarlemCategoryFilter) => void;
   selectPlace: (placeId: string | null) => void;
   toggleSavedPreview: (placeId: string) => void;
-  /** Opens the sheet at `detent`, or {@linkcode DEFAULT_SHEET_DETENT}. */
-  openSheet: (detent?: SheetDetent) => void;
+  /**
+   * Opens the sheet at `detent`, or {@linkcode DEFAULT_SHEET_DETENT}, and
+   * records which control opened it.
+   */
+  openSheet: (detent?: SheetDetent, returnFocusId?: string | null) => void;
   /** Moves an open sheet; on a closed sheet, sets where it will reopen. */
   setSheetDetent: (detent: SheetDetent) => void;
-  /** Closes the sheet and keeps its detent. */
+  /** Closes the sheet and keeps its detent and `returnFocusId`, which the
+   *  caller reads after close to restore focus. */
   closeSheet: () => void;
   setLocationPermission: (permission: LocationPermission) => void;
 }
@@ -254,16 +264,17 @@ export const useExplore = create<ExploreState>((set) => ({
   category: 'All',
   selectedPlaceId: null,
   savedPreviewIds: [],
-  sheet: { open: false, detent: DEFAULT_SHEET_DETENT },
+  sheet: { open: false, detent: DEFAULT_SHEET_DETENT, returnFocusId: null },
   locationPermission: 'unknown',
   setQuery: (query) => set({ query }),
   setCategory: (category) => set({ category }),
   selectPlace: (selectedPlaceId) => set({ selectedPlaceId }),
   toggleSavedPreview: (placeId) =>
     set((state) => ({ savedPreviewIds: toggleId(state.savedPreviewIds, placeId) })),
-  openSheet: (detent = DEFAULT_SHEET_DETENT) => set({ sheet: { open: true, detent } }),
-  setSheetDetent: (detent) => set((state) => ({ sheet: { open: state.sheet.open, detent } })),
-  closeSheet: () => set((state) => ({ sheet: { open: false, detent: state.sheet.detent } })),
+  openSheet: (detent = DEFAULT_SHEET_DETENT, returnFocusId = null) =>
+    set({ sheet: { open: true, detent, returnFocusId } }),
+  setSheetDetent: (detent) => set((state) => ({ sheet: { ...state.sheet, detent } })),
+  closeSheet: () => set((state) => ({ sheet: { ...state.sheet, open: false } })),
   setLocationPermission: (locationPermission) => set({ locationPermission }),
 }));
 
