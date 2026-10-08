@@ -84,5 +84,11 @@ export {
   AudioLines,
   Play,
   Pause,
+  MapPinned,
+  Footprints,
+  BookOpen,
+  CalendarClock,
+  Ellipsis,
+  ExternalLink,
 } from 'lucide-react';
 export type { LucideProps as IconProps } from 'lucide-react';

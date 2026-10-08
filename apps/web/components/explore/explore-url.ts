@@ -1,5 +1,6 @@
-// Pure helpers for the Explore workspace: URL parsing and building, the
-// result summary line, and focus-return targets. No React and no store, so
+// Pure helpers for the Explore workspace: URL parsing and building, and
+// focus-return targets. Result copy is shared with the app in
+// @acme/app/features/explore/explore-copy.ts. No React and no store, so
 // node --test can run them directly.
 
 export type ExploreView = 'map' | 'list';
@@ -43,22 +44,6 @@ export function exploreHref(pathname: string, current: string, patch: Record<str
   }
   const search = next.toString();
   return search ? `${pathname}?${search}` : pathname;
-}
-
-const plural = (n: number) => (n === 1 ? '1 place' : `${n} places`);
-
-/**
- * The polite live-region line under the filters. Names the filter and the
- * map gap, so a screen-reader user hears what the map can't show.
- */
-export function resultsSummary(total: number, mapped: number, q: string, category: string, all: string) {
-  const scope = [q.trim() ? `matching “${q.trim()}”` : '', category !== all ? `in ${category}` : '']
-    .filter(Boolean)
-    .join(' ');
-  const head = scope ? `${plural(total)} ${scope}` : plural(total);
-  if (total === 0) return `No places ${scope}`.trim() + '.';
-  if (mapped === total) return `${head}.`;
-  return `${head}, ${mapped} on the map.`;
 }
 
 /** Ids for `data-explore-focus`, the hook focus return queries by. */

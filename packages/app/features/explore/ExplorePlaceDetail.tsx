@@ -1,17 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Button, IconButton, Text } from '@acme/ui';
-import { X } from '@acme/ui/icons';
-import { Pressable, ScrollView, View } from '@acme/ui/tw';
-import {
-  formatDistance,
-  getHarlemPlacePreview,
-  nearbyPlaces,
-  placeStreetLine,
-  useExplore,
-  type HarlemPlacePreview,
-} from './explore.store';
+import { MightsButton, MightsHeading, MightsLocationStamp, MightsText } from '@acme/ui/mights';
+import { Pressable, ScrollView, Text, View } from '@acme/ui/tw';
+import { directionsUrl } from './explore-copy';
+import { formatDistance, getHarlemPlacePreview, nearbyPlaces, placeStreetLine, type HarlemPlacePreview } from './explore.store';
 import { useExploreType } from './explore-type';
 import { DETAIL_HEADING_FOCUS_ID, focusTargetRef, moveFocusTo } from './focus-registry';
 
@@ -21,14 +14,20 @@ export interface ExplorePlaceDetailProps {
   /** Closes Detail; the caller clears the selection. */
   onClose: () => void;
   /**
-   * `close` (an X) where Detail sits beside the map; `back` where it covers
-   * the map (compact).
+   * `close` where Detail sits beside the map (a leading gold rail); `back`
+   * where it covers the map on a phone (a top gold rail, "Back" label).
    */
   dismissKind?: 'close' | 'back';
   /** Shows the map. Pass only where Detail covers it (compact). */
   onShowOnMap?: () => void;
   /** A Nearby row was chosen. */
   onSelectNearby: (place: HarlemPlacePreview) => void;
+  /**
+   * Absolute URL of the place's page on the site. Omit when the build has no
+   * site address; the "Open place page" action is then left out rather than
+   * shown dead.
+   */
+  placePageUrl?: string;
   /** `window` (24dp) in a Horizon window or pane, `pane` (16dp) elsewhere. */
   padding?: 'window' | 'pane';
 }
@@ -37,13 +36,19 @@ export interface ExplorePlaceDetailProps {
 const LOCATION_CHECKED = '3 Oct 2026';
 
 /**
- * Place Detail (handoff §5, copy.md §3). One column: gold rail, Close/Save
- * bar, title, street, lead, actions, "Why it matters", Nearby and "Where this
- * comes from". A section with no data doesn't render; nothing promises
- * hours, menus or events the record doesn't hold.
+ * Place Detail, drawn like the site's inspector
+ * (apps/web/components/explore/ExploreWorkspace.tsx): a gold rail frame, the
+ * place name with a text Close, the location stamp (category, street), the
+ * short description and the site's two actions, "Get directions" and "Open
+ * place page". Below them, Nearby and "Where this comes from", which the
+ * native pane has room for.
  *
- * On open, screen-reader focus moves to the title. The title is a header, so
- * gaze and TalkBack find it first inside a Horizon window too.
+ * Shows `shortDescription`, never `whyItMatters`: the fixture's whyItMatters is
+ * planning copy about the product, not a fact about the place. No Save until
+ * saved places sync to an account (D8), matching the site.
+ *
+ * On open, screen-reader focus moves to the title, so gaze and TalkBack find
+ * it first inside a Horizon window too.
  */
 export function ExplorePlaceDetail({
   placeId,
@@ -51,53 +56,48 @@ export function ExplorePlaceDetail({
   dismissKind = 'close',
   onShowOnMap,
   onSelectNearby,
+  placePageUrl,
   padding = 'pane',
 }: ExplorePlaceDetailProps) {
   const type = useExploreType();
   const place = getHarlemPlacePreview(placeId);
-  const saved = useExplore((state) => state.savedPreviewIds.includes(placeId));
-  const toggleSavedPreview = useExplore((state) => state.toggleSavedPreview);
   const pad = padding === 'window' ? 'px-window' : 'px-4';
+  // The rail sits on the edge that meets the map: leading beside it, top over it.
+  const frame = dismissKind === 'back' ? 'pt-rail' : 'pl-rail';
+  const dismissLabel = dismissKind === 'back' ? 'Back' : 'Close';
 
   useEffect(() => {
     moveFocusTo(DETAIL_HEADING_FOCUS_ID);
   }, [placeId]);
 
-  const dismiss =
-    dismissKind === 'back' ? (
-      <Pressable
-        onPress={onClose}
-        aria-label="Back to map"
-        className="min-h-target min-w-target items-center justify-center rounded-card px-3"
-      >
-        <Text className={type.label + ' font-semibold text-text'}>Back</Text>
-      </Pressable>
-    ) : (
-      <IconButton
-        size="lg"
-        variant="ghost"
-        aria-label="Close details"
-        icon={<X size={22} strokeWidth={2.5} className="text-text" />}
-        onPress={onClose}
-      />
-    );
+  // The focus registry needs the heading's host view, and MightsHeading takes
+  // no ref, so a grouped wrapper carries the heading role and the ref.
+  const title = (text: string) => (
+    <View
+      ref={focusTargetRef(DETAIL_HEADING_FOCUS_ID) as never}
+      {...({ accessible: true, accessibilityRole: 'header', accessibilityLabel: text } as object)}
+      className="min-w-0 flex-1"
+    >
+      <MightsHeading level={2} size="title" className={type.heading}>
+        {text}
+      </MightsHeading>
+    </View>
+  );
 
   if (!place) {
     return (
-      <View className="flex-1 bg-surface-raised">
-        <View className={'min-h-14 flex-row items-center ' + pad}>{dismiss}</View>
-        <View className={'flex-1 justify-center gap-3 ' + pad}>
-          <Text
-            ref={focusTargetRef(DETAIL_HEADING_FOCUS_ID) as never}
-            role="heading"
-            className={type.title + ' font-semibold text-text'}
-          >
-            {"We couldn't find that place."}
-          </Text>
-          <Text className={type.body + ' text-text-muted'}>
-            It may have been renamed or removed.
-          </Text>
-          <Button variant="outline" title="Back to Discover" className="min-h-target" onPress={onClose} />
+      <View className={'flex-1 bg-primary ' + frame}>
+        <View className={'flex-1 gap-4 bg-surface-raised py-5 ' + pad}>
+          <View className="flex-row items-start justify-between gap-4">
+            {title('We couldn’t find that place.')}
+            <MightsButton size="sm" variant="ghost" onPress={onClose} aria-label={`${dismissLabel} details`}>
+              {dismissLabel}
+            </MightsButton>
+          </View>
+          <MightsText>It may have been renamed or removed.</MightsText>
+          <MightsButton size="sm" variant="secondary" onPress={onClose}>
+            Back to Explore
+          </MightsButton>
         </View>
       </View>
     );
@@ -106,85 +106,93 @@ export function ExplorePlaceDetail({
   const near = nearbyPlaces(place.id, 3);
 
   return (
-    <View className="flex-1 bg-surface-raised" aria-label={`Details: ${place.name}`}>
-      {/* The gold rail says "this shows the selected place" (direction.md, principle 1). */}
-      <View className="h-rail bg-primary" />
-      <View className={'min-h-14 flex-row items-center justify-between ' + pad}>{dismiss}</View>
-
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName={'max-w-content-prose gap-6 pb-12 ' + pad}
-        showsVerticalScrollIndicator={false}
-      >
-        <View className="gap-2">
-          <Text
-            ref={focusTargetRef(DETAIL_HEADING_FOCUS_ID) as never}
-            role="heading"
-            className={type.heading + ' font-display font-semibold text-text'}
-          >
-            {place.name}
-          </Text>
-          <Text className={type.body + ' text-brownstone'}>
-            {placeStreetLine(place)}, {place.category.toLowerCase()}
-          </Text>
-          <Text className={type.body + ' text-text'}>{place.shortDescription}</Text>
-        </View>
-
-        <View className="flex-row flex-wrap gap-target-gap">
-          {onShowOnMap ? (
-            <Button variant="primary" title="Show on map" className="min-h-target" onPress={onShowOnMap} />
-          ) : null}
-          <Button
-            variant="outline"
-            title={saved ? 'Saved' : 'Save'}
-            aria-label={saved ? `Saved ${place.name}. Tap to remove.` : `Save ${place.name}`}
-            className="min-h-target"
-            onPress={() => toggleSavedPreview(place.id)}
-          />
-        </View>
-
-        <View className="gap-2 border-t border-rule-hairline pt-6">
-          <Text role="heading" className={type.title + ' font-semibold text-text'}>
-            Why it matters
-          </Text>
-          <Text className={type.prose + ' text-text'}>{place.whyItMatters}</Text>
-        </View>
-
-        {near.length > 0 ? (
-          <View className="gap-2 border-t border-rule-hairline pt-6">
-            <Text role="heading" className={type.title + ' font-semibold text-text'}>
-              Nearby
-            </Text>
-            {near.map(({ place: other, meters }) => (
-              <Pressable
-                key={other.id}
-                onPress={() => onSelectNearby(other)}
-                aria-label={`${other.name}, ${formatDistance(meters)} away`}
-                className="min-h-target justify-center"
-              >
-                <Text className={type.body + ' text-text'}>
-                  {other.name} · {formatDistance(meters)}
-                </Text>
-              </Pressable>
-            ))}
+    <View className={'flex-1 bg-primary ' + frame} aria-label={`Details: ${place.name}`}>
+      <View className="flex-1 bg-surface-raised">
+        <View className={'border-b border-rule-hairline py-4 ' + pad}>
+          <View className="flex-row items-start justify-between gap-4">
+            {title(place.name)}
+            <MightsButton
+              size="sm"
+              variant="ghost"
+              onPress={onClose}
+              aria-label={dismissKind === 'back' ? `Back to the map from ${place.name}` : `Close ${place.name}`}
+            >
+              {dismissLabel}
+            </MightsButton>
           </View>
-        ) : null}
-
-        <View className="gap-1 border-t border-rule-hairline pt-6">
-          <Text role="heading" className={type.title + ' font-semibold text-text'}>
-            Where this comes from
-          </Text>
-          <Text className={type.body + ' text-text-muted'}>
-            {place.lngLat && place.osm
-              ? `Location from OpenStreetMap (${place.osm}), checked ${LOCATION_CHECKED}`
-              : 'Location not verified yet'}
-          </Text>
-          <Text className={type.body + ' text-text-muted'}>Description written by Harlem Might</Text>
-          <Text className={type.caption + ' text-text-muted'}>
-            No photos yet. We only show photos the venue or an archive has cleared for use.
-          </Text>
         </View>
-      </ScrollView>
+
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName={'max-w-content-prose gap-5 py-5 pb-12 ' + pad}
+          showsVerticalScrollIndicator={false}
+        >
+          <MightsLocationStamp name={place.category} street={placeStreetLine(place)} />
+          <MightsText tone="default" className={type.body}>
+            {place.shortDescription}
+          </MightsText>
+          {place.lngLat ? null : (
+            <MightsText size="small" className={type.caption}>
+              Location pending verification.
+            </MightsText>
+          )}
+
+          <View className="flex-row flex-wrap gap-3">
+            {onShowOnMap ? (
+              <MightsButton size="sm" variant="outline" onPress={onShowOnMap}>
+                Show on map
+              </MightsButton>
+            ) : null}
+            {place.lngLat ? (
+              <MightsButton size="sm" href={directionsUrl(place.lngLat)} external>
+                Get directions
+              </MightsButton>
+            ) : null}
+            {placePageUrl ? (
+              <MightsButton size="sm" variant="secondary" href={placePageUrl} external>
+                Open place page
+              </MightsButton>
+            ) : null}
+          </View>
+
+          {near.length > 0 ? (
+            <View className="gap-1 border-t border-rule-hairline pt-5">
+              <MightsHeading level={3} size="card" className={type.title}>
+                Nearby
+              </MightsHeading>
+              {near.map(({ place: other, meters }) => (
+                <Pressable
+                  key={other.id}
+                  onPress={() => onSelectNearby(other)}
+                  aria-label={`${other.name}, ${formatDistance(meters)} away`}
+                  className="min-h-target flex-row items-center gap-3 active:bg-surface-sunken"
+                >
+                  <View className="size-2 rotate-45 bg-rule-rail" />
+                  <Text className={type.body + ' flex-1 font-sans text-text'}>{other.name}</Text>
+                  <Text className={type.caption + ' font-sans text-text-muted'}>{formatDistance(meters)}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+
+          <View className="gap-1 border-t border-rule-hairline pt-5">
+            <MightsHeading level={3} size="card" className={type.title}>
+              Where this comes from
+            </MightsHeading>
+            <MightsText size="small" className={type.caption}>
+              {place.lngLat && place.osm
+                ? `Location from OpenStreetMap (${place.osm}), checked ${LOCATION_CHECKED}.`
+                : 'Location not verified yet.'}
+            </MightsText>
+            <MightsText size="small" className={type.caption}>
+              Description written by Harlem Might.
+            </MightsText>
+            <MightsText size="small" className={type.caption}>
+              No photos yet. We only show photos the venue or an archive has cleared for use.
+            </MightsText>
+          </View>
+        </ScrollView>
+      </View>
     </View>
   );
 }

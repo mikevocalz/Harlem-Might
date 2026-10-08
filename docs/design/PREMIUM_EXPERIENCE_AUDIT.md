@@ -10,7 +10,7 @@ These come from the repo owner and override the pack where they disagree.
 
 | # | Decision | Pack text it overrides |
 |---|---|---|
-| D1 | The public site stays dark, with the gold logo colour as primary. Light values remain for the mobile app's light mode. Read "daylit" in the pack as "warm dark, gold primary, legible outdoors". | `00-shared-contract.md` "Light / dark direction"; Phase 1 hypothesis 12 |
+| D1 | The public site stays dark, with the gold logo colour as primary. Read "daylit" in the pack as "warm dark, gold primary, legible outdoors". Revised 2026-10-08 (DECISIONS S14): the mobile app is dark-only too (`userInterfaceStyle: 'dark'`, `Uniwind.setTheme('dark')` at startup, no theme toggle). Light values stay in `@acme/theme` tokens, unused by either app. | `00-shared-contract.md` "Light / dark direction"; Phase 1 hypothesis 12 |
 | D2 | Map style: compare current `mapbox/dark-v11` with a warm dark style built from the tokens. No light-map prototype. | Phase 4 "light/custom Mights daylit" prototype |
 | D3 | Public name is "Harlem Might", singular. Internal `Mights*` component names stay. | "Flag, do not decide" |
 | D8 | B12 Profile/Saved is struck: `/profile` redirects to `/` (`apps/web/next.config.ts`). Returns when a signed-in saved-places route ships. | Bento register B12 |

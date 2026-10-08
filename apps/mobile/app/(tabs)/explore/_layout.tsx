@@ -1,23 +1,24 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { BackHandler, useWindowDimensions } from 'react-native';
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { BackHandler } from 'react-native';
+import { Slot } from 'expo-router';
+import { useRouter } from 'solito/navigation';
+import { routes } from '@acme/ui/mights';
 import {
   ExploreMapPane,
   ExploreMasterPane,
   ExplorePlaceDetail,
   ExploreTypeContext,
-  MightsAssistant,
   markerFocusId,
   moveFocusTo,
   rowFocusId,
   useExplore,
-  useMightsAssistant,
 } from '@acme/app';
 import { SafeArea } from '@acme/ui';
 import { View } from '@acme/ui/tw';
-import { useWindowSizeClass } from '@/src/navigation/split-view';
+import { useWindowSizeClass } from '@/src/navigation/split-view/use-window-size-class';
+import { siteUrl } from '@/src/site/site-url';
 import { EXPLORE_SURFACE, resolveExploreWorkspace } from '@/src/spatial/exploreWorkspace';
 import {
   EXPLORE_PANE_DP,
@@ -31,8 +32,6 @@ import { ExploreWorkspaceContext, ExploreWorkspaceWindow } from '@/src/spatial/E
 import { isHorizonBuild } from '@/src/spatial/horizonBuild';
 import { metaWindows } from '@/src/spatial/metaWindows';
 
-/** Room the collapsed assistant bar takes at the bottom of the map. */
-const ASSISTANT_BAR_CLEARANCE = 96;
 
 /**
  * Explore: the map is the permanent centre (design handoff §0, §4).
@@ -50,15 +49,11 @@ const ASSISTANT_BAR_CLEARANCE = 96;
  */
 export default function ExploreRouteLayout() {
   const router = useRouter();
-  const segments = useSegments();
   const sizeClass = useWindowSizeClass();
-  const { height } = useWindowDimensions();
 
   const selectedPlaceId = useExplore((state) => state.selectedPlaceId);
   const openPlace = useExplore((state) => state.openPlace);
   const closePlace = useExplore((state) => state.closePlace);
-  const assistantOpen = useMightsAssistant((state) => state.open);
-  const closeAssistant = useMightsAssistant((state) => state.close);
 
   const compactPane = useExploreLayoutStore((state) => state.compactPane);
   const discoverDrawerOpen = useExploreLayoutStore((state) => state.discoverDrawerOpen);
@@ -90,10 +85,9 @@ export default function ExploreRouteLayout() {
   const dismissDetail = () => {
     closePlace();
     leaveCompactDetail();
-    // A deep link left /explore/[placeId] in the URL; drop it with the selection.
-    if ((segments as string[]).includes('[placeId]')) {
-      router.replace('/explore');
-    }
+    // A deep link may have left /explore/[placeId] as the current route; drop
+    // it with the selection. Harmless when the index is already showing.
+    router.replace(routes.explore());
   };
 
   // Return focus to the row or marker that opened Detail once it has gone
@@ -107,7 +101,7 @@ export default function ExploreRouteLayout() {
     previousSelection.current = selectedPlaceId;
   }, [selectedPlaceId]);
 
-  // Android Back: assistant, then Detail, then a Discover screen or drawer.
+  // Android Back: Detail, then a Discover screen or drawer.
   const latest = useRef<{ layout: ExploreLayout; dismissDetail: () => void }>({ layout, dismissDetail });
   useEffect(() => {
     latest.current = { layout, dismissDetail };
@@ -115,13 +109,10 @@ export default function ExploreRouteLayout() {
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       const action = exploreBackAction({
-        assistantOpen: useMightsAssistant.getState().open,
+        assistantOpen: false,
         layout: latest.current.layout,
       });
       switch (action) {
-        case 'close-assistant':
-          useMightsAssistant.getState().close();
-          return true;
         case 'close-detail':
           latest.current.dismissDetail();
           return true;
@@ -169,20 +160,11 @@ export default function ExploreRouteLayout() {
                   top: 0,
                   left: layout.mapInsets.left,
                   right: layout.mapInsets.right,
-                  bottom: assistantOpen ? Math.round(height / 2) : ASSISTANT_BAR_CLEARANCE,
+                  bottom: 0,
                 }}
               >
-                <MightsAssistant
-                  layout={layout.assistant}
-                  onOpenPlace={(placeId) => open(placeId, 'map', markerFocusId(placeId))}
-                  onShowDetails={() => {
-                    closeAssistant();
-                    if (compact) showCompactDetail('map');
-                  }}
-                  onShowOnMap={() => {
-                    if (compact) setCompactPane('map');
-                  }}
-                />
+                {/* The assistant is struck until it has a backend: today it would only
+                    repeat Discover's search (spatial DECISIONS S16, 2026-10-08). */}
               </ExploreMapPane>
             </View>
 
@@ -191,6 +173,7 @@ export default function ExploreRouteLayout() {
                 <ExploreWorkspaceWindow surfaceId={EXPLORE_SURFACE.placeDetail}>
                   <ExplorePlaceDetail
                     placeId={selectedPlaceId}
+                    placePageUrl={siteUrl(routes.place(selectedPlaceId))}
                     padding={windowPadding}
                     dismissKind={layout.detailDismiss}
                     onClose={dismissDetail}

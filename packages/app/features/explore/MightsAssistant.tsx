@@ -76,7 +76,7 @@ export function MightsAssistant({ onOpenPlace, onShowDetails, onShowOnMap, layou
           className="min-h-target w-full max-w-assistant-bar flex-row items-center gap-target-gap rounded-full border border-border-strong bg-surface-raised px-4"
         >
           <AssistantMark />
-          <Text numberOfLines={1} className={type.label + ' flex-1 font-semibold text-text'}>
+          <Text numberOfLines={1} className={type.label + ' flex-1 font-sans-semibold text-text'}>
             {assistantBarLabel(place)}
           </Text>
         </Pressable>
@@ -113,7 +113,7 @@ export function MightsAssistant({ onOpenPlace, onShowDetails, onShowOnMap, layou
       <View className="h-rail -mx-4 -mt-4 mb-1 rounded-t-sheet bg-rule-rail" />
       <View className="flex-row items-center gap-target-gap">
         <AssistantMark />
-        <Text role="heading" className={type.title + ' flex-1 font-semibold text-text'}>
+        <Text role="heading" className={type.title + ' flex-1 font-sans-semibold text-text'}>
           Ask Harlem Might
         </Text>
         <IconButton
@@ -166,7 +166,7 @@ export function MightsAssistant({ onOpenPlace, onShowDetails, onShowOnMap, layou
               onPress={() => run(suggestion)}
               className="min-h-target justify-center rounded-card border border-border-strong bg-surface px-4"
             >
-              <Text className={type.label + ' font-semibold text-text'}>{suggestion.label}</Text>
+              <Text className={type.label + ' font-sans-semibold text-text'}>{suggestion.label}</Text>
             </Pressable>
           ))}
         </View>

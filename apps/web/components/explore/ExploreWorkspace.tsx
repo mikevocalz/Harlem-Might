@@ -11,10 +11,11 @@ import {
   useExplore,
   type SheetDetent,
 } from '@acme/app/features/explore/explore.store.ts';
+import { directionsUrl, noResultsCopy, placeRowLine, resultsSummary } from '@acme/app/features/explore/explore-copy.ts';
 import { Main, Pressable, ScrollView, Text, TextInput, View } from '@acme/ui/tw';
 import { MightsButton, MightsHeading, MightsLocationStamp, MightsText, condensed, routes } from '@acme/ui/mights';
 import { ExploreMap, type MapPlace } from './ExploreMap';
-import { exploreHref, focusId, focusReturnOrder, isFocusFor, parseExploreParams, resultsSummary } from './explore-url';
+import { exploreHref, focusId, focusReturnOrder, isFocusFor, parseExploreParams } from './explore-url';
 import { useMapStatus } from './map-status';
 import { useMediaQuery } from './use-media-query';
 
@@ -247,10 +248,7 @@ export function ExploreWorkspace() {
       <ScrollView className={`flex-1 md:flex ${view === 'list' ? '' : 'hidden'}`}>
         {results.length === 0 ? (
           <View className="items-start gap-3 p-5">
-            <MightsText tone="default">
-              Nothing in the catalogue matches{q.trim() ? ` “${q.trim()}”` : ''}
-              {category !== 'All' ? ` in ${category}` : ''}. Search looks at names, areas, categories and tags.
-            </MightsText>
+            <MightsText tone="default">{noResultsCopy(q, category, 'All')}</MightsText>
             <MightsButton size="sm" variant="secondary" onPress={clearAll}>
               Clear search and filters
             </MightsButton>
@@ -271,10 +269,7 @@ export function ExploreWorkspace() {
                 <View className={`mt-2 size-2.5 shrink-0 rotate-45 ${on ? 'bg-primary' : 'bg-rule-rail'}`} />
                 <View className="min-w-0 flex-1 gap-0.5">
                   <Text className="text-body font-semibold text-text">{place.name}</Text>
-                  <Text className="text-small text-text-muted">
-                    {place.category}, {place.street ?? place.area}
-                    {place.lngLat ? '' : ', location pending'}
-                  </Text>
+                  <Text className="text-small text-text-muted">{placeRowLine(place)}</Text>
                 </View>
               </Pressable>
             );
@@ -344,7 +339,7 @@ export function ExploreWorkspace() {
               <MightsButton
                 external
                 size="sm"
-                href={`https://www.google.com/maps/dir/?api=1&destination=${selected.lngLat[1]},${selected.lngLat[0]}`}
+                href={directionsUrl(selected.lngLat)}
               >
                 Get directions
                 <Text className="sr-only">, opens Google Maps in a new tab</Text>

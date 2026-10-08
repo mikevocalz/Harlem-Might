@@ -12,6 +12,8 @@ import type { WindowSizeClass } from '../navigation/split-view/constants.ts';
  * - `screen`: fills the window in place of the map (compact).
  * - `collapsed`: zero width, hidden from touch and screen readers.
  * - `promoted`: zero width; the content shows in its own Horizon window.
+ *   Only Place Detail can be promoted; Discover is always in the main
+ *   window (DECISIONS S12).
  */
 export type ExplorePaneMode =
   | { kind: 'tiled'; width: number }
@@ -30,8 +32,6 @@ export interface ExploreLayoutInput {
   sizeClass: WindowSizeClass;
   /** `useExplore().selectedPlaceId != null`. Detail exists only then (DECISIONS S5). */
   hasSelection: boolean;
-  /** `useSpatialWindowState('discover').placement`. */
-  discoverPlacement: MetaWindowPlacement;
   /** `useSpatialWindowState('place-detail').placement`. */
   detailPlacement: MetaWindowPlacement;
   /** A quest build: large windows give Detail the 440dp Horizon width. */
@@ -41,8 +41,11 @@ export interface ExploreLayoutInput {
   discoverDrawerOpen: boolean;
 }
 
+/** A pane mode for a surface that never gets its own window (Discover, S12). */
+export type InlinePaneMode = Exclude<ExplorePaneMode, { kind: 'promoted' }>;
+
 export interface ExploreLayout {
-  discover: ExplorePaneMode;
+  discover: InlinePaneMode;
   /** `null` while nothing is selected: Detail is not mounted at all. */
   detail: ExplorePaneMode | null;
   /** False on compact while Discover or Detail covers the window. */
@@ -89,8 +92,9 @@ const isSpatial = (placement: MetaWindowPlacement) => placement === 'spatial';
  * - M3 / S5: no selection, no Detail.
  * - A pane shown in its own Horizon window is `promoted`, and the map takes
  *   its width. `pending` renders inline, so a slow promotion never blanks it.
- * - Discover stays mounted on every size class, including compact, so
- *   shrinking the main window never unregisters its window.
+ * - Discover is the item list and stays in the main window on every build
+ *   (S12, Meta's "Primary content and details" pattern). It stays mounted on
+ *   every size class, including compact, so scroll state survives a resize.
  */
 export function resolveExploreLayout(input: ExploreLayoutInput): ExploreLayout {
   const { sizeClass, hasSelection, isHorizon } = input;
@@ -111,9 +115,8 @@ export function resolveExploreLayout(input: ExploreLayoutInput): ExploreLayout {
 
   const detailCoversWindow = detail?.kind === 'screen';
 
-  let discover: ExplorePaneMode;
-  if (isSpatial(input.discoverPlacement)) discover = { kind: 'promoted' };
-  else if (compact) {
+  let discover: InlinePaneMode;
+  if (compact) {
     discover = input.compactPane === 'discover' && !detailCoversWindow ? { kind: 'screen' } : { kind: 'collapsed' };
   } else if (sizeClass === 'medium') {
     discover = input.discoverDrawerOpen
@@ -126,8 +129,7 @@ export function resolveExploreLayout(input: ExploreLayoutInput): ExploreLayout {
   }
 
   const showMap = !(discover.kind === 'screen' || detailCoversWindow);
-  const discoverReachableOnlyByToggle =
-    discover.kind !== 'promoted' && (compact || sizeClass === 'medium');
+  const discoverReachableOnlyByToggle = compact || sizeClass === 'medium';
 
   return {
     discover,

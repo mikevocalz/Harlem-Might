@@ -14,7 +14,8 @@ const config: ExpoConfig = {
   version: '0.1.0',
   orientation: 'default',
   icon: './assets/images/icon.png',
-  userInterfaceStyle: 'automatic',
+  // Dark only, like the site (DECISIONS S14). Light tokens stay in @acme/theme, unused here.
+  userInterfaceStyle: 'dark',
   ios: {
     bundleIdentifier: 'com.harlemmight.app',
     supportsTablet: true,
@@ -23,7 +24,7 @@ const config: ExpoConfig = {
     package: 'com.harlemmight.app',
     adaptiveIcon: {
       foregroundImage: './assets/images/adaptive-icon.png',
-      backgroundColor: palette.ink[50],
+      backgroundColor: palette.mights['warm-black'],
     },
   },
   web: {
@@ -42,16 +43,26 @@ const config: ExpoConfig = {
         image: './assets/images/splash-icon.png',
         imageWidth: 200,
         resizeMode: 'contain',
-        backgroundColor: palette.ink[50],
-        dark: { backgroundColor: palette.ink[50] },
+        // The app canvas (`surface` dark), so splash and first frame share one colour.
+        backgroundColor: palette.mights['warm-black'],
+        dark: { backgroundColor: palette.mights['warm-black'] },
       },
     ],
     [
       'expo-font',
       {
+        // Upstream static TTFs. File name = PostScript name, so the same
+        // fontFamily string resolves on iOS and Android. Native font tokens
+        // in packages/theme/tokens.ts (nativeFontFamilies) name these files.
         fonts: [
-          '../../packages/assets/fonts/ArchivoBlack-Regular.ttf',
-          '../../packages/assets/fonts/SpaceGrotesk-Variable.ttf',
+          '../../packages/assets/fonts/native/MonaSans-Regular.ttf',
+          '../../packages/assets/fonts/native/MonaSans-Medium.ttf',
+          '../../packages/assets/fonts/native/MonaSans-SemiBold.ttf',
+          '../../packages/assets/fonts/native/MonaSans-Bold.ttf',
+          '../../packages/assets/fonts/native/MonaSansDisplayCondensed-Bold.ttf',
+          '../../packages/assets/fonts/native/MonaSansSemiExpanded-SemiBold.ttf',
+          '../../packages/assets/fonts/native/Newsreader16pt-Regular.ttf',
+          '../../packages/assets/fonts/native/Newsreader16pt-Italic.ttf',
         ],
       },
     ],

@@ -14,38 +14,12 @@ This supports separate Brunch, Dinner, Drinks, Happy Hour, Dessert, Seasonal, et
 
 ## In-app viewer
 
-The mobile route is:
+Removed 2026-10-08 (DECISIONS S13). The mobile `/menu-viewer` route and `apps/mobile/src/menu-viewer/*` were deleted with the demo shell: no screen linked to them and no place record held a menu. If a menu viewer comes back, it lands with a link from Place Detail and keeps the rules below, which still apply to anything that renders a venue's menu:
 
-```text
-/menu-viewer?placeId=<canonical-place-id>&menuId=<payload-array-row-id>
-```
-
-The route fetches the canonical Place from Payload first and resolves the menu by its Payload array-row ID. The client does not accept an arbitrary browser URL as the source of truth.
-
-### Web menu pages
-
-Native uses `react-native-secure-webview`, **not** `react-native-webview`.
-
-The viewer:
-
-- fails closed;
-- allows the initial exact origin;
-- optionally allows additional exact origins curated in `allowedOrigins`;
-- blocks unknown redirects/schemes;
-- exposes back, forward and reload;
-- keeps a separate close action that returns to the Harlem Might route, similar to X's in-app browser.
-
-Do not add wildcard origins just to make a site load. If a restaurant's menu redirects through a provider (Toast, BentoBox, etc.), verify the exact redirect origin and add only that origin to the menu record.
-
-### PDF menus
-
-PDFs do not use a WebView.
-
-The app downloads a temporary cached copy with Expo FileSystem and renders it with `@kishannareshpal/expo-pdf`, which uses native PDF engines. This avoids the unreliable Android-WebView-PDF path while keeping the PDF inside Harlem Might.
-
-### Image menus
-
-Menu images render in a swipeable native carousel. Prefer venue-supplied or rights-cleared images. Remote images keep their source URL in Payload.
+- Resolve the menu from the canonical Place in Payload by its array-row ID; never accept an arbitrary URL from the client.
+- Web menus: `react-native-secure-webview`, not `react-native-webview`. Fail closed, allow the initial exact origin plus exact origins curated in `allowedOrigins`, block unknown redirects and schemes, keep a separate close action. No wildcard origins.
+- PDF menus: no WebView. Download a cached copy with Expo FileSystem and render it with a native PDF engine.
+- Image menus: a swipeable native carousel of venue-supplied or rights-cleared images, keeping each source URL in Payload.
 
 ## Security / provenance
 
