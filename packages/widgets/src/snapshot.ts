@@ -1,9 +1,9 @@
 import {
   WIDGET_SCHEMA_VERSION, type WidgetInputs, type WidgetSnapshot,
   type StorySummary, type EventSummary, type PlaceSummary, type WidgetCard,
-} from './contracts.js';
-import { widgetPaths } from './deep-links.js';
-import { nextStopId } from './walk-session.js';
+} from './contracts.ts';
+import { widgetPaths } from './deep-links.ts';
+import { nextStopId } from './walk-session.ts';
 
 const HOUR = 60 * 60 * 1000;
 const HARLEM_TIMEZONE = 'America/New_York';
