@@ -1,4 +1,5 @@
 'use client';
+import { shouldPlayHaptic, type HapticMoment } from './haptic-policy';
 /**
  * Premium interaction haptics via react-native-pulsar (Software Mansion).
  * Semantic vocabulary — components never call Pulsar directly.
@@ -18,6 +19,9 @@
  */
 
 type HapticFn = () => void;
+let enabled = true;
+let foreground = true;
+const lastPlayedAt: Partial<Record<HapticMoment, number>> = {};
 
 let presets: typeof import('react-native-pulsar').Presets | null | undefined;
 
@@ -43,6 +47,7 @@ function loadPresets() {
 const guard =
   (select: (p: NonNullable<typeof presets>) => HapticFn): HapticFn =>
   () => {
+    if (!enabled || !foreground) return;
     const loaded = loadPresets();
     if (!loaded) return;
     try {
@@ -51,6 +56,19 @@ const guard =
       // A haptic that fails mid-gesture must not surface to the user.
     }
   };
+
+const moment = (
+  name: HapticMoment,
+  select: (p: NonNullable<typeof presets>) => HapticFn,
+): HapticFn => {
+  const trigger = guard(select);
+  return () => {
+    const now = Date.now();
+    if (!shouldPlayHaptic({ moment: name, now, lastPlayedAt: lastPlayedAt[name], enabled, foreground })) return;
+    lastPlayedAt[name] = now;
+    trigger();
+  };
+};
 
 export const haptics = {
   /** button/row press */
@@ -61,4 +79,24 @@ export const haptics = {
   warning: guard((p) => p.System.notificationWarning),
   /** tab/segment/selection change */
   selection: guard((p) => p.System.selection),
+  /** Beginning a self-guided walk is a quiet positive moment. */
+  walkStarted: moment('walkStarted', p => p.bloom),
+  /** A verified route maneuver is approaching; always show directions too. */
+  approachingTurn: moment('approachingTurn', p => p.System.impactMedium),
+  /** A curator-sourced point of interest is nearby, not proof of arrival. */
+  landmarkNearby: moment('landmarkNearby', p => p.blip),
+  /** Arrival is confirmed by a separate navigation validation layer. */
+  arrived: moment('arrived', p => p.bloom),
+  stopConfirmed: moment('stopConfirmed', p => p.System.notificationSuccess),
+  tourCompleted: moment('tourCompleted', p => p.ascent),
+  routeChanged: moment('routeChanged', p => p.System.notificationWarning),
+  /** Must be wired to the in-app preference; does not persist by itself. */
+  setEnabled(state: boolean) {
+    enabled = state;
+    try {
+      (require('react-native-pulsar') as typeof import('react-native-pulsar')).Settings.enableHaptics(state);
+    } catch { /* Native module may be absent in a JS-only bundle. */ }
+  },
+  /** Root host must update from AppState; never cue while backgrounded. */
+  setForeground(state: boolean) { foreground = state; },
 };
