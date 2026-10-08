@@ -2,7 +2,7 @@
 
 This is the design handoff for Explore on Horizon, tablet, foldable and phone. It was written for `feat/spatial-explore-ux` (PR D) and updated 2026-10-08 for `feat/mobile-site-parity` P2, which made native Explore look like the site's Explore (`apps/web/components/explore/ExploreWorkspace.tsx`, `docs/design/handoff/EXPLORE.md`). Sections 2, 3 and 5 describe the P2 look; the layout rules in §1 and §4 are unchanged except where noted. Each section says where the code is and how it differs from the original spec. The original spec, critique, a11y audit, token audit and copy deck were written before the build. Where this file and those disagree, this file is the current state.
 
-Decisions referenced: DECISIONS S4 (map stays in the main window), S5 (Detail exists only while a place is selected), S7 (assistant is inline, never a window), S11 (native Mapbox surface, not built yet), S12 (Discover inline, Place Detail the only supporting window), S13 (tab shell from the site's nav), S14 (dark only), S15 (native Mights kit), S16 (street map deferred; schematic map with an honest caption).
+Decisions referenced: DECISIONS S4 (map stays in the main window), S5 (Detail exists only while a place is selected), S7 (assistant is inline, never a window), S11 (native Mapbox surface, not built yet), S12 (Discover inline; its Place Detail window is superseded by S17), S13 (tab shell from the site's nav), S14 (dark only), S15 (native Mights kit), S16 (street map deferred; schematic map with an honest caption), S17 (one 1440x900dp window, three columns; Detail window deferred, ADR 0004).
 
 ### References (Mobbin, pulled 2026-10-08)
 
@@ -26,9 +26,11 @@ Decisions referenced: DECISIONS S4 (map stays in the main window), S5 (Detail ex
 
 ## 1. Horizon workspace
 
-`EXPLORE_WORKSPACE` in `apps/mobile/src/spatial/exploreWorkspace.ts`. Map is the main window. Since S12 the list pane renders inline in the main window and is never a window; Place Detail is the only supporting window, 440x600, end-anchored, priority 10, inline fallback, mounted only while a place is selected. Window sizes now also live in `@acme/theme` as `spatialWindow` and `horizonMainWindow`.
+`EXPLORE_WORKSPACE` in `apps/mobile/src/spatial/exploreWorkspace.ts`. Since S17 (2026-10-08) everything lives in ONE main window, 1440x900dp (`expo-horizon-core` `defaultWidth`/`defaultHeight` in `apps/mobile/app.config.ts`): Discover 360 | map (flex) | Detail 400. Discover and Place Detail are `layer` surfaces in the leading and trailing regions, and `maxPromotedSurfaces` is 0, so nothing asks for a window. Detail is still mounted only while a place is selected (S5).
 
-Placement drives the main window through `resolveExploreLayout` (§4). `spatial` collapses the pane to zero width and the map takes the room. `pending` renders inline. No banner appears for any placement change.
+The S12 Detail window (440x600, end-anchored, priority 10) is deferred, not deleted: `PLACE_DETAIL_WINDOW` and `PLACE_DETAIL_OFFSET` stay for an explicit "Open in new window" command, and a test proves they still resolve. On the Quest 3S it covered the map at every offset tried, and its buttons never fired: inside a promoted window Meta's `SpatialWindowRootViewGroup` reports window-relative `pageX/pageY`, while RN's Pressability measures the press rect in main-surface coordinates, so the first move cancels the press. Details and sources in `adr/0004-detail-in-window.md`. `metaWindows.SceneProvider`, `ExploreWorkspaceWindow` and `modules/spatial-window-owners` stay on the render path for that return; with every surface inline they pass content through unchanged.
+
+If a surface is ever promoted again, `resolveExploreLayout` (§4) collapses its pane to zero width and the map takes the room; `pending` renders inline.
 
 Back (Android hardware back, controller B) goes through `exploreBackAction`: it closes the assistant panel first, then Detail, then a Discover screen or drawer that covers the map, and after that hands Back to the system.
 
@@ -38,7 +40,7 @@ Back (Android hardware back, controller B) goes through `exploreBackAction`: it 
 
 | Element | Built (P2) | Site counterpart |
 |---|---|---|
-| Title | "Explore", `MightsHeading level={1} size="display-md"` held at `text-title-lg` (`xr-heading` on quest builds). One name for one place | condensed bold `text-title-lg` |
+| Title | "Explore", `MightsHeading level={1} size="display-md"` held at `text-title-lg` (`xr-heading` 32/40 on quest builds). One name for one place | condensed bold `text-title-lg` |
 | Search | square `TextInput` from `@acme/ui/tw`: `h-12`, `border-border-strong`, `bg-surface-raised`, placeholder "Search places, like Apollo", a11y "Search places". "Clear" (`MightsButton sm outline`, a11y "Clear search") shows while there is a query. Filters on every keystroke; the catalogue is a fixed in-memory list, so the old 180ms debounce is gone | same field and Clear |
 | Categories | one horizontal row of `MightsButton size="sm"`, `primary` + `pressed` when on, `outline` when off, labelled "Filter by category" | same |
 | Summary | `resultsSummary(total, mapped, q, category, 'All')` from `explore-copy.ts`, `text-label` muted, polite live region. "8 places, 6 on the map." | same function |
@@ -70,18 +72,34 @@ Not built, because each needs the street map: zoom, locate, the Mapbox style, ca
 
 `apps/mobile/src/spatial/exploreLayout.ts` (pure, tested), `ExplorePane.tsx`, `apps/mobile/app/(tabs)/explore/_layout.tsx`. The SplitView module was deleted in P2; `src/navigation/split-view/` keeps only `use-window-size-class.ts`, `constants.ts` and `transitions.ts`, which this layout reads.
 
-Explore no longer uses `SplitView`. The old layout put the map in the 294dp `supplementary` column and gave the flex region to the detail route (critique C1). Inverting that inside `SplitView` would have meant a new SplitView API on Android plus a divergence from the native iOS `UISplitViewController`. Instead Explore has its own layout, built from the same pieces: size classes from `useWindowSizeClass`, the `TRANSITIONS.paneWidth` tween, and keep-mounted panes. The map always takes the flex region.
+Explore no longer uses `SplitView`. The old layout put the map in the 294dp `supplementary` column and gave the flex region to the detail route (critique C1). Inverting that inside `SplitView` would have meant a new SplitView API on Android plus a divergence from the native iOS `UISplitViewController`. Instead Explore has its own layout, built from the same pieces: the window width from `useWindowDimensions` (the Horizon window is user-resizable), the `TRANSITIONS.paneWidth` tween (220ms; snaps under reduced motion), and keep-mounted panes. The map always takes the flex region. `resolveExploreLayout` returns an `arrangement` (`single`, `toggle`, `columns`) that the route uses instead of a size class.
+
+### Quest builds (S17)
+
+| Window width (dp) | Discover | Map | Detail (only when selected) |
+|---|---|---|---|
+| < 840 | full screen via "Places" | full screen, first | full screen with Back and "Show on map" |
+| 840–1199 | behind "Places"; opening it replaces Detail for the moment (selection kept), "Close" folds it | flex, ≥ 440 | tiled 400 |
+| 1200–1359 | tiled 360 with nothing selected; behind "Places" once a selection would push the map under 600 | flex | tiled 400 |
+| ≥ 1360 (default 1440) | tiled 360 | flex, ≥ 600: 1080 with nothing selected, 680 with Detail | tiled 400 |
+
+Nothing is drawn over the map at any width: no overlays, map insets are 0. Detail pushes the map narrower. Columns meet on 1dp `border-border-strong` dividers. The 1200–1359 band is the one place the spec's "≥1200 three columns" bends: there the 600dp map minimum wins (ADR 0004).
+
+Pane rhythm on quest builds: padding 24 (`px-window`), gaps 24/12/8 (`gap-xr-section`, `gap-xr-stack`, `gap-xr-inline`), list rows 72 (`min-h-xr-row`), Detail header 64 (`min-h-xr-header`). Every control is at least 48x48 (`MightsButton size="xr"`); Close, Get directions, Open place page and the search field are 60 (`xr-primary`, `h-target-primary`). Type: body 18/26, secondary 16/22, headings 20/24/32, floor 14, all Mona Sans roman; Explore sets no italic face. The scale lives in `useExploreType()` (`packages/app/features/explore/explore-type.ts`).
+
+### Phones, tablets, PICO (unchanged)
 
 | Class (dp) | Discover | Map | Detail (only when selected) | Assistant |
 |---|---|---|---|---|
 | compact < 600 | full screen via "Places"; "Map" returns | full screen, first | full screen with Back and "Show on map" | sheet across the map |
 | medium 600–839 | 320dp drawer over the map via "Places" | full width | 360dp overlay; markers pad right 360 | 400dp panel |
 | expanded 840–1199 | tiled 280dp | flex | 360dp overlay | 400dp panel |
-| large ≥ 1200 | tiled 320dp | flex (≥ 520) | tiled 360dp, 440dp on quest builds | 400dp panel |
-| extraLarge ≥ 1600 | tiled 320dp | flex | tiled 440dp | 400dp panel |
+| large ≥ 1200 | tiled 320dp | flex (≥ 520) | tiled 360dp | 400dp panel |
+| extraLarge ≥ 1600 | tiled 320dp | flex | tiled 400dp (`pane-detail-xr`, was 440) | 400dp panel |
 
 Rules are enforced in tests (`exploreLayout.test.ts`):
-- M1: at the narrowest width of every tiled class, the map is the widest pane. On Horizon flat at 1280dp it is exactly 520dp next to a 440dp Detail.
+- M1: at the narrowest width of every tiled class, the map is the widest pane.
+- S17: on quest builds nothing overlays the map at any width, the map keeps 600dp whenever Discover is a permanent column and 440dp from 840dp up, and it is exactly 1080/680dp at 1440dp without and with Detail.
 - M3/S5: no selection, no Detail, whatever the placement.
 - A promoted pane is zero width and the map takes it; `pending` stays inline.
 
@@ -162,10 +180,10 @@ The Detail content crossfade, marker grow animation and camera fly were not buil
 
 ## 9. Tokens added (`packages/theme/tokens.ts`, regenerated with `node build-css.mjs`)
 
-- Type: `xr-caption` 14/20, `xr-label` 16/22, `xr-body` 18/28, `xr-title` 22/28, `xr-heading` 30/36, `xr-prose` 20/34, all in px so the rem-14 polyfill can't shrink them.
-- Spacing: `target` 48px, `target-gap` 12px, `window` 24px, `focus-ring` 3px, `marker` 20px, `marker-selected` 28px.
+- Type: `xr-caption` 14/20, `xr-label` 16/22, `xr-body` 18/26, `xr-title` 20/26, `xr-headline` 24/30, `xr-heading` 32/40, `xr-prose` 20/34, all in px so the rem-14 polyfill can't shrink them (S17 values).
+- Spacing: `target` 48px, `target-primary` 60px, `target-gap` 12px, `window` 24px, `xr-section` 24px, `xr-stack` 12px, `xr-inline` 8px, `xr-row` 72px, `xr-header` 64px, `focus-ring` 3px, `marker` 20px, `marker-selected` 28px.
 - Semantic colours: `selected`, `map-marker`, `map-marker-selected`, `route`, `map-canvas`.
-- Widths: `pane-discover` 320, `pane-discover-narrow` 280, `pane-detail` 360, `pane-detail-xr` 440, `assistant-bar` 560, `assistant-panel` 400 (px).
+- Widths: `pane-discover` 320, `pane-discover-narrow` 280, `pane-detail` 360, `pane-discover-xr` 360, `pane-detail-xr` 400 (was 440), `pane-map-min-xr` 600, `assistant-bar` 560, `assistant-panel` 400 (px).
 - Motion: `duration.camera` 600ms, `spring.pane`, `spring.drawer`.
 - Layout: `windowClass` (the SplitView's `WINDOW_SIZE_CLASS_MIN_WIDTH_DP` now reads it), `spatialWindow`, `horizonMainWindow`.
 
