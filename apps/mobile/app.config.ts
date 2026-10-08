@@ -99,7 +99,10 @@ const config: ExpoConfig = {
       '@expo-pico/core',
       {
         // PICO Platform Services (account, IAP, social) need the developer-portal app id.
-        picoAppId: process.env.PICO_APP_ID,
+        // Omit the key when unset: @expo-pico/core spreads options over its
+        // defaults, so an explicit `undefined` replaces the '' default and
+        // prebuild dies writing <string name="pico_app_id"> with no text.
+        ...(process.env.PICO_APP_ID ? { picoAppId: process.env.PICO_APP_ID } : {}),
         buildVariant: 'pico',
         xrMode: 'pico-os5',
         appType: 'mr',
