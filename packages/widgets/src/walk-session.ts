@@ -1,4 +1,4 @@
-import { WIDGET_SCHEMA_VERSION, type WalkSession, type WalkSummary } from './contracts.js';
+import { WIDGET_SCHEMA_VERSION, type WalkSession, type WalkSummary } from './contracts.ts';
 
 function validInstant(value: string): boolean {
   return Number.isFinite(Date.parse(value));
