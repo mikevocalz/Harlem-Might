@@ -1,3 +1,7 @@
+import { useEffect } from 'react';
+import { AppState } from 'react-native';
+import { refreshPublicSnapshot } from '../widgets/public-feed';
+import { publishHomeWidgets } from '../widgets/sync';
 import { DarkTheme, Slot, ThemeProvider } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
@@ -42,6 +46,25 @@ const NAV_THEME = {
 };
 
 export default function RootLayout() {
+  useEffect(() => {
+    let active = true;
+    const refresh = async () => {
+      try {
+        const snapshot = await refreshPublicSnapshot();
+        if (active && snapshot && Date.parse(snapshot.expiresAt) > Date.now()) {
+          await publishHomeWidgets(snapshot);
+        }
+      } catch {
+        // Widgets are an enhancement; they must never prevent app navigation.
+      }
+    };
+    void refresh();
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') void refresh();
+    });
+    return () => { active = false; subscription.remove(); };
+  }, []);
+
   return (
     <GestureRoot className="flex-1 bg-surface">
       <StatusBar style="light" />
