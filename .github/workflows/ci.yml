@@ -14,11 +14,6 @@ jobs:
           if git ls-files | grep -E '(^|/)\.env(\..*)?$' | grep -v '\.env\.example$'; then
             echo '::error::.env files must never be committed'; exit 1
           fi
-      # apps/mobile depends on @expo-pico/core as file:../../../expo-pico/...,
-      # a sibling checkout of the public expo-pico repo. Only app.config.ts
-      # names it (as a config plugin), so install needs the source, not a build.
-      - name: Check out expo-pico beside the repo
-        run: git clone --depth 1 https://github.com/mikevocalz/expo-pico.git "$GITHUB_WORKSPACE/../expo-pico"
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
