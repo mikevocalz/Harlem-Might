@@ -26,7 +26,15 @@ const HEADER = '/* GENERATED from tokens.ts — do not edit by hand. `node build
 // Everything that is theme-independent: identical in both outputs, except
 // font families. Web gets the Mona/Newsreader variable stacks; native gets one
 // static TTF per role (React Native takes no fallbacks and no wdth axis).
-const sharedThemeTokens = (fonts) => {
+// React Native has no `ch` unit; Uniwind passes `65ch` through and Yoga reads
+// it as 65dp, which squeezed the place-detail column to a sliver on Quest.
+// Native gets the measure at the body size: 1ch ≈ 0.5em of Mona Sans at 16px.
+const toNativeLength = (value) => {
+  const ch = /^([\d.]+)ch$/.exec(value);
+  return ch ? `${Number(ch[1]) * 0.5}rem` : value;
+};
+
+const sharedThemeTokens = (fonts, { native = false } = {}) => {
   const out = [];
 
   // primitive palettes
@@ -52,7 +60,7 @@ const sharedThemeTokens = (fonts) => {
 
   // content widths → max-w-content-* utilities
   for (const [name, width] of Object.entries(contentWidths)) {
-    out.push(`  --container-${name}: ${width};`);
+    out.push(`  --container-${name}: ${native ? toNativeLength(width) : width};`);
   }
 
   for (const [name, value] of Object.entries(spacing)) {
@@ -139,6 +147,7 @@ const native = [HEADER, '@theme {'];
 native.push(
   ...sharedThemeTokens(
     Object.fromEntries(Object.entries(nativeFontFamilies).map(([name, file]) => [name, `'${file}'`])),
+    { native: true },
   ),
 );
 native.push('}');

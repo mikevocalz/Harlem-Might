@@ -47,9 +47,9 @@ describe('Explore workspace on Meta Horizon OS (S12)', () => {
       promotable: true,
       fallback: 'inline',
       anchor: { parent: 'end', child: 'start' },
-      offset: { start: -META_OFFSET_STEPS.near, z: META_OFFSET_STEPS.near },
+      offset: { z: META_OFFSET_STEPS.near },
     });
-    assert.equal(PLACE_DETAIL_OFFSET.start, -META_OFFSET_STEPS.near);
+    assert.equal('start' in PLACE_DETAIL_OFFSET, false);
   });
 
   it('never mounts Place Detail without a selection, and Discover is never a window', () => {
