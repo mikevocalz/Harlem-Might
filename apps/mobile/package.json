@@ -13,7 +13,9 @@
     "viro:assert-fork": "node scripts/assert-viro-fork.mjs",
     "prebuild": "node scripts/assert-viro-fork.mjs && expo prebuild",
     "android:quest": "node scripts/assert-viro-fork.mjs && expo run:android --variant questDebug",
-    "android:pico": "node scripts/assert-viro-fork.mjs && expo run:android --variant picoDebug"
+    "android:pico": "node scripts/assert-viro-fork.mjs && expo run:android --variant picoDebug",
+    "quest": "node scripts/quest.mjs",
+    "test:scripts": "node --test 'scripts/*.test.mjs'"
   },
   "dependencies": {
     "@acme/app": "workspace:*",
