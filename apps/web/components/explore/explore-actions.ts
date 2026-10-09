@@ -61,9 +61,10 @@ export function useExploreActions() {
   // without re-running the page's dynamic server reader on every selection.
   const replace = (patch: Record<string, string | null>) => window.history.replaceState(null, '', href(patch));
   const select = (id: string, opener: string) => {
-    const { sheet, openSheet, setSelectionPushed } = useExplore.getState();
+    const { sheet, openSheet, setSelectionPushed, pushRecent } = useExplore.getState();
     openSheet(sheet.open ? sheet.detent : DEFAULT_SHEET_DETENT, opener);
     setSelectionPushed(true);
+    pushRecent(id);
     window.history.pushState(null, '', href({ place: id }));
   };
   // Focus and the store follow the URL in the sheet region, so Close, Escape

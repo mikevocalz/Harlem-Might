@@ -53,6 +53,13 @@ export function MasterRegion({ cataloguePromise }: { cataloguePromise: Promise<r
   const results = useMemo(() => filterPlaces(places, q, category), [places, q, category]);
   const summary = resultsSummary(results.length, results.filter((p) => p.lngLat).length, q, category, 'All');
 
+  // Recently viewed — session history as real catalogue rows, not a mock.
+  const recentIds = useExplore((s) => s.recentIds);
+  const recents = useMemo(
+    () => recentIds.flatMap((id) => places.filter((p) => p.id === id)),
+    [recentIds, places],
+  );
+
   // Publish what the map dims. Written here — not passed — because the map
   // region resolves a lighter points promise and renders before this does.
   useEffect(() => {
@@ -136,6 +143,28 @@ export function MasterRegion({ cataloguePromise }: { cataloguePromise: Promise<r
               );
             })}
           </View>
+          {recents.length > 0 ? (
+            <View
+              role="group"
+              aria-label="Recently viewed"
+              className="-mx-4 flex-row items-center gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:overflow-visible md:px-0"
+            >
+              <Text className="shrink-0 text-label text-text-muted">Recent</Text>
+              {recents.map((place) => (
+                <MightsButton
+                  key={place.id}
+                  size="sm"
+                  variant="ghost"
+                  pressed={place.id === selectedId}
+                  className="shrink-0"
+                  aria-label={`Open ${place.name} again`}
+                  onPress={() => select(place.id, focusId.row(place.id))}
+                >
+                  {place.name}
+                </MightsButton>
+              ))}
+            </View>
+          ) : null}
           <Text role="status" aria-live="polite" className="text-label text-text-muted">
             {summary}
           </Text>

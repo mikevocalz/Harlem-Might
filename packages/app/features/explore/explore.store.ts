@@ -251,6 +251,12 @@ export interface ExploreState {
   selectedPlaceId: string | null;
   /** Fixture place ids saved this session (not persisted). */
   savedPreviewIds: string[];
+  /**
+   * Place ids the user opened this session, newest first, capped at 8 —
+   * the "recently viewed" strip. Written by the web select path and
+   * mobile's `selectPlace`/`openPlace`; the catalogue id space is shared.
+   */
+  recentIds: string[];
   /** Place sheet (mobile) / inspector (desktop) visibility and detent. */
   sheet: ExploreSheet;
   /** Last known location permission. Written by whoever asks the platform. */
@@ -294,11 +300,20 @@ export interface ExploreState {
   setLocationPermission: (permission: LocationPermission) => void;
   setVisibleIds: (ids: readonly string[] | null) => void;
   setSelectionPushed: (pushed: boolean) => void;
+  /** Pushes a place onto `recentIds` (deduped, newest first, max 8). */
+  pushRecent: (placeId: string) => void;
 }
 
 /** Adds `id` when absent, removes it when present. Returns a new array. */
 export function toggleId(ids: readonly string[], id: string): string[] {
   return ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
+}
+
+const RECENTS_CAP = 8;
+
+/** `id` to the front, deduped, capped at 8. Pure, for the store actions. */
+export function pushRecentId(ids: readonly string[], id: string): string[] {
+  return [id, ...ids.filter((x) => x !== id)].slice(0, RECENTS_CAP);
 }
 
 /**
@@ -319,14 +334,20 @@ export const useExplore = create<ExploreState>((set) => ({
   category: 'All',
   selectedPlaceId: null,
   savedPreviewIds: [],
+  recentIds: [],
   sheet: { open: false, detent: DEFAULT_SHEET_DETENT, returnFocusId: null },
   locationPermission: 'unknown',
   setQuery: (query) => set({ query }),
   setCategory: (category) => set({ category }),
-  selectPlace: (selectedPlaceId) => set({ selectedPlaceId }),
+  selectPlace: (selectedPlaceId) =>
+    set((state) => ({
+      selectedPlaceId,
+      recentIds: selectedPlaceId ? pushRecentId(state.recentIds, selectedPlaceId) : state.recentIds,
+    })),
   openPlace: (placeId, returnFocusId = null) =>
     set((state) => ({
       selectedPlaceId: placeId,
+      recentIds: pushRecentId(state.recentIds, placeId),
       sheet: { ...state.sheet, open: true, returnFocusId },
     })),
   closePlace: () =>
@@ -342,6 +363,7 @@ export const useExplore = create<ExploreState>((set) => ({
   selectionPushed: false,
   setVisibleIds: (visibleIds) => set({ visibleIds }),
   setSelectionPushed: (selectionPushed) => set({ selectionPushed }),
+  pushRecent: (placeId) => set((state) => ({ recentIds: pushRecentId(state.recentIds, placeId) })),
 }));
 
 export function getHarlemPlacePreview(placeId?: string | null) {

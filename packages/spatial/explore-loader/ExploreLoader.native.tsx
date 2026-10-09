@@ -20,8 +20,11 @@ import {
 } from './bindings';
 import type { ExploreLoaderProps } from './ExploreLoader.types';
 
+/** The shipped .riv, committed beside the component (built by rive --once). */
+const BUNDLED_ASSET = require('./explore-loader.riv') as number;
+
 export function ExploreLoader({
-  source,
+  source = BUNDLED_ASSET,
   size = 160,
   phase = 'loading',
   progress,

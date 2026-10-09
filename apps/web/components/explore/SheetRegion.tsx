@@ -69,6 +69,8 @@ export function SheetRegion({ cataloguePromise }: { cataloguePromise: Promise<re
     const was = shownId.current;
     shownId.current = selected?.id ?? null;
     if (selected) {
+      // A deep link or reload counts as a view even when nothing clicked.
+      useExplore.getState().pushRecent(selected.id);
       const sheetNow = useExplore.getState().sheet;
       if (!sheetNow.open) useExplore.getState().openSheet(DEFAULT_SHEET_DETENT, null);
       // Back/Forward between two pushed selections changes the place without a

@@ -4,10 +4,11 @@ import type { ExploreLoaderPhase } from './bindings';
  * Props shared by the web and native `ExploreLoader`. `source` is the
  * platform asset: a URL string on web (`/rive/explore-loader.riv`) or a
  * bundled `require()` id on native — always local, never fetched at load
- * time beyond the bundled asset.
+ * time beyond the bundled asset. Both platforms default to their bundled
+ * copy; pass one only for a themed variant.
  */
 export interface ExploreLoaderProps {
-  source: string | number;
+  source?: string | number;
   /** Rendered size in px; the artboard is square. */
   size?: number;
   /**

@@ -26,7 +26,7 @@ function colorToRiveInt(color: string) {
 }
 
 export function ExploreLoader({
-  source,
+  source = '/rive/explore-loader.riv',
   size = 160,
   phase = 'loading',
   progress,
