@@ -5,7 +5,7 @@ import type { WidgetKind } from '@acme/widgets';
 import { HarlemWidget } from './HarlemWidget';
 import { loadPublicSnapshot, refreshPublicSnapshot } from '../public-feed';
 
-const widgetKinds: Record<string, WidgetKind> = {
+export const widgetKinds: Record<string, WidgetKind> = {
   HarlemStory: 'story',
   HarlemEvent: 'event',
   HarlemPlace: 'place',

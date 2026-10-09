@@ -37,7 +37,7 @@ const HarlemEventView = (props: HarlemEventProps, env: WidgetEnvironment) => {
 
 export default createWidget<HarlemEventProps>('HarlemEvent', HarlemEventView, {
   eyebrow: 'HAPPENING IN HARLEM',
-  title: 'Explore today's events',
+  title: "Explore today's events",
   subtitle: 'Open Harlem Might to discover more.',
   destination: 'harlemmight://today',
 });

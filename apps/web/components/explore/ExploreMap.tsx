@@ -1,10 +1,12 @@
 'use client';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { GeoJSONSource, Map as MapboxMap, Marker, PaddingOptions } from 'mapbox-gl';
 import { semantic } from '@acme/theme';
 import { View } from '@acme/ui/tw';
+import { MightsButton } from '@acme/ui/mights';
+import { useIsGuiding } from '@acme/app/features/navigation/ui/hooks.ts';
 import type { GeographicCoordinate } from '@acme/app/features/navigation/model/geo.ts';
 import { navigationFixStore, useNavigationStore } from '@acme/app/features/navigation/session/navigationStore.ts';
 import { useNavigationUi } from '@acme/app/features/navigation/view/navigationUi.store.ts';
@@ -44,6 +46,13 @@ interface ExploreMapProps {
 const FIT_PADDING = 96;
 const FIT_MAX_ZOOM = 15.5;
 const SELECT_MIN_ZOOM = 16.5;
+const BUILDINGS_LAYER = 'hm-3d-buildings';
+type MapView = 'map' | 'tilt' | 'buildings';
+const MAP_VIEWS: readonly { id: MapView; label: string }[] = [
+  { id: 'map', label: '2D' },
+  { id: 'tilt', label: 'Tilt' },
+  { id: 'buildings', label: '3D buildings' },
+];
 
 // Marker look lives here as utilities rather than in globals.css, so every
 // value is a token. The 44×44 button is the hit area (WCAG 2.5.8 goal); the
@@ -236,15 +245,22 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
   const mapRef = useRef<MapboxMap | null>(null);
   const markersRef = useRef(new Map<string, { marker: Marker; el: HTMLButtonElement }>());
   const onSelectRef = useRef(onSelect);
-  onSelectRef.current = onSelect;
   const selectedRef = useRef(selectedId);
-  selectedRef.current = selectedId;
   const visibleRef = useRef(visibleIds);
-  visibleRef.current = visibleIds;
   // A primitive dependency: the parent builds a new array every render.
   const visibleKey = visibleIds.join('\n');
   const setStatus = useMapStatus((s) => s.setStatus);
   const detachNavigationRef = useRef<(() => void) | null>(null);
+  const [mapView, setMapView] = useState<MapView>('buildings');
+  const mapViewRef = useRef(mapView);
+  const guiding = useIsGuiding();
+
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+    selectedRef.current = selectedId;
+    visibleRef.current = visibleIds;
+    mapViewRef.current = mapView;
+  }, [onSelect, selectedId, visibleIds, mapView]);
 
   // The selected marker stays visible even when the filter excludes it: the
   // open sheet points at it. The camera is never refitted to the filtered set;
@@ -310,7 +326,7 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
           style: 'mapbox://styles/mapbox/dark-v11',
           bounds,
           fitBoundsOptions: { padding: FIT_PADDING, maxZoom: FIT_MAX_ZOOM },
-          pitch: 30,
+          pitch: 60,
           attributionControl: true,
           cooperativeGestures: false,
         });
@@ -330,6 +346,25 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
       // Top-left: the sheet and inspector own the bottom and right edges.
       map.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-left');
       mapRef.current = map;
+      map.on('style.load', () => {
+        if (!map.getSource('composite') || map.getLayer(BUILDINGS_LAYER)) return;
+        const firstLabel = map.getStyle().layers.find((layer) => layer.type === 'symbol')?.id;
+        map.addLayer({
+          id: BUILDINGS_LAYER,
+          type: 'fill-extrusion',
+          source: 'composite',
+          'source-layer': 'building',
+          filter: ['==', ['get', 'extrude'], 'true'],
+          minzoom: 15,
+          layout: { visibility: mapViewRef.current === 'buildings' ? 'visible' : 'none' },
+          paint: {
+            'fill-extrusion-color': semantic['border-strong'].dark,
+            'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height']],
+            'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'min_height']],
+            'fill-extrusion-opacity': 0.7,
+          },
+        }, firstLabel);
+      });
 
       places.forEach((p) => {
         const el = document.createElement('button');
@@ -365,6 +400,8 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
 
       map.once('load', () => {
         applySelection(false);
+        if (!selectedRef.current && mapViewRef.current === 'buildings' && map.getZoom() < 15.5)
+          map.jumpTo({ zoom: 15.5 });
         detachNavigationRef.current = attachNavigation(map, mapboxgl, () => occluderRef.current);
       });
       // A map created inside a hidden pane (view=list on a phone) has no size;
@@ -376,6 +413,8 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
           fitted = true;
           map.fitBounds(bounds, { padding: FIT_PADDING, maxZoom: FIT_MAX_ZOOM, duration: 0 });
           applySelection(false);
+          if (!selectedRef.current && mapViewRef.current === 'buildings' && map.getZoom() < 15.5)
+            map.jumpTo({ zoom: 15.5 });
         }
       });
       observer.observe(container);
@@ -406,5 +445,39 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, layoutKey]);
 
-  return <View ref={containerRef as never} className="h-full w-full bg-surface-sunken" />;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (map.getLayer(BUILDINGS_LAYER))
+      map.setLayoutProperty(BUILDINGS_LAYER, 'visibility', mapView === 'buildings' ? 'visible' : 'none');
+    const target = {
+      pitch: mapView === 'map' ? 0 : mapView === 'tilt' ? 45 : 60,
+      zoom: mapView === 'buildings' ? Math.max(map.getZoom(), 15.5) : map.getZoom(),
+    };
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) map.jumpTo(target);
+    else map.easeTo({ ...target, duration: 450 });
+  }, [mapView]);
+
+  return (
+    <View className="relative h-full w-full">
+      <View ref={containerRef as never} className="h-full w-full bg-surface-sunken" />
+      <View
+        role="group"
+        aria-label="Map view"
+        className={`absolute right-4 z-(--z-raised) flex-row gap-1 border border-border-strong bg-surface-raised p-1 ${guiding ? 'top-36' : 'top-4'}`}
+      >
+        {MAP_VIEWS.map(({ id, label }) => (
+          <MightsButton
+            key={id}
+            size="sm"
+            pressed={mapView === id}
+            variant={mapView === id ? 'primary' : 'outline'}
+            onPress={() => setMapView(id)}
+          >
+            {label}
+          </MightsButton>
+        ))}
+      </View>
+    </View>
+  );
 }

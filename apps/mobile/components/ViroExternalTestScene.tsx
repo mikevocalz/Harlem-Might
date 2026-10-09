@@ -7,7 +7,7 @@
  * Rive panel is mounted here — see docs/adr/0005.
  */
 import React from "react";
-import { Image } from "react-native";
+import { Asset } from "expo-asset";
 import {
   ViroAmbientLight,
   ViroNode,
@@ -32,7 +32,7 @@ import {
 const PALACE = require("../assets/viro-external-test/viro-row-palace.jpg");
 const CACTUS = require("../assets/viro-external-test/viro-row-cactus.jpg");
 const DOG = require("../assets/viro-external-test/viro-row-dog.jpg");
-const DEMO_VIDEO = Image.resolveAssetSource(require("../assets/viro-external-test/demo.mp4")).uri;
+const DEMO_VIDEO = Asset.fromModule(require("../assets/viro-external-test/demo.mp4")).uri;
 
 // Pre-rewrite PANEL_TYPE scale (viro-external ce88d7d): figure 28, heading
 // 22, label 18, body 16, caption 14.
