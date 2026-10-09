@@ -1,0 +1,2085 @@
+{
+ "source": "Mapbox Directions API v5",
+ "fetchedAt": "2026-10-08",
+ "request": {
+  "profile": "mapbox/walking",
+  "path": "/directions/v5/mapbox/walking/-73.9449105,40.8079659;-73.9409874,40.8146476",
+  "query": {
+   "alternatives": "true",
+   "geometries": "geojson",
+   "overview": "full",
+   "steps": "true",
+   "language": "en"
+  }
+ },
+ "origin": {
+  "placeId": "red-rooster-harlem",
+  "lngLat": [
+   -73.9449105,
+   40.8079659
+  ]
+ },
+ "destination": {
+  "placeId": "schomburg-center",
+  "lngLat": [
+   -73.9409874,
+   40.8146476
+  ]
+ },
+ "response": {
+  "code": "Ok",
+  "waypoints": [
+   {
+    "location": [
+     -73.94509,
+     40.808041
+    ],
+    "name": "Malcolm X Boulevard",
+    "distance": 17.264
+   },
+   {
+    "location": [
+     -73.940754,
+     40.814548
+    ],
+    "name": "Malcolm X Boulevard",
+    "distance": 22.589
+   }
+  ],
+  "routes": [
+   {
+    "geometry": {
+     "type": "LineString",
+     "coordinates": [
+      [
+       -73.94509,
+       40.808041
+      ],
+      [
+       -73.944878,
+       40.808329
+      ],
+      [
+       -73.944839,
+       40.808382
+      ],
+      [
+       -73.944795,
+       40.808442
+      ],
+      [
+       -73.94442,
+       40.808946
+      ],
+      [
+       -73.944379,
+       40.809003
+      ],
+      [
+       -73.944334,
+       40.809067
+      ],
+      [
+       -73.943963,
+       40.80958
+      ],
+      [
+       -73.943949,
+       40.809599
+      ],
+      [
+       -73.943927,
+       40.809628
+      ],
+      [
+       -73.943894,
+       40.809669
+      ],
+      [
+       -73.943881,
+       40.809687
+      ],
+      [
+       -73.9435,
+       40.810209
+      ],
+      [
+       -73.943469,
+       40.810253
+      ],
+      [
+       -73.943426,
+       40.810313
+      ],
+      [
+       -73.943032,
+       40.810818
+      ],
+      [
+       -73.942996,
+       40.810869
+      ],
+      [
+       -73.942954,
+       40.810928
+      ],
+      [
+       -73.94257,
+       40.811434
+      ],
+      [
+       -73.94253,
+       40.811488
+      ],
+      [
+       -73.942485,
+       40.811547
+      ],
+      [
+       -73.94213,
+       40.812069
+      ],
+      [
+       -73.94212,
+       40.812085
+      ],
+      [
+       -73.94209,
+       40.812134
+      ],
+      [
+       -73.942068,
+       40.81217
+      ],
+      [
+       -73.942049,
+       40.812196
+      ],
+      [
+       -73.941681,
+       40.812698
+      ],
+      [
+       -73.941598,
+       40.812813
+      ],
+      [
+       -73.941524,
+       40.812915
+      ],
+      [
+       -73.941243,
+       40.813302
+      ],
+      [
+       -73.941148,
+       40.813432
+      ],
+      [
+       -73.940767,
+       40.81395
+      ],
+      [
+       -73.940755,
+       40.813971
+      ],
+      [
+       -73.940704,
+       40.814049
+      ],
+      [
+       -73.940781,
+       40.814081
+      ],
+      [
+       -73.940935,
+       40.814145
+      ],
+      [
+       -73.941024,
+       40.814185
+      ],
+      [
+       -73.940974,
+       40.814255
+      ],
+      [
+       -73.940954,
+       40.814279
+      ],
+      [
+       -73.940754,
+       40.814548
+      ]
+     ]
+    },
+    "distance": 841.503,
+    "duration": 610.627,
+    "weight": 672.867,
+    "weight_name": "pedestrian",
+    "legs": [
+     {
+      "steps": [
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.94509,
+           40.808041
+          ],
+          [
+           -73.944878,
+           40.808329
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 36.65,
+        "duration": 25.818,
+        "weight": 25.818,
+        "name": "Malcolm X Boulevard",
+        "maneuver": {
+         "location": [
+          -73.94509,
+          40.808041
+         ],
+         "bearing_before": 0,
+         "bearing_after": 29,
+         "instruction": "Walk northeast on Malcolm X Boulevard.",
+         "type": "depart"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.94509,
+           40.808041
+          ],
+          "geometry_index": 0,
+          "admin_index": 0,
+          "is_urban": true,
+          "out": 0,
+          "entry": [
+           true
+          ],
+          "bearings": [
+           29
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.944878,
+           40.808329
+          ],
+          [
+           -73.944839,
+           40.808382
+          ],
+          [
+           -73.944795,
+           40.808442
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 14.392,
+        "duration": 12.136,
+        "weight": 17.136,
+        "name": "",
+        "maneuver": {
+         "location": [
+          -73.944878,
+          40.808329
+         ],
+         "bearing_before": 29,
+         "bearing_after": 29,
+         "modifier": "straight",
+         "instruction": "Continue on the crosswalk.",
+         "type": "new name"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.944878,
+           40.808329
+          ],
+          "geometry_index": 1,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 6,
+          "duration": 5.756,
+          "weight": 10.756,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           29,
+           120,
+           209,
+           300
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         },
+         {
+          "location": [
+           -73.944839,
+           40.808382
+          ],
+          "geometry_index": 2,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 1,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           29,
+           120,
+           209,
+           298
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.944795,
+           40.808442
+          ],
+          [
+           -73.94442,
+           40.808946
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 64.391,
+        "duration": 46.345,
+        "weight": 51.345,
+        "name": "Malcolm X Boulevard",
+        "maneuver": {
+         "location": [
+          -73.944795,
+          40.808442
+         ],
+         "bearing_before": 29,
+         "bearing_after": 29,
+         "modifier": "straight",
+         "instruction": "Continue on Malcolm X Boulevard.",
+         "type": "new name"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.944795,
+           40.808442
+          ],
+          "geometry_index": 3,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 6,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           29,
+           120,
+           209,
+           298
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.94442,
+           40.808946
+          ],
+          [
+           -73.944379,
+           40.809003
+          ],
+          [
+           -73.944334,
+           40.809067
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 15.295,
+        "duration": 12.771,
+        "weight": 17.771,
+        "name": "",
+        "maneuver": {
+         "location": [
+          -73.94442,
+          40.808946
+         ],
+         "bearing_before": 29,
+         "bearing_after": 29,
+         "modifier": "straight",
+         "instruction": "Continue on the crosswalk.",
+         "type": "new name"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.94442,
+           40.808946
+          ],
+          "geometry_index": 4,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 6,
+          "duration": 6.088,
+          "weight": 11.088,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           29,
+           120,
+           209,
+           298
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         },
+         {
+          "location": [
+           -73.944379,
+           40.809003
+          ],
+          "geometry_index": 5,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 1,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           28,
+           120,
+           209,
+           298
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.944334,
+           40.809067
+          ],
+          [
+           -73.943963,
+           40.80958
+          ],
+          [
+           -73.943949,
+           40.809599
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 67.524,
+        "duration": 49.552,
+        "weight": 54.552,
+        "name": "Malcolm X Boulevard",
+        "maneuver": {
+         "location": [
+          -73.944334,
+          40.809067
+         ],
+         "bearing_before": 28,
+         "bearing_after": 29,
+         "modifier": "straight",
+         "instruction": "Continue on Malcolm X Boulevard.",
+         "type": "new name"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.944334,
+           40.809067
+          ],
+          "geometry_index": 6,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 6,
+          "duration": 46.847,
+          "weight": 51.847,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           29,
+           120,
+           208,
+           298
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         },
+         {
+          "location": [
+           -73.943963,
+           40.80958
+          ],
+          "geometry_index": 7,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 1,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           29,
+           120,
+           209,
+           291
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.943949,
+           40.809599
+          ],
+          [
+           -73.943927,
+           40.809628
+          ],
+          [
+           -73.943894,
+           40.809669
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 9.067,
+        "duration": 7.385,
+        "weight": 7.385,
+        "name": "",
+        "maneuver": {
+         "location": [
+          -73.943949,
+          40.809599
+         ],
+         "bearing_before": 29,
+         "bearing_after": 30,
+         "modifier": "straight",
+         "instruction": "Continue on the crosswalk.",
+         "type": "new name"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.943949,
+           40.809599
+          ],
+          "geometry_index": 8,
+          "admin_index": 0,
+          "is_urban": true,
+          "duration": 2.622,
+          "weight": 2.622,
+          "in": 1,
+          "out": 0,
+          "entry": [
+           true,
+           false
+          ],
+          "bearings": [
+           30,
+           209
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         },
+         {
+          "location": [
+           -73.943927,
+           40.809628
+          ],
+          "geometry_index": 9,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 1,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           31,
+           120,
+           210,
+           298
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.943894,
+           40.809669
+          ],
+          [
+           -73.943881,
+           40.809687
+          ],
+          [
+           -73.9435,
+           40.810209
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 68.67,
+        "duration": 49.359,
+        "weight": 49.359,
+        "name": "Malcolm X Boulevard",
+        "maneuver": {
+         "location": [
+          -73.943894,
+          40.809669
+         ],
+         "bearing_before": 31,
+         "bearing_after": 29,
+         "modifier": "straight",
+         "instruction": "Continue on Malcolm X Boulevard.",
+         "type": "new name"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.943894,
+           40.809669
+          ],
+          "geometry_index": 10,
+          "admin_index": 0,
+          "is_urban": true,
+          "duration": 1.608,
+          "weight": 1.608,
+          "in": 1,
+          "out": 0,
+          "entry": [
+           true,
+           false
+          ],
+          "bearings": [
+           29,
+           211
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         },
+         {
+          "location": [
+           -73.943881,
+           40.809687
+          ],
+          "geometry_index": 11,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 1,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           29,
+           120,
+           209,
+           298
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.9435,
+           40.810209
+          ],
+          [
+           -73.943469,
+           40.810253
+          ],
+          [
+           -73.943426,
+           40.810313
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 13.15,
+        "duration": 11.26,
+        "weight": 16.26,
+        "name": "",
+        "maneuver": {
+         "location": [
+          -73.9435,
+          40.810209
+         ],
+         "bearing_before": 29,
+         "bearing_after": 28,
+         "modifier": "straight",
+         "instruction": "Continue on the crosswalk.",
+         "type": "new name"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.9435,
+           40.810209
+          ],
+          "geometry_index": 12,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 6,
+          "duration": 4.909,
+          "weight": 9.909,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           28,
+           120,
+           209,
+           298
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         },
+         {
+          "location": [
+           -73.943469,
+           40.810253
+          ],
+          "geometry_index": 13,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 1,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           28,
+           120,
+           208,
+           298
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.943426,
+           40.810313
+          ],
+          [
+           -73.943032,
+           40.810818
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 65.286,
+        "duration": 42.379,
+        "weight": 47.379,
+        "name": "Malcolm X Boulevard",
+        "maneuver": {
+         "location": [
+          -73.943426,
+          40.810313
+         ],
+         "bearing_before": 28,
+         "bearing_after": 31,
+         "modifier": "straight",
+         "instruction": "Continue on Malcolm X Boulevard.",
+         "type": "new name"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.943426,
+           40.810313
+          ],
+          "geometry_index": 14,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 6,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           31,
+           120,
+           208,
+           298
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.943032,
+           40.810818
+          ],
+          [
+           -73.942996,
+           40.810869
+          ],
+          [
+           -73.942954,
+           40.810928
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 13.897,
+        "duration": 11.787,
+        "weight": 16.787,
+        "name": "",
+        "maneuver": {
+         "location": [
+          -73.943032,
+          40.810818
+         ],
+         "bearing_before": 31,
+         "bearing_after": 28,
+         "modifier": "straight",
+         "instruction": "Continue on the crosswalk.",
+         "type": "new name"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.943032,
+           40.810818
+          ],
+          "geometry_index": 15,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 6,
+          "duration": 5.533,
+          "weight": 10.533,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           28,
+           120,
+           211,
+           298
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         },
+         {
+          "location": [
+           -73.942996,
+           40.810869
+          ],
+          "geometry_index": 16,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 1,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           28,
+           120,
+           208,
+           298
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.942954,
+           40.810928
+          ],
+          [
+           -73.94257,
+           40.811434
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 64.958,
+        "duration": 46.745,
+        "weight": 51.745,
+        "name": "Malcolm X Boulevard",
+        "maneuver": {
+         "location": [
+          -73.942954,
+          40.810928
+         ],
+         "bearing_before": 28,
+         "bearing_after": 30,
+         "modifier": "straight",
+         "instruction": "Continue on Malcolm X Boulevard.",
+         "type": "new name"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.942954,
+           40.810928
+          ],
+          "geometry_index": 17,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 6,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           30,
+           120,
+           208,
+           298
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.94257,
+           40.811434
+          ],
+          [
+           -73.94253,
+           40.811488
+          ],
+          [
+           -73.942485,
+           40.811547
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 14.475,
+        "duration": 12.194,
+        "weight": 17.194,
+        "name": "",
+        "maneuver": {
+         "location": [
+          -73.94257,
+          40.811434
+         ],
+         "bearing_before": 30,
+         "bearing_after": 29,
+         "modifier": "straight",
+         "instruction": "Continue on the crosswalk.",
+         "type": "new name"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.94257,
+           40.811434
+          ],
+          "geometry_index": 18,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 6,
+          "duration": 5.853,
+          "weight": 10.853,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           29,
+           120,
+           210,
+           300
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         },
+         {
+          "location": [
+           -73.94253,
+           40.811488
+          ],
+          "geometry_index": 19,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 1,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           30,
+           120,
+           209,
+           298
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.942485,
+           40.811547
+          ],
+          [
+           -73.94213,
+           40.812069
+          ],
+          [
+           -73.94212,
+           40.812085
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 67.325,
+        "duration": 49.412,
+        "weight": 54.412,
+        "name": "Malcolm X Boulevard",
+        "maneuver": {
+         "location": [
+          -73.942485,
+          40.811547
+         ],
+         "bearing_before": 30,
+         "bearing_after": 27,
+         "modifier": "straight",
+         "instruction": "Continue on Malcolm X Boulevard.",
+         "type": "new name"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.942485,
+           40.811547
+          ],
+          "geometry_index": 20,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 6,
+          "duration": 47.025,
+          "weight": 52.025,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           27,
+           120,
+           210,
+           300
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         },
+         {
+          "location": [
+           -73.94213,
+           40.812069
+          ],
+          "geometry_index": 21,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 1,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           25,
+           120,
+           207,
+           296
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.94212,
+           40.812085
+          ],
+          [
+           -73.94209,
+           40.812134
+          ],
+          [
+           -73.942068,
+           40.81217
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 10.427,
+        "duration": 8.343,
+        "weight": 8.343,
+        "name": "",
+        "maneuver": {
+         "location": [
+          -73.94212,
+          40.812085
+         ],
+         "bearing_before": 25,
+         "bearing_after": 25,
+         "modifier": "straight",
+         "instruction": "Continue on the crosswalk.",
+         "type": "new name"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.94212,
+           40.812085
+          ],
+          "geometry_index": 22,
+          "admin_index": 0,
+          "is_urban": true,
+          "duration": 4.234,
+          "weight": 4.234,
+          "in": 1,
+          "out": 0,
+          "entry": [
+           true,
+           false
+          ],
+          "bearings": [
+           25,
+           205
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         },
+         {
+          "location": [
+           -73.94209,
+           40.812134
+          ],
+          "geometry_index": 23,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 1,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           25,
+           120,
+           205,
+           298
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.942068,
+           40.81217
+          ],
+          [
+           -73.942049,
+           40.812196
+          ],
+          [
+           -73.941681,
+           40.812698
+          ],
+          [
+           -73.941598,
+           40.812813
+          ],
+          [
+           -73.941524,
+           40.812915
+          ],
+          [
+           -73.941243,
+           40.813302
+          ],
+          [
+           -73.941148,
+           40.813432
+          ],
+          [
+           -73.940767,
+           40.81395
+          ],
+          [
+           -73.940755,
+           40.813971
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 228.994,
+        "duration": 160.802,
+        "weight": 160.802,
+        "name": "Malcolm X Boulevard",
+        "maneuver": {
+         "location": [
+          -73.942068,
+          40.81217
+         ],
+         "bearing_before": 25,
+         "bearing_after": 29,
+         "modifier": "straight",
+         "instruction": "Continue on Malcolm X Boulevard.",
+         "type": "new name"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.942068,
+           40.81217
+          ],
+          "geometry_index": 24,
+          "admin_index": 0,
+          "is_urban": true,
+          "duration": 2.329,
+          "weight": 2.329,
+          "in": 1,
+          "out": 0,
+          "entry": [
+           true,
+           false
+          ],
+          "bearings": [
+           29,
+           205
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         },
+         {
+          "location": [
+           -73.942049,
+           40.812196
+          ],
+          "geometry_index": 25,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 1,
+          "duration": 46.005,
+          "weight": 46.005,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           29,
+           103,
+           209,
+           297
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         },
+         {
+          "location": [
+           -73.941681,
+           40.812698
+          ],
+          "geometry_index": 26,
+          "admin_index": 0,
+          "is_urban": true,
+          "duration": 10.273,
+          "weight": 10.273,
+          "in": 1,
+          "out": 0,
+          "entry": [
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           29,
+           209,
+           296
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         },
+         {
+          "location": [
+           -73.941598,
+           40.812813
+          ],
+          "geometry_index": 27,
+          "admin_index": 0,
+          "is_urban": true,
+          "duration": 9.122,
+          "weight": 9.122,
+          "in": 1,
+          "out": 0,
+          "entry": [
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           29,
+           209,
+           303
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         },
+         {
+          "location": [
+           -73.941524,
+           40.812915
+          ],
+          "geometry_index": 28,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 1,
+          "duration": 32.156,
+          "weight": 32.156,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           29,
+           118,
+           209,
+           297
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         },
+         {
+          "location": [
+           -73.941243,
+           40.813302
+          ],
+          "geometry_index": 29,
+          "admin_index": 0,
+          "is_urban": true,
+          "duration": 11.646,
+          "weight": 11.646,
+          "in": 1,
+          "out": 0,
+          "entry": [
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           29,
+           209,
+           306
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         },
+         {
+          "location": [
+           -73.941148,
+           40.813432
+          ],
+          "geometry_index": 30,
+          "admin_index": 0,
+          "is_urban": true,
+          "duration": 46.476,
+          "weight": 46.476,
+          "in": 1,
+          "out": 0,
+          "entry": [
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           29,
+           209,
+           306
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         },
+         {
+          "location": [
+           -73.940767,
+           40.81395
+          ],
+          "geometry_index": 31,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 1,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           23,
+           120,
+           209,
+           298
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.940755,
+           40.813971
+          ],
+          [
+           -73.940704,
+           40.814049
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 9.688,
+        "duration": 6.823,
+        "weight": 6.823,
+        "name": "",
+        "maneuver": {
+         "location": [
+          -73.940755,
+          40.813971
+         ],
+         "bearing_before": 23,
+         "bearing_after": 26,
+         "modifier": "straight",
+         "instruction": "Continue on the crosswalk.",
+         "type": "new name"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.940755,
+           40.813971
+          ],
+          "geometry_index": 32,
+          "admin_index": 0,
+          "is_urban": true,
+          "in": 1,
+          "out": 0,
+          "entry": [
+           true,
+           false
+          ],
+          "bearings": [
+           26,
+           203
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.940704,
+           40.814049
+          ],
+          [
+           -73.940781,
+           40.814081
+          ],
+          [
+           -73.940935,
+           40.814145
+          ],
+          [
+           -73.941024,
+           40.814185
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 30.924,
+        "duration": 26.403,
+        "weight": 33.643,
+        "name": "West 135th Street",
+        "maneuver": {
+         "location": [
+          -73.940704,
+          40.814049
+         ],
+         "bearing_before": 26,
+         "bearing_after": 299,
+         "modifier": "left",
+         "instruction": "Turn left onto West 135th Street.",
+         "type": "turn"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.940704,
+           40.814049
+          ],
+          "geometry_index": 33,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_weight": 5,
+          "duration": 5.212,
+          "weight": 10.733,
+          "in": 2,
+          "out": 3,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           27,
+           120,
+           206,
+           299
+          ],
+          "mapbox_streets_v8": {
+           "class": "tertiary"
+          }
+         },
+         {
+          "location": [
+           -73.940781,
+           40.814081
+          ],
+          "geometry_index": 34,
+          "admin_index": 0,
+          "is_urban": true,
+          "traffic_signal": true,
+          "turn_duration": 2,
+          "turn_weight": 2,
+          "duration": 13.049,
+          "weight": 14.154,
+          "in": 1,
+          "out": 3,
+          "entry": [
+           true,
+           false,
+           true,
+           true
+          ],
+          "bearings": [
+           30,
+           119,
+           208,
+           299
+          ],
+          "mapbox_streets_v8": {
+           "class": "tertiary"
+          }
+         },
+         {
+          "location": [
+           -73.940935,
+           40.814145
+          ],
+          "geometry_index": 35,
+          "admin_index": 0,
+          "is_urban": true,
+          "traffic_signal": true,
+          "turn_duration": 2,
+          "turn_weight": 2,
+          "in": 1,
+          "out": 3,
+          "entry": [
+           true,
+           false,
+           true,
+           true
+          ],
+          "bearings": [
+           30,
+           119,
+           208,
+           301
+          ],
+          "mapbox_streets_v8": {
+           "class": "tertiary"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.941024,
+           40.814185
+          ],
+          [
+           -73.940974,
+           40.814255
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 8.858,
+        "duration": 6.238,
+        "weight": 11.238,
+        "name": "",
+        "maneuver": {
+         "location": [
+          -73.941024,
+          40.814185
+         ],
+         "bearing_before": 301,
+         "bearing_after": 28,
+         "modifier": "right",
+         "instruction": "Turn right onto the walkway.",
+         "type": "turn"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.941024,
+           40.814185
+          ],
+          "geometry_index": 36,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_weight": 5,
+          "in": 1,
+          "out": 0,
+          "entry": [
+           true,
+           false,
+           true,
+           true
+          ],
+          "bearings": [
+           28,
+           121,
+           208,
+           298
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.940974,
+           40.814255
+          ],
+          [
+           -73.940954,
+           40.814279
+          ],
+          [
+           -73.940754,
+           40.814548
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 37.529,
+        "duration": 24.874,
+        "weight": 24.874,
+        "name": "Malcolm X Boulevard",
+        "maneuver": {
+         "location": [
+          -73.940974,
+          40.814255
+         ],
+         "bearing_before": 28,
+         "bearing_after": 32,
+         "modifier": "straight",
+         "instruction": "Continue on Malcolm X Boulevard.",
+         "type": "new name"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.940974,
+           40.814255
+          ],
+          "geometry_index": 37,
+          "admin_index": 0,
+          "is_urban": true,
+          "duration": 2.224,
+          "weight": 2.224,
+          "in": 1,
+          "out": 0,
+          "entry": [
+           true,
+           false
+          ],
+          "bearings": [
+           32,
+           208
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         },
+         {
+          "location": [
+           -73.940954,
+           40.814279
+          ],
+          "geometry_index": 38,
+          "admin_index": 0,
+          "is_urban": true,
+          "turn_duration": 1,
+          "turn_weight": 1,
+          "in": 2,
+          "out": 0,
+          "entry": [
+           true,
+           true,
+           false,
+           true
+          ],
+          "bearings": [
+           29,
+           120,
+           212,
+           298
+          ],
+          "mapbox_streets_v8": {
+           "class": "service"
+          }
+         }
+        ]
+       },
+       {
+        "geometry": {
+         "type": "LineString",
+         "coordinates": [
+          [
+           -73.940754,
+           40.814548
+          ],
+          [
+           -73.940754,
+           40.814548
+          ]
+         ]
+        },
+        "mode": "walking",
+        "driving_side": "right",
+        "distance": 0,
+        "duration": 0,
+        "weight": 0,
+        "name": "Malcolm X Boulevard",
+        "maneuver": {
+         "location": [
+          -73.940754,
+          40.814548
+         ],
+         "bearing_before": 29,
+         "bearing_after": 0,
+         "modifier": "left",
+         "instruction": "Your destination is on the left.",
+         "type": "arrive"
+        },
+        "intersections": [
+         {
+          "location": [
+           -73.940754,
+           40.814548
+          ],
+          "geometry_index": 39,
+          "admin_index": 0,
+          "in": 0,
+          "entry": [
+           true
+          ],
+          "bearings": [
+           209
+          ]
+         }
+        ]
+       }
+      ],
+      "summary": "Malcolm X Boulevard, West 135th Street",
+      "distance": 841.503,
+      "duration": 610.627,
+      "weight": 672.867,
+      "admins": [
+       {
+        "iso_3166_1": "US",
+        "iso_3166_1_alpha3": "USA"
+       }
+      ],
+      "via_waypoints": []
+     }
+    ]
+   }
+  ]
+ }
+}

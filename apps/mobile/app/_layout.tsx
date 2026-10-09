@@ -12,6 +12,8 @@ import { AppQueryProvider, SafeAreaProvider } from "@acme/app";
 import { Toaster } from "@acme/ui";
 import { palette, semantic } from "@acme/theme";
 import { metaWindows } from "../src/spatial/metaWindows";
+import { SpatialWindowHost } from "../src/spatial/SpatialWindowHost";
+import { MainRouteRelay } from "../src/spatial/MainRouteRelay";
 import "../global.css";
 
 // className-capable gesture root (third-party component → withUniwind).
@@ -80,12 +82,16 @@ export default function RootLayout() {
           <ThemeProvider value={NAV_THEME}>
           <AppQueryProvider>
             {/*
-              The app's only Meta spatial scene. Explore's Place Detail window
-              registers under it; the main window stays the activity. A
+              The app's only Meta spatial scene. The main window stays the
+              activity. Every promoted window renders from SpatialWindowHost
+              at the surface origin, so presses inside it work (ADR 0005). A
               fragment off the quest flavor.
             */}
             <metaWindows.SceneProvider>
               <Slot />
+              <SpatialWindowHost />
+              {/* Routes that Horizon panels ask for, performed here with solito. */}
+              <MainRouteRelay />
             </metaWindows.SceneProvider>
             <Toaster />
           </AppQueryProvider>
