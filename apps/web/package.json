@@ -52,7 +52,8 @@
     "sharp": "catalog:",
     "solito": "catalog:",
     "zod": "catalog:",
-    "zustand": "catalog:"
+    "zustand": "catalog:",
+    "@acme/widgets": "workspace:*"
   },
   "devDependencies": {
     "@acme/config": "workspace:*",

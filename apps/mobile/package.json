@@ -76,7 +76,10 @@
     "react-native-worklets": "catalog:",
     "solito": "catalog:",
     "uniwind": "catalog:",
-    "zustand": "catalog:"
+    "zustand": "catalog:",
+    "@acme/widgets": "workspace:*",
+    "expo-widgets": "~58.0.14",
+    "react-native-android-widget": "0.22.1"
   },
   "devDependencies": {
     "@acme/config": "workspace:*",
