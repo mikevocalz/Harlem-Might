@@ -22,12 +22,19 @@ Branch: `feat/explore-load-perf`. Baseline commit: `d52ede0`.
 
 ## §3 Measurements (web, dev server, warm)
 
-| Metric | Before (`d52ede0`) | After L1 | Method |
-|---|---|---|---|
-| `/explore` TTFB | ~0.04–0.14 s | ~0.04–0.14 s | `curl -w '%{time_starttransfer}'` |
-| `/explore` RSC stream completion | ~5.7 s | ~3.4–4.7 s | `curl -w '%{time_total}'` |
-| `/explore` HTML+flight bytes | 879 KB | 793 KB | `curl` body size |
-| Equivalent catalogue via REST | 1.53 MB, ~1.24 s | 664 KB, ~0.59 s | `/payload-api/places` full vs `select` |
+| Metric | Before (`d52ede0`) | After L1 | After L2 | Method |
+|---|---|---|---|---|
+| `/explore` TTFB (shell + skeleton) | ~0.04–0.14 s (blank) | ~0.04–0.14 s | ~0.06–0.22 s (shell + skeleton painted) | `curl -w` |
+| `/explore` RSC stream completion | ~5.7 s | ~3.4–4.7 s | ~6.0–6.6 s (dev-serialize noise; two arrays) | `curl -w '%{time_total}'` |
+| `/explore` HTML+flight bytes | 879 KB | 793 KB | 974 KB (points array ~180 KB of it) | `curl` body size |
+| Equivalent catalogue via REST | 1.53 MB, ~1.24 s | 664 KB, ~0.59 s | unchanged | `/payload-api/places` |
+| First painted content | whole page at once | whole page at once | skeleton + overlay at TTFB | streamed `hm-suspense-in` markup |
+
+Interpretation: L1's win is bytes and query shape. L2's win is *ordering* —
+the shell and a shaped skeleton paint at TTFB and the map region resolves
+on its own promise — at the documented cost of ~180 KB of duplicated
+id/name/lngLat and a second DB read. Stream-completion time in dev is
+dominated by RSC serialization and is not a production proxy.
 
 Device targets (mid-tier Android, iPhone, Quest 3): **not measured** — no
 devices were available in this environment. Web numbers above are the
@@ -107,6 +114,24 @@ delay so sub-250 ms loads render no skeleton.
 - Captures (Rive CLI `--screenshot --advance`): `t30`, `t90` frames in
   `packages/spatial/explore-loader/rive/build/` — counter-rotation and
   diamond core confirmed.
+
+## §6 Accessibility notes
+
+- `role="progressbar"` + `aria-label` on the loader; `aria-valuenow` only
+  when a real `progress` prop exists (never faked).
+- Polite `role="status"` announcements: "Loading map" once on mount,
+  "Map ready" once when the complete exit starts. No progress chatter.
+- OS reduce-motion → the Rive `reduced` phase (opacity pulse, no
+  rotation); skeletons use `motion-reduce:animate-none` already built
+  into `LoadingSkeleton`.
+- No flashing: ring cycle is 3 s, pulse 4 s — far under the 3 Hz limit.
+- Contrast: gold #F8C626 and spatial #5FD1E1 on `map-canvas` #070604
+  exceed 3:1; the dim track ring is decorative support.
+- Horizon: the loader is ordinary window content — sized for 1.5–3 m via
+  the `size` prop; it changes no window geometry.
+- Mobile gap: `ExploreLoader` ships the native runtime, but the mobile
+  Explore map pane has no `mapStatus` equivalent wired — integration is a
+  named follow-up, not a claim.
 
 ## Verification commands
 
