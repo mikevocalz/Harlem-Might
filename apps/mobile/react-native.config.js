@@ -9,5 +9,10 @@ module.exports = {
     '@mapbox/react-native-mapbox-ar': {
       platforms: { android: null, ios: null },
     },
+    // The Podfile pins ViroReact + ViroKit to the local fork by hand; letting
+    // the linked package autolink its podspec installs libviroreact.a twice.
+    '@reactvision/react-viro': {
+      platforms: { ios: null },
+    },
   },
 };
