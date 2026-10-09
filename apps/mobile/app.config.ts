@@ -34,6 +34,9 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
+    // Registers native watchOS application in apps/mobile/targets/harlem-watch.
+    // Expo Widgets remains sole owner of the iPhone WidgetKit extension.
+    '@bacons/apple-targets',
     [
       'expo-widgets',
       {
