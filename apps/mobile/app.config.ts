@@ -34,6 +34,29 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
+    [
+      'expo-widgets',
+      {
+        groupIdentifier: 'group.com.harlemmight.app',
+        widgets: [
+          { name: 'HarlemStory', displayName: 'This Is Harlem', description: 'A sourced Harlem story each day.', ios: { supportedFamilies: ['systemSmall', 'systemMedium'], initialLayout: './widgets/ios/HarlemStory.tsx' } },
+          { name: 'HarlemEvent', displayName: 'Happening in Harlem', description: 'Verified neighborhood events.', ios: { supportedFamilies: ['systemSmall', 'systemMedium'], initialLayout: './widgets/ios/HarlemEvent.tsx' } },
+          { name: 'HarlemPlace', displayName: 'My Harlem', description: 'A place you saved in Harlem.', ios: { supportedFamilies: ['systemSmall', 'systemMedium'], initialLayout: './widgets/ios/HarlemPlace.tsx' } },
+          { name: 'HarlemWalk', displayName: 'Take Me There', description: 'Pick up your walking tour.', ios: { supportedFamilies: ['systemSmall', 'systemMedium', 'accessoryRectangular'], initialLayout: './widgets/ios/HarlemWalk.tsx' } },
+        ],
+      },
+    ],
+    [
+      'react-native-android-widget',
+      {
+        widgets: [
+          { name: 'HarlemStory', label: 'This Is Harlem', description: 'Sourced daily Harlem stories', minWidth: '180dp', minHeight: '100dp', resizeMode: 'horizontal|vertical', updatePeriodMillis: 1800000 },
+          { name: 'HarlemEvent', label: 'Happening in Harlem', description: 'Current verified Harlem events', minWidth: '180dp', minHeight: '100dp', resizeMode: 'horizontal|vertical', updatePeriodMillis: 1800000 },
+          { name: 'HarlemPlace', label: 'My Harlem', description: 'Saved places around Harlem', minWidth: '180dp', minHeight: '100dp', resizeMode: 'horizontal|vertical', updatePeriodMillis: 1800000 },
+          { name: 'HarlemWalk', label: 'Take Me There', description: 'Your ongoing Harlem walking tour', minWidth: '180dp', minHeight: '100dp', resizeMode: 'horizontal|vertical', updatePeriodMillis: 1800000 },
+        ],
+      },
+    ],
     // Quest and PICO run Android 12+; Meta's layout library and
     // react-native-webgpu's AHardwareBuffer use both need minSdk 29.
     ['expo-build-properties', { android: { minSdkVersion: 29 } }],
@@ -106,6 +129,13 @@ const config: ExpoConfig = {
           questArm64Only: true,
         },
       },
+    ],
+    // Place Detail as its own Horizon OS panel (DECISIONS S20, ADR 0006):
+    // declares SpatialPanelActivity with a 400x600dp <layout> in the QUEST
+    // flavor manifest only. After expo-horizon-core, which writes that file.
+    [
+      './modules/spatial-panels/app.plugin.js',
+      { defaultWidth: '400dp', defaultHeight: '600dp' },
     ],
     // Adds the pico flavor: PICO OS 5 OpenXR loader, manifest and SDK levels.
     // Build with `pnpm --filter mobile android:pico` (picoDebug).

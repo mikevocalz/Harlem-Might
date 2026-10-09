@@ -1,6 +1,6 @@
 import { useWindowDimensions } from 'react-native';
 import { Tabs } from 'expo-router';
-import { AppTabBar } from '@/components/AppTabBar';
+import { AppTabBarHost } from '@/components/AppTabBarHost';
 import { APP_TABS, TAB_SCREEN } from '@/src/site/app-tabs';
 
 /**
@@ -21,6 +21,9 @@ export const unstable_settings = { initialRouteName: 'explore' };
  * race, Spatial, Schedule, Editor settings, Menu viewer, Notifications,
  * Profile, Settings. None had a site counterpart or real data.
  *
+ * On a quest build the rail moves into its own window on the main window's
+ * start edge (DECISIONS S18, `AppTabBarHost`).
+ *
  * JS tabs, not `NativeTabs`: `NativeTabs` cannot draw an Android navigation
  * rail (`sidebarAdaptable` is iOS 18+ iPad only), and `tabBarPosition` exists
  * only on the JS tabs.
@@ -35,7 +38,7 @@ export default function TabLayout() {
         headerShown: false,
         tabBarPosition: rail ? 'left' : 'bottom',
       }}
-      tabBar={(props) => <AppTabBar {...props} rail={rail} />}
+      tabBar={(props) => <AppTabBarHost {...props} rail={rail} />}
     >
       {APP_TABS.map((tab) => (
         <Tabs.Screen key={tab.route} name={TAB_SCREEN[tab.route]} options={{ title: tab.label }} />

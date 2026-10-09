@@ -67,10 +67,11 @@ export interface ArSessionState {
    */
   setPlayheadM: (distanceM: number) => void;
   /**
-   * Moves the wearer to a ground point (already clamped by the scene).
-   * @throws {RangeError} When either coordinate is not finite.
+   * Moves the wearer to a ground point (already clamped by the scene), and
+   * turns the world to `headingDeg` when given.
+   * @throws {RangeError} When a coordinate or the heading is not finite.
    */
-  teleport: (to: EnuGround) => void;
+  teleport: (to: EnuGround, headingDeg?: number) => void;
   /** One 45 degree snap turn. */
   snapTurn: (direction: 'left' | 'right') => void;
   reset: () => void;
@@ -103,11 +104,19 @@ export const useArSession = create<ArSessionState>((set) => ({
     if (!Number.isFinite(distanceM)) throw new RangeError('distanceM must be finite');
     set({ playheadM: Math.max(0, distanceM) });
   },
-  teleport: (to) => {
+  teleport: (to, headingDeg) => {
     if (!Number.isFinite(to.eastM) || !Number.isFinite(to.northM)) {
       throw new RangeError('teleport target must be finite');
     }
-    set((s) => ({ street: { ...s.street, user: { eastM: to.eastM, northM: to.northM } } }));
+    if (headingDeg !== undefined && !Number.isFinite(headingDeg)) {
+      throw new RangeError('headingDeg must be finite');
+    }
+    set((s) => ({
+      street: {
+        user: { eastM: to.eastM, northM: to.northM },
+        headingDeg: headingDeg === undefined ? s.street.headingDeg : ((headingDeg % 360) + 360) % 360,
+      },
+    }));
   },
   snapTurn: (direction) =>
     set((s) => ({ street: { ...s.street, headingDeg: nextHeading(s.street.headingDeg, direction) } })),

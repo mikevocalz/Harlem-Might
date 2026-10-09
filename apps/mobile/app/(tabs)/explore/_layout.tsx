@@ -6,14 +6,26 @@ import { Slot } from 'expo-router';
 import { useRouter } from 'solito/navigation';
 import { routes } from '@acme/ui/mights';
 import {
+  DirectionsPanel,
   ExploreMapPane,
   ExploreMasterPane,
   ExplorePlaceDetail,
   ExploreTypeContext,
+  HARLEM_PLACE_PREVIEWS,
+  NO_LOCATION_SOURCE,
+  NavigationHud,
+  closeDirections,
+  endNavigation,
+  getHarlemPlacePreview,
   markerFocusId,
   moveFocusTo,
+  openDirections,
   rowFocusId,
+  useDirectionsPlaceId,
   useExplore,
+  useIsGuiding,
+  useNavigationHost,
+  useNavigationStore,
 } from '@acme/app';
 import { SafeArea } from '@acme/ui';
 import { View } from '@acme/ui/tw';
@@ -31,6 +43,12 @@ import { ExploreWorkspaceContext, ExploreWorkspaceWindow } from '@/src/spatial/E
 import { isHorizonBuild } from '@/src/spatial/horizonBuild';
 import { ViewInArButton } from '@/src/ar/ViewInArButton';
 import { metaWindows } from '@/src/spatial/metaWindows';
+import { usePlaceDetailPanel } from '@/src/spatial/usePlaceDetailPanel';
+
+// This build has no location module (expo-location is not a dependency yet),
+// so directions start from a chosen place and guidance says it can't follow
+// the person. See docs/NAVIGATION_PLATFORM_MATRIX.md.
+const noLocationSource = () => NO_LOCATION_SOURCE;
 
 
 /**
@@ -38,10 +56,12 @@ import { metaWindows } from '@/src/spatial/metaWindows';
  *
  * The map always takes the flex region. Discover is a leading column, drawer
  * or single-column screen, and always stays in this window (DECISIONS S12).
- * Place Detail is a trailing column, overlay or screen that exists only while
- * a place is selected (S5). On a quest build all three share one 1440x900dp
- * window, Discover 360 | map | Detail 400, and Detail pushes the map narrower
- * instead of covering it (S17). Breakpoints come from the window's width,
+ * Place Detail exists only while a place is selected (S5). On a quest build it
+ * opens as its own Horizon OS panel to the right of this window (S20,
+ * `usePlaceDetailPanel`); if the panel cannot open, Discover 360 | map |
+ * Detail 400 share this 1440x900dp window and Detail pushes the map narrower
+ * instead of covering it (S17). Elsewhere it is a trailing column, overlay or
+ * screen. Breakpoints come from the window's width,
  * which the user can resize (src/spatial/exploreLayout.ts).
  *
  * Selection is one store write (`openPlace`). The `[placeId]` route only
@@ -55,6 +75,16 @@ export default function ExploreRouteLayout() {
   const selectedPlaceId = useExplore((state) => state.selectedPlaceId);
   const openPlace = useExplore((state) => state.openPlace);
   const closePlace = useExplore((state) => state.closePlace);
+  const savedPreviewIds = useExplore((state) => state.savedPreviewIds);
+
+  // One navigation session for every pane: Detail's directions, the map's
+  // route line and the HUD all read useNavigationStore.
+  useNavigationHost(noLocationSource);
+  const directionsPlaceId = useDirectionsPlaceId();
+  const guiding = useIsGuiding();
+  const destinationId = useNavigationStore((s) =>
+    'activeRoute' in s.session ? (s.session.destination.placeId ?? null) : null,
+  );
 
   const compactPane = useExploreLayoutStore((state) => state.compactPane);
   const discoverDrawerOpen = useExploreLayoutStore((state) => state.discoverDrawerOpen);
@@ -65,7 +95,14 @@ export default function ExploreRouteLayout() {
 
   const isSpatialAvailable = metaWindows.useSpatialAvailable();
   const workspace = resolveExploreWorkspace({ selectedPlaceId, isSpatialAvailable });
-  const detailPlacement = metaWindows.usePlacement(EXPLORE_SURFACE.placeDetail);
+
+  // Quest: Detail is its own panel right of this window (S20); `inline`
+  // falls back to the S17 column. `dismissDetail` is defined below and only
+  // runs from the panel's close event, never during render.
+  const detailPlacement = usePlaceDetailPanel({
+    selectedPlaceId,
+    onClosedByUser: () => dismissDetail(),
+  });
 
   const layout = resolveExploreLayout({
     windowWidth,
@@ -85,6 +122,7 @@ export default function ExploreRouteLayout() {
   };
 
   const dismissDetail = () => {
+    if (!guiding) closeDirections();
     closePlace();
     leaveCompactDetail();
     // A deep link may have left /explore/[placeId] as the current route; drop
@@ -104,12 +142,22 @@ export default function ExploreRouteLayout() {
   }, [selectedPlaceId]);
 
   // Android Back: Detail, then a Discover screen or drawer.
-  const latest = useRef<{ layout: ExploreLayout; dismissDetail: () => void }>({ layout, dismissDetail });
+  const directionsOpen = directionsPlaceId != null && directionsPlaceId === selectedPlaceId && !guiding;
+  const latest = useRef<{ layout: ExploreLayout; dismissDetail: () => void; directionsOpen: boolean }>({
+    layout,
+    dismissDetail,
+    directionsOpen,
+  });
   useEffect(() => {
-    latest.current = { layout, dismissDetail };
+    latest.current = { layout, dismissDetail, directionsOpen };
   });
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      // Directions sit on top of Place Detail: Back returns to the place.
+      if (latest.current.directionsOpen) {
+        closeDirections();
+        return true;
+      }
       const action = exploreBackAction({
         assistantOpen: false,
         layout: latest.current.layout,
@@ -132,6 +180,22 @@ export default function ExploreRouteLayout() {
   }, []);
 
   const showPlaces = () => (single ? setCompactPane('discover') : setDiscoverDrawerOpen(true));
+  // Guidance: phones bring the map forward and reach the step list through
+  // the HUD; wider layouts keep the steps in the Detail column beside it.
+  const showSteps = () => {
+    if (destinationId) openPlace(destinationId, null);
+    showCompactDetail('map');
+  };
+  const showPlaceAfterTrip = (placeId: string) => {
+    endNavigation();
+    open(placeId, 'map', null);
+  };
+  const showDirectionsFor = selectedPlaceId != null && directionsPlaceId === selectedPlaceId;
+  const directionsPlace = showDirectionsFor ? getHarlemPlacePreview(selectedPlaceId) : null;
+  // Before guidance the panel's Back abandons planning and Place Detail comes
+  // back (the panel does that itself). During guidance a phone's "Map"
+  // uncovers the map; beside the map the steps stay put, so no button.
+  const directionsDismiss = !guiding ? () => {} : single ? () => setCompactPane('map') : undefined;
   const showMap = () => (single ? setCompactPane('map') : setDiscoverDrawerOpen(false));
   const windowPadding = isHorizonBuild ? 'window' : 'pane';
 
@@ -168,12 +232,30 @@ export default function ExploreRouteLayout() {
               >
                 {/* The assistant is struck until it has a backend: today it would only
                     repeat Discover's search (spatial DECISIONS S16, 2026-10-08). */}
+                <NavigationHud
+                  onShowSteps={single ? showSteps : undefined}
+                  onShowPlace={showPlaceAfterTrip}
+                  onSave={(placeId) => useExplore.getState().toggleSavedPreview(placeId)}
+                  isSaved={destinationId != null && savedPreviewIds.includes(destinationId)}
+                />
               </ExploreMapPane>
             </View>
 
-            {selectedPlaceId != null && layout.detail ? (
+            {/* A promoted Detail is the separate panel (PlaceDetailPanel), so the
+                main window renders no second copy of it. */}
+            {selectedPlaceId != null && layout.detail && layout.detail.kind !== 'promoted' ? (
               <ExplorePane mode={layout.detail} side="trailing" restingWidth={EXPLORE_PANE_DP.detail}>
                 <ExploreWorkspaceWindow surfaceId={EXPLORE_SURFACE.placeDetail}>
+                  {directionsPlace ? (
+                    <DirectionsPanel
+                      place={directionsPlace}
+                      originPlaces={HARLEM_PLACE_PREVIEWS}
+                      padding={windowPadding}
+                      frame={layout.detailDismiss === 'back' ? 'rail-top' : 'rail-leading'}
+                      onDismiss={directionsDismiss}
+                      onStarted={single ? () => setCompactPane('map') : undefined}
+                    />
+                  ) : (
                   <ExplorePlaceDetail
                     placeId={selectedPlaceId}
                     placePageUrl={siteUrl(routes.place(selectedPlaceId))}
@@ -185,7 +267,9 @@ export default function ExploreRouteLayout() {
                     onSelectNearby={(place) =>
                       openPlace(place.id, useExplore.getState().sheet.returnFocusId)
                     }
+                    onDirections={() => openDirections(selectedPlaceId)}
                   />
+                  )}
                 </ExploreWorkspaceWindow>
               </ExplorePane>
             ) : null}

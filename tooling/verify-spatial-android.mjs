@@ -49,6 +49,11 @@ expect('@reactvision/react-viro android.metaSpatialLayout', viro.metaSpatialLayo
 const pico = plugin('@expo-pico/core');
 expect('@expo-pico/core buildVariant', pico.buildVariant, 'pico');
 expect('@expo-pico/core metaLayoutSdk', pico.metaLayoutSdk, true);
+// Place Detail panel (DECISIONS S20, ADR 0006): 400x600dp, quest flavor only.
+const panels = plugin('./modules/spatial-panels/app.plugin.js');
+expect('spatial-panels defaultWidth', panels.defaultWidth, '400dp');
+expect('spatial-panels defaultHeight', panels.defaultHeight, '600dp');
+
 if ('picoAppId' in pico && !pico.picoAppId) {
   // An explicit undefined replaces the plugin's '' default and prebuild dies
   // writing an empty <string name="pico_app_id">.
@@ -123,6 +128,10 @@ const treeChecks = [
     // Window size from expo-horizon-core in app.config.ts (S17: 1440x900dp).
     'android:defaultWidth="1440dp"',
     'android:defaultHeight="900dp"',
+    // Place Detail panel (S20): its own activity and <layout>, quest only.
+    'com.harlemmight.spatialpanels.SpatialPanelActivity',
+    'android:defaultWidth="400dp"',
+    'android:defaultHeight="600dp"',
   ]],
   ['app/src/pico/AndroidManifest.xml', [
     'com.picovr.intent.category.VR',
@@ -160,12 +169,18 @@ if (existsSync(android)) {
   const mainManifestPath = 'app/src/main/AndroidManifest.xml';
   if (existsSync(join(android, mainManifestPath))) {
     const manifest = read(mainManifestPath);
-    for (const leak of ['com.oculus.intent.category.VR', 'com.oculus.supportedDevices', 'horizonos.permission.', 'com.picovr.', 'pvr.app.type']) {
+    for (const leak of ['com.oculus.intent.category.VR', 'com.oculus.supportedDevices', 'horizonos.permission.', 'com.picovr.', 'pvr.app.type', 'SpatialPanelActivity']) {
       if (manifest.includes(leak)) failures.push(`android/${mainManifestPath}: ${leak} belongs in a flavor manifest, not main`);
     }
     if (manifest.includes('android.permission.SYSTEM_ALERT_WINDOW')) {
       failures.push(`android/${mainManifestPath}: SYSTEM_ALERT_WINDOW must not ship`);
     }
+  }
+
+  // The panel activity is Meta multi-panel only; PICO must never declare it.
+  const picoManifestPath = 'app/src/pico/AndroidManifest.xml';
+  if (existsSync(join(android, picoManifestPath)) && read(picoManifestPath).includes('SpatialPanelActivity')) {
+    failures.push(`android/${picoManifestPath}: SpatialPanelActivity belongs in the quest manifest only`);
   }
 
   mainApplication = findSourceFile('MainApplication.kt');

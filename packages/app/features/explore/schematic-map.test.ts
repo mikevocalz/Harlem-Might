@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { HARLEM_PLACE_PREVIEWS, MAPPED_PLACES, UNMAPPED_PLACES, type HarlemPlacePreview } from './explore.store.ts';
-import { markerLabel, projectSchematic } from './schematic-map.ts';
+import { markerLabel, projectSchematic, projectToSchematic, schematicBounds } from './schematic-map.ts';
 
 describe('projectSchematic', () => {
   it('places only mapped places, inside 0–100%', () => {
@@ -34,5 +34,23 @@ describe('markerLabel', () => {
   it('keeps short names and truncates long ones at 18 characters', () => {
     assert.equal(markerLabel('Apollo Theater'), 'Apollo Theater');
     assert.equal(markerLabel('The Studio Museum in Harlem'), 'The Studio Museum…');
+  });
+});
+
+describe('projectSchematic with a route', () => {
+  it('grows the fit to hold extra points and keeps markers and route in one frame', () => {
+    // A point west and south of every seed: the route's start outside the catalogue's corner.
+    const outside = [-73.96, 40.80] as const;
+    const points = new Map(projectSchematic(HARLEM_PLACE_PREVIEWS, [outside]).map((p) => [p.placeId, p]));
+    const bounds = schematicBounds([...MAPPED_PLACES.map((p) => p.lngLat!), outside])!;
+    assert.deepEqual(projectToSchematic(outside, bounds), { xPercent: 0, yPercent: 100 });
+    // Apollo is no longer the westernmost point, so it moves off the left edge.
+    assert.ok(points.get('apollo-theater')!.xPercent > 0);
+    const apollo = MAPPED_PLACES.find((p) => p.id === 'apollo-theater')!;
+    assert.deepEqual(points.get('apollo-theater'), { placeId: 'apollo-theater', ...projectToSchematic(apollo.lngLat!, bounds) });
+  });
+
+  it('has no bounds for no points', () => {
+    assert.equal(schematicBounds([]), undefined);
   });
 });
