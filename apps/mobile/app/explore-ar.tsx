@@ -1,5 +1,7 @@
+import { Platform } from 'react-native';
 import { useRouter } from 'solito/navigation';
-import { ViroXRSceneNavigator } from '@reactvision/react-viro';
+import { ViroXRSceneNavigator, isMetaHorizonXR, isPico, isVisionOS } from '@reactvision/react-viro';
+import { selectArTracking, selectSession, useNavigationStore } from '@acme/app/features/navigation/session/navigationStore.ts';
 import { getHarlemPlacePreview, useExplore } from '@acme/app';
 import { MightsButton, MightsHeading, MightsText, routes } from '@acme/ui/mights';
 import { View } from '@acme/ui/tw';
@@ -9,6 +11,20 @@ import { sceneModeFor, useArSession, type ArSceneMode } from '../src/ar/arSessio
 import { mapboxToken } from '../src/ar/mapboxToken';
 import { useStreetMapLoader } from '../src/ar/useStreetMapLoader';
 import { useTabletopRoute } from '../src/ar/useTabletopRoute';
+import { HarlemNavigationAr } from '../src/ar/HarlemNavigationAr';
+import { canUseArNavigation, chooseArExperience } from '../src/ar/arNavigationEntry';
+import { isArNavigationScreen } from '../src/ar/navAr';
+import { getNavigationController } from '../src/ar/navigationRuntime';
+import { isHorizonBuild } from '../src/spatial/horizonBuild';
+
+/** Phone AR navigation is a property of the build and device, fixed for the app's lifetime. */
+const AR_NAVIGATION_SUPPORTED = canUseArNavigation({
+  isHorizonBuild,
+  isMetaHorizonXR,
+  isPico,
+  isVisionOS: isVisionOS(),
+  platform: Platform.OS,
+});
 
 const TABLETOP_SCENE = { scene: HarlemTabletopScene };
 const STREET_SCENE = { scene: HarlemStreetScene };
@@ -31,12 +47,44 @@ export default function ExploreArRoute() {
   const placeId = useArSession((s) => s.requested?.placeId);
   const sceneMode = useArSession((s) => sceneModeFor(s.requested));
   const selectedPlaceId = useExplore((s) => s.selectedPlaceId);
-  useTabletopRoute(placeId ?? selectedPlaceId ?? undefined);
-  const street = sceneMode === 'street';
+  // A walk in an AR phase opens phone AR navigation on the same session; it
+  // never requests a route of its own, so the tabletop route is skipped too.
+  const navigationSessionInAR = useNavigationStore(
+    (s) => isArNavigationScreen(selectSession(s), selectArTracking(s)),
+  );
+  const experience = chooseArExperience({
+    requestedScene: sceneMode,
+    navigationAvailable: AR_NAVIGATION_SUPPORTED,
+    navigationSessionInAR,
+  });
+  const isNavigatingInAr = experience === 'navigation';
+  // Only the phone navigation layer reads the shared trip. Existing table
+  // and street worlds, their place routes, and their controls stay untouched.
+  useTabletopRoute(isNavigatingInAr ? undefined : (placeId ?? selectedPlaceId ?? undefined));
+  const street = experience === 'street';
   // The map layer for the street scene: real buildings around the wearer.
   // The scene only draws what this publishes. Routes come from the shared
   // NavigationSession (useStreetNavigation).
   useStreetMapLoader(street, placeId ?? selectedPlaceId ?? undefined);
+
+  if (isNavigatingInAr) {
+    return (
+      <HarlemNavigationAr
+        onBackToMap={() => {
+          // Leaves AR only; the walk keeps going on the map.
+          const controller = getNavigationController();
+          controller.exitAR();
+          controller.setArTracking({ kind: 'off' });
+          exit();
+        }}
+        onExplorePlace={(destinationPlaceId) => {
+          getNavigationController().cancel();
+          if (destinationPlaceId) useExplore.getState().selectPlace(destinationPlaceId);
+          exit();
+        }}
+      />
+    );
+  }
 
   return (
     <ViroXRSceneNavigator
