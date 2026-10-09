@@ -42,7 +42,7 @@ export default function ExploreArRoute() {
       handTrackingEnabled
       trackingOrigin="floor"
       onExitViro={exit}
-      renderQuestPanel={(enter) => (
+      renderQuestPanel={(enter: () => void) => (
         <ArPanel
           mode={sceneMode}
           placeName={getHarlemPlacePreview(selectedPlaceId ?? placeId)?.name}
