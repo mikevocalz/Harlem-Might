@@ -15,6 +15,7 @@
     "test": "node --test '**/*.test.ts'"
   },
   "dependencies": {
+    "@acme/assets": "workspace:*",
     "@acme/theme": "workspace:*",
     "@acme/ui": "workspace:*",
     "@tanstack/react-query": "catalog:",
@@ -30,6 +31,7 @@
     "react-native-gesture-handler": "catalog:",
     "react-native-keyboard-controller": "catalog:",
     "react-native-mmkv": "catalog:",
+    "react-native-nitro-fetch": "catalog:",
     "react-native-reanimated": "catalog:",
     "react-native-safe-area-context": "catalog:",
     "react-native-svg": "catalog:",

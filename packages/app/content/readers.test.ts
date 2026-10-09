@@ -6,7 +6,7 @@ import { createContentReaders, type ContentDocs, type ContentQuery, type Content
 // Fixtures are synthetic test data for the mapping, not content. They never
 // reach the CMS or a page.
 const place = (id: number, slug: string): Place =>
-  ({ id, slug, name: `Place ${id}` });
+  ({ id, slug, name: `Place ${id}`, kind: 'culture', lifecycle: 'unknown', locationAccuracy: 'pending' });
 
 const walk: Walk = {
   id: 1,
@@ -27,6 +27,22 @@ const walk: Walk = {
 };
 
 const media: Media = { alt: 'Alt', url: '/media/a.jpg', width: 800, height: 600 };
+
+const licensedMedia: Media = {
+  id: 17,
+  alt: 'A documented editorial photograph.',
+  url: 'https://example.org/photo.jpg',
+  role: 'hero',
+  source: 'other',
+  sourceUrl: 'https://example.org/source',
+  license: 'Example license',
+  licenseUrl: 'https://example.org/license',
+  creator: 'Example photographer',
+  credit: 'Example photographer',
+  attributionText: 'Photograph by Example photographer',
+  shareAlike: false,
+  noDerivatives: false,
+};
 
 const story: Story = {
   id: 2,
@@ -116,7 +132,7 @@ test('malformed slugs are not-found without a query', async () => {
   assert.equal(queries.length, 0);
 });
 
-test('every query asks for published documents only', async () => {
+test('versioned-content queries ask for published documents only', async () => {
   const { source, queries } = fakeSource();
   const readers = createContentReaders(source);
   await readers.listWalks();
@@ -128,6 +144,24 @@ test('every query asks for published documents only', async () => {
   for (const query of queries) {
     assert.match(JSON.stringify(query.where), /"_status":\{"equals":"published"\}/);
   }
+});
+
+test('place reads do not apply a status clause to the unversioned places collection', async () => {
+  const { source, queries } = fakeSource();
+  const readers = createContentReaders(source);
+  await readers.listPlaces();
+  await readers.getPlace('test-place');
+  assert.equal(queries.length, 2);
+  assert.deepEqual(queries[0]?.where, {});
+  assert.deepEqual(queries[1]?.where, { and: [{}, { slug: { equals: 'test-place' } }] });
+});
+
+test('a generated source slug resolves through the stored legacy slug', async () => {
+  const { source, queries } = fakeSource({ docs: { places: [place(10, 'the-edge')] } });
+  const result = await createContentReaders(source).getPlaceByLegacySlug('osm-node-2768136308');
+  assert.equal(result.status, 'ok');
+  if (result.status === 'ok') assert.equal(result.data.slug, 'the-edge');
+  assert.deepEqual(queries[0]?.where, { 'legacySlugs.slug': { equals: 'osm-node-2768136308' } });
 });
 
 test('events for a date use the New York day window, overlap semantics, earliest first', async () => {
@@ -156,6 +190,15 @@ test('walk mapping keeps stop order and count, and drops an unsourced accessibil
   assert.deepEqual(result.data.sources, [{ label: 'Source', url: undefined, accessedAt: undefined }]);
 });
 
+test('place detail reads carry only populated, rights-cleared images', async () => {
+  const doc = { ...place(10, 'stop-a'), images: [licensedMedia, { ...licensedMedia, id: 18, credit: null }] };
+  const result = await createContentReaders(fakeSource({ docs: { places: [doc] } }).source).getPlace('stop-a');
+  assert.equal(result.status, 'ok');
+  if (result.status !== 'ok') return;
+  assert.equal(result.data.images?.length, 1);
+  assert.equal(result.data.images?.[0]?.attributionText, 'Photograph by Example photographer');
+});
+
 test('story mapping drops unpopulated places and archive items without an image', async () => {
   const result = await createContentReaders(fakeSource({ docs: { stories: [story] } }).source).listStories();
   assert.equal(result.status, 'ok');
@@ -180,6 +223,7 @@ test('event mapping keeps cancelled status, venue fallback and provenance', asyn
     endsAt: '2026-10-08T01:00:00.000Z',
     timeZone: 'America/New_York',
     status: 'cancelled',
+    images: [],
     place: undefined,
     venueName: 'Uncatalogued venue',
     venueUrl: undefined,

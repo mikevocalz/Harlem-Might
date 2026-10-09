@@ -9,12 +9,17 @@
   },
   "scripts": {
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --test editorial-images.test.ts"
   },
   "devDependencies": {
     "@acme/config": "workspace:*",
+    "@types/node": "catalog:",
     "eslint": "catalog:",
     "eslint-config-expo": "catalog:",
     "typescript": "catalog:"
+  },
+  "dependencies": {
+    "zustand": "catalog:"
   }
 }
