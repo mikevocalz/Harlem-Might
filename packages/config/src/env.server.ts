@@ -24,6 +24,7 @@ const schema = z.object({
   // ---- Payload ----
   PAYLOAD_SECRET: z.string().min(32),
   PAYLOAD_PUSH: z.stringbool().default(false),
+  PAYLOAD_MCP_ENABLED: z.stringbool().default(false),
 
   // ---- Better Auth ----
   BETTER_AUTH_SECRET: z.string().min(32),
@@ -41,10 +42,6 @@ const schema = z.object({
   SEATGEEK_CLIENT_SECRET: optional,
   PREDICTHQ_API_TOKEN: optional,
   NYC_OPEN_DATA_APP_TOKEN: optional,
-  MEETUP_OAUTH_CLIENT_ID: optional,
-  MEETUP_OAUTH_CLIENT_SECRET: optional,
-  MEETUP_ACCESS_TOKEN: optional,
-  MEETUP_REFRESH_TOKEN: optional,
   EVENTS_SCRAPER_USER_AGENT: z.string().min(1).default('HarlemMightBot/1.0 (+https://harlemmight.com/bot)'),
 
   // ---- Geo ----
@@ -99,12 +96,6 @@ export const providerAvailability = {
   nycPermittedEvents: true,
   nycParks: true,
   nypl: true,
-  meetup: Boolean(
-    env.MEETUP_OAUTH_CLIENT_ID &&
-      env.MEETUP_OAUTH_CLIENT_SECRET &&
-      env.MEETUP_ACCESS_TOKEN &&
-      env.MEETUP_REFRESH_TOKEN,
-  ),
 } as const;
 
 export const supabaseConfigured = Boolean(

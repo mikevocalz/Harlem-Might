@@ -50,7 +50,7 @@ const event: Event = {
   startsAt: '2026-10-07T23:00:00.000Z',
   startsAt_tz: 'America/New_York',
   endsAt: '2026-10-08T01:00:00.000Z',
-  status: 'cancelled',
+  lifecycle: 'cancelled',
   place: null,
   venueName: 'Uncatalogued venue',
   sourceUrl: 'https://example.org/listing',

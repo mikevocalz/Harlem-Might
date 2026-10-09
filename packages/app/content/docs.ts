@@ -72,7 +72,7 @@ export interface EventDoc {
   startsAt: string;
   startsAt_tz: string;
   endsAt: string;
-  status: 'scheduled' | 'cancelled' | 'postponed';
+  lifecycle: 'scheduled' | 'cancelled' | 'postponed';
   place?: Nullable<number | PlaceDoc>;
   venueName?: Nullable<string>;
   venueUrl?: Nullable<string>;

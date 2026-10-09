@@ -98,7 +98,7 @@ export const mapEvent = (doc: EventDoc): EventRecord => ({
   startsAt: doc.startsAt,
   endsAt: doc.endsAt,
   timeZone: doc.startsAt_tz,
-  status: doc.status,
+  status: doc.lifecycle,
   place: mapPlaceRef(doc.place),
   venueName: opt(doc.venueName),
   venueUrl: opt(doc.venueUrl),

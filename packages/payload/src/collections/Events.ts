@@ -32,7 +32,7 @@ export const Events: CollectionConfig = {
   slug: 'events',
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'startsAt', 'status', 'place', 'lastVerifiedAt', '_status'],
+    defaultColumns: ['title', 'startsAt', 'lifecycle', 'place', 'lastVerifiedAt', '_status'],
   },
   access: {
     read: publishedOrCurator,
@@ -67,8 +67,10 @@ export const Events: CollectionConfig = {
         },
       ],
     },
+    // Named `lifecycle` like Places: a field called `status` collides with the
+    // versions `_status` enum (`enum_events_status`) and the push fails.
     {
-      name: 'status',
+      name: 'lifecycle',
       type: 'select',
       required: true,
       defaultValue: 'scheduled',

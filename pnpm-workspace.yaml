@@ -60,6 +60,14 @@ minimumReleaseAgeExclude:
   - eslint-plugin-expo@1.2.1
   - lucide-react-native@1.51.0
   - lucide-react@1.51.0
+  - "@payloadcms/db-postgres@4.0.0-canary.39"
+  - "@payloadcms/drizzle@4.0.0-canary.39"
+  - "@payloadcms/graphql@4.0.0-canary.39"
+  - "@payloadcms/next@4.0.0-canary.39"
+  - "@payloadcms/plugin-mcp@4.0.0-canary.39"
+  - "@payloadcms/translations@4.0.0-canary.39"
+  - "@payloadcms/ui@4.0.0-canary.39"
+  - payload@4.0.0-canary.39
 
 # One version per dependency, declared once. Package manifests consume catalog:.
 catalog:
@@ -129,7 +137,7 @@ catalog:
 
   # web
   "@next/env": 16.3.8
-  next: 16.3.8
+  next: 16.4.0
   nextjs-toploader: 3.9.17
 
   # styling
@@ -165,18 +173,17 @@ catalog:
   "@delmaredigital/payload-better-auth": github:mikevocalz/payload-better-auth#5134d0b3b14f4dd5f59acbd0a0c09b2326c48f80
 
   # backend / cms
-  payload: 4.0.0-canary.37
-  "@payloadcms/db-postgres": 4.0.0-canary.37
-  "@payloadcms/next": 4.0.0-canary.37
-  "@payloadcms/ui": 4.0.0-canary.37
+  payload: 4.0.0-canary.39
+  "@payloadcms/db-postgres": 4.0.0-canary.39
+  "@payloadcms/next": 4.0.0-canary.39
+  "@payloadcms/plugin-mcp": 4.0.0-canary.39
+  "@payloadcms/ui": 4.0.0-canary.39
   graphql: 16.14.2
   pg: 8.23.1
-  # Better Auth and its CLI (the bare `auth` package; `@better-auth/cli` stops
-  # at 1.4.x) move together: the CLI generates the DDL for the adapter shipped
-  # in that exact release. Bumping one means regenerating
-  # packages/auth/migrations/better_auth_tables.sql with the other.
+  # Better Auth runs inside Payload via @delmaredigital/payload-better-auth —
+  # its tables are Payload collections in the `payload` schema, so no separate
+  # better_auth schema or hand-generated DDL exists.
   better-auth: 1.7.7
-  auth: 1.7.7
   sharp: 0.35.5
   "@types/pg": 8.23.1
 
@@ -203,7 +210,7 @@ catalog:
   unplugin-typegpu: 0.12.4
   eslint: ^9.39.2
   eslint-config-expo: ~58.0.4
-  eslint-config-next: 16.3.8
+  eslint-config-next: 16.4.0
   "@eslint/eslintrc": ^3.3.7
   babel-plugin-react-compiler: 1.0.0
   turbo: 2.11.7
