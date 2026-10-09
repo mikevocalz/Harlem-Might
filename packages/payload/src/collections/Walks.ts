@@ -53,6 +53,13 @@ export const Walks: CollectionConfig = {
       ],
     },
     {
+      name: 'images',
+      type: 'relationship',
+      relationTo: 'media',
+      hasMany: true,
+      admin: { description: 'Cover and route images. Each image must include a verified source, license, credit and attribution before it can render.' },
+    },
+    {
       type: 'row',
       fields: [
         { name: 'distanceMeters', type: 'number', min: 0, required: true },

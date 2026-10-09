@@ -82,6 +82,13 @@ export const Events: CollectionConfig = {
       ],
     },
     { name: 'place', type: 'relationship', relationTo: 'places', index: true },
+    {
+      name: 'images',
+      type: 'relationship',
+      relationTo: 'media',
+      hasMany: true,
+      admin: { description: 'Event art and venue images. Each image must include a verified source, license, credit and attribution before it can render.' },
+    },
     { name: 'venueName', type: 'text', validate: venueNameWhenNoPlace },
     { name: 'venueUrl', type: 'text', validate: validateOptionalUrl },
     {

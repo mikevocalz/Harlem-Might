@@ -14,7 +14,19 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "build": "pnpm generate:types",
-    "generate:types": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload generate:types"
+    "generate:types": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload generate:types",
+    "seed:events": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/seed-events.ts",
+    "seed:media": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/seed-media.ts",
+    "seed:places": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/seed-places.ts",
+    "patch:place-slugs": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/patch-place-slugs.ts",
+    "seed:places-nyc": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/seed-places-nyc.ts",
+    "seed:stories": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/seed-stories.ts",
+    "seed:walks": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/seed-walks.ts",
+    "publish:walks": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/publish-walks.ts",
+    "enrich:osm": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/enrich-places-osm.ts",
+    "enrich:menus": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/enrich-places-menus.ts",
+    "link:media": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/link-place-media.ts",
+    "seed:story-images": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/seed-story-lead-images.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "catalog:",

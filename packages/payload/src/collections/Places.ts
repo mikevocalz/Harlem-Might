@@ -22,6 +22,14 @@ export const Places: CollectionConfig = {
     { name: 'name', type: 'text', required: true, index: true },
     { name: 'slug', type: 'text', required: true, unique: true, index: true },
     {
+      name: 'legacySlugs',
+      type: 'array',
+      admin: {
+        description: 'Old generated public paths. These stay resolvable and redirect to the current name-led slug.',
+      },
+      fields: [{ name: 'slug', type: 'text', required: true, index: true }],
+    },
+    {
       name: 'kind',
       type: 'select',
       required: true,
@@ -56,6 +64,13 @@ export const Places: CollectionConfig = {
       name: 'logo',
       type: 'relationship',
       relationTo: 'media',
+    },
+    {
+      name: 'images',
+      type: 'relationship',
+      relationTo: 'media',
+      hasMany: true,
+      admin: { description: 'Editorial images. Each image must include a verified source, license, credit and attribution before it can render.' },
     },
     { name: 'summary', type: 'textarea' },
     { name: 'location', type: 'point' },
@@ -104,6 +119,20 @@ export const Places: CollectionConfig = {
     },
     { name: 'website', type: 'text' },
     { name: 'phone', type: 'text' },
+    {
+      name: 'openingHours',
+      type: 'group',
+      admin: {
+        description:
+          'Hours as published by the source. `osm` holds the raw OpenStreetMap opening_hours value; never transcribe it by hand.',
+      },
+      fields: [
+        { name: 'osm', type: 'text', admin: { description: 'Raw opening_hours tag, e.g. "Mo-Fr 11:00-23:00; Sa 12:00-24:00".' } },
+        { name: 'note', type: 'text', admin: { description: 'Human-readable hours when a source gives prose instead of a parseable value.' } },
+        { name: 'sourceUrl', type: 'text', validate: validateOptionalUrl },
+        { name: 'verifiedAt', type: 'date' },
+      ],
+    },
     {
       name: 'menus',
       type: 'array',
