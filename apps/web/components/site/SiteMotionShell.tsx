@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useSyncExternalStore } from 'react';
+import { Suspense, useEffect, useSyncExternalStore } from 'react';
 import { usePathname } from 'solito/navigation';
+import { Link } from '@acme/ui/html';
 import { View } from '@acme/ui/tw';
 import { MightsDock, MightsFooter, MightsNavbar, routes } from '@acme/ui/mights';
 
@@ -29,11 +30,17 @@ const subscribeReduced = (onChange: () => void) => {
 const readReduced = () => window.matchMedia(REDUCE).matches;
 const serverReduced = () => false;
 
-export function SiteMotionShell({ children }: { children: React.ReactNode }) {
+function SiteMotion() {
   const pathname = usePathname() ?? '/';
   const reducedMotion = useSyncExternalStore(subscribeReduced, readReduced, serverReduced);
-  // Explore is a full-viewport map workspace: no footer under it.
+  // Explore is a full-viewport map workspace: smooth scroll would fight its canvas.
   const workspace = pathname.startsWith(routes.explore());
+
+  useEffect(() => {
+    const main = document.getElementById('main');
+    main?.setAttribute('data-product-route', pathname);
+    return () => main?.removeAttribute('data-product-route');
+  }, [pathname]);
 
   useEffect(() => {
     if (reducedMotion || workspace) return;
@@ -66,17 +73,40 @@ export function SiteMotionShell({ children }: { children: React.ReactNode }) {
     };
   }, [reducedMotion, workspace]);
 
+  return null;
+}
+
+function SiteNavbar() {
+  const pathname = usePathname() ?? '/';
+  return <MightsNavbar overlay={pathname === routes.home()} />;
+}
+
+function SiteFooter() {
+  const pathname = usePathname() ?? '/';
+  return pathname.startsWith(routes.explore()) ? null : <MightsFooter />;
+}
+
+export function SiteMotionShell({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <a href="#main" className="skip-link">
+      <Link href="#main" className="skip-link">
         Skip to content
-      </a>
-      <MightsNavbar overlay={pathname === routes.home()} />
-      <View id="main" className="min-h-[calc(100dvh-4rem)] flex-1" data-product-route={pathname}>
+      </Link>
+      <Suspense>
+        <SiteMotion />
+      </Suspense>
+      <Suspense>
+        <SiteNavbar />
+      </Suspense>
+      <View id="main" className="min-h-[calc(100dvh-4rem)] flex-1 me:pl-rail-width md:pl-0">
         {children}
       </View>
-      {workspace ? null : <MightsFooter />}
-      <MightsDock />
+      <Suspense>
+        <SiteFooter />
+      </Suspense>
+      <Suspense>
+        <MightsDock />
+      </Suspense>
     </>
   );
 }

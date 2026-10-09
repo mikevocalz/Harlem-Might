@@ -202,6 +202,7 @@
   --container-assistant-bar: 560px;
   --container-assistant-panel: 400px;
   --spacing-rail: 0.125rem;
+  --spacing-rail-width: 5.5rem;
   --spacing-dock: 3.5rem;
   --spacing-target: 48px;
   --spacing-target-gap: 12px;
@@ -234,8 +235,10 @@
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --breakpoint-me: 37.5rem;
   --breakpoint-sm: 40rem;
   --breakpoint-md: 48rem;
+  --breakpoint-xp: 52.5rem;
   --breakpoint-lg: 64rem;
   --breakpoint-xl: 80rem;
   --breakpoint-2xl: 96rem;

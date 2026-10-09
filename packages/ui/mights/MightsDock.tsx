@@ -14,13 +14,18 @@ const ICONS = {
 } as const;
 
 const item =
-  'mights-focus relative flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-1 text-caption font-medium';
+  'mights-focus relative flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-1 text-caption font-medium me:w-full me:flex-none me:py-2.5';
 
-const marker = 'absolute top-0 h-rail w-8 bg-primary';
+// Bar: a gold rule across the item's top. Rail: a gold rule down its leading
+// edge, the same marker the native AppTabBar draws in rail mode.
+const marker = 'absolute top-0 h-rail w-8 bg-primary me:bottom-2 me:left-0 me:top-2 me:h-auto me:w-rail';
 
-// Mobile primary navigation (< 768px). "More" is a native <dialog> sheet:
-// showModal() supplies the focus trap, inert backdrop and Escape-to-close,
-// and close() returns focus to the More button.
+// Mobile primary navigation (below md): a bottom dock on compact widths and a
+// leading rail from Material medium (me, 600px) — the same composition
+// MoyoLearn's ShellTabBar uses, so foldables and split windows get the rail +
+// panes standard instead of the phone layout. "More" is a native <dialog>
+// sheet: showModal() supplies the focus trap, inert backdrop and
+// Escape-to-close, and close() returns focus to the More button.
 export function MightsDock() {
   const pathname = usePathname() ?? '/';
   const current = activeSection(pathname);
@@ -33,14 +38,14 @@ export function MightsDock() {
     <>
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-50 border-t border-rule-hairline bg-paper/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-rule-hairline bg-paper/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden me:right-auto me:top-16 me:w-rail-width me:border-r me:border-t-0 me:pb-0"
       >
-        <ul className="flex h-dock items-stretch px-1">
+        <ul className="flex h-dock items-stretch px-1 me:h-full me:flex-col me:gap-1 me:px-0 me:py-4">
           {primaryNav.map((nav) => {
             const Icon = ICONS[nav.label];
             const active = current === nav.label;
             return (
-              <li key={nav.label} className="flex flex-1">
+              <li key={nav.label} className="flex flex-1 me:w-full me:flex-none">
                 <Link
                   href={nav.href}
                   aria-current={active ? 'page' : undefined}
@@ -53,7 +58,7 @@ export function MightsDock() {
               </li>
             );
           })}
-          <li className="flex flex-1">
+          <li className="flex flex-1 me:w-full me:flex-none">
             <button
               type="button"
               aria-haspopup="dialog"

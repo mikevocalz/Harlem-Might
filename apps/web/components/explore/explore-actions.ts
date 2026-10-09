@@ -14,9 +14,9 @@ import { exploreHref } from './explore-url';
 export const SHEET_TITLE_ID = 'explore-sheet-title';
 export const SEARCH_FOCUS = 'search';
 
-// Phones get one pane at a time below md; the full-height sheet there is the
-// only place the rest of the page goes inert.
-export const PHONE = '(width < 48rem)';
+// Phones get one pane at a time below Material medium (me, 600px); the
+// full-height sheet there is the only place the rest of the page goes inert.
+export const PHONE = '(width < 37.5rem)';
 // From lg the sheet docks beside the map as the inspector.
 export const DOCKED = '(width >= 64rem)';
 

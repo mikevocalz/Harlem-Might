@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { filterPlaces, useExplore, type ExplorePlace } from '@acme/app/features/explore/explore.store.ts';
 import { exploreCategories } from '@acme/app/features/explore/catalogue.ts';
 import { noResultsCopy, placeRowLine, resultsSummary } from '@acme/app/features/explore/explore-copy.ts';
@@ -14,13 +14,10 @@ import { useMediaQuery } from './use-media-query';
 const LIST_ROW_CAP = 250;
 
 /**
- * The search, filters and result list. Suspends on the catalogue promise;
- * the map region never waits on it — instead this region publishes the
- * filtered ids into the store, and the map dims non-matching dots when they
- * arrive.
+ * The search, filters and result list. Publishes the filtered ids into the
+ * store, and the map dims non-matching dots.
  */
-export function MasterRegion({ cataloguePromise }: { cataloguePromise: Promise<readonly ExplorePlace[]> }) {
-  const places = use(cataloguePromise);
+export function MasterRegion({ catalogue: places }: { catalogue: readonly ExplorePlace[] }) {
   const { params, replace, select, commitQuery } = useExploreActions();
   const categories = useMemo(() => exploreCategories(places), [places]);
   const { view, category } = parseExploreParams(params, categories, 'All');
@@ -60,8 +57,7 @@ export function MasterRegion({ cataloguePromise }: { cataloguePromise: Promise<r
     [recentIds, places],
   );
 
-  // Publish what the map dims. Written here — not passed — because the map
-  // region resolves a lighter points promise and renders before this does.
+  // Publish what the map dims.
   useEffect(() => {
     const ids = results.flatMap((p) => (p.lngLat ? [p.id] : []));
     useExplore.getState().setVisibleIds(ids);
@@ -74,14 +70,14 @@ export function MasterRegion({ cataloguePromise }: { cataloguePromise: Promise<r
   // never needs a trip to the list first; only the results swap with the map.
   return (
     <View
-      className={`w-full border-rule-hairline md:w-pane-primary md:shrink-0 md:border-r ${
+      className={`w-full border-rule-hairline me:w-pane-primary-narrow me:shrink-0 me:border-r xp:w-pane-primary ${
         view === 'list' ? 'min-h-0 flex-1' : 'shrink-0'
       }`}
     >
-      <View className={`min-h-0 bg-surface md:h-full md:flex-1 ${view === 'list' ? 'flex-1' : 'shrink-0'}`}>
-        <View className="gap-3 border-b border-rule-hairline p-4 md:gap-4 md:p-5">
-          {/* Visible title from md; the h1 lives at the workspace root so it exists at every breakpoint. */}
-          <Text aria-hidden className={`hidden font-sans text-title-lg font-bold text-text md:flex ${condensed}`}>
+      <View className={`min-h-0 bg-surface me:h-full me:flex-1 ${view === 'list' ? 'flex-1' : 'shrink-0'}`}>
+        <View className="gap-3 border-b border-rule-hairline p-4 me:gap-4 me:p-5">
+          {/* Visible title from me; the h1 lives at the workspace root so it exists at every breakpoint. */}
+          <Text aria-hidden className={`hidden font-sans text-title-lg font-bold text-text me:flex ${condensed}`}>
             Explore
           </Text>
           {/* RN's Role union lags ARIA; RNW passes "search" through to the DOM. */}
@@ -122,11 +118,11 @@ export function MasterRegion({ cataloguePromise }: { cataloguePromise: Promise<r
             ) : null}
           </View>
           {/* One row that scrolls sideways on phones, so the list starts higher;
-              wraps from md, where the master pane is a fixed column. */}
+              wraps from me, where the master pane is a fixed column. */}
           <View
             role="group"
             aria-label="Filter by category"
-            className="-mx-4 flex-row gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:overflow-visible md:px-0"
+            className="-mx-4 flex-row gap-2 overflow-x-auto px-4 me:mx-0 me:flex-wrap me:overflow-visible me:px-0"
           >
             {categories.map((c) => {
               const on = c === category;
@@ -147,7 +143,7 @@ export function MasterRegion({ cataloguePromise }: { cataloguePromise: Promise<r
             <View
               role="group"
               aria-label="Recently viewed"
-              className="-mx-4 flex-row items-center gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:overflow-visible md:px-0"
+              className="-mx-4 flex-row items-center gap-2 overflow-x-auto px-4 me:mx-0 me:flex-wrap me:overflow-visible me:px-0"
             >
               <Text className="shrink-0 text-label text-text-muted">Recent</Text>
               {recents.map((place) => (
@@ -170,7 +166,7 @@ export function MasterRegion({ cataloguePromise }: { cataloguePromise: Promise<r
           </Text>
         </View>
 
-        <ScrollView className={`flex-1 md:flex ${view === 'list' ? '' : 'hidden'}`}>
+        <ScrollView className={`flex-1 me:flex ${view === 'list' ? '' : 'hidden'}`}>
           {results.length === 0 ? (
             <View className="items-start gap-3 p-5">
               <MightsText tone="default">{noResultsCopy(q, category, 'All')}</MightsText>

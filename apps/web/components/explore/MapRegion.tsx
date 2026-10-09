@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useExplore } from '@acme/app/features/explore/explore.store.ts';
 import { NavigationHud } from '@acme/app/features/navigation/ui/NavigationHud.tsx';
 import { useNavigationUi } from '@acme/app/features/navigation/view/navigationUi.store.ts';
@@ -15,13 +15,10 @@ import { useMapStatus } from './map-status';
 import { useMediaQuery } from './use-media-query';
 
 /**
- * The map pane. Suspends on the points promise — a slimmer read than the
- * catalogue, so dots and the GL init race ahead of the list. Filter
- * visibility arrives through `visibleIds` in the store once the master
- * region resolves; until then every point shows.
+ * The map pane. Filter visibility arrives through `visibleIds` in the store,
+ * published by the master region; until then every point shows.
  */
-export function MapRegion({ pointsPromise }: { pointsPromise: Promise<readonly MapPlace[]> }) {
-  const mapped = use(pointsPromise);
+export function MapRegion({ points: mapped }: { points: readonly MapPlace[] }) {
   const { params, replace, select } = useExploreActions();
   const placeId = params.get('place');
   const detent = useExplore((s) => s.sheet.detent);
@@ -68,7 +65,7 @@ export function MapRegion({ pointsPromise }: { pointsPromise: Promise<readonly M
       {mapStatus === 'unavailable' ? (
         <View className="absolute inset-0 items-start justify-end gap-3 bg-surface-sunken p-6">
           <MightsText tone="default">The map didn’t load. Every place is in the list.</MightsText>
-          <MightsButton size="sm" variant="secondary" className="md:hidden" onPress={() => replace({ view: 'list' })}>
+          <MightsButton size="sm" variant="secondary" className="me:hidden" onPress={() => replace({ view: 'list' })}>
             Show the list
           </MightsButton>
         </View>

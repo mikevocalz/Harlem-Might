@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import {
   DEFAULT_SHEET_DETENT,
   useExplore,
@@ -37,15 +37,14 @@ import { useMediaQuery } from './use-media-query';
 const DETENTS: readonly SheetDetent[] = ['peek', 'half', 'full'];
 
 /**
- * The place sheet / docked inspector. Suspends on the catalogue promise, but
- * only renders when the URL selects a place — so it never holds the page
- * back. Owns the URL→store sheet sync, focus return, Escape and the modal
+ * The place sheet / docked inspector. Renders only when the URL selects a
+ * place. Owns the URL→store sheet sync, focus return, Escape and the modal
  * inert walk.
  */
-export function SheetRegion({ cataloguePromise }: { cataloguePromise: Promise<readonly ExplorePlace[]> }) {
+export function SheetRegion({ catalogue }: { catalogue: readonly ExplorePlace[] }) {
   const { params, replace, close } = useExploreActions();
   const placeId = params.get('place');
-  const places = placeId ? use(cataloguePromise) : null;
+  const places = placeId ? catalogue : null;
   const selected = places?.find((p) => p.id === placeId) ?? null;
 
   const detent = useExplore((s) => s.sheet.detent);
@@ -149,7 +148,7 @@ export function SheetRegion({ cataloguePromise }: { cataloguePromise: Promise<re
       role="dialog"
       aria-modal={modal}
       aria-labelledby={SHEET_TITLE_ID}
-      className={`absolute inset-x-0 bottom-0 z-(--z-raised) flex-col bg-primary pt-rail md:left-(--container-pane-primary) lg:static lg:inset-auto lg:max-h-none lg:w-pane-inspector lg:shrink-0 lg:pl-rail lg:pt-0 ${sheetPosition}`}
+      className={`absolute inset-x-0 bottom-0 z-(--z-raised) flex-col bg-primary pt-rail me:left-(--container-pane-primary-narrow) xp:left-(--container-pane-primary) lg:static lg:inset-auto lg:max-h-none lg:w-pane-inspector lg:shrink-0 lg:pl-rail lg:pt-0 ${sheetPosition}`}
     >
       {showDirections ? (
         <DirectionsPanel
@@ -172,7 +171,7 @@ export function SheetRegion({ cataloguePromise }: { cataloguePromise: Promise<re
         />
       ) : (
         <View className="min-h-0 flex-1 bg-surface-raised">
-          <View className="gap-3 border-b border-rule-hairline p-4 md:p-5">
+          <View className="gap-3 border-b border-rule-hairline p-4 me:p-5">
             <View className="flex-row items-start justify-between gap-4">
               <MightsHeading id={SHEET_TITLE_ID} level={2} size="title" className="min-w-0 flex-1 outline-none">
                 {selected.name}

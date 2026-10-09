@@ -393,8 +393,12 @@ export const motion = {
 } as const;
 
 export const breakpoints = {
+  /** Material medium (600px, `windowClass.medium`): rail + split panes start here. */
+  me: '37.5rem',
   sm: '40rem',
   md: '48rem',
+  /** Material expanded (840px, `windowClass.expanded`): full-width primary pane. */
+  xp: '52.5rem',
   lg: '64rem',
   xl: '80rem',
   '2xl': '96rem',

@@ -1,6 +1,5 @@
 'use client';
 
-import { Suspense } from 'react';
 import { type ExplorePlace } from '@acme/app/features/explore/explore.store.ts';
 import { Main, View } from '@acme/ui/tw';
 import { MightsButton, MightsHeading } from '@acme/ui/mights';
@@ -10,11 +9,11 @@ import { MasterRegion } from './MasterRegion';
 import type { MapPlace } from './ExploreMap';
 import { MapRegion } from './MapRegion';
 import { SheetRegion } from './SheetRegion';
-import { MasterSkeleton } from './ExploreSkeletons';
 import { ExploreRegionBoundary } from './ExploreRegionBoundary';
 import { MapLoadOverlay } from './MapLoadOverlay';
 import { parseExploreParams } from './explore-url';
-import { useExploreActions } from './explore-actions';
+import { PHONE, useExploreActions } from './explore-actions';
+import { useMediaQuery } from './use-media-query';
 
 // W3C Geolocation, foreground only. The site never asks for the camera.
 const browserLocation = () =>
@@ -24,58 +23,53 @@ const browserLocation = () =>
   );
 
 export interface ExploreWorkspaceProps {
-  /**
-   * Slim read — ids, names, featured flags, coordinates. The map region is
-   * the only consumer: dots and the GL init never wait on the catalogue.
-   */
-  pointsPromise: Promise<readonly MapPlace[]>;
+  /** Slim read — ids, names, coordinates. The map's only input. */
+  points: readonly MapPlace[];
   /** Fuller read — categories, streets, summaries. List and sheet consume it. */
-  cataloguePromise: Promise<readonly ExplorePlace[]>;
+  catalogue: readonly ExplorePlace[];
 }
 
 /**
  * The merged Explore workspace (ADR-024): one stage holding the master list,
- * the map and the place sheet. Each region suspends on the promise it needs
- * — the map on `pointsPromise`, the list and sheet on `cataloguePromise` —
- * and each boundary carries a fallback or overlay sized to its region.
+ * the map and the place sheet. The page's single Suspense boundary resolves
+ * both reads before this renders, and `MapLoadOverlay` then covers the whole
+ * stage until the GL map is ready — the regions reveal together, never the
+ * map first and the list last.
  */
-export function ExploreWorkspace({ pointsPromise, cataloguePromise }: ExploreWorkspaceProps) {
+export function ExploreWorkspace({ points, catalogue }: ExploreWorkspaceProps) {
   // The one navigation session: the sheet's directions, the map line and the
   // HUD all read it.
   useNavigationHost(browserLocation);
   const { params, replace } = useExploreActions();
   const { view } = parseExploreParams(params, [], 'All');
+  const phone = useMediaQuery(PHONE);
 
   return (
     // grow-0: globals.css grows every main[role=main] to fill the shell, which
     // would push the phone toggle under the fixed dock.
-    <Main className="grow-0 h-[calc(100dvh-var(--spacing)*16-var(--spacing-dock)-env(safe-area-inset-bottom))] flex-col overflow-hidden md:h-[calc(100dvh-var(--spacing)*16)]">
+    <Main className="grow-0 h-[calc(100dvh-var(--spacing)*16-var(--spacing-dock)-env(safe-area-inset-bottom))] flex-col overflow-hidden me:h-[calc(100dvh-var(--spacing)*16)]">
       <MightsHeading level={1} className="sr-only">
         Explore
       </MightsHeading>
-      <View className="relative min-h-0 flex-1 md:flex-row">
+      <View className="relative min-h-0 flex-1 me:flex-row">
         <ExploreRegionBoundary region="list">
-          <Suspense fallback={<MasterSkeleton />}>
-            <MasterRegion cataloguePromise={cataloguePromise} />
-          </Suspense>
+          <MasterRegion catalogue={catalogue} />
         </ExploreRegionBoundary>
 
-        <View className={`relative min-w-0 flex-1 md:flex ${view === 'list' ? 'hidden' : 'flex'}`}>
+        <View className={`relative min-w-0 flex-1 me:flex ${view === 'list' ? 'hidden' : 'flex'}`}>
           <ExploreRegionBoundary region="map">
-            <Suspense fallback={null}>
-              <MapRegion pointsPromise={pointsPromise} />
-            </Suspense>
+            <MapRegion points={points} />
           </ExploreRegionBoundary>
-          {/* The map's real wait is the GL style/tile load, longer than either
-              promise — the overlay spans it via mapStatus. */}
-          <MapLoadOverlay />
         </View>
 
         <ExploreRegionBoundary region="place details">
-          <Suspense fallback={null}>
-            <SheetRegion cataloguePromise={cataloguePromise} />
-          </Suspense>
+          <SheetRegion catalogue={catalogue} />
         </ExploreRegionBoundary>
+
+        {/* The GL style/tile load is the longest wait; the overlay spans the
+            whole stage through it so the list doesn't show before the map.
+            Phones in list view never wait on a map they can't see. */}
+        {phone && view === 'list' ? null : <MapLoadOverlay />}
       </View>
 
       {/* Phones: the toggle sits just above the dock, in thumb reach, and
@@ -83,7 +77,7 @@ export function ExploreWorkspace({ pointsPromise, cataloguePromise }: ExploreWor
       <View
         role="group"
         aria-label="View"
-        className="flex-row justify-center gap-2 border-t border-rule-hairline bg-surface px-4 py-2 md:hidden"
+        className="flex-row justify-center gap-2 border-t border-rule-hairline bg-surface px-4 py-2 me:hidden"
       >
         {(['map', 'list'] as const).map((v) => (
           <MightsButton

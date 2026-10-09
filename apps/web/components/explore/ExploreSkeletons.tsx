@@ -1,47 +1,29 @@
 'use client';
 
-import { LoadingSkeleton } from '@acme/ui';
-import { View } from '@acme/ui/tw';
+import { useReducedMotion } from '@acme/ui';
+import { Text, View } from '@acme/ui/tw';
+import { ExploreLoader } from '@acme/spatial/explore-loader';
 
 /**
- * Fallbacks that mirror the regions they stand in for, so the page shape is
- * right before any data lands. Everything is wrapped in `hm-suspense-in`,
- * which holds opacity at 0 for the first 250 ms — a fast catalogue shows no
- * skeleton at all instead of a flash.
+ * The page-level Suspense fallback: the same plate and Rive loader as
+ * `MapLoadOverlay`, sized to the stage, so the data wait and the GL wait read
+ * as one loader. `hm-suspense-in` holds it at opacity 0 for 250 ms, so a warm
+ * cache shows nothing here and the overlay takes over directly.
  */
-
-function RowSkeleton() {
+export function ExplorePageLoader() {
+  const reducedMotion = useReducedMotion();
   return (
-    <View className="flex-row items-start gap-4 border-b border-b-rule-hairline px-5 py-4">
-      <LoadingSkeleton variant="custom" className="mt-2 size-2.5 shrink-0 rotate-45" />
-      <View className="min-w-0 flex-1 gap-2">
-        <LoadingSkeleton className="w-2/5" />
-        <LoadingSkeleton className="w-3/5" />
-      </View>
-    </View>
-  );
-}
-
-/** The master pane's search bar, chips and first rows. */
-export function MasterSkeleton() {
-  return (
-    <View className="hm-suspense-in w-full border-rule-hairline md:w-pane-primary md:shrink-0 md:border-r">
-      <View className="gap-3 border-b border-rule-hairline p-4 md:gap-4 md:p-5">
-        <LoadingSkeleton className="hidden h-8 w-24 md:block" />
-        <LoadingSkeleton variant="custom" className="h-12 w-full" />
-        <View className="flex-row gap-2">
-          <LoadingSkeleton variant="custom" className="h-8 w-14 rounded-full" />
-          <LoadingSkeleton variant="custom" className="h-8 w-14 rounded-full" />
-          <LoadingSkeleton variant="custom" className="h-8 w-14 rounded-full" />
-          <LoadingSkeleton variant="custom" className="h-8 w-14 rounded-full" />
-        </View>
-        <LoadingSkeleton className="w-1/3" />
-      </View>
-      <View>
-        {Array.from({ length: 8 }, (_, i) => (
-          <RowSkeleton key={i} />
-        ))}
-      </View>
+    <View
+      role="status"
+      className="hm-suspense-in h-[calc(100dvh-var(--spacing)*16-var(--spacing-dock)-env(safe-area-inset-bottom))] items-center justify-center bg-map-canvas me:h-[calc(100dvh-var(--spacing)*16)]"
+    >
+      <Text className="sr-only">Loading Explore</Text>
+      <ExploreLoader
+        source="/rive/explore-loader.riv"
+        size={168}
+        phase={reducedMotion ? 'reduced' : 'loading'}
+        label="Loading Explore"
+      />
     </View>
   );
 }
