@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { View } from '@acme/ui/tw';
+import { Text, View } from '@acme/ui/tw';
 import { useReducedMotion } from '@acme/ui';
 import { ExploreLoader } from '@acme/spatial/explore-loader';
 import { useMapLoader } from './map-loader.store';
@@ -32,6 +32,9 @@ export function MapLoadOverlay() {
 
   return (
     <View role="status" aria-live="polite" className="hm-suspense-in absolute inset-0 items-center justify-center bg-map-canvas">
+      {/* Two announcements total: "Loading map" on mount, "Map ready" when the
+          exit starts — not a stream of progress chatter. */}
+      <Text className="sr-only">{phase === 'complete' ? 'Map ready' : 'Loading map'}</Text>
       <ExploreLoader
         source={LOADER_SRC}
         size={168}
