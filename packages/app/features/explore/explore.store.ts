@@ -8,6 +8,37 @@ export type HarlemPlaceCategory =
   | 'History'
   | 'Outdoors';
 
+/**
+ * A catalogue place as the web Explore workspace, the place detail route and
+ * the map consume it. `HarlemPlacePreview` satisfies this shape, and the
+ * Payload readers map `places` rows to it (`explorePlaceFromRecord` in
+ * catalogue.ts), so surfaces don't depend on the fixture. `category` is the
+ * record's free-form `primaryCategory` — not every imported row uses the
+ * fixture's chip set — so it is a plain string here.
+ */
+export interface ExplorePlace {
+  id: string;
+  name: string;
+  category: string;
+  area: string;
+  street?: string;
+  shortDescription?: string;
+  tags: string[];
+  lngLat?: readonly [number, number];
+  /** OSM object id ("node/123") behind lngLat, for source lines and links. */
+  osm?: string;
+  /** ISO instant the point's source was last read. */
+  sourceReadAt?: string;
+  website?: string;
+  phone?: string;
+  /** Hours as published by the source — rendered verbatim, never reformatted. */
+  hoursText?: string;
+  /** Live menu links from the record (label + url). */
+  menus?: { label: string; url: string }[];
+  /** Curated landmark; keeps a labelled map marker at any zoom. */
+  featured?: boolean;
+}
+
 export interface HarlemPlacePreview {
   id: string;
   name: string;
@@ -224,6 +255,20 @@ export interface ExploreState {
   sheet: ExploreSheet;
   /** Last known location permission. Written by whoever asks the platform. */
   locationPermission: LocationPermission;
+  /**
+   * Web only: the place ids the master's current filters pass. The map
+   * region reads this to dim non-matching dots once the catalogue resolves,
+   * so it never has to wait on the catalogue promise itself. `null` means
+   * "no filter applied yet — show everything".
+   */
+  visibleIds: readonly string[] | null;
+  /**
+   * Web only: true once this session pushed a selection onto history, so
+   * Close can step Back instead of leaving a duplicate entry. Lives here —
+   * not in a component ref — because the region that selects (list, map,
+   * HUD) is never the region that closes (the sheet).
+   */
+  selectionPushed: boolean;
   setQuery: (query: string) => void;
   setCategory: (category: HarlemCategoryFilter) => void;
   selectPlace: (placeId: string | null) => void;
@@ -247,6 +292,8 @@ export interface ExploreState {
    *  caller reads after close to restore focus. */
   closeSheet: () => void;
   setLocationPermission: (permission: LocationPermission) => void;
+  setVisibleIds: (ids: readonly string[] | null) => void;
+  setSelectionPushed: (pushed: boolean) => void;
 }
 
 /** Adds `id` when absent, removes it when present. Returns a new array. */
@@ -291,20 +338,31 @@ export const useExplore = create<ExploreState>((set) => ({
   setSheetDetent: (detent) => set((state) => ({ sheet: { ...state.sheet, detent } })),
   closeSheet: () => set((state) => ({ sheet: { ...state.sheet, open: false } })),
   setLocationPermission: (locationPermission) => set({ locationPermission }),
+  visibleIds: null,
+  selectionPushed: false,
+  setVisibleIds: (visibleIds) => set({ visibleIds }),
+  setSelectionPushed: (selectionPushed) => set({ selectionPushed }),
 }));
 
 export function getHarlemPlacePreview(placeId?: string | null) {
   return HARLEM_PLACE_PREVIEWS.find((place) => place.id === placeId) ?? null;
 }
 
-export function filterHarlemPlacePreviews(
+/**
+ * Search and category-filter over any place list — the Payload catalogue on
+ * the web workspace, the fixture in the native panes. `category` is the chip
+ * label; `all` is the chip that means "no filter" ('All' today).
+ */
+export function filterPlaces<T extends ExplorePlace>(
+  places: readonly T[],
   query: string,
-  category: HarlemCategoryFilter,
-) {
+  category: string,
+  all = 'All',
+): T[] {
   const normalized = query.trim().toLowerCase();
 
-  return HARLEM_PLACE_PREVIEWS.filter((place) => {
-    const matchesCategory = category === 'All' || place.category === category;
+  return places.filter((place) => {
+    const matchesCategory = category === all || place.category === category;
     if (!matchesCategory) return false;
     if (!normalized) return true;
 
@@ -313,10 +371,17 @@ export function filterHarlemPlacePreviews(
       place.area,
       place.street ?? '',
       place.category,
-      place.shortDescription,
+      place.shortDescription ?? '',
       ...place.tags,
     ].some((value) => value.toLowerCase().includes(normalized));
   });
+}
+
+export function filterHarlemPlacePreviews(
+  query: string,
+  category: HarlemCategoryFilter,
+) {
+  return filterPlaces(HARLEM_PLACE_PREVIEWS, query, category);
 }
 
 const toRad = (d: number) => (d * Math.PI) / 180;

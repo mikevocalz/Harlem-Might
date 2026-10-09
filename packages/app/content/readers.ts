@@ -70,7 +70,15 @@ export interface ContentReaders {
    * modules read. Detail facts (menus, phone, images…) stay in `getPlace`.
    */
   listExploreCatalogue(): Promise<ContentResult<PlaceRecord[]>>;
+  /**
+   * The map's read: `EXPLORE_POINT_FIELDS` only. The Explore map region
+   * suspends on this while the list and sheet take `listExploreCatalogue`,
+   * so dots and GL init never wait on catalogue columns they don't render.
+   */
+  listExplorePoints(): Promise<ContentResult<PlaceRecord[]>>;
   getPlace(slug: string): Promise<DetailResult<PlaceRecord>>;
+  /** Resolves a stored generated path (osm-*, lpc-*, mon-*) for a permanent redirect. */
+  getPlaceByLegacySlug(slug: string): Promise<DetailResult<PlaceRecord>>;
 }
 
 /** Hard cap per list read. No route shows more than this today. */
@@ -100,6 +108,21 @@ export const EXPLORE_PLACE_FIELDS = [
   'locationAccuracy',
   'locationSource',
   'address',
+  'featured',
+] as const;
+
+/**
+ * The subset the Explore map needs — enough for mapPlaceRecord plus the
+ * marker's name/coords/featured flag. Reads about a third of the catalogue
+ * row, so the map region resolves before the fuller catalogue does.
+ */
+export const EXPLORE_POINT_FIELDS = [
+  'slug',
+  'name',
+  'kind',
+  'lifecycle',
+  'location',
+  'locationAccuracy',
   'featured',
 ] as const;
 
@@ -172,6 +195,21 @@ export const createContentReaders = (source: ContentSource): ContentReaders => {
         { collection: 'places', where: {}, depth: 0, limit: PLACES_LIMIT, sort: 'name', select: EXPLORE_PLACE_FIELDS },
         mapPlaceRecord,
       ),
+    listExplorePoints: () =>
+      list(
+        { collection: 'places', where: {}, depth: 0, limit: PLACES_LIMIT, sort: 'name', select: EXPLORE_POINT_FIELDS },
+        mapPlaceRecord,
+      ),
     getPlace: (slug) => bySlug('places', slug, mapPlaceRecord, {}),
+    getPlaceByLegacySlug: async (slug) => {
+      if (!SLUG_PATTERN.test(slug)) return source.isConfigured() ? { status: 'not-found' } : notConfigured();
+      const result = await list(
+        { collection: 'places', where: { 'legacySlugs.slug': { equals: slug } }, depth: 1, limit: 1 },
+        mapPlaceRecord,
+      );
+      if (result.status !== 'ok') return result;
+      const [record] = result.data;
+      return record === undefined ? { status: 'not-found' } : ok(record);
+    },
   };
 };

@@ -44,8 +44,18 @@ const payloadSource: ContentSource = {
   },
 };
 
-export const { listWalks, getWalk, getPlace, listPlaces, listExploreCatalogue, listStories, getStory, listEventsForDate } =
-  createContentReaders(payloadSource);
+export const {
+  listWalks,
+  getWalk,
+  getPlace,
+  getPlaceByLegacySlug,
+  listPlaces,
+  listExploreCatalogue,
+  listExplorePoints,
+  listStories,
+  getStory,
+  listEventsForDate,
+} = createContentReaders(payloadSource);
 
 export { harlemToday, isHarlemDate } from '@acme/app/content';
 export type {
