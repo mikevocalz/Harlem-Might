@@ -5,50 +5,88 @@ Branch: `feat/explore-load-perf`. Baseline commit: `d52ede0`.
 
 ## §1 Route anatomy (what actually mounts)
 
-- `/explore` (`apps/web/app/(site)/explore/page.tsx`) — a client-first Server
-  Component: `connection()` → `listExploreCatalogue()` (Payload Local API,
-  ~1,686 docs) → `explorePlaceFromRecord` ×N → `<Suspense>` (no fallback) →
-  `ExploreWorkspace`.
-- `ExploreWorkspace` — the merged map+master+sheet workspace (ADR-024). One
-  client component owns list, canvas, and sheet; `mapbox-gl` is a dynamic
-  import inside an effect.
-- `explore.store.ts` — Zustand; query/sheet/detent/guide state.
+- `/explore` (`apps/web/app/(site)/explore/page.tsx`) — a Server Component
+  wrapped in a page-level `<Suspense fallback={<ExplorePageLoader />}>`.
+  `ExploreContent` awaits `readExplore()`, which uses `'use cache'` and
+  `cacheLife(...)` to run `listExplorePoints()` and `listExploreCatalogue()`
+  (Payload Local API, ~1,686 docs) in parallel. A hit caches for minutes; a
+  miss (no `DATABASE_URL` or failed query) caches for seconds so the preview
+  fixture is never baked into the static shell.
+- `readExplore()` returns two shapes: a slim `points` array for the map and a
+  fuller `catalogue` array for the list/sheet, both via
+  `explorePlaceFromRecord`.
+- `ExploreWorkspace` (`apps/web/components/explore/ExploreWorkspace.tsx`) —
+  the merged map+master+sheet workspace (ADR-024). One client component owns
+  list, canvas, and sheet. The `mapbox-gl` chunk is imported at module scope
+  (`const mapboxglPromise = import('mapbox-gl')`) so it races hydration; the
+  actual `Map` instance still boots inside an effect (no SSR hazards under
+  `mounted`).
+- `ExploreRegionBoundary` — one error boundary per region, with retry →
+  `router.refresh()`. The workspace itself has no inner Suspense boundaries;
+  the single page boundary resolves both reads before the regions mount.
+- `explore.store.ts` — Zustand; query/sheet/detent/guide state, plus
+  `recentIds` (deduped, newest-first, cap 8) for the session strip.
 - Rive: `packages/spatial/rive-fx` is the existing Rive CLI project;
   `RiveStage`/`GridFxStage` wrap `@rive-app/react-webgl2` (web) and
   `@rive-app/react-native` (native). Loader reuses this pattern — no second
   runtime.
-- "History Bar" from the spec: no such region existed at inspection; it was
-  built as a real session strip in the gap-closure pass — `recentIds`
-  (deduped, newest-first, cap 8) in `explore.store`, written by select /
-  deep-link / mobile selectPlace paths, rendered as a "Recent" chip row in
-  the web master region and `ExploreMasterPane`.
+- "Recently viewed" strip — a real session row, not a spec placeholder.
+  `recentIds` is written by web select / deep-link / mobile `selectPlace`
+  paths and rendered as a "Recent" chip row in `MasterRegion` (web) and
+  `ExploreMasterPane` (native).
+- Responsive layout:
+  - Phone (`< 37.5rem` / 600px): one pane at a time, with a Map/List toggle
+    above the dock.
+  - Material medium band (`600–767px`): the master pane becomes a narrow rail
+    (`w-pane-primary-narrow`, 16rem) beside the map; the sheet still overlays
+    the map region.
+  - `xp` (`≥ 840px`): the rail widens to `w-pane-primary` (20rem).
+  - `lg` (`≥ 1024px`): the sheet docks as an inspector column beside the map,
+    so list, map, and detail sit side by side.
 
 ## §3 Measurements (web, dev server, warm)
 
-| Metric | Before (`d52ede0`) | After L1 | After L2 | Method |
-|---|---|---|---|---|
-| `/explore` TTFB (shell + skeleton) | ~0.04–0.14 s (blank) | ~0.04–0.14 s | ~0.06–0.22 s (shell + skeleton painted) | `curl -w` |
-| `/explore` RSC stream completion | ~5.7 s | ~3.4–4.7 s | ~6.0–6.6 s (dev-serialize noise; two arrays) | `curl -w '%{time_total}'` |
-| `/explore` HTML+flight bytes | 879 KB | 793 KB | 974 KB (points array ~180 KB of it) | `curl` body size |
-| Equivalent catalogue via REST | 1.53 MB, ~1.24 s | 664 KB, ~0.59 s | unchanged | `/payload-api/places` |
-| First painted content | whole page at once | whole page at once | skeleton + overlay at TTFB | streamed `hm-suspense-in` markup |
+| Metric | Current flow (L1 + L2 + L3 + medium-band) | Method |
+|---|---|---|
+| `/explore` TTFB (shell + loader plate) | ~0.04–0.22 s; the page shell and `ExplorePageLoader` (same Rive plate used by `MapLoadOverlay`) paint together | `curl -w` |
+| `/explore` RSC stream completion | ~0.15–0.36 s / ~872 KB warm (dev-serialize noise; includes ~180 KB duplicated `id/name/lngLat` points array) | `curl -w '%{time_total}'`, `curl` body size |
+| Equivalent catalogue via REST | 664 KB, ~0.59 s | `/payload-api/places` |
+| First painted content | page-level loader plate at TTFB, then the whole workspace appears once both reads resolve, then `MapLoadOverlay` covers the stage until the GL map is ready; on phones in list view the overlay is suppressed so the list is visible immediately | streamed `hm-suspense-in` markup / visual frame |
 
-Interpretation: L1's win is bytes and query shape. L2's win is *ordering* —
-the shell and a shaped skeleton paint at TTFB and the map region resolves
-on its own promise — at the documented cost of ~180 KB of duplicated
-id/name/lngLat and a second DB read. Stream-completion time in dev is
-dominated by RSC serialization and is not a production proxy.
+Interpretation: L1's win was bytes and query shape. L2's win was *ordering*
+— streaming the shell before the catalogue. L3's win is a single continuous
+loader: `ExplorePageLoader` and `MapLoadOverlay` use the same Rive asset, so
+the data wait and the GL wait read as one plate. The remaining wait is still
+mapbox GL init + style + tiles (~4 s). The list/catalogue is not the
+bottleneck anymore. Stream-completion time in dev is dominated by RSC
+serialization and is not a production proxy; re-measure on a production build
+after the medium-band layout change.
 
-Device evidence (gap-closure pass, argent): a live Chrome via CDP on
-`/explore` showed FCP 248 ms with the skeleton shell painted at first
-paint (pre-L2 behaviour was a blank page for the whole stream), the first
-place row at ~6.6 s and the mapbox canvas at ~14.2 s — **under Turbopack
-recompile load, not a steady-state number**. An iOS-sim build
-(`expo run:ios`) was attempted for native numbers; build status is noted
-in §8 below. Mid-tier Android: no AVD exists on this machine and no
-system image is installed — cannot create one without a multi-GB
-download. Quest 3: Meta ships no Quest 3 emulator — requires hardware.
-Both remain named gaps, not claims.
+Device evidence (gap-closure pass, argent CDP on live Chrome, steady
+warm dev server):
+
+| Metric | Value | Method |
+|---|---|---|
+| FCP (shell + loader plate) | 1.26 s | `paint` entry |
+| Full stream (curl warm) | 0.15–0.36 s / 872 KB | `curl -w`, 3 runs |
+| Mapbox canvas first frame | 4.07 s | rAF poll via CDP |
+| Main-thread during load | ~98 fps avg (120 Hz display) | rAF count over 23 s |
+| Post-load | loader exited, `role=progressbar` gone, 267 list buttons rendered | DOM audit |
+
+Read: the remaining wait is mapbox GL init + style + tiles (~4 s) — the
+span the Rive overlay is built to cover. List/catalogue is not the
+bottleneck anymore.
+
+Device status: **Android** — created `hm-midtier` AVD (API 36, arm64,
+2 GB/2-core mid-tier profile) + `expo run:android` build in flight.
+**iOS** — blocked by the local `viro` fork state: `pod install` fails
+(`ViroReact` vendors a prebuilt `libViroReact.a` AND compiles a lib of
+the same name — a self-conflict), and both `dist/lib/libViroReact.a` and
+`ViroKit.framework/ViroKit` are 0-byte stubs, so the iOS binary cannot
+link even after the conflict. The only iOS sim present is the foldable
+Duo, which the app's supported-platforms rejects; the physical iPhone
+is paired-but-unreachable. **Quest 3** — Meta ships no emulator; needs
+hardware. iOS/Quest numbers remain named gaps with concrete causes.
 
 ## §3 Ranked root causes (confirmed, not assumed)
 
@@ -71,26 +109,40 @@ Both remain named gaps, not claims.
 4. **One monolithic client component** (fixed, L2): list, map, and sheet
    all waited for the full catalogue before anything rendered; the page
    Suspense had no fallback, so the shell showed nothing for the whole
-   stream time. Fix: two promises (map points, slim; catalogue, fuller) +
-   per-region boundaries + skeleton fallbacks.
+   stream time. Fix: `readExplore()` returns two shapes (slim `points` for the
+   map, fuller `catalogue` for the list/sheet) and the page wraps everything
+   in one `<Suspense fallback={<ExplorePageLoader />}>` so the loader plate
+   paints at TTFB. `MapLoadOverlay` then spans the whole stage until the GL
+   map is ready, so the regions reveal together rather than map-first /
+   list-last.
 5. **Map style/tile load is the real map-region wait** (unchanged,
    expected): `mapStatus` already models `loading → ready`; the loader
    overlay (L3) spans the whole wait, not just data.
 
-## §4 Boundary map (L2)
+## §4 Boundary map (current)
 
 ```text
-ExploreWorkspace (client, no data deps)
-├─ FilterBar + Master list   ── Suspense(cataloguePromise)  fallback: row skeletons
-├─ Map region                ── Suspense(pointsPromise)     fallback: none — Rive overlay
-│   └─ visibleIds syncs from the list region via explore.store (map never waits on catalogue)
-├─ Sheet (place detail)      ── Suspense(cataloguePromise)  fallback: null (mounts only when selected)
-└─ each boundary wrapped in ExploreRegionBoundary (retry → router.refresh())
+ExplorePage (Server Component)
+└─ <Suspense fallback={<ExplorePageLoader />}>
+    └─ ExploreContent
+        └─ readExplore()  ── 'use cache' + cacheLife('minutes'|'seconds')
+            ├─ listExplorePoints()    → slim points array
+            └─ listExploreCatalogue() → fuller catalogue array
+        └─ <ExploreWorkspace points={points} catalogue={catalogue} />
+            ├─ ExploreRegionBoundary(region="list")
+            │   └─ <MasterRegion catalogue={catalogue} />
+            ├─ ExploreRegionBoundary(region="map")
+            │   └─ <MapRegion points={points} />
+            ├─ ExploreRegionBoundary(region="place details")
+            │   └─ <SheetRegion catalogue={catalogue} />
+            └─ <MapLoadOverlay />   covers whole stage while mapStatus is 'loading'
+                (hidden on phones when view === 'list')
 ```
 
-Anti-flicker: map overlay appears only after `LOAD_DELAY_MS` (250 ms) and,
-once shown, runs the loader's `complete` exit; skeletons fade in via CSS
-delay so sub-250 ms loads render no skeleton.
+The page now has one Suspense boundary; `ExploreRegionBoundary` is an error
+boundary per region (retry → `router.refresh()`). The Rive loader is shared by
+the page fallback and the map overlay so there is no visual hand-off between
+data wait and GL wait.
 
 ## §5 Loader (L3)
 
@@ -117,10 +169,15 @@ delay so sub-250 ms loads render no skeleton.
   `@rive-app/react-webgl2` (same runtime as `GridFxStage`), native
   `@rive-app/react-native` (`useViewModelInstance` + `dataBind`).
   `role="progressbar"` + label; `aria-valuenow` only with real progress.
-- `MapLoadOverlay` mounts it over the map region, driven by
-  `map-loader.store`: `hm-suspense-in` 250 ms grace → never shown on fast
-  loads; minimum 700 ms shown → `complete` exit 450 ms; OS reduce-motion →
-  the `reduced` phase (pulse, no rotation); `unavailable` → error plate.
+- `ExplorePageLoader` is the page-level Suspense fallback; it uses the same
+  Rive plate and the `hm-suspense-in` 250 ms grace → never shown on fast
+  warm loads. Once the cached data resolves, `MapLoadOverlay` takes over.
+- `MapLoadOverlay` covers the whole Explore stage while `mapStatus` is
+  `loading`, driven by `map-loader.store`: no entry delay, so the list never
+  paints ahead of the map; minimum 700 ms shown → `complete` exit 450 ms; hidden
+  on phones when the view is `list` because that pane doesn't wait on GL; OS
+  reduce-motion → the `reduced` phase (pulse, no rotation); `unavailable` →
+  the map's error plate.
 - Captures (Rive CLI `--screenshot --advance`): `t30`, `t90` frames in
   `packages/spatial/explore-loader/rive/build/` — counter-rotation and
   diamond core confirmed.

@@ -17,6 +17,7 @@ storybook-static
 .turbo
 .expo
 .vercel
+.gradle
 
 # OS
 .DS_Store

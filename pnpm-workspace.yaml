@@ -100,6 +100,7 @@ catalog:
   react-native-keyboard-controller: 1.22.6
   react-native-mmkv: 4.3.2
   react-native-nitro-modules: 0.37.1
+  react-native-nitro-fetch: 1.8.0
   react-native-enriched-html: 1.1.1
   react-native-gesture-handler: ~3.2.1
   react-native-reanimated: 4.7.0

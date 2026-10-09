@@ -1,12 +1,12 @@
 # ADR 0003: Explore map style and markers
 
-**Status:** Accepted for markers. Style built and measured, not yet live (waits on one account-owner upload).
+**Status:** Accepted for markers. Interim realism uses Mapbox Standard in GL and classic satellite statics; the token-built style is still not live (waits on one account-owner upload).
 **Date:** 2026-10-07
 **Deciders:** Mike Allen (repo owner)
 
 ## Context
 
-Explore draws the GL map with `mapbox://styles/mapbox/dark-v11` (`apps/web/components/explore/ExploreMap.tsx`). Every static raster on the site uses the same style through `packages/ui/mights/MightsMapImage.tsx:STYLE`. Standing decision D2 asks Phase 4 to compare dark-v11 with a warm-dark style built from our tokens, with no light prototype (audit §16, architecture ADR-03 and ADR-04).
+Explore historically drew the GL map with `mapbox://styles/mapbox/dark-v11` (`apps/web/components/explore/ExploreMap.tsx`). Static rasters were equally flat because they used the same style through `packages/ui/mights/MightsMapImage.tsx:STYLE`. Standing decision D2 asks Phase 4 to compare dark-v11 with a warm-dark style built from our tokens, with no light prototype (audit §16, architecture ADR-03 and ADR-04).
 
 dark-v11 is fully desaturated (`hsl(0, 0%, …)` on all 50 layers). It shows Mapbox POI labels next to our pins, so "Apollo Th…" sits under the selected Apollo marker (`explore@1440-apollo.png` in the Phase 4 captures).
 
@@ -25,8 +25,8 @@ Two Mapbox facts decide most of this:
    - `road-simple`, `bridge-simple` and `tunnel-simple` get a `match` on `class`. dark-v11 varies only `line-width` by class there, so without the match avenues and side streets share one colour. Motorway through tertiary get a quarter-step from `border` toward `border-strong`; every other class gets `border`;
    - labels get `text-muted` on a `surface` halo, 1.5 px wide;
    - `poi-label`, `airport-label` and `natural-point-label` are hidden, so gold pins are the only saturated marks.
-2. The live maps stay on `mapbox/dark-v11`. A warm Explore beside grey home and place rasters is worse than one consistent grey, and only an account style can reach both.
-3. **Parity rule.** Static and GL always name the same style. The switch is one change that edits `MightsMapImage.tsx:STYLE` and the `style:` line in `ExploreMap.tsx` together, after the upload below. A GL-only switch (inline JSON or `setPaintProperty`) is not allowed.
+2. Until the account style exists, Explore GL uses `mapbox://styles/mapbox/standard` with the `faded` theme, `day` light preset and maintained `show3dObjects` pass. Static rasters use `mapbox/satellite-streets-v12`, because the Static Images API rejects Standard and Standard Satellite. This interim split chooses real building/aerial depth over another flat card, and it carries the required Mapbox, OpenStreetMap and Maxar credit.
+3. **Final parity rule.** Static and GL must share the hosted Harlem style once it exists. The interim split is explicitly not parity: Standard cannot be rendered by Static Images today, and `satellite-streets-v12` cannot render 3D objects in GL. Do not switch only one side or claim the custom style is live before the upload below.
 
 **Upload, by the account owner, once and then on each change** (a token with `styles:write`, kept in `.env.local`, never committed):
 

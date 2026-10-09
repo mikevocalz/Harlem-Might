@@ -157,3 +157,23 @@ These need no decisions and no keys:
   `react-native-nitro-fetch` (Margelo skill); on web it is `fetch`. One
   shared query-key factory per resource.
 - **Payload:** 4.0.0-canary.37.
+
+## Event ingestion shipped 2026-10-29
+
+`packages/payload/src/seed-events.ts` (`pnpm --dir @acme/payload seed:events`,
+`--apply` writes). Providers:
+
+- `w3wp-dpdi` NYC Parks public events (keyless, coordinates → NTA clip)
+- `tvpp-9vvx` NYC permitted events (keyless, Manhattan → community boards 9/10/11)
+- Ticketmaster Discovery (credentialed, radius query → venue coords → NTA clip)
+- SeatGeek (credentialed, radius query → venue coords → NTA clip)
+- PredictHQ (credentialed, radius query → event coords → NTA clip)
+
+All rows land as **drafts** (`publishedOrCurator` gates publish). Providers
+missing an end time get a 3-hour placeholder for the curator to correct.
+`NYC_OPEN_DATA_APP_TOKEN` raises Socrata limits and falls back to anonymous
+on 403. `EVENTS_PROVIDERS_ENABLED` limits credentialed providers when set.
+Related importers: `seed-places-nyc` (LPC landmarks + Parks monuments),
+`seed-media` (LOC + Wikimedia Commons, explicit-open-licence rows only),
+`seed-stories` (Wikipedia CC BY-SA draft leads), `seed-walks` (featured-place
+walks with real Mapbox Directions distances).
