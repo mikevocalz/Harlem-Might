@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { connection } from 'next/server';
-import { listWalks } from '@acme/payload/server';
+import { getHarlemArchivalImage } from '@acme/app/content';
+import { cachedWalks } from '@/lib/cached-content';
 import { MightsButton, MightsPage, MightsText, routes } from '@acme/ui/mights';
-import { ContentNotice } from '@/components/content/ContentNotice';
-import { WalksIndex } from '@/components/walks/WalksIndex';
+import { ContentNotice } from '@acme/app/features/site/content/ContentNotice.tsx';
+import { WalksIndex } from '@acme/app/features/site/walks/WalksIndex.tsx';
+
+const archiveImage = getHarlemArchivalImage('nypl-shoeshiners-lenox-avenue-1939');
 
 export const metadata: Metadata = {
   title: 'Walks',
@@ -25,15 +27,12 @@ export default function WalksPage() {
 }
 
 async function WalksContent() {
-  // Read at request time: the build has no content database, and a build-time
-  // "unavailable" must never be baked into the static shell.
-  await connection();
-  const result = await listWalks();
+  const result = await cachedWalks();
   if (result.status === 'unavailable') {
-    if (result.reason === 'query-failed') console.error('walks read failed', result.error);
     return (
       <ContentNotice
         title="We couldn’t check for walks right now"
+        image={archiveImage}
         actions={
           <>
             <MightsButton href={routes.walks()}>Try again</MightsButton>
@@ -50,7 +49,11 @@ async function WalksContent() {
   }
   if (result.data.length === 0) {
     return (
-      <ContentNotice title="No walks published yet" actions={<MightsButton href={routes.explore()}>Open the map</MightsButton>}>
+      <ContentNotice
+        title="No walks published yet"
+        image={archiveImage}
+        actions={<MightsButton href={routes.explore()}>Open the map</MightsButton>}
+      >
         The first routes are being researched now. Until they are published, start from a place on the map and walk out
         from there.
       </ContentNotice>

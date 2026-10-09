@@ -10,11 +10,12 @@ import { useMapStatus } from './map-status';
 const LOADER_SRC = '/rive/explore-loader.riv';
 
 /**
- * Covers the map region while `mapStatus` is `loading` — the span that
- * really takes time here is the GL style/tile load, not data. Timing lives
- * in `map-loader.store`: the CSS delay keeps the overlay off entirely when
- * the map comes up fast, the choreographed `complete` exit runs once shown,
- * and `unavailable` hands the region to the map's error plate.
+ * Covers the whole Explore stage while `mapStatus` is `loading` — the GL
+ * style/tile load is the longest wait, and it picks up where the page's
+ * Suspense fallback (`ExplorePageLoader`, same plate) leaves off, so there is
+ * one loader and no gap between them. It paints on the first frame (no
+ * entry delay) so the list never shows ahead of the map. Timing lives in
+ * `map-loader.store`; `unavailable` hands the region to the map's error plate.
  */
 export function MapLoadOverlay() {
   const mapStatus = useMapStatus((s) => s.status);
@@ -28,10 +29,10 @@ export function MapLoadOverlay() {
     else store.fail();
   }, [mapStatus]);
 
-  if (phase === 'hidden') return null;
+  if (phase === 'hidden' && mapStatus !== 'loading') return null;
 
   return (
-    <View role="status" aria-live="polite" className="hm-suspense-in absolute inset-0 items-center justify-center bg-map-canvas">
+    <View role="status" aria-live="polite" className="absolute inset-0 z-10 items-center justify-center bg-map-canvas">
       {/* Two announcements total: "Loading map" on mount, "Map ready" when the
           exit starts — not a stream of progress chatter. */}
       <Text className="sr-only">{phase === 'complete' ? 'Map ready' : 'Loading map'}</Text>

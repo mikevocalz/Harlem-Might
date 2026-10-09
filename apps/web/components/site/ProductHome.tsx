@@ -1,3 +1,4 @@
+import { preload } from 'react-dom';
 import { Main, Section, View } from "@acme/ui/tw";
 import {
   MapAttribution,
@@ -5,6 +6,7 @@ import {
   cornerCut,
   MightsButton,
   MightsHeading,
+  MightsEditorialImage,
   MightsLocationStamp,
   MightsMapImage,
   MightsPlaceBento,
@@ -14,6 +16,7 @@ import {
   routes,
   type BentoModule,
 } from "@acme/ui/mights";
+import { getHarlemArchivalImage } from '@acme/app/content';
 import {
   HARLEM_PLACE_PREVIEWS,
   haversine,
@@ -85,8 +88,9 @@ const PLACES = [
 ].slice(0, 6);
 
 const chapter = "mx-auto w-full max-w-screen-2xl px-4 sm:px-6";
+const HOME_ARCHIVE = getHarlemArchivalImage("nypl-harlem-newspaper-stand-1939");
 
-/** The hero frame's exact request — shared by the <img> and its preload. */
+/** The hero frame's exact request — shared by the image and its preload. */
 const HERO_MAP = {
   center: HERO_CENTER,
   zoom: 16.2,
@@ -102,19 +106,17 @@ export function ProductHome() {
   // fetch at head-parse instead of img-parse. React hoists the link.
   const heroSrc = mapboxStaticUrl(HERO_MAP);
   const heroSrcSet = mapboxStaticSrcSet(HERO_MAP);
+  if (heroSrc) {
+    preload(heroSrc, {
+      as: 'image',
+      imageSrcSet: heroSrcSet || undefined,
+      imageSizes: HERO_MAP_SIZES,
+      fetchPriority: 'high',
+    });
+  }
   return (
     <Main className="-mt-16 flex-1 bg-surface">
       <HomeMotion />
-      {heroSrc ? (
-        <link
-          rel="preload"
-          as="image"
-          href={heroSrc}
-          imageSrcSet={heroSrcSet || undefined}
-          imageSizes={HERO_MAP_SIZES}
-          fetchPriority="high"
-        />
-      ) : null}
 
       {/* 1 — Hero: the block, through the lens */}
       <Section id="trg-hero" className="relative grid grid-cols-1 lg:min-h-svh lg:grid-cols-12">
@@ -226,8 +228,16 @@ export function ProductHome() {
           id="mfx-story-copy"
           className={`${chapter} grid grid-cols-1 gap-8 py-24 md:grid-cols-12 md:gap-6 md:py-32`}
         >
-          <View className="md:col-span-5">
+          <View className="gap-6 md:col-span-5">
             <MightsHeading size="display-lg">What a pin can&apos;t tell you</MightsHeading>
+            {HOME_ARCHIVE ? (
+              <MightsEditorialImage
+                image={HOME_ARCHIVE}
+                screenId="home"
+                ratio="standard"
+                sizes="(min-width: 768px) 40vw, 100vw"
+              />
+            ) : null}
           </View>
           <View className="gap-5 md:col-span-6 md:col-start-7">
             <MightsText size="lead" tone="default">

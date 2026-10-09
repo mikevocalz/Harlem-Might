@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { View } from '@acme/ui/tw';
-import { MightsButton, MightsFigure, MightsPage, MightsProse, routes } from '@acme/ui/mights';
+import { getHarlemArchivalImage } from '@acme/app/content';
+import { MightsButton, MightsEditorialImage, MightsPage, MightsProse, routes } from '@acme/ui/mights';
 import { ABOUT_LEAD, ABOUT_SECTIONS } from '../../../content/about';
 import { companyImage } from '../../../lib/companyImage';
 
@@ -16,6 +17,7 @@ const FIGURES: Record<string, { slug: string; alt: string }> = {
   method: { slug: 'about-method', alt: 'Old black-and-white street photographs, a notebook and a map on a wooden table' },
   sources: { slug: 'about-sources', alt: 'A quiet library reading room with long tables and archive boxes' },
 };
+const archive = getHarlemArchivalImage('nypl-harlem-tenement-summer-1930s');
 
 export default function AboutPage() {
   const sections = ABOUT_SECTIONS.map((s) => {
@@ -23,12 +25,13 @@ export default function AboutPage() {
     return f ? { ...s, figure: { src: companyImage(f.slug), alt: f.alt } } : s;
   });
   return (
-    <MightsPage title="About Harlem Might" lead={ABOUT_LEAD}>
-      <MightsFigure
-        src={companyImage('about-hero')}
-        alt="A row of Harlem brownstones at golden hour with stoops and street trees"
-        priority
-      />
+    <MightsPage
+      title="About Harlem Might"
+      lead={ABOUT_LEAD}
+      media={archive ? (
+        <MightsEditorialImage image={archive} screenId="about" ratio="standard" sizes="(min-width: 768px) 40vw, 100vw" priority />
+      ) : undefined}
+    >
       <MightsProse sections={sections} />
       <View className="flex-row flex-wrap gap-3 border-t border-rule-rail pt-8">
         <MightsButton href={routes.explore()}>Open the map</MightsButton>

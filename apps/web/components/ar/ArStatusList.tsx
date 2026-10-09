@@ -1,4 +1,6 @@
+import { DescriptionDetails, DescriptionList, DescriptionTerm } from '@acme/ui/html';
 import { MightsBand, MightsButton, MightsText, routes } from '@acme/ui/mights';
+import { View } from '@acme/ui/tw';
 import { SPATIAL_STATUS, statusLabel } from './ar-status';
 
 // B11 (proof cluster) is struck, 2026-10-07: a concept has no proof records to
@@ -16,24 +18,24 @@ export function ArStatusList() {
         </MightsButton>
       }
     >
-      <dl className="flex max-w-content-screen flex-col">
+      <DescriptionList className="flex max-w-content-screen flex-col">
         {SPATIAL_STATUS.map((row) => (
-          <div
+          <View
             key={row.id}
             className="grid grid-cols-1 gap-2 border-b border-rule-hairline py-6 md:grid-cols-12 md:gap-6"
           >
-            <dt className="md:col-span-4">
+            <DescriptionTerm className="md:col-span-4">
               <MightsText tone="default" className="font-semibold">
                 {row.name}
               </MightsText>
-            </dt>
-            <dd className="flex flex-col gap-1 md:col-span-8">
+            </DescriptionTerm>
+            <DescriptionDetails className="flex flex-col gap-1 md:col-span-8">
               <MightsText tone="default">{statusLabel(row.status)}</MightsText>
               <MightsText>{row.detail}</MightsText>
-            </dd>
-          </div>
+            </DescriptionDetails>
+          </View>
         ))}
-      </dl>
+      </DescriptionList>
       <MightsText size="small">
         Nothing here is verified yet. Verified means it passed an eight-point check on the real device: render, input,
         camera and permissions, window behavior, performance and the rest. Until then we use preview (code on an

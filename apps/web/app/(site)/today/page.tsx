@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { connection } from 'next/server';
+import { io } from 'next/cache';
 import { getHarlemArchivalImage } from '@acme/app/content';
 import { harlemToday } from '@acme/payload/server';
 import { cachedEventsForDate } from '@/lib/cached-content';
 import { MightsButton, MightsPage, routes } from '@acme/ui/mights';
 import { TodayEvents } from '@acme/app/features/site/today/TodayEvents.tsx';
+import { HistoryFact } from '@acme/app/features/site/today/HistoryFact.tsx';
 import { todayHeading } from '@acme/app/features/site/today/event-format.ts';
 import { ContentNotice } from '@acme/app/features/site/content/ContentNotice.tsx';
 
@@ -18,7 +19,9 @@ export const metadata: Metadata = {
 
 async function TodayContent() {
   // Request-time date in Harlem's time zone; never baked in at build, never the server's UTC day.
-  await connection();
+  // `io()` (not `connection()`) keeps the timestamp out of the static shell while still letting
+  // the cached read below be prefetched and reused across navigations.
+  await io();
   const now = new Date();
   const date = harlemToday(now);
   // The date is the cache key, so each Harlem day is read once.
@@ -61,6 +64,7 @@ async function TodayContent() {
       title={`Today in Harlem, ${todayHeading(now)}`}
       lead="Events with a date and a source, and when we last checked each one."
     >
+      <HistoryFact date={date} />
       {body}
     </MightsPage>
   );

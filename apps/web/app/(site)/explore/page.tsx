@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { connection } from 'next/server';
+import { cacheLife } from 'next/cache';
 import { listExploreCatalogue, listExplorePoints } from '@acme/payload/server';
 import type { ContentResult, PlaceRecord } from '@acme/payload/server';
 import { HARLEM_PLACE_PREVIEWS, type ExplorePlace } from '@acme/app/features/explore/explore.store.ts';
 import { explorePlaceFromRecord } from '@acme/app/features/explore/catalogue.ts';
 import { ExploreWorkspace } from '../../../components/explore/ExploreWorkspace';
+import { ExplorePageLoader } from '../../../components/explore/ExploreSkeletons';
 import type { MapPlace } from '../../../components/explore/ExploreMap';
 
 export const metadata: Metadata = {
@@ -15,7 +16,8 @@ export const metadata: Metadata = {
 
 export default function ExplorePage() {
   return (
-    <Suspense>
+    // One boundary for the whole stage: list, map and sheet reveal together.
+    <Suspense fallback={<ExplorePageLoader />}>
       <ExploreContent />
     </Suspense>
   );
@@ -46,13 +48,20 @@ function resolvePoints(result: ContentResult<PlaceRecord[]>): readonly MapPlace[
   return result.data.flatMap((r) => (r.location ? [{ id: r.slug, name: r.name, lngLat: r.location }] : []));
 }
 
-// Read at request time: the build has no content database, and a build-time
-// "unavailable" must never be baked into the static shell. The two reads
-// stay unresolved — React streams each into the workspace as it lands, so
-// the map region (points) never waits on the catalogue the list needs.
+// Cached, not per-request: a return visit (and the Link prefetch) reuses the
+// shell instead of re-reading both tables. No revalidateTag hooks exist on
+// the Places collection yet, so `minutes` bounds how long a CMS edit takes
+// to show. A miss (no DATABASE_URL at build, or a failed read) drops to
+// `seconds`, which Next keeps out of the prerender — the fixture is never
+// baked into the static shell.
+async function readExplore() {
+  'use cache';
+  const [points, catalogue] = await Promise.all([listExplorePoints(), listExploreCatalogue()]);
+  cacheLife(points.status === 'ok' && catalogue.status === 'ok' ? 'minutes' : 'seconds');
+  return { points: resolvePoints(points), catalogue: resolveCatalogue(catalogue) };
+}
+
 async function ExploreContent() {
-  await connection();
-  const pointsPromise = listExplorePoints().then(resolvePoints);
-  const cataloguePromise = listExploreCatalogue().then(resolveCatalogue);
-  return <ExploreWorkspace pointsPromise={pointsPromise} cataloguePromise={cataloguePromise} />;
+  const { points, catalogue } = await readExplore();
+  return <ExploreWorkspace points={points} catalogue={catalogue} />;
 }

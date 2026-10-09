@@ -1,31 +1,41 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { connection } from 'next/server';
-import { notFound } from 'next/navigation';
-import { getPlace, listExploreCatalogue } from '@acme/payload/server';
-import type { EditorialImage } from '@acme/app/content';
+import { cachedExploreCatalogue, cachedPlace, cachedPlaceByLegacySlug, cachedStories } from '@/lib/cached-content';
+import type { EditorialImage, PlaceRecord } from '@acme/app/content';
 import { getHarlemPlacePreview, type ExplorePlace } from '@acme/app/features/explore/explore.store.ts';
 import { explorePlaceFromRecord } from '@acme/app/features/explore/catalogue.ts';
 import { MightsButton, MightsJsonLd, MightsPage, routes } from '@acme/ui/mights';
-import { ContentNotice } from '../../../../components/content/ContentNotice';
-import { PlaceHero } from '../../../../components/place/PlaceHero';
-import { PlaceNearby } from '../../../../components/place/PlaceNearby';
-import { PlaceSources } from '../../../../components/place/PlaceSources';
-import { nearbyLayout, nearbyPlaces } from '../../../../components/place/nearby';
+import { ContentNotice } from '@acme/app/features/site/content/ContentNotice.tsx';
+import { PlaceMasthead, PlaceVisit } from '@acme/app/features/site/place/PlaceHero.tsx';
+import { PlaceStories, storiesAbout } from '@acme/app/features/site/place/PlaceStories.tsx';
+import { PlaceNearby } from '@acme/app/features/site/place/PlaceNearby.tsx';
+import { PlaceSources } from '@acme/app/features/site/place/PlaceSources.tsx';
+import { nearbyLayout, nearbyPlaces } from '@acme/app/features/site/place/nearby.ts';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 
 interface ResolvedPlace {
   place: ExplorePlace;
   images: EditorialImage[];
+  hours?: PlaceRecord['openingHours'];
 }
 
 // The catalogue is dynamic — thousands of imported rows — so place pages
 // render on demand rather than as static params.
 async function resolvePlace(slug: string): Promise<ResolvedPlace | 'unavailable' | null> {
-  const result = await getPlace(slug);
-  if (result.status === 'ok') return { place: explorePlaceFromRecord(result.data), images: result.data.images };
-  if (result.status === 'not-found') return null;
+  const result = await cachedPlace(slug);
+  if (result.status === 'ok')
+    return { place: explorePlaceFromRecord(result.data), images: result.data.images, hours: result.data.openingHours };
+  if (result.status === 'not-found') {
+    // Imported rows once used osm-node-* / lpc-* / mon-* paths. Those stay
+    // resolvable, but the canonical public URL is always the name-led slug.
+    const legacy = await cachedPlaceByLegacySlug(slug);
+    if (legacy.status === 'ok') permanentRedirect(routes.place(legacy.data.slug));
+    if (legacy.status === 'unavailable') return 'unavailable';
+    return null;
+  }
   // No database in this process keeps the fixture places routable in dev.
   const fixture = getHarlemPlacePreview(slug);
   return fixture ? { place: fixture, images: [] } : 'unavailable';
@@ -43,12 +53,19 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     : {};
 }
 
-// params are awaited inside Suspense so the route can prerender a shell
-// (Cache Components: 'Await params inside <Suspense>').
-export default function PlacePage({ params }: { params: Promise<{ slug: string }> }) {
+// The permanent redirect for generated source-id paths can only be a real 308
+// before the first byte streams, so the place resolution deliberately happens
+// before the shell — `instant = false` keeps this route server-rendered
+// (dynamic `connection()` read) rather than prerendered.
+export const instant = false;
+
+export default async function PlacePage({ params }: { params: Promise<{ slug: string }> }) {
+  await connection();
+  const { slug } = await params;
+  const resolved = await resolvePlace(slug);
   return (
     <Suspense>
-      <PlacePageContent params={params} />
+      <PlacePageContent resolved={resolved} />
     </Suspense>
   );
 }
@@ -63,10 +80,7 @@ export default function PlacePage({ params }: { params: Promise<{ slug: string }
 // No current layer: there is no per-place events reader. listEventsForDate
 // returns a whole day across venues; filtering it here would hide every
 // event without a venue relation. It returns with an events-by-place reader.
-async function PlacePageContent({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  await connection();
-  const resolved = await resolvePlace(slug);
+async function PlacePageContent({ resolved }: { resolved: ResolvedPlace | 'unavailable' | null }) {
   if (resolved === 'unavailable') {
     return (
       <ContentNotice
@@ -78,10 +92,11 @@ async function PlacePageContent({ params }: { params: Promise<{ slug: string }> 
     );
   }
   if (!resolved) notFound();
-  const { place, images } = resolved;
+  const { place, images, hours } = resolved;
   const { lngLat } = place;
 
-  const catalogue = await listExploreCatalogue();
+  const [catalogue, stories] = await Promise.all([cachedExploreCatalogue(), cachedStories()]);
+  const related = stories.status === 'ok' ? storiesAbout(place, stories.data) : [];
   const nearby =
     catalogue.status === 'ok'
       ? nearbyPlaces(place, catalogue.data.map(explorePlaceFromRecord))
@@ -90,7 +105,8 @@ async function PlacePageContent({ params }: { params: Promise<{ slug: string }> 
   return (
     <MightsPage
       title={place.name}
-      lead={place.shortDescription}
+      lead={place.shortDescription ?? `${place.category} in ${place.area}.`}
+      media={<PlaceMasthead place={place} images={images} />}
       crumbs={[
         { label: 'Explore', href: routes.explore() },
         { label: place.name, href: routes.place(place.id) },
@@ -111,7 +127,8 @@ async function PlacePageContent({ params }: { params: Promise<{ slug: string }> 
           ...(lngLat ? { geo: { '@type': 'GeoCoordinates', latitude: lngLat[1], longitude: lngLat[0] } } : {}),
         }}
       />
-      <PlaceHero place={place} images={images} />
+      <PlaceVisit place={place} hours={hours} hasPhotos={images.length > 0} now={new Date()} />
+      <PlaceStories place={place} stories={related} />
       <PlaceNearby place={place} nearby={nearby} />
       <PlaceSources place={place} showsDistances={nearbyLayout(nearby.length) !== 'none'} />
     </MightsPage>

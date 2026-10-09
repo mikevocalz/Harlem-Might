@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import { Figcaption, Figure } from '@acme/ui/html';
 import { MightsAccentFrame, MightsText } from '@acme/ui/mights';
 import { View } from '@acme/ui/tw';
 import { useSightlineIsland, type SightlinePhase } from './sightline-island.store';
@@ -89,9 +90,9 @@ export function SightlineIsland() {
       : 'relative aspect-4/3 overflow-hidden bg-surface-sunken md:aspect-video';
 
   return (
-    <figure className="flex flex-col gap-3">
+    <Figure className="flex flex-col gap-3">
       <MightsAccentFrame tone="iron" className="p-3">
-        <div ref={frameRef} className={box}>
+        <View ref={frameRef as never} className={box}>
           {mounted ? (
             <SightlineHeroCanvas
               getProgress={getProgress}
@@ -112,11 +113,11 @@ export function SightlineIsland() {
               </MightsText>
             </View>
           )}
-        </div>
+        </View>
       </MightsAccentFrame>
-      <figcaption className="text-label text-text-muted">
+      <Figcaption className="text-label text-text-muted">
         Concept render. The glasses and puck don’t exist; nobody can buy them and we haven’t built for them.
-      </figcaption>
-    </figure>
+      </Figcaption>
+    </Figure>
   );
 }

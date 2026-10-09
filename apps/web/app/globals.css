@@ -158,11 +158,6 @@ body {
 }
 
 /* Bottom sheet: native <dialog> pinned to the bottom edge. */
-dialog.mights-sheet[open] {
-  position: fixed;
-  inset: auto 0 0 0;
-}
-
 .skip-link {
   position: absolute;
   left: 1rem;

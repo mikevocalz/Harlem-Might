@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useSyncExternalStore } from 'react';
+import { Suspense, useEffect, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import { usePathname } from 'solito/navigation';
 import { Link } from '@acme/ui/html';
 import { View } from '@acme/ui/tw';
@@ -42,6 +42,36 @@ function SiteMotion() {
     return () => main?.removeAttribute('data-product-route');
   }, [pathname]);
 
+  // Lenis eases toward its own target and writes it to the window every
+  // frame, so after a route change it pulled the new page back toward the old
+  // page's offset and it opened partway down. Stop it in the commit (layout
+  // effect, before its next frame can write), send a link navigation to the
+  // top, leave back/forward to the browser's own restoration, and restart it a
+  // few frames later. Lenis's start() resets to the window's real offset.
+  const lenisRef = useRef<{ stop(): void; start(): void } | null>(null);
+  const popped = useRef(false);
+  useEffect(() => {
+    const onPop = () => {
+      popped.current = true;
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  useLayoutEffect(() => {
+    const restoring = popped.current;
+    popped.current = false;
+    const lenis = lenisRef.current;
+    lenis?.stop();
+    if (!restoring) window.scrollTo(0, 0);
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => lenis?.start());
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      lenis?.start();
+    };
+  }, [pathname]);
+
   useEffect(() => {
     if (reducedMotion || workspace) return;
 
@@ -60,7 +90,9 @@ function SiteMotion() {
           clock: 'kinetrell',
           refreshOnConnect: true,
         });
+        lenisRef.current = owned.lenis;
         teardown = () => {
+          lenisRef.current = null;
           disconnect();
           owned.destroy();
         };

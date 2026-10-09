@@ -5,10 +5,40 @@ import { withPayload } from '@payloadcms/next/withPayload'
 // FileSystemInfo snapshot walker dies with RangeError on the pnpm symlink
 // forest. RN globals (__DEV__) come from a runtime shim imported in the root
 // layout instead of DefinePlugin.
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ? new URL(process.env.NEXT_PUBLIC_SITE_URL) : null
+
 const nextConfig: NextConfig = {
   // Dev-only: the browser preview proxies localhost:3000 through 127.0.0.1,
   // which trips the dev-resource origin check and breaks HMR in that iframe.
   allowedDevOrigins: ['127.0.0.1'],
+  images: {
+    // Next 16 refuses to optimize images from local addresses. In dev the
+    // Payload uploads are served by this same localhost process; a deployed
+    // site URL is public, so this stays off there.
+    dangerouslyAllowLocalIP: siteUrl?.hostname === 'localhost' || siteUrl?.hostname === '127.0.0.1',
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.nypl.org',
+        port: '',
+        pathname: '/index.php',
+      },
+      // MightsMapImage renders Mapbox Static Images through the kit Image (next/image).
+      { protocol: 'https', hostname: 'api.mapbox.com', port: '', pathname: '/styles/v1/**' },
+      // Payload uploads: mapEditorialImages absolutizes /payload-api/media/…
+      // against NEXT_PUBLIC_SITE_URL, so the optimizer must allow that host
+      // (localhost in dev) or every CMS photo throws and the page falls back
+      // to the archive pool.
+      ...(siteUrl
+        ? [{
+            protocol: siteUrl.protocol.slice(0, -1) as 'http' | 'https',
+            hostname: siteUrl.hostname,
+            port: siteUrl.port,
+            pathname: '/payload-api/media/file/**',
+          }]
+        : []),
+    ],
+  },
   // React Compiler — auto-memoization, same as the mobile app's
   // experiments.reactCompiler in app.config.ts.
   reactCompiler: true,
