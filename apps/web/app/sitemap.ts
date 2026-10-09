@@ -1,10 +1,17 @@
 import type { MetadataRoute } from 'next';
 import { HARLEM_PLACE_PREVIEWS } from '@acme/app/features/explore/explore.store.ts';
+import { listExploreCatalogue } from '@acme/payload/server';
 import { routes } from '@acme/ui/mights';
 
 const base = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const catalogue = await listExploreCatalogue();
+  // No database (builds, dev without env): the fixture slugs still resolve.
+  const placeSlugs =
+    catalogue.status === 'ok' && catalogue.data.length
+      ? catalogue.data.map((p) => p.slug)
+      : HARLEM_PLACE_PREVIEWS.map((p) => p.id);
   const pages = [
     routes.home(),
     routes.explore(),
@@ -18,7 +25,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     routes.legal('privacy'),
     routes.legal('terms'),
     routes.legal('accessibility'),
-    ...HARLEM_PLACE_PREVIEWS.map((p) => routes.place(p.id)),
+    ...placeSlugs.map((slug) => routes.place(slug)),
   ];
   return pages.map((path) => ({ url: base + path }));
 }

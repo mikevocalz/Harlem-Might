@@ -1,19 +1,26 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useMemo, useRef } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'solito/navigation';
 import {
   DEFAULT_SHEET_DETENT,
-  HARLEM_CATEGORIES,
-  MAPPED_PLACES,
-  filterHarlemPlacePreviews,
-  getHarlemPlacePreview,
+  filterPlaces,
   useExplore,
+  type ExplorePlace,
   type SheetDetent,
 } from '@acme/app/features/explore/explore.store.ts';
 import { noResultsCopy, placeRowLine, resultsSummary } from '@acme/app/features/explore/explore-copy.ts';
 import { Main, Pressable, ScrollView, Text, TextInput, View } from '@acme/ui/tw';
-import { MightsButton, MightsHeading, MightsLocationStamp, MightsText, condensed, routes } from '@acme/ui/mights';
+import {
+  MapAttribution,
+  MightsButton,
+  MightsHeading,
+  MightsLocationStamp,
+  MightsMapImage,
+  MightsText,
+  condensed,
+  routes,
+} from '@acme/ui/mights';
 import { DirectionsPanel } from '@acme/app/features/navigation/ui/DirectionsPanel.tsx';
 import { NavigationHud } from '@acme/app/features/navigation/ui/NavigationHud.tsx';
 import { useDirectionsPlaceId, useIsGuiding } from '@acme/app/features/navigation/ui/hooks.ts';
@@ -27,13 +34,15 @@ import { exploreHref, focusId, focusReturnOrder, isFocusFor, parseExploreParams 
 import { useMapStatus } from './map-status';
 import { useMediaQuery } from './use-media-query';
 
-const MAP_PLACES = MAPPED_PLACES as unknown as readonly MapPlace[];
 const SHEET_TITLE_ID = 'explore-sheet-title';
 const SEARCH_FOCUS = 'search';
+// Rows rendered before the "keep typing" note; the catalogue has ~1.6k places.
+const LIST_ROW_CAP = 250;
 const focusSearch = () =>
   document.querySelector<HTMLElement>(`[data-explore-focus="${SEARCH_FOCUS}"]`)?.focus();
 // Detents in raise order; the sheet steps through them with Less / More.
 const DETENTS: readonly SheetDetent[] = ['peek', 'half', 'full'];
+const EMPTY_SEARCH_PARAMS = new URLSearchParams();
 
 const isVisible = (el: Element) => el.getClientRects().length > 0 && !el.closest('[inert]');
 
@@ -64,12 +73,12 @@ const browserLocation = () =>
 // The URL is the source of truth for view, q, category and place: reload
 // restores the workspace, the address is the share link, and Back closes a
 // selection because selecting pushes while typing and filtering replace.
-export function ExploreWorkspace() {
-  const params = useSearchParams();
+export function ExploreWorkspace({ places, categories }: { places: readonly ExplorePlace[]; categories: readonly string[] }) {
+  const params = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
   const router = useRouter();
-  const pathname = usePathname();
-  const { view, category, placeId } = parseExploreParams(params, HARLEM_CATEGORIES, 'All');
-  const selected = getHarlemPlacePreview(placeId);
+  const pathname = usePathname() ?? routes.explore();
+  const { view, category, placeId } = parseExploreParams(params, categories, 'All');
+  const selected = placeId ? (places.find((p) => p.id === placeId) ?? null) : null;
 
   // The search draft lives in zustand so typing never fights the router; the
   // URL is updated with a debounced history.replaceState (no navigation).
@@ -105,11 +114,13 @@ export function ExploreWorkspace() {
   const sheetRef = useRef<HTMLElement | null>(null);
 
   const href = (patch: Record<string, string | null>) => exploreHref(pathname, params.toString(), patch);
-  const replace = (patch: Record<string, string | null>) => router.replace(href(patch), { scroll: false });
+  // Query-only state stays client-side: native history updates useSearchParams
+  // without re-running the page's dynamic server reader on every selection.
+  const replace = (patch: Record<string, string | null>) => window.history.replaceState(null, '', href(patch));
   const select = (id: string, opener: string) => {
     openSheet(sheetOpen ? detent : DEFAULT_SHEET_DETENT, opener);
     pushed.current = true;
-    router.push(href({ place: id }), { scroll: false });
+    window.history.pushState(null, '', href({ place: id }));
   };
   // Focus and the store follow the URL in the effect below, so Close, Escape
   // and browser Back all take the same path.
@@ -193,8 +204,14 @@ export function ExploreWorkspace() {
     return () => touched.forEach((el) => el.removeAttribute('inert'));
   }, [modal]);
 
-  const results = filterHarlemPlacePreviews(q, category);
-  const mappedIds = results.filter((p) => p.lngLat).map((p) => p.id);
+  const results = useMemo(() => filterPlaces(places, q, category), [places, q, category]);
+  // Mapped places feed the map and the directions origin picker; memoised so
+  // the map's init effect sees a stable array.
+  const mapped = useMemo<MapPlace[]>(
+    () => places.flatMap((p) => (p.lngLat ? [{ id: p.id, name: p.name, lngLat: p.lngLat }] : [])),
+    [places],
+  );
+  const mappedIds = useMemo(() => results.filter((p) => p.lngLat).map((p) => p.id), [results]);
   const mappedCount = mappedIds.length;
   const summary = resultsSummary(results.length, mappedCount, q, category, 'All');
 
@@ -251,7 +268,7 @@ export function ExploreWorkspace() {
           aria-label="Filter by category"
           className="-mx-4 flex-row gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:overflow-visible md:px-0"
         >
-          {HARLEM_CATEGORIES.map((c) => {
+          {categories.map((c) => {
             const on = c === category;
             return (
               <MightsButton
@@ -280,26 +297,36 @@ export function ExploreWorkspace() {
             </MightsButton>
           </View>
         ) : (
-          results.map((place) => {
-            const on = place.id === selected?.id;
-            return (
-              <Pressable
-                key={place.id}
-                data-explore-focus={focusId.row(place.id)}
-                onPress={() => select(place.id, focusId.row(place.id))}
-                aria-current={on ? 'true' : undefined}
-                className={`mights-focus flex-row items-start gap-4 border-b border-l-2 border-b-rule-hairline px-5 py-4 text-left ${
-                  on ? 'border-l-primary bg-surface-raised' : 'border-l-transparent hover:bg-surface-raised'
-                }`}
-              >
-                <View className={`mt-2 size-2.5 shrink-0 rotate-45 ${on ? 'bg-primary' : 'bg-rule-rail'}`} />
-                <View className="min-w-0 flex-1 gap-0.5">
-                  <Text className="text-body font-semibold text-text">{place.name}</Text>
-                  <Text className="text-small text-text-muted">{placeRowLine(place)}</Text>
-                </View>
-              </Pressable>
-            );
-          })
+          <>
+            {/* The catalogue runs into the thousands; a long unfiltered list
+                renders the first page of rows and says so, so typing narrows
+                rather than scrolls forever. */}
+            {(results.length > LIST_ROW_CAP ? results.slice(0, LIST_ROW_CAP) : results).map((place) => {
+              const on = place.id === selected?.id;
+              return (
+                <Pressable
+                  key={place.id}
+                  data-explore-focus={focusId.row(place.id)}
+                  onPress={() => select(place.id, focusId.row(place.id))}
+                  aria-current={on ? 'true' : undefined}
+                  className={`mights-focus flex-row items-start gap-4 border-b border-l-2 border-b-rule-hairline px-5 py-4 text-left ${
+                    on ? 'border-l-primary bg-surface-raised' : 'border-l-transparent hover:bg-surface-raised'
+                  }`}
+                >
+                  <View className={`mt-2 size-2.5 shrink-0 rotate-45 ${on ? 'bg-primary' : 'bg-rule-rail'}`} />
+                  <View className="min-w-0 flex-1 gap-0.5">
+                    <Text className="text-body font-semibold text-text">{place.name}</Text>
+                    <Text className="text-small text-text-muted">{placeRowLine(place)}</Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+            {results.length > LIST_ROW_CAP ? (
+              <Text className="p-5 text-small text-text-muted">
+                {`Showing the first ${LIST_ROW_CAP} — search or pick a category to narrow it down.`}
+              </Text>
+            ) : null}
+          </>
         )}
       </ScrollView>
     </View>
@@ -331,7 +358,7 @@ export function ExploreWorkspace() {
       {showDirections ? (
         <DirectionsPanel
           place={selected}
-          originPlaces={MAPPED_PLACES}
+          originPlaces={mapped}
           frame="none"
           onDismiss={
             guiding
@@ -376,13 +403,33 @@ export function ExploreWorkspace() {
           className={`min-h-0 flex-1 ${detent === 'peek' ? 'hidden lg:flex' : ''}`}
           contentContainerClassName="gap-5 p-4 md:p-5"
         >
+          {selected.lngLat ? (
+            <View className="overflow-hidden border border-rule-hairline">
+              <View className="aspect-video">
+                <MightsMapImage
+                  center={selected.lngLat}
+                  zoom={17.4}
+                  pitch={45}
+                  bearing={-14}
+                  width={640}
+                  height={360}
+                  sizes="(min-width: 1024px) 24rem, 100vw"
+                  pins={[{ lngLat: selected.lngLat }]}
+                  alt={`Aerial map around ${selected.name}`}
+                />
+              </View>
+              <MapAttribution className="block border-t border-rule-hairline px-3 py-2" />
+            </View>
+          ) : null}
           <MightsLocationStamp name={selected.category} street={selected.street ?? selected.area} className="self-start" />
           {/* shortDescription, not whyItMatters: the fixture's whyItMatters is
-              planning copy about the product, not a fact about the place. */}
-          <MightsText tone="default">{selected.shortDescription}</MightsText>
+              planning copy about the product, not a fact about the place.
+              Imported rows often have no summary yet; the name, category and
+              area above already carry the sheet. */}
+          {selected.shortDescription ? <MightsText tone="default">{selected.shortDescription}</MightsText> : null}
           {selected.lngLat ? null : <MightsText size="small">Location pending verification.</MightsText>}
-          {/* No Save (this site has no sign-in) and no AR (no AR runtime on
-              the web), so neither shows a button that can't work. */}
+          {/* No Save until saved places are wired to the member session, and
+              no AR button on web because there is no AR runtime here. */}
           <View className="flex-row flex-wrap gap-3">
             {selected.lngLat ? (
               <MightsButton
@@ -424,7 +471,7 @@ export function ExploreWorkspace() {
 
         <View className={`relative min-w-0 flex-1 md:flex ${view === 'list' ? 'hidden' : 'flex'}`}>
           <ExploreMap
-            places={MAP_PLACES}
+            places={mapped}
             visibleIds={mappedIds}
             selectedId={selected?.lngLat ? selected.id : null}
             onSelect={(id) => select(id, focusId.marker(id))}

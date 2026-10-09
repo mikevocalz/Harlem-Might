@@ -5,11 +5,11 @@ import 'server-only';
 import { createContentReaders, type ContentDocs, type ContentSource } from '@acme/app/content';
 import { getPayload, type Where } from 'payload';
 import config from './src/payload.config';
-import type { Event, Story, Walk } from './src/payload-types';
+import type { Event, Place, Story, Walk } from './src/payload-types';
 
 // Compile-time drift check: the generated CMS documents must satisfy the
 // reader contract in packages/app/content/docs.ts.
-type GeneratedDocs = { walks: Walk; stories: Story; events: Event };
+type GeneratedDocs = { walks: Walk; stories: Story; events: Event; places: Place };
 type AssertDocsMatch<T extends ContentDocs> = T;
 export type CheckedContentDocs = AssertDocsMatch<GeneratedDocs>;
 
@@ -34,6 +34,7 @@ const payloadSource: ContentSource = {
       depth: query.depth,
       limit: query.limit,
       sort: query.sort,
+      ...(query.select ? { select: Object.fromEntries(query.select.map((field) => [field, true])) } : {}),
       draft: false,
       // Run as an anonymous visitor so the collection read rule
       // (publishedOrCurator) applies on top of the reader's own filter.
@@ -43,7 +44,7 @@ const payloadSource: ContentSource = {
   },
 };
 
-export const { listWalks, getWalk, listStories, getStory, listEventsForDate } =
+export const { listWalks, getWalk, getPlace, listPlaces, listExploreCatalogue, listStories, getStory, listEventsForDate } =
   createContentReaders(payloadSource);
 
 export { harlemToday, isHarlemDate } from '@acme/app/content';
@@ -51,6 +52,8 @@ export type {
   ContentResult,
   DetailResult,
   EventRecord,
+  PlaceRecord,
+  PlaceRef,
   StoryRecord,
   WalkRecord,
 } from '@acme/app/content';

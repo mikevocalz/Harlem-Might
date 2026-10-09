@@ -1,8 +1,8 @@
 'use client';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { useEffect, useRef, useState, type RefObject } from 'react';
-import type { GeoJSONSource, Map as MapboxMap, Marker, PaddingOptions } from 'mapbox-gl';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import type { GeoJSONSource, Map as MapboxMap, MapMouseEvent, Marker, PaddingOptions } from 'mapbox-gl';
 import { semantic } from '@acme/theme';
 import { View } from '@acme/ui/tw';
 import { MightsButton } from '@acme/ui/mights';
@@ -16,10 +16,17 @@ import { useMapStatus } from './map-status';
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
+// Start the mapbox-gl chunk fetch at module evaluation, not inside the mount
+// effect: the ~800 kB library is the first thing on the map's critical path,
+// so it downloads while React hydrates instead of after it.
+const mapboxglPromise = typeof window === 'undefined' ? null : import('mapbox-gl');
+
 export interface MapPlace {
   id: string;
   name: string;
   lngLat: readonly [number, number];
+  /** Curated landmark: gets a real button marker at any zoom. */
+  featured?: boolean;
 }
 
 interface ExploreMapProps {
@@ -46,7 +53,14 @@ interface ExploreMapProps {
 const FIT_PADDING = 96;
 const FIT_MAX_ZOOM = 15.5;
 const SELECT_MIN_ZOOM = 16.5;
-const BUILDINGS_LAYER = 'hm-3d-buildings';
+const BUILDING_PITCH = 64;
+const BUILDING_BEARING = -18;
+// The catalogue is drawn as canvas circles — ~1.6k DOM buttons would be a
+// wall of tab stops and layout work. Featured landmarks and the selected
+// place still get real button markers, and every place is a row in the list.
+const DOTS_LAYER = 'hm-place-dots';
+const LABELS_LAYER = 'hm-place-labels';
+const PLACES_SOURCE = 'hm-places';
 type MapView = 'map' | 'tilt' | 'buildings';
 const MAP_VIEWS: readonly { id: MapView; label: string }[] = [
   { id: 'map', label: '2D' },
@@ -91,6 +105,17 @@ const line = (coordinates: [number, number][]): LineFeature => ({
 const EMPTY: LineFeature = line([]);
 const EMPTY_SET = { type: 'FeatureCollection' as const, features: [] as LineFeature[] };
 
+interface PointFeature {
+  type: 'Feature';
+  properties: { id: string; name: string };
+  geometry: { type: 'Point'; coordinates: [number, number] };
+}
+const placeFeature = (p: MapPlace): PointFeature => ({
+  type: 'Feature',
+  properties: { id: p.id, name: p.name },
+  geometry: { type: 'Point', coordinates: [p.lngLat[0], p.lngLat[1]] },
+});
+
 function overlap(map: MapboxMap, occluder: HTMLElement | null): PaddingOptions {
   const pad = { top: 0, right: 0, bottom: 0, left: 0 };
   if (!occluder) return pad;
@@ -125,10 +150,10 @@ function attachNavigation(
   // Alternatives under the chosen route, muted, while choosing (Mapbox
   // navigation patterns: main route bold, others quiet). Added last of the
   // map's layers, so every route line sits above the basemap's POIs.
-  map.addLayer({ id: 'hm-route-alternatives', type: 'line', source: 'hm-route-alternatives', layout: lineLayout, paint: { 'line-color': ROUTE_WALKED, 'line-width': 4, 'line-opacity': 0.8 } });
-  map.addLayer({ id: 'hm-route-casing', type: 'line', source: 'hm-route-ahead', layout: lineLayout, paint: { 'line-color': ROUTE_CASING, 'line-width': 9 } });
-  map.addLayer({ id: 'hm-route-walked', type: 'line', source: 'hm-route-walked', layout: lineLayout, paint: { 'line-color': ROUTE_WALKED, 'line-width': 5 } });
-  map.addLayer({ id: 'hm-route-ahead', type: 'line', source: 'hm-route-ahead', layout: lineLayout, paint: { 'line-color': ROUTE_AHEAD, 'line-width': 5 } });
+  map.addLayer({ id: 'hm-route-alternatives', type: 'line', source: 'hm-route-alternatives', slot: 'top', layout: lineLayout, paint: { 'line-color': ROUTE_WALKED, 'line-width': 4, 'line-opacity': 0.8 } });
+  map.addLayer({ id: 'hm-route-casing', type: 'line', source: 'hm-route-ahead', slot: 'top', layout: lineLayout, paint: { 'line-color': ROUTE_CASING, 'line-width': 9 } });
+  map.addLayer({ id: 'hm-route-walked', type: 'line', source: 'hm-route-walked', slot: 'top', layout: lineLayout, paint: { 'line-color': ROUTE_WALKED, 'line-width': 5 } });
+  map.addLayer({ id: 'hm-route-ahead', type: 'line', source: 'hm-route-ahead', slot: 'top', layout: lineLayout, paint: { 'line-color': ROUTE_AHEAD, 'line-width': 5 } });
 
   const puckEl = document.createElement('span');
   puckEl.className = PUCK_CLASS;
@@ -243,12 +268,15 @@ function attachNavigation(
 export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderRef, layoutKey }: ExploreMapProps) {
   const containerRef = useRef<HTMLElement | null>(null);
   const mapRef = useRef<MapboxMap | null>(null);
+  const mapboxglRef = useRef<typeof import('mapbox-gl').default | null>(null);
   const markersRef = useRef(new Map<string, { marker: Marker; el: HTMLButtonElement }>());
   const onSelectRef = useRef(onSelect);
   const selectedRef = useRef(selectedId);
   const visibleRef = useRef(visibleIds);
-  // A primitive dependency: the parent builds a new array every render.
-  const visibleKey = visibleIds.join('\n');
+  // A primitive dependency for the visibility effect. `visibleIds` is a
+  // memoised array, so the joined key only re-derives when the set changes —
+  // not on every render of the workspace above it.
+  const visibleKey = useMemo(() => visibleIds.join('\n'), [visibleIds]);
   const setStatus = useMapStatus((s) => s.setStatus);
   const detachNavigationRef = useRef<(() => void) | null>(null);
   const [mapView, setMapView] = useState<MapView>('buildings');
@@ -273,17 +301,65 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
     markersRef.current.forEach(({ el }, key) => {
       el.hidden = !visible.has(key) && key !== selectedRef.current;
     });
+    const map = mapRef.current;
+    if (!map?.getLayer(DOTS_LAYER)) return;
+    const ids = [...visible, ...(selectedRef.current ? [selectedRef.current] : [])];
+    // The catalogue layers follow the same rule as the button markers: the
+    // selection stays on the map even when the filter excludes it.
+    const filter = ['in', ['get', 'id'], ['literal', ids]];
+    map.setFilter(DOTS_LAYER, filter as never);
+    map.setFilter(LABELS_LAYER, filter as never);
+  };
+
+  // One button marker per place would not scale; markers exist only for
+  // featured places (made at init) and the selected place (made on demand).
+  const addMarker = (place: MapPlace) => {
+    const map = mapRef.current;
+    const mapboxgl = mapboxglRef.current;
+    if (!map || !mapboxgl || markersRef.current.has(place.id)) return;
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = MARKER_CLASS;
+    el.dataset.exploreFocus = focusId.marker(place.id);
+    el.setAttribute('aria-label', place.name);
+    // Pressed state is right from the first frame, before the style loads.
+    el.dataset.selected = String(place.id === selectedRef.current);
+    el.setAttribute('aria-pressed', String(place.id === selectedRef.current));
+    // Mapbox's Marker sets role="img" on any element without a role
+    // (mapbox-gl-dev.js, Marker constructor), which turns the button into
+    // an image and makes aria-pressed invalid. Setting it first keeps it.
+    el.setAttribute('role', 'button');
+    const diamond = document.createElement('span');
+    diamond.className = DIAMOND_CLASS;
+    diamond.setAttribute('aria-hidden', 'true');
+    const label = document.createElement('span');
+    label.className = LABEL_CLASS;
+    label.setAttribute('aria-hidden', 'true');
+    label.textContent = place.name;
+    el.append(diamond, label);
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      onSelectRef.current(place.id);
+    });
+    const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+      .setLngLat([place.lngLat[0], place.lngLat[1]])
+      .addTo(map);
+    markersRef.current.set(place.id, { marker, el });
+    el.hidden = !visibleRef.current.includes(place.id) && place.id !== selectedRef.current;
   };
 
   // Reads refs only, so it is safe from the async map init and from effects.
   const applySelection = (animate: boolean) => {
     const id = selectedRef.current;
+    const place = places.find((p) => p.id === id);
+    // The selection always gets a button marker, so the label, the pressed
+    // state and the focus-return target exist even for a dot-only place.
+    if (place) addMarker(place);
     markersRef.current.forEach(({ el }, key) => {
       el.dataset.selected = String(key === id);
       el.setAttribute('aria-pressed', String(key === id));
     });
     const map = mapRef.current;
-    const place = places.find((p) => p.id === id);
     if (!map || !place) return;
     // The docked inspector narrows the canvas in the same commit; sync the
     // map's size before framing or the centre lands off by half a pane.
@@ -292,6 +368,9 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
       center: [place.lngLat[0], place.lngLat[1]] as [number, number],
       zoom: Math.max(map.getZoom(), SELECT_MIN_ZOOM),
       padding: overlap(map, occluderRef.current),
+      ...(mapViewRef.current === 'buildings'
+        ? { pitch: BUILDING_PITCH, bearing: BUILDING_BEARING }
+        : {}),
     };
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!animate || reduce) map.jumpTo(target);
@@ -310,9 +389,10 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
     let observer: ResizeObserver | null = null;
     const markers = markersRef.current;
 
-    void import('mapbox-gl').then(({ default: mapboxgl }) => {
+    void mapboxglPromise?.then(({ default: mapboxgl }) => {
       if (cancelled) return;
       mapboxgl.accessToken = TOKEN;
+      mapboxglRef.current = mapboxgl;
       const bounds = new mapboxgl.LngLatBounds();
       places.forEach((p) => bounds.extend([p.lngLat[0], p.lngLat[1]]));
       let map: MapboxMap;
@@ -320,13 +400,25 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
       try {
         map = new mapboxgl.Map({
           container,
-          // Stays on dark-v11 until the token-built style is on the account:
-          // Static Images can't take an inline style, and a warm Explore next
-          // to grey home/place rasters is worse than one consistent grey.
-          style: 'mapbox://styles/mapbox/dark-v11',
+          // Standard supplies the maintained 3D object, shadow and lighting
+          // pass. Static Images cannot render Standard, so static cards use
+          // the classic satellite style in MightsMapImage until the hosted
+          // Harlem style lands (docs/adr/0003-explore-map-style-and-markers.md).
+          style: 'mapbox://styles/mapbox/standard',
+          config: {
+            basemap: {
+              theme: 'faded',
+              lightPreset: 'day',
+              show3dObjects: true,
+              showPointOfInterestLabels: false,
+              showTransitLabels: false,
+            },
+          },
           bounds,
           fitBoundsOptions: { padding: FIT_PADDING, maxZoom: FIT_MAX_ZOOM },
-          pitch: 60,
+          pitch: BUILDING_PITCH,
+          bearing: BUILDING_BEARING,
+          maxPitch: 72,
           attributionControl: true,
           cooperativeGestures: false,
         });
@@ -346,62 +438,73 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
       // Top-left: the sheet and inspector own the bottom and right edges.
       map.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-left');
       mapRef.current = map;
-      map.on('style.load', () => {
-        if (!map.getSource('composite') || map.getLayer(BUILDINGS_LAYER)) return;
-        const firstLabel = map.getStyle().layers.find((layer) => layer.type === 'symbol')?.id;
-        map.addLayer({
-          id: BUILDINGS_LAYER,
-          type: 'fill-extrusion',
-          source: 'composite',
-          'source-layer': 'building',
-          filter: ['==', ['get', 'extrude'], 'true'],
-          minzoom: 15,
-          layout: { visibility: mapViewRef.current === 'buildings' ? 'visible' : 'none' },
-          paint: {
-            'fill-extrusion-color': semantic['border-strong'].dark,
-            'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height']],
-            'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'min_height']],
-            'fill-extrusion-opacity': 0.7,
-          },
-        }, firstLabel);
-      });
-
       places.forEach((p) => {
-        const el = document.createElement('button');
-        el.type = 'button';
-        el.className = MARKER_CLASS;
-        el.dataset.exploreFocus = focusId.marker(p.id);
-        el.setAttribute('aria-label', p.name);
-        // Pressed state is right from the first frame, before the style loads.
-        el.dataset.selected = String(p.id === selectedRef.current);
-        el.setAttribute('aria-pressed', String(p.id === selectedRef.current));
-        // Mapbox's Marker sets role="img" on any element without a role
-        // (mapbox-gl-dev.js, Marker constructor), which turns the button into
-        // an image and makes aria-pressed invalid. Setting it first keeps it.
-        el.setAttribute('role', 'button');
-        const diamond = document.createElement('span');
-        diamond.className = DIAMOND_CLASS;
-        diamond.setAttribute('aria-hidden', 'true');
-        const label = document.createElement('span');
-        label.className = LABEL_CLASS;
-        label.setAttribute('aria-hidden', 'true');
-        label.textContent = p.name;
-        el.append(diamond, label);
-        el.addEventListener('click', (e) => {
-          e.stopPropagation();
-          onSelectRef.current(p.id);
-        });
-        const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
-          .setLngLat([p.lngLat[0], p.lngLat[1]])
-          .addTo(map);
-        markers.set(p.id, { marker, el });
+        if (p.featured) addMarker(p);
       });
       applyVisibility();
 
       map.once('load', () => {
+        // The whole catalogue as canvas layers — circles plus names that fade
+        // in at street zoom. Standard's top slot keeps them above basemap
+        // labels and 3D objects; the route lines attach after them.
+        map.addSource(PLACES_SOURCE, {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features: places.map(placeFeature) },
+        });
+        map.addLayer({
+          id: DOTS_LAYER,
+          type: 'circle',
+          source: PLACES_SOURCE,
+          slot: 'top',
+          minzoom: 13,
+          paint: {
+            'circle-color': semantic.primary.dark,
+            // A fine-grained field at catalogue zoom, full dots at street zoom.
+            'circle-radius': ['interpolate', ['linear'], ['zoom'], 13, 1.5, 14.5, 2.5, 17, 5.5],
+            'circle-stroke-color': semantic.surface.dark,
+            'circle-stroke-width': 1,
+            'circle-opacity': 0.85,
+          },
+        });
+        map.addLayer({
+          id: LABELS_LAYER,
+          type: 'symbol',
+          source: PLACES_SOURCE,
+          slot: 'top',
+          minzoom: 15.5,
+          layout: {
+            'text-field': ['get', 'name'],
+            'text-size': 11,
+            'text-offset': [0, 1],
+            'text-anchor': 'top',
+            'text-optional': true,
+            'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
+          },
+          paint: {
+            'text-color': semantic.text.dark,
+            'text-halo-color': semantic.surface.dark,
+            'text-halo-width': 1.5,
+          },
+        });
+        const onDotClick = (e: MapMouseEvent) => {
+          const feature = e.features?.[0] as { properties?: Record<string, unknown> } | undefined;
+          const id = feature?.properties?.id;
+          if (typeof id === 'string') onSelectRef.current(id);
+        };
+        const pointerOn = () => {
+          map.getCanvas().style.cursor = 'pointer';
+        };
+        const pointerOff = () => {
+          map.getCanvas().style.cursor = '';
+        };
+        map.on('click', DOTS_LAYER, onDotClick);
+        map.on('click', LABELS_LAYER, onDotClick);
+        map.on('mouseenter', DOTS_LAYER, pointerOn);
+        map.on('mouseleave', DOTS_LAYER, pointerOff);
+        applyVisibility();
         applySelection(false);
-        if (!selectedRef.current && mapViewRef.current === 'buildings' && map.getZoom() < 15.5)
-          map.jumpTo({ zoom: 15.5 });
+        if (!selectedRef.current && mapViewRef.current === 'buildings' && map.getZoom() < 16)
+          map.jumpTo({ zoom: 16, pitch: BUILDING_PITCH, bearing: BUILDING_BEARING });
         detachNavigationRef.current = attachNavigation(map, mapboxgl, () => occluderRef.current);
       });
       // A map created inside a hidden pane (view=list on a phone) has no size;
@@ -413,8 +516,8 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
           fitted = true;
           map.fitBounds(bounds, { padding: FIT_PADDING, maxZoom: FIT_MAX_ZOOM, duration: 0 });
           applySelection(false);
-          if (!selectedRef.current && mapViewRef.current === 'buildings' && map.getZoom() < 15.5)
-            map.jumpTo({ zoom: 15.5 });
+          if (!selectedRef.current && mapViewRef.current === 'buildings' && map.getZoom() < 16)
+            map.jumpTo({ zoom: 16, pitch: BUILDING_PITCH, bearing: BUILDING_BEARING });
         }
       });
       observer.observe(container);
@@ -429,6 +532,7 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
       markers.clear();
       mapRef.current?.remove();
       mapRef.current = null;
+      mapboxglRef.current = null;
     };
     // places is static catalogue data; the map is built once per mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -448,11 +552,13 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    if (map.getLayer(BUILDINGS_LAYER))
-      map.setLayoutProperty(BUILDINGS_LAYER, 'visibility', mapView === 'buildings' ? 'visible' : 'none');
+    // Standard owns the 3D pass: 2D drops the objects, while Tilt keeps the
+    // depth cue and Buildings pushes the camera far enough to read facades.
+    map.setConfigProperty('basemap', 'show3dObjects', mapView !== 'map');
     const target = {
-      pitch: mapView === 'map' ? 0 : mapView === 'tilt' ? 45 : 60,
-      zoom: mapView === 'buildings' ? Math.max(map.getZoom(), 15.5) : map.getZoom(),
+      pitch: mapView === 'map' ? 0 : mapView === 'tilt' ? 48 : BUILDING_PITCH,
+      bearing: mapView === 'map' ? 0 : mapView === 'tilt' ? -12 : BUILDING_BEARING,
+      zoom: mapView === 'buildings' ? Math.max(map.getZoom(), 16) : map.getZoom(),
     };
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) map.jumpTo(target);
     else map.easeTo({ ...target, duration: 450 });
