@@ -38,7 +38,7 @@ const toDom = (className?: string, style?: WebStyle) => {
   };
 };
 
-type P = { className?: string; style?: WebStyle; children?: React.ReactNode };
+type P = { className?: string; style?: WebStyle; children?: React.ReactNode; id?: string };
 
 const dom = <T extends P>(Tag: string) => {
   const Component = ({ className, style, ...props }: T) =>

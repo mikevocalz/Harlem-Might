@@ -77,17 +77,36 @@ delay so sub-250 ms loads render no skeleton.
 
 ## §5 Loader (L3)
 
-- RML project: `packages/spatial/explore-loader/rive/` (new Rive CLI
-  project, mirrors `rive-fx` layout).
-- Built `.riv`: `packages/spatial/explore-loader/explore-loader.riv`
-  (committed) + copied to `apps/web/public/rive/explore-loader.riv`.
-- View model `ExploreLoader` — colors `ringPrimary` / `ringAccent` / `core`
-  / `track` bound from theme tokens at runtime; `phase` string drives the
-  state machine (`enter` → `loading` → `complete` / `error` /
-  `reducedMotion`); `progress` number binds the outer trim ring.
-- `ExploreLoader` component in `packages/spatial` — web via
-  `@rive-app/react-webgl2` (same runtime as `GridFxStage`), native via
-  `@rive-app/react-native`.
+- RML project: `packages/spatial/explore-loader/rive/` — built by Rive CLI
+  1.5.0 (`rive . --once`, 2,158 bytes, unwatermarked, bundled locally).
+  Committed asset: `packages/spatial/explore-loader/explore-loader.riv`
+  (+ `apps/web/public/rive/explore-loader.riv` for the web runtime).
+- Scene: 4 rings — track (dim full circle), progress arc (real `progress`
+  0–1 only), three counter-rotating arc rotors (outer +1 turn, mid −1,
+  inner +2 per 3 s loop — whole turns so the loop is seamless), soft core
+  pulse, and the brand diamond at center (same rotated square as the map
+  marker and list rows).
+- State machine `Loader`, phase-driven by the `phase` view-model string:
+  `enter` (draw-in, exit-time-chained) → `loading` (loop) → `complete`
+  (collapse+fade ~450 ms) / `error` (settle+dim) / `reduced` (opacity
+  pulse, no rotation). `loading`→`complete`/`error`/`reduced` transitions
+  live on AnyState; resume lives on REDUCED so ENTER can never be skipped.
+- Colors: `ringPrimary`/`core` ← `semantic.primary`, `ringAccent` ←
+  `semantic.spatial`, `track` ← `semantic['rule-rail']`, resolved per
+  scheme at runtime — no hex in component code, theme change needs no
+  rebuild. RML authoring defaults are the dark values.
+- `ExploreLoader` (`@acme/spatial/explore-loader`): typed props
+  `size / phase / progress / scheme / label`; web uses
+  `@rive-app/react-webgl2` (same runtime as `GridFxStage`), native
+  `@rive-app/react-native` (`useViewModelInstance` + `dataBind`).
+  `role="progressbar"` + label; `aria-valuenow` only with real progress.
+- `MapLoadOverlay` mounts it over the map region, driven by
+  `map-loader.store`: `hm-suspense-in` 250 ms grace → never shown on fast
+  loads; minimum 700 ms shown → `complete` exit 450 ms; OS reduce-motion →
+  the `reduced` phase (pulse, no rotation); `unavailable` → error plate.
+- Captures (Rive CLI `--screenshot --advance`): `t30`, `t90` frames in
+  `packages/spatial/explore-loader/rive/build/` — counter-rotation and
+  diamond core confirmed.
 
 ## Verification commands
 

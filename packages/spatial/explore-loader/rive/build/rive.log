@@ -1,0 +1,18 @@
+[12:55:13.284] error   scene.rml:26:1  [rml] Stroke has no property "opacity"
+[12:55:13.284] error   scene.rml:60:1  [rml] Stroke has no property "opacity"
+[12:55:13.284] error   scene.rml:67:1  [rml] Stroke has no property "opacity"
+[12:55:13.284] error   scene.rml:84:1  [rml] Stroke has no property "opacity"
+[12:55:13.284] error   scene.rml:113:1  [rml] Stroke has no property "opacity"
+[12:55:13.284] rive  build failed (0 bytes, 27ms, 5 errors, 0 warnings)
+[12:55:25.875] rive  verified (0 bytes, 20ms, 0 errors, 0 warnings)
+[12:55:27.913] rive  built build/explore-loader.riv (2158 bytes, 15ms, 0 errors, 0 warnings)
+[12:55:30.155] rive  built build/explore-loader.riv (2158 bytes, 15ms, 0 errors, 0 warnings)
+[12:55:30.158] rive  showing ExploreLoader [1/1]
+[12:55:30.158] rive  viewport 320x320 @1x
+[12:55:30.186] rive  wrote build/loader-t30.png
+[12:55:30.316] rive  built build/explore-loader.riv (2158 bytes, 15ms, 0 errors, 0 warnings)
+[12:55:30.316] rive  showing ExploreLoader [1/1]
+[12:55:30.317] rive  viewport 320x320 @1x
+[12:55:30.338] rive  wrote build/loader-t90.png
+[12:56:08.679] rive  verified (0 bytes, 36ms, 0 errors, 0 warnings)
+[12:56:09.017] rive  built build/explore-loader.riv (2158 bytes, 15ms, 0 errors, 0 warnings)
