@@ -11,6 +11,7 @@ import {
   MightsLocationStamp,
   MightsMapImage,
   MightsNotchCard,
+  mapboxStaticUrl,
   MightsText,
   routes,
 } from '@acme/ui/mights';
@@ -18,52 +19,74 @@ import { PlaceGallery } from './PlaceGallery.tsx';
 import { PlaceHours } from './PlaceHours.tsx';
 
 // /places/[slug], top of page (docs/design/handoff/PLACE.md). The masthead is
-// always an image: the place's own photographs when it has them, otherwise
-// a pitched satellite view of the block. Below it, one visit card holds the
-// facts (address, phone, website, hours) beside a second picture.
+// always the carousel: the place's own photographs when it has them, otherwise
+// the satellite frame of the block plus archival Harlem pictures. Below it,
+// one visit card holds the facts (address, phone, website, hours) beside a
+// second picture.
 
 const link = 'mights-focus text-primary underline underline-offset-4 hover:no-underline';
 
-/** A stable archive photograph for a place without its own: same place, same picture. */
-function archiveFor(slug: string): EditorialImage | undefined {
+function hashSlug(slug: string): number {
   let hash = 0;
   for (const ch of slug) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return HARLEM_ARCHIVAL_IMAGES[hash % HARLEM_ARCHIVAL_IMAGES.length];
+  return hash;
 }
 
-/** The `media` slot of MightsPage: gallery, or a satellite hero when there are no photos. */
+/** A stable archive photograph for a place without its own: same place, same picture. */
+function archiveFor(slug: string): EditorialImage | undefined {
+  return HARLEM_ARCHIVAL_IMAGES[hashSlug(slug) % HARLEM_ARCHIVAL_IMAGES.length];
+}
+
+/** A stable run of archive photographs for a place: same place, same set. */
+function archivesFor(slug: string, count: number): EditorialImage[] {
+  const start = hashSlug(slug) % HARLEM_ARCHIVAL_IMAGES.length;
+  return Array.from({ length: count }, (_, i) => HARLEM_ARCHIVAL_IMAGES[(start + i) % HARLEM_ARCHIVAL_IMAGES.length]!);
+}
+
+/** The satellite frame as a gallery slide, so the map sits inside the carousel. */
+function mapSlide(place: ExplorePlace, where: string): EditorialImage | undefined {
+  const { lngLat } = place;
+  if (!lngLat) return undefined;
+  const url = mapboxStaticUrl({
+    center: lngLat,
+    zoom: 17.4,
+    // ADR-04 route map: place hero pitch stays at or under 30.
+    pitch: 30,
+    bearing: -29,
+    width: 960,
+    height: 720,
+    pins: [{ lngLat }],
+  });
+  if (!url) return undefined;
+  return {
+    id: `place-${place.id}-map`,
+    role: 'map_pin',
+    url,
+    altText: `Satellite view of ${place.name}, ${where}`,
+    source: 'other',
+    sourceUrl: 'https://www.mapbox.com/',
+    license: '© Mapbox © OpenStreetMap © Maxar',
+    licenseUrl: 'https://www.mapbox.com/legal/tos',
+    credit: 'Mapbox',
+    attributionText: '© Mapbox © OpenStreetMap © Maxar',
+    shareAlike: false,
+    noDerivatives: true,
+  };
+}
+
+/** The `media` slot of MightsPage: the place's photos, or location images — the satellite frame and archival Harlem. */
 export function PlaceMasthead({ place, images }: { place: ExplorePlace; images: readonly EditorialImage[] }) {
   const where = place.street ?? place.area;
-  if (images.length) return <PlaceGallery images={images} placeId={place.id} name={place.name} street={where} />;
-  const { lngLat } = place;
+  const slides = images.length
+    ? images
+    : [mapSlide(place, where), ...archivesFor(place.id, 2)].filter((i): i is EditorialImage => i !== undefined);
+  if (slides.length) return <PlaceGallery images={slides} placeId={place.id} name={place.name} street={where} />;
   return (
-    <View className="gap-2">
-      <MightsNotchCard className="aspect-4/3">
-        <View className="relative h-full">
-          {lngLat ? (
-            <MightsMapImage
-              center={lngLat}
-              zoom={17.4}
-              // ADR-04 route map: place hero pitch stays at or under 30.
-              pitch={30}
-              bearing={-29}
-              width={960}
-              height={720}
-              sizes="(min-width: 768px) 42vw, 100vw"
-              pins={[{ lngLat }]}
-              alt={`Satellite view of ${place.name}, ${where}`}
-              priority
-            />
-          ) : (
-            <View className="h-full items-start justify-end bg-surface-sunken p-5">
-              <MightsText size="small">Location pending verification</MightsText>
-            </View>
-          )}
-          <MightsLocationStamp name={place.name} street={where} tone="dark" className="absolute bottom-4 left-4" />
-        </View>
-      </MightsNotchCard>
-      {lngLat ? <MapAttribution /> : null}
-    </View>
+    <MightsNotchCard className="aspect-4/3">
+      <View className="h-full items-start justify-end bg-surface-sunken p-5">
+        <MightsText size="small">Location pending verification</MightsText>
+      </View>
+    </MightsNotchCard>
   );
 }
 
