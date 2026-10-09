@@ -1,3 +1,5 @@
+import { View } from '../tw';
+
 // Four corner marks. Focus, the selected pin, the Sightline lens, the QR card —
 // never a card decoration.
 export interface MightsAccentFrameProps {
@@ -12,10 +14,7 @@ const toneClass = {
   live: '[--frame:var(--color-accent)]',
 } as const;
 
+// `block` keeps the old <div> flow; a kit View is a flex column by default.
 export function MightsAccentFrame({ children, className = '', tone = 'iron' }: MightsAccentFrameProps) {
-  return (
-    <div className={`mights-frame relative ${toneClass[tone]} ${className}`}>
-      {children}
-    </div>
-  );
+  return <View className={`mights-frame relative block ${toneClass[tone]} ${className}`}>{children}</View>;
 }

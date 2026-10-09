@@ -22,6 +22,11 @@ export const DetailsBase = ({ open: _open, ...props }: P & { open?: boolean }) =
   <Div {...props} />
 );
 export const SummaryBase = (props: P) => <Span {...props} />;
+// RNW has no ordered/description-list elements; ARIA keeps the same structure.
+export const OrderedListBase = (props: P) => <Div role="list" {...props} />;
+export const DescriptionListBase = (props: P) => <Div role="list" {...props} />;
+export const DescriptionTermBase = (props: P) => <Div role="listitem" {...props} />;
+export const DescriptionDetailsBase = (props: P) => <Div {...props} />;
 export const FieldsetBase = (props: P & { disabled?: boolean }) => <Div {...props} />;
 export const LegendBase = (props: P) => <Span {...props} />;
 /**

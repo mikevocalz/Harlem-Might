@@ -1,6 +1,7 @@
 'use client';
 import { tv } from './tv';
 import { BottomSheet as ExpoBottomSheet } from '@expo/ui';
+import { useCSSVariable } from 'uniwind';
 import { ScrollView, View, Text, Pressable } from './tw';
 
 // Expo UI's universal sheet: vaul on web (real drag physics), SwiftUI /
@@ -57,8 +58,18 @@ export interface BottomSheetProps extends SheetSurfaceProps {
 }
 
 export function BottomSheet({ open, onClose, ...surfaceProps }: BottomSheetProps) {
+  // Expo UI's sheet defaults to a white container with 16px padding, which
+  // framed the themed surface in white. Paint the container with the same
+  // token and let SheetSurface own the padding.
+  const [raised] = useCSSVariable(['--color-surface-raised']);
   return (
-    <ExpoBottomSheet isPresented={open} onDismiss={onClose} snapPoints={SNAP_POINTS}>
+    <ExpoBottomSheet
+      isPresented={open}
+      onDismiss={onClose}
+      snapPoints={SNAP_POINTS}
+      containerColor={raised === undefined ? undefined : String(raised)}
+      contentPadding={0}
+    >
       <SheetSurface {...surfaceProps} onClose={onClose} />
     </ExpoBottomSheet>
   );

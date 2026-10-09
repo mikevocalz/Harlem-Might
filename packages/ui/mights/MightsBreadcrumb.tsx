@@ -1,6 +1,9 @@
 'use client';
 
 import { Link } from 'solito/link';
+import { ListItem, Nav, OrderedList, Text } from '../html';
+import { View } from '../tw';
+import { JsonLd } from './MightsJsonLd';
 
 export interface Crumb {
   label: string;
@@ -24,27 +27,30 @@ export function MightsBreadcrumb({ items, origin = SITE }: { items: Crumb[]; ori
     })),
   };
   return (
-    <nav aria-label="Breadcrumb" className="mx-auto w-full max-w-screen-2xl px-4 pt-4 sm:px-6">
-      <ol className="flex flex-wrap items-center gap-3 text-label text-text-muted">
+    <Nav aria-label="Breadcrumb" className="mx-auto block w-full max-w-screen-2xl px-4 pt-4 sm:px-6">
+      <OrderedList className="flex flex-wrap items-center gap-3 text-label text-text-muted">
         {items.map((item, i) => {
           const last = i === items.length - 1;
           return (
-            <li key={item.label} className="flex items-center gap-3">
-              {i > 0 ? <span aria-hidden className="h-3 w-px bg-rule-hairline" /> : null}
+            <ListItem key={item.label} className="flex flex-row items-center gap-3">
+              {i > 0 ? <View aria-hidden className="h-3 w-px bg-rule-hairline" /> : null}
               {last || !item.href ? (
-                <span aria-current={last ? 'page' : undefined} className={last ? 'text-text' : ''}>
+                <Text
+                  aria-current={last ? 'page' : undefined}
+                  className={`[font:inherit] whitespace-normal ${last ? 'text-text' : 'text-inherit'}`}
+                >
                   {item.label}
-                </span>
+                </Text>
               ) : (
                 <Link href={item.href} className="mights-focus hover:text-primary">
                   {item.label}
                 </Link>
               )}
-            </li>
+            </ListItem>
           );
         })}
-      </ol>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
-    </nav>
+      </OrderedList>
+      <JsonLd data={jsonLd} />
+    </Nav>
   );
 }

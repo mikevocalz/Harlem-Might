@@ -19,6 +19,7 @@ import type { Role } from 'react-native';
 import { css, type CN } from './css';
 import {
   FigcaptionBase, AddressBase, DetailsBase, SummaryBase,
+  OrderedListBase, DescriptionListBase, DescriptionTermBase, DescriptionDetailsBase,
   FieldsetBase, LegendBase, SelectBase,
   DocumentHtmlBase, DocumentHeadBase, DocumentBodyBase,
   GpuCanvasBase,
@@ -78,11 +79,23 @@ export const Paragraph = css(
   'Paragraph',
 );
 export const Text = css(Span, 'Text');
-export const Time = css(ETime, 'Time');
+const TimeBase = css(ETime, 'Time');
+/**
+ * `<time>`. Takes the colour and type of the text around it: Expo's Time is a
+ * standalone RN Text, which on web reset both to black body text and
+ * vanished on the dark surface.
+ */
+export function Time({ className = '', ...props }: React.ComponentProps<typeof TimeBase>) {
+  return <TimeBase className={`text-inherit [font:inherit] ${className}`} {...props} />;
+}
 
 // ---- lists ----------------------------------------------------------------
 
 export const List = css(UL, 'List');
+export const OrderedList = css(OrderedListBase, 'OrderedList');
+export const DescriptionList = css(DescriptionListBase, 'DescriptionList');
+export const DescriptionTerm = css(DescriptionTermBase, 'DescriptionTerm');
+export const DescriptionDetails = css(DescriptionDetailsBase, 'DescriptionDetails');
 export const ListItem = css(LI, 'ListItem');
 
 // ---- interactive / forms ---------------------------------------------------

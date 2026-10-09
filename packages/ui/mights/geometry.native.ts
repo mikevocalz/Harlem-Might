@@ -122,3 +122,6 @@ export function notchPath(size: Size, inset = 0): string {
     [x0, y1],
   ]);
 }
+
+/** The web's clip-path notch class. React Native cannot clip to a path, so it is inert here; shared files can still compose it. */
+export const notch = '';

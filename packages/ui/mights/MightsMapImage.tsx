@@ -1,11 +1,15 @@
-import { palette, semantic } from '@acme/theme';
+import { Image } from '../Image';
+import { Link } from '../html';
+import { Text, View } from '../tw';
+import { buildMapboxStaticUrl } from './mapbox-static';
 
 // A live Mapbox Static Images render of a real place — the sanctioned stand-in
-// wherever a cleared photograph does not exist yet. Without a token it renders
-// an honest, labelled empty plate; never a gradient.
+// wherever a cleared photograph does not exist yet. The classic satellite style
+// is used because Static Images cannot render Mapbox Standard or Standard
+// Satellite; it gives cards real aerial imagery while Explore GL uses Standard.
 
-const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-const STYLE = 'mapbox/dark-v11';
+// Literal reads so Next and Metro each inline their own.
+const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
 
 export interface MapPin {
   lngLat: readonly [number, number];
@@ -33,27 +37,8 @@ export interface MightsMapImageProps {
 }
 
 
-// Mapbox overlay colours are bare hex: brand gold, live red, warm off-white.
-const hex = (c: string) => c.replace('#', '').toLowerCase();
-const PIN_COLOR = {
-  cobalt: hex(palette.mights.gold),
-  live: hex(semantic.accent.dark),
-  iron: hex(semantic.text.dark),
-} as const;
-
-export function mapboxStaticUrl({ center, zoom, pitch = 0, bearing = 0, width, height, pins = [] }: Omit<MightsMapImageProps, 'alt'>) {
-  if (!TOKEN) return null;
-  const overlay = pins
-    .map((p) => `pin-s+${PIN_COLOR[p.tone ?? 'cobalt']}(${p.lngLat[0]},${p.lngLat[1]})`)
-    .join(',');
-  const w = Math.min(1280, Math.round(width));
-  const h = Math.min(1280, Math.round(height));
-  return (
-    `https://api.mapbox.com/styles/v1/${STYLE}/static/` +
-    (overlay ? `${overlay}/` : '') +
-    `${center[0]},${center[1]},${zoom},${bearing},${pitch}/${w}x${h}@2x` +
-    `?attribution=false&logo=false&access_token=${TOKEN}`
-  );
+export function mapboxStaticUrl(props: Omit<MightsMapImageProps, 'alt'>) {
+  return buildMapboxStaticUrl(TOKEN, props);
 }
 
 /**
@@ -83,42 +68,43 @@ export function mapboxStaticSrcSet(props: Omit<MightsMapImageProps, 'alt' | 'cla
 export function MightsMapImage(props: MightsMapImageProps) {
   const { alt, className = '', priority, sizes } = props;
   const src = mapboxStaticUrl(props);
-  const srcSet = sizes ? mapboxStaticSrcSet(props) : undefined;
   if (!src) {
     return (
-      <div
+      <View
         role="img"
         aria-label={`${alt} (map unavailable)`}
-        className={`flex h-full w-full items-end bg-surface-sunken p-4 text-label text-text-muted ${className}`}
+        className={`h-full w-full justify-end bg-surface-sunken p-4 ${className}`}
       >
-        Map unavailable: no Mapbox token configured
-      </div>
+        <Text className="text-label text-text-muted">Map unavailable: no Mapbox token configured</Text>
+      </View>
     );
   }
+  // The kit Image: next/image on web (sized by `sizes`), expo-image on native.
   return (
-    // Plain <img>, not next/image: this package lints outside the Next plugin
-    // and Mapbox already serves sized @2x rasters.
-    <img
-      src={src}
-      srcSet={srcSet}
-      sizes={sizes}
-      alt={alt}
-      width={props.width}
-      height={props.height}
-      loading={priority ? 'eager' : 'lazy'}
-      fetchPriority={priority ? 'high' : 'auto'}
-      decoding="async"
-      className={`block h-full w-full object-cover ${className}`}
-    />
+    <View className={`h-full w-full overflow-hidden ${className}`}>
+      <Image src={src} alt={alt} fill priority={priority} sizes={sizes ?? '100vw'} className="h-full w-full" />
+    </View>
   );
 }
 
-/** Mapbox and OpenStreetMap attribution, required wherever a map renders. */
+const CREDITS = [
+  ['Mapbox', 'https://www.mapbox.com/about/maps/'],
+  ['OpenStreetMap', 'https://www.openstreetmap.org/copyright'],
+  ['Maxar', 'https://www.maxar.com/'],
+] as const;
+
+/** Mapbox, OpenStreetMap and satellite-imagery attribution required by this style. */
 export function MapAttribution({ className = '' }: { className?: string }) {
   return (
-    <span className={`text-caption text-text-muted ${className}`}>
-      © <a className="hover:underline" href="https://www.mapbox.com/about/maps/" target="_blank" rel="noreferrer">Mapbox</a>{' '}
-      © <a className="hover:underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>
-    </span>
+    <Text className={`text-caption text-text-muted ${className}`}>
+      {CREDITS.map(([name, url], i) => (
+        <Text key={name}>
+          {i ? ' ' : ''}©{' '}
+          <Link className="hover:underline" href={url} target="_blank" rel="noreferrer">
+            {name}
+          </Link>
+        </Text>
+      ))}
+    </Text>
   );
 }

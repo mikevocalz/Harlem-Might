@@ -1,7 +1,12 @@
+import { Image } from '../Image';
+import { Figcaption, Figure } from '../html';
+import { View } from '../tw';
 import { notch } from './geometry';
 
 // A framed editorial image with an optional caption (use it for credits on
 // documentary or archival photographs). Renders nothing until there is an image.
+// Kit primitives only, so the same file serves web and native; on native the
+// notch class is inert and the frame reads as a rail-coloured border.
 export function MightsFigure({
   src,
   alt,
@@ -19,21 +24,13 @@ export function MightsFigure({
 }) {
   if (!src) return null;
   return (
-    <figure className={`flex flex-col gap-2 ${className}`}>
-      <div className={`bg-rule-rail p-rail ${notch}`}>
-        <div className={`overflow-hidden bg-surface-raised ${notch} ${ratio === 'wide' ? 'aspect-video' : 'aspect-4/3'}`}>
-          {/* Plain <img>: this package lints outside the Next plugin; static /public file sized by its frame */}
-          <img
-            src={src}
-            alt={alt}
-            loading={priority ? 'eager' : 'lazy'}
-            fetchPriority={priority ? 'high' : 'auto'}
-            decoding="async"
-            className="block h-full w-full object-cover"
-          />
-        </div>
-      </div>
-      {caption ? <figcaption className="text-label text-text-muted">{caption}</figcaption> : null}
-    </figure>
+    <Figure className={`flex flex-col gap-2 ${className}`}>
+      <View className={`bg-rule-rail p-rail ${notch}`}>
+        <View className={`overflow-hidden bg-surface-raised ${notch} ${ratio === 'wide' ? 'aspect-video' : 'aspect-4/3'}`}>
+          <Image src={src} alt={alt} fill priority={priority} sizes="(min-width: 768px) 60vw, 100vw" className="h-full w-full" />
+        </View>
+      </View>
+      {caption ? <Figcaption className="text-label text-text-muted">{caption}</Figcaption> : null}
+    </Figure>
   );
 }

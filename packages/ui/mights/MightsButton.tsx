@@ -1,18 +1,21 @@
 'use client';
 
 import { Link } from 'solito/link';
+import { Button, Link as Anchor, Text } from '../html';
 import { tv } from '../tv';
+import { View } from '../tw';
 import { cornerCut, cornerCutSm, expanded } from './geometry';
 
 // One visual recipe, two elements. With `href` it navigates and renders <a>
-// (solito Link, or a raw <a> for `external`). Without `href` it acts and
+// (solito Link, or the kit anchor for `external`). Without `href` it acts and
 // renders <button>. The diagonal cut is the sole ornament.
 // The outer element stays unclipped so focus corners and the hover glow sit
 // outside the shape. Secondary draws a 1px rail that follows the cut by
 // layering two clipped boxes. Proportions measured from NeonBlade's Corner
 // Cut Button.
 const outer = tv({
-  base: 'flex transition-colors duration-fast',
+  // Kit View: a flex column by default, so the row is explicit.
+  base: 'flex flex-row transition-colors duration-fast',
   variants: {
     variant: {
       primary: 'bg-primary group-hover:bg-primary-pressed',
@@ -27,7 +30,8 @@ const outer = tv({
 });
 
 const inner = tv({
-  base: `flex items-center justify-center whitespace-nowrap font-sans font-semibold tracking-[0.01em] ${expanded}`,
+  // Kit Text: the label is a text root, so every font property is set here.
+  base: `flex flex-row items-center justify-center whitespace-nowrap font-sans font-semibold tracking-[0.01em] ${expanded}`,
   variants: {
     variant: {
       primary: 'text-on-primary',
@@ -65,7 +69,7 @@ interface MightsButtonBaseProps {
 /** Navigates. Renders an `<a>`. */
 export interface MightsLinkButtonProps extends MightsButtonBaseProps {
   href: string;
-  /** Opens in a new tab with a raw `<a>` instead of the router link. */
+  /** Opens in a new tab with the kit anchor instead of the router link. */
   external?: boolean;
   'aria-current'?: 'page' | undefined;
 }
@@ -92,9 +96,9 @@ export type MightsButtonProps = MightsLinkButtonProps | MightsActionButtonProps;
 export function MightsButton(props: MightsButtonProps) {
   const { children, variant = 'primary', size = 'md', className, fill } = props;
   const content = (
-    <span className={`${outer({ variant, size })} ${fill ? 'w-full' : ''}`}>
-      <span className={`${inner({ variant, size })} ${fill ? 'w-full' : ''}`}>{children}</span>
-    </span>
+    <View className={`${outer({ variant, size })} ${fill ? 'w-full' : ''}`}>
+      <Text className={`${inner({ variant, size })} ${fill ? 'w-full' : ''}`}>{children}</Text>
+    </View>
   );
   const disabled = props.href === undefined && props.disabled === true;
   const cls = `mights-focus group ${fill ? 'flex w-full' : 'inline-flex shrink-0'} select-none ${
@@ -103,23 +107,29 @@ export function MightsButton(props: MightsButtonProps) {
 
   if (props.href === undefined) {
     return (
-      <button
+      <Button
         type={props.type ?? 'button'}
-        onClick={props.onPress}
+        onPress={props.onPress}
         disabled={props.disabled}
         aria-pressed={props.pressed}
         aria-label={props['aria-label']}
-        className={`${cls} disabled:cursor-not-allowed disabled:opacity-50`}
+        className={`${cls} flex-row disabled:cursor-not-allowed disabled:opacity-50`}
       >
         {content}
-      </button>
+      </Button>
     );
   }
   if (props.external) {
     return (
-      <a href={props.href} className={cls} target="_blank" rel="noreferrer" aria-current={props['aria-current']}>
+      <Anchor
+        href={props.href}
+        className={`${cls} flex-row`}
+        target="_blank"
+        rel="noreferrer"
+        aria-current={props['aria-current']}
+      >
         {content}
-      </a>
+      </Anchor>
     );
   }
   return (

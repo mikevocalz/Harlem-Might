@@ -51,6 +51,10 @@ export const FigcaptionBase = dom('figcaption');
 export const AddressBase = dom('address');
 export const DetailsBase = dom<P & { open?: boolean }>('details');
 export const SummaryBase = dom('summary');
+export const OrderedListBase = dom('ol');
+export const DescriptionListBase = dom('dl');
+export const DescriptionTermBase = dom('dt');
+export const DescriptionDetailsBase = dom('dd');
 export const FieldsetBase = dom<P & { disabled?: boolean }>('fieldset');
 export const LegendBase = dom('legend');
 export const SelectBase = (
@@ -73,6 +77,10 @@ export interface PressBaseProps extends P {
   onKeyDown?: (event: React.KeyboardEvent<HTMLElement>) => void;
   disabled?: boolean;
   role?: string;
+  /** Web-only <button> attributes; the native Pressable ignores them. */
+  type?: 'button' | 'submit' | 'reset';
+  'aria-pressed'?: boolean;
+  'aria-haspopup'?: React.AriaAttributes['aria-haspopup'];
   'aria-label'?: string;
   'aria-disabled'?: boolean;
   'aria-checked'?: boolean;

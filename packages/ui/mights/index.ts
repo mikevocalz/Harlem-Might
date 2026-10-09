@@ -13,7 +13,7 @@ export { MightsFooter } from './MightsFooter';
 export { MightsMapImage, MapAttribution, mapboxStaticUrl, mapboxStaticSrcSet, type MapPin, type MightsMapImageProps } from './MightsMapImage';
 export { MightsHeading, MightsText, type MightsHeadingProps } from './MightsType';
 export { MightsSearchForm } from './MightsSearchForm';
-export { MightsJsonLd } from './MightsJsonLd';
+export { JsonLd, MightsJsonLd, type JsonLdProps } from './MightsJsonLd';
 export { MightsPage, MightsBand } from './MightsPage';
 export {
   MightsPlaceBento,
@@ -30,4 +30,5 @@ export {
   type MightsPlaceBentoProps,
 } from './MightsPlaceBento';
 export { MightsFigure } from './MightsFigure';
+export { MightsEditorialImage, type MightsEditorialImageProps } from './MightsEditorialImage';
 export { MightsProse, type ProseSection } from './MightsProse';
