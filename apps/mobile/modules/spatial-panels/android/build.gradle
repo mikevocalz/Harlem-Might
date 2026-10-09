@@ -1,0 +1,23 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.harlemmight.spatialpanels'
+version = '1.0.0'
+
+android {
+  namespace "com.harlemmight.spatialpanels"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  // ReactApplication, ReactHost and ReactSurface: the panel is a second
+  // surface on the app's one ReactHost.
+  implementation 'com.facebook.react:react-android'
+  // ComponentActivity and OnBackPressedCallback.
+  implementation 'androidx.activity:activity:1.11.0'
+}

@@ -2,8 +2,13 @@
 
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useEffect, useRef, type RefObject } from 'react';
-import type { Map as MapboxMap, Marker, PaddingOptions } from 'mapbox-gl';
+import type { GeoJSONSource, Map as MapboxMap, Marker, PaddingOptions } from 'mapbox-gl';
+import { semantic } from '@acme/theme';
 import { View } from '@acme/ui/tw';
+import type { GeographicCoordinate } from '@acme/app/features/navigation/model/geo.ts';
+import { navigationFixStore, useNavigationStore } from '@acme/app/features/navigation/session/navigationStore.ts';
+import { useNavigationUi } from '@acme/app/features/navigation/view/navigationUi.store.ts';
+import { selectDisplayedRoute, splitRouteAt, toLngLat } from '@acme/app/features/navigation/view/routeLine.ts';
 import { focusId } from './explore-url';
 import { useMapStatus } from './map-status';
 
@@ -53,6 +58,30 @@ const DIAMOND_CLASS =
 const LABEL_CLASS =
   'pointer-events-none absolute left-full top-1/2 ml-1 hidden -translate-y-1/2 whitespace-nowrap border-l-2 border-primary bg-surface-raised px-2 font-sans text-label font-semibold text-text group-data-[selected=true]/marker:block';
 
+// Route line: gold like the AR chevrons, not the cyan `route` token, so map
+// and AR read as one route (AR spec: gold/warm guidance). Dark only (S14).
+const ROUTE_AHEAD = semantic.primary.dark;
+const ROUTE_WALKED = semantic['rule-rail'].dark;
+const ROUTE_CASING = semantic.surface.dark;
+const ROUTE_FIT_PADDING = 64;
+const FOLLOW_ZOOM = 17;
+const PUCK_CLASS =
+  'pointer-events-none block size-4 rounded-full border-[3px] border-primary bg-text shadow-[0_0_0_6px_color-mix(in_srgb,var(--color-primary)_25%,transparent)]';
+
+// The GeoJSON shape setData takes, written out so the app does not need @types/geojson.
+interface LineFeature {
+  type: 'Feature';
+  properties: Record<string, never>;
+  geometry: { type: 'LineString'; coordinates: [number, number][] };
+}
+const line = (coordinates: [number, number][]): LineFeature => ({
+  type: 'Feature',
+  properties: {},
+  geometry: { type: 'LineString', coordinates },
+});
+const EMPTY: LineFeature = line([]);
+const EMPTY_SET = { type: 'FeatureCollection' as const, features: [] as LineFeature[] };
+
 function overlap(map: MapboxMap, occluder: HTMLElement | null): PaddingOptions {
   const pad = { top: 0, right: 0, bottom: 0, left: 0 };
   if (!occluder) return pad;
@@ -65,6 +94,139 @@ function overlap(map: MapboxMap, occluder: HTMLElement | null): PaddingOptions {
   if (horizontal >= m.width - 1) pad.bottom = Math.max(0, m.bottom - o.top);
   else pad.right = Math.max(0, m.right - o.left);
   return pad;
+}
+
+/**
+ * Draws the shared navigation session on the map: the route line (preview
+ * or active, redrawn when the route id or reroute generation changes), the
+ * walked part dimmed, and a position puck from the per-fix store. Camera
+ * follows the puck until the person drags the map; Recenter turns following
+ * back on. Subscribes to the stores directly, so a GPS fix never re-renders
+ * React. Returns its cleanup.
+ */
+function attachNavigation(
+  map: MapboxMap,
+  mapboxgl: typeof import('mapbox-gl').default,
+  occluder: () => HTMLElement | null,
+): () => void {
+  map.addSource('hm-route-alternatives', { type: 'geojson', data: EMPTY_SET });
+  map.addSource('hm-route-ahead', { type: 'geojson', data: EMPTY });
+  map.addSource('hm-route-walked', { type: 'geojson', data: EMPTY });
+  const lineLayout = { 'line-join': 'round', 'line-cap': 'round' } as const;
+  // Alternatives under the chosen route, muted, while choosing (Mapbox
+  // navigation patterns: main route bold, others quiet). Added last of the
+  // map's layers, so every route line sits above the basemap's POIs.
+  map.addLayer({ id: 'hm-route-alternatives', type: 'line', source: 'hm-route-alternatives', layout: lineLayout, paint: { 'line-color': ROUTE_WALKED, 'line-width': 4, 'line-opacity': 0.8 } });
+  map.addLayer({ id: 'hm-route-casing', type: 'line', source: 'hm-route-ahead', layout: lineLayout, paint: { 'line-color': ROUTE_CASING, 'line-width': 9 } });
+  map.addLayer({ id: 'hm-route-walked', type: 'line', source: 'hm-route-walked', layout: lineLayout, paint: { 'line-color': ROUTE_WALKED, 'line-width': 5 } });
+  map.addLayer({ id: 'hm-route-ahead', type: 'line', source: 'hm-route-ahead', layout: lineLayout, paint: { 'line-color': ROUTE_AHEAD, 'line-width': 5 } });
+
+  const puckEl = document.createElement('span');
+  puckEl.className = PUCK_CLASS;
+  puckEl.setAttribute('aria-hidden', 'true');
+  const puck = new mapboxgl.Marker({ element: puckEl, anchor: 'center' });
+  let puckShown = false;
+
+  const ahead = () => map.getSource('hm-route-ahead') as GeoJSONSource | undefined;
+  const alternatives = () => map.getSource('hm-route-alternatives') as GeoJSONSource | undefined;
+  const walked = () => map.getSource('hm-route-walked') as GeoJSONSource | undefined;
+  const reduce = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let routeKey = '';
+  let coordinates: readonly GeographicCoordinate[] = [];
+  const drawRoute = () => {
+    const displayed = selectDisplayedRoute(useNavigationStore.getState());
+    const key = displayed ? `${displayed.route.id}:${displayed.generation}:${displayed.kind}` : '';
+    if (key === routeKey) return;
+    routeKey = key;
+    coordinates = displayed?.route.geometry.coordinates ?? [];
+    walked()?.setData(EMPTY);
+    ahead()?.setData(displayed ? line(toLngLat(coordinates)) : EMPTY);
+    const session = useNavigationStore.getState().session;
+    alternatives()?.setData(
+      session.phase === 'routeReady'
+        ? {
+            type: 'FeatureCollection',
+            features: session.routes
+              .filter((_, i) => i !== session.selectedRouteIndex)
+              .map((r) => line(toLngLat(r.geometry.coordinates))),
+          }
+        : EMPTY_SET,
+    );
+    if (!displayed) {
+      puck.remove();
+      puckShown = false;
+      return;
+    }
+    // Frame the whole route on a new preview or reroute, inside the part of
+    // the map the sheet or inspector leaves visible.
+    if (displayed.kind === 'preview' || displayed.generation > 1 || !useNavigationUi.getState().followUser) {
+      const bounds = new mapboxgl.LngLatBounds();
+      coordinates.forEach((c) => bounds.extend([c.longitude, c.latitude]));
+      map.resize();
+      const pad = overlap(map, occluder());
+      map.fitBounds(bounds, {
+        padding: {
+          top: (pad.top ?? 0) + ROUTE_FIT_PADDING,
+          right: (pad.right ?? 0) + ROUTE_FIT_PADDING,
+          bottom: (pad.bottom ?? 0) + ROUTE_FIT_PADDING,
+          left: (pad.left ?? 0) + ROUTE_FIT_PADDING,
+        },
+        maxZoom: FOLLOW_ZOOM,
+        duration: reduce() ? 0 : 600,
+      });
+    }
+  };
+
+  const drawFix = () => {
+    if (!routeKey) return;
+    const fixes = navigationFixStore.getState();
+    const match = fixes.match?.kind === 'matched' ? fixes.match : undefined;
+    const position = match?.coordinate ?? (fixes.lastFix?.kind === 'accepted' ? fixes.lastFix.filtered.coordinate : undefined);
+    if (match && routeKey.endsWith(':active')) {
+      const split = splitRouteAt(coordinates, match);
+      walked()?.setData(line(toLngLat(split.walked)));
+      ahead()?.setData(line(toLngLat(split.ahead)));
+    }
+    if (!position) return;
+    puck.setLngLat([position.longitude, position.latitude]);
+    if (!puckShown) {
+      puck.addTo(map);
+      puckShown = true;
+    }
+    if (routeKey.endsWith(':active') && useNavigationUi.getState().followUser) {
+      const target = { center: [position.longitude, position.latitude] as [number, number], zoom: Math.max(map.getZoom(), FOLLOW_ZOOM), padding: overlap(map, occluder()) };
+      if (reduce()) map.jumpTo(target);
+      else map.easeTo({ ...target, duration: 400 });
+    }
+  };
+
+  // A drag by the person (not a camera move of ours) stops following.
+  const onDragStart = (event: { originalEvent?: unknown }) => {
+    if (event.originalEvent) useNavigationUi.getState().setFollowUser(false);
+  };
+  map.on('dragstart', onDragStart);
+
+  drawRoute();
+  drawFix();
+  const unsubSession = useNavigationStore.subscribe((state, prev) => {
+    if (state.session !== prev.session) {
+      drawRoute();
+      drawFix();
+    }
+  });
+  const unsubFix = navigationFixStore.subscribe(drawFix);
+  const unsubFollow = useNavigationUi.subscribe((state, prev) => {
+    if (state.followUser && !prev.followUser) drawFix();
+  });
+
+  return () => {
+    unsubSession();
+    unsubFix();
+    unsubFollow();
+    map.off('dragstart', onDragStart);
+    puck.remove();
+  };
 }
 
 // Mapbox GL JS v3, driven imperatively through refs: one map per mount,
@@ -82,6 +244,7 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
   // A primitive dependency: the parent builds a new array every render.
   const visibleKey = visibleIds.join('\n');
   const setStatus = useMapStatus((s) => s.setStatus);
+  const detachNavigationRef = useRef<(() => void) | null>(null);
 
   // The selected marker stays visible even when the filter excludes it: the
   // open sheet points at it. The camera is never refitted to the filtered set;
@@ -200,7 +363,10 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
       });
       applyVisibility();
 
-      map.once('load', () => applySelection(false));
+      map.once('load', () => {
+        applySelection(false);
+        detachNavigationRef.current = attachNavigation(map, mapboxgl, () => occluderRef.current);
+      });
       // A map created inside a hidden pane (view=list on a phone) has no size;
       // fit the bounds the first time it gets one.
       let fitted = container.clientWidth > 0;
@@ -217,6 +383,8 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
 
     return () => {
       cancelled = true;
+      detachNavigationRef.current?.();
+      detachNavigationRef.current = null;
       observer?.disconnect();
       markers.forEach(({ marker }) => marker.remove());
       markers.clear();

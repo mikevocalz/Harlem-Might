@@ -1,6 +1,6 @@
 # ADR 0004: Place Detail lives in the main window; the Detail window is deferred
 
-**Status:** Accepted
+**Status:** Accepted. Placement and the input root cause superseded by ADR 0005 (2026-10-08).
 **Date:** 2026-10-08
 **Deciders:** Mike Allen (repo owner)
 **Decision record:** DECISIONS S17 (supersedes S12's Detail window)

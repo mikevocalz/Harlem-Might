@@ -28,3 +28,4 @@ export {
   ASSISTANT_RIVE_ACTIVITY,
   type AssistantActivity,
 } from './features/explore/mights-assistant.store';
+export * from './features/navigation/ui';

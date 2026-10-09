@@ -130,6 +130,13 @@ const config: ExpoConfig = {
         },
       },
     ],
+    // Place Detail as its own Horizon OS panel (DECISIONS S20, ADR 0006):
+    // declares SpatialPanelActivity with a 400x600dp <layout> in the QUEST
+    // flavor manifest only. After expo-horizon-core, which writes that file.
+    [
+      './modules/spatial-panels/app.plugin.js',
+      { defaultWidth: '400dp', defaultHeight: '600dp' },
+    ],
     // Adds the pico flavor: PICO OS 5 OpenXR loader, manifest and SDK levels.
     // Build with `pnpm --filter mobile android:pico` (picoDebug).
     [
