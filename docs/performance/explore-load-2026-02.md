@@ -17,8 +17,11 @@ Branch: `feat/explore-load-perf`. Baseline commit: `d52ede0`.
   `RiveStage`/`GridFxStage` wrap `@rive-app/react-webgl2` (web) and
   `@rive-app/react-native` (native). Loader reuses this pattern — no second
   runtime.
-- "History Bar" from the spec: **no such region exists** in the codebase.
-  Boundary map below covers the three regions that do exist.
+- "History Bar" from the spec: no such region existed at inspection; it was
+  built as a real session strip in the gap-closure pass — `recentIds`
+  (deduped, newest-first, cap 8) in `explore.store`, written by select /
+  deep-link / mobile selectPlace paths, rendered as a "Recent" chip row in
+  the web master region and `ExploreMasterPane`.
 
 ## §3 Measurements (web, dev server, warm)
 
@@ -36,9 +39,16 @@ on its own promise — at the documented cost of ~180 KB of duplicated
 id/name/lngLat and a second DB read. Stream-completion time in dev is
 dominated by RSC serialization and is not a production proxy.
 
-Device targets (mid-tier Android, iPhone, Quest 3): **not measured** — no
-devices were available in this environment. Web numbers above are the
-evidence base; device numbers are a named gap.
+Device evidence (gap-closure pass, argent): a live Chrome via CDP on
+`/explore` showed FCP 248 ms with the skeleton shell painted at first
+paint (pre-L2 behaviour was a blank page for the whole stream), the first
+place row at ~6.6 s and the mapbox canvas at ~14.2 s — **under Turbopack
+recompile load, not a steady-state number**. An iOS-sim build
+(`expo run:ios`) was attempted for native numbers; build status is noted
+in §8 below. Mid-tier Android: no AVD exists on this machine and no
+system image is installed — cannot create one without a multi-GB
+download. Quest 3: Meta ships no Quest 3 emulator — requires hardware.
+Both remain named gaps, not claims.
 
 ## §3 Ranked root causes (confirmed, not assumed)
 
@@ -129,9 +139,11 @@ delay so sub-250 ms loads render no skeleton.
   exceed 3:1; the dim track ring is decorative support.
 - Horizon: the loader is ordinary window content — sized for 1.5–3 m via
   the `size` prop; it changes no window geometry.
-- Mobile gap: `ExploreLoader` ships the native runtime, but the mobile
-  Explore map pane has no `mapStatus` equivalent wired — integration is a
-  named follow-up, not a claim.
+- Mobile: `ExploreLoader` mounts where mobile genuinely waits — the AR
+  route panel (`apps/mobile/app/explore-ar.tsx`, `route.status ===
+  'loading'`), reduced-motion aware. The schematic mobile map pane stays
+  loader-free by design: its data is fixture-sync, so a loader there would
+  decorate a wait that doesn't exist.
 
 ## Verification commands
 
