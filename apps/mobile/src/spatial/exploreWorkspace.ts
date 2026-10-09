@@ -19,9 +19,10 @@ export const PLACE_SELECTION = 'place';
 
 /**
  * Place Detail's window offset, kept for the DEFERRED "Open in new window"
- * action (DECISIONS S17, docs/spatial-layout/adr/0004-detail-in-window.md).
- * One step toward the user and no horizontal shift: on a Quest 3S (Horizon OS
- * 207) an extra `start: -OffsetNear` pulled the window back over the map.
+ * action (DECISIONS S17, S18; ADR 0005). One step toward the user and no
+ * horizontal shift. The SDK clamps offsets to ±5 steps and a horizontal
+ * step measured about 2 mm on a Quest 3S, so no offset can move this window
+ * clear of the main one.
  */
 export const PLACE_DETAIL_OFFSET: MetaNeutralOffset = {
   z: META_OFFSET_STEPS.near,
@@ -30,12 +31,15 @@ export const PLACE_DETAIL_OFFSET: MetaNeutralOffset = {
 /**
  * Place Detail as its own window: 440x600 dp on the main window's end edge,
  * priority 10. NOT used by {@linkcode EXPLORE_WORKSPACE}. It is the
- * presentation an explicit "Open in new window" command would swap in once
- * the blocker in ADR 0004 is fixed: inside a promoted window, Meta's
- * `SpatialWindowRootViewGroup` reports window-relative `pageX/pageY`, while
- * RN's Pressability measures the responder region in main-surface
- * coordinates, so every move reads as leaving the press rect and cancels the
- * press. Close and Get directions did nothing on the Quest 3S.
+ * presentation an explicit "Open in new window" command would swap in.
+ *
+ * The input blocker has a fix: windows render from `SpatialWindowHost` at
+ * the main surface's origin (ADR 0005), not yet confirmed with a controller
+ * or hand on the headset. Placement is still blocked: Horizon OS 207 puts
+ * an outward-attached window's far edge 160dp past the main window's edge
+ * whatever its width (`OUTWARD_FAR_EDGE_DP` in `railWindow.ts`), so this
+ * window overlaps the main one by 280dp. It stays deferred until Meta's
+ * placement changes or exposes an exact offset.
  */
 export const PLACE_DETAIL_WINDOW: WorkspaceWindowPresentation = {
   kind: 'window',
@@ -46,12 +50,13 @@ export const PLACE_DETAIL_WINDOW: WorkspaceWindowPresentation = {
 };
 
 /**
- * The Explore workspace on Meta Horizon OS (DECISIONS S4, S5, S12, S17;
- * design handoff §1). Everything lives in ONE main window: Discover 360 |
- * map | Detail 400 (S17). Meta, Apple and Google all put supplementary
- * detail in a split inside the window, and Meta's anchors carry no collision
- * guarantee: on the Quest 3S every offset tried put the Detail window over
- * the map.
+ * The Explore workspace on Meta Horizon OS (DECISIONS S4, S5, S12, S17, S18;
+ * design handoff §1). The navigation rail is a window of its own beside this
+ * one (`RAIL_WINDOW`), not an Explore surface. Explore itself lives in ONE
+ * main window: Discover 360 | map | Detail 400 (S17). Meta, Apple and
+ * Google all put supplementary detail in a split inside the window, and on
+ * the Quest 3S a 400dp Detail window cannot sit clear of the main one
+ * (ADR 0005).
  *
  * - The map is the main window and is never promoted.
  * - Discover is a layer in the main window's leading column (S12).

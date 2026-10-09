@@ -11,9 +11,17 @@ import {
   useExplore,
   type SheetDetent,
 } from '@acme/app/features/explore/explore.store.ts';
-import { directionsUrl, noResultsCopy, placeRowLine, resultsSummary } from '@acme/app/features/explore/explore-copy.ts';
+import { noResultsCopy, placeRowLine, resultsSummary } from '@acme/app/features/explore/explore-copy.ts';
 import { Main, Pressable, ScrollView, Text, TextInput, View } from '@acme/ui/tw';
 import { MightsButton, MightsHeading, MightsLocationStamp, MightsText, condensed, routes } from '@acme/ui/mights';
+import { DirectionsPanel } from '@acme/app/features/navigation/ui/DirectionsPanel.tsx';
+import { NavigationHud } from '@acme/app/features/navigation/ui/NavigationHud.tsx';
+import { useDirectionsPlaceId, useIsGuiding } from '@acme/app/features/navigation/ui/hooks.ts';
+import { useNavigationHost } from '@acme/app/features/navigation/ui/useNavigationHost.ts';
+import { createBrowserLocationSource } from '@acme/app/features/navigation/view/locationSource.ts';
+import { useNavigationUi } from '@acme/app/features/navigation/view/navigationUi.store.ts';
+import { endNavigation, openDirections } from '@acme/app/features/navigation/view/runtime.ts';
+import { useNavigationStore } from '@acme/app/features/navigation/session/navigationStore.ts';
 import { ExploreMap, type MapPlace } from './ExploreMap';
 import { exploreHref, focusId, focusReturnOrder, isFocusFor, parseExploreParams } from './explore-url';
 import { useMapStatus } from './map-status';
@@ -43,6 +51,15 @@ function focusFirst(ids: string[]) {
 // Phones get one pane at a time below md; the full-height sheet there is the
 // only place the rest of the page goes inert.
 const PHONE = '(width < 48rem)';
+// From lg the sheet docks beside the map as the inspector.
+const DOCKED = '(width >= 64rem)';
+
+// W3C Geolocation, foreground only. The site never asks for the camera.
+const browserLocation = () =>
+  createBrowserLocationSource(
+    typeof navigator !== 'undefined' ? navigator.geolocation : undefined,
+    typeof navigator !== 'undefined' ? (navigator.permissions as never) : undefined,
+  );
 
 // The URL is the source of truth for view, q, category and place: reload
 // restores the workspace, the address is the share link, and Back closes a
@@ -63,6 +80,15 @@ export function ExploreWorkspace() {
   const { openSheet, closeSheet, setSheetDetent } = useExplore.getState();
   const mapStatus = useMapStatus((s) => s.status);
   const phone = useMediaQuery(PHONE);
+  const docked = useMediaQuery(DOCKED);
+
+  // The one navigation session: the sheet's directions, the map line and the
+  // HUD all read it.
+  useNavigationHost(browserLocation);
+  const directionsPlaceId = useDirectionsPlaceId();
+  const guiding = useIsGuiding();
+  const stepsOpen = useNavigationUi((s) => s.stepsOpen);
+  const destinationId = useNavigationStore((s) => ('activeRoute' in s.session ? (s.session.destination.placeId ?? null) : null));
 
   useEffect(() => {
     setQuery(params.get('q') ?? '');
@@ -291,7 +317,10 @@ export function ExploreWorkspace() {
     half: 'max-h-1/2',
     full: 'top-0',
   }[detent];
-  const sheet = selected ? (
+  const showDirections = !!selected && directionsPlaceId === selected.id;
+  // Guidance below lg: the map and HUD own the screen; Steps brings the sheet back.
+  const sheetHidden = guiding && !docked && !stepsOpen;
+  const sheet = selected && !sheetHidden ? (
     <View
       ref={sheetRef as never}
       role="dialog"
@@ -299,6 +328,26 @@ export function ExploreWorkspace() {
       aria-labelledby={SHEET_TITLE_ID}
       className={`absolute inset-x-0 bottom-0 z-(--z-raised) flex-col bg-primary pt-rail md:left-(--container-pane-primary) lg:static lg:inset-auto lg:max-h-none lg:w-pane-inspector lg:shrink-0 lg:pl-rail lg:pt-0 ${sheetPosition}`}
     >
+      {showDirections ? (
+        <DirectionsPanel
+          place={selected}
+          originPlaces={MAPPED_PLACES}
+          frame="none"
+          onDismiss={
+            guiding
+              ? docked
+                ? undefined
+                : () => useNavigationUi.getState().setStepsOpen(false)
+              : () => document.getElementById(SHEET_TITLE_ID)?.focus()
+          }
+          onStarted={() => {
+            useNavigationUi.getState().setStepsOpen(false);
+            if (!docked) setSheetDetent('peek');
+            // The HUD lives on the map; a phone showing the list switches to it.
+            if (view === 'list') replace({ view: null });
+          }}
+        />
+      ) : (
       <View className="min-h-0 flex-1 bg-surface-raised">
         <View className="gap-3 border-b border-rule-hairline p-4 md:p-5">
           <View className="flex-row items-start justify-between gap-4">
@@ -337,12 +386,13 @@ export function ExploreWorkspace() {
           <View className="flex-row flex-wrap gap-3">
             {selected.lngLat ? (
               <MightsButton
-                external
                 size="sm"
-                href={directionsUrl(selected.lngLat)}
+                onPress={() => {
+                  openDirections(selected.id);
+                  if (detent === 'peek') setSheetDetent('half');
+                }}
               >
-                Get directions
-                <Text className="sr-only">, opens Google Maps in a new tab</Text>
+                Directions
               </MightsButton>
             ) : null}
             <MightsButton href={routes.place(selected.id)} size="sm" variant="secondary">
@@ -351,6 +401,7 @@ export function ExploreWorkspace() {
           </View>
         </ScrollView>
       </View>
+      )}
     </View>
   ) : null;
 
@@ -379,6 +430,22 @@ export function ExploreWorkspace() {
             onSelect={(id) => select(id, focusId.marker(id))}
             occluderRef={sheetRef}
             layoutKey={detent}
+          />
+          <NavigationHud
+            onShowSteps={
+              docked
+                ? undefined
+                : () => {
+                    if (destinationId && selected?.id !== destinationId) select(destinationId, focusId.marker(destinationId));
+                    useNavigationUi.getState().setStepsOpen(true);
+                    setSheetDetent('full');
+                  }
+            }
+            onRecenter={() => useNavigationUi.getState().setFollowUser(true)}
+            onShowPlace={(id) => {
+              endNavigation();
+              if (selected?.id !== id) select(id, focusId.marker(id));
+            }}
           />
           {mapStatus === 'unavailable' ? (
             <View className="absolute inset-0 items-start justify-end gap-3 bg-surface-sunken p-6">

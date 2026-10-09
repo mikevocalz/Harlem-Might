@@ -5,9 +5,23 @@ import { Pressable, Text, View } from '@acme/ui/tw';
 import { BookOpen, CalendarClock, Ellipsis, Footprints, MapPinned } from '@acme/ui/icons';
 import { haptics } from '@acme/ui/haptics';
 import { APP_TABS, TAB_SCREEN, type AppTabRoute } from '@/src/site/app-tabs';
+import { isTabShown } from '@/src/site/tabVisibility';
+import { isHorizonBuild } from '@/src/spatial/horizonBuild';
+import { RAIL_WINDOW_DP } from '@/src/spatial/railWindow';
 
 /** Material 3 navigation rail width. Items keep the 48dp target floor. */
 export const RAIL_WIDTH = 88;
+
+/**
+ * Where the tab bar draws.
+ *
+ * - `bar`: along the bottom, below 600dp.
+ * - `rail`: a leading column inside the window, from 600dp up.
+ * - `window`: the whole of its own Horizon window beside the main one
+ *   (DECISIONS S18): 60dp icon-and-label items, like a visionOS tab bar
+ *   ornament.
+ */
+export type AppTabBarLayout = 'bar' | 'rail' | 'window';
 
 // The same glyphs as the site's dock (packages/ui/mights/MightsDock.tsx).
 const ICONS: Record<AppTabRoute, typeof MapPinned> = {
@@ -29,14 +43,23 @@ const TAB_BY_SCREEN = new Map(APP_TABS.map((tab) => [TAB_SCREEN[tab.route], tab.
  * current one marked by a gold rail plus gold label. No pill and no fill, so
  * the selection reads the same as on the site.
  *
- * Bottom bar below 600dp. From 600dp up (tablets, the 1280dp Horizon window)
- * it becomes a leading rail, where the gold marker moves to the item's
- * leading edge.
+ * See {@linkcode AppTabBarLayout} for the three layouts. In the rail and the
+ * window the gold marker moves to the item's leading edge.
  */
-export function AppTabBar({ state, emitter, navigateToTab, insets, rail }: BottomTabBarProps & { rail: boolean }) {
+export function AppTabBar({
+  state,
+  emitter,
+  navigateToTab,
+  insets,
+  layout,
+}: Pick<BottomTabBarProps, 'state' | 'emitter' | 'navigateToTab' | 'insets'> & { layout: AppTabBarLayout }) {
+  const rail = layout !== 'bar';
+  const xr = layout === 'window';
   const items = state.routes.map((route, index) => {
     const tab = TAB_BY_SCREEN.get(route.name);
-    if (!tab) return null;
+    // More is struck on Horizon builds, in the rail window and the in-window
+    // fallback alike (DECISIONS S20, `HORIZON_STRUCK_TABS`).
+    if (!tab || !isTabShown(tab, isHorizonBuild)) return null;
     const focused = state.index === index;
     const Icon = ICONS[tab];
     const label = LABELS[tab];
@@ -55,7 +78,7 @@ export function AppTabBar({ state, emitter, navigateToTab, insets, rail }: Botto
         aria-selected={focused}
         onPress={onPress}
         className={`relative min-h-target min-w-target items-center justify-center gap-1 active:bg-surface-sunken ${
-          rail ? 'w-full py-2' : 'flex-1'
+          xr ? 'h-target-primary w-full' : rail ? 'w-full py-2' : 'flex-1'
         }`}
       >
         {focused ? (
@@ -64,10 +87,10 @@ export function AppTabBar({ state, emitter, navigateToTab, insets, rail }: Botto
             className={rail ? 'absolute bottom-2 left-0 top-2 w-rail bg-primary' : 'absolute top-0 h-rail w-8 bg-primary'}
           />
         ) : null}
-        <Icon size={rail ? 24 : 20} strokeWidth={focused ? 2.25 : 1.75} className={focused ? 'text-primary' : 'text-text-muted'} />
+        <Icon size={xr ? 26 : rail ? 24 : 20} strokeWidth={focused ? 2.25 : 1.75} className={focused ? 'text-primary' : 'text-text-muted'} />
         <Text
           numberOfLines={1}
-          className={`font-sans font-medium ${rail ? 'text-label' : 'text-caption'} ${
+          className={`font-sans font-medium ${xr ? 'text-xr-caption' : rail ? 'text-label' : 'text-caption'} ${
             focused ? 'text-primary' : 'text-text-muted'
           }`}
         >
@@ -76,6 +99,23 @@ export function AppTabBar({ state, emitter, navigateToTab, insets, rail }: Botto
       </Pressable>
     );
   });
+
+  if (xr) {
+    return (
+      <View
+        role="tablist"
+        style={{
+          width: RAIL_WINDOW_DP.width,
+          height: RAIL_WINDOW_DP.height,
+          padding: RAIL_WINDOW_DP.padding,
+          gap: RAIL_WINDOW_DP.gap,
+        }}
+        className="items-stretch bg-paper"
+      >
+        {items}
+      </View>
+    );
+  }
 
   if (!rail) {
     return (

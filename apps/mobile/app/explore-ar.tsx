@@ -8,6 +8,8 @@ import { View } from '@acme/ui/tw';
 import { HarlemStreetScene } from '../src/ar/HarlemStreetScene';
 import { HarlemTabletopScene } from '../src/ar/HarlemTabletopScene';
 import { sceneModeFor, useArSession, type ArSceneMode } from '../src/ar/arSession.store';
+import { mapboxToken } from '../src/ar/mapboxToken';
+import { useStreetMapLoader } from '../src/ar/useStreetMapLoader';
 import { useTabletopRoute } from '../src/ar/useTabletopRoute';
 import { HarlemNavigationAr } from '../src/ar/HarlemNavigationAr';
 import { canUseArNavigation, chooseArExperience } from '../src/ar/arNavigationEntry';
@@ -60,6 +62,10 @@ export default function ExploreArRoute() {
   // and street worlds, their place routes, and their controls stay untouched.
   useTabletopRoute(isNavigatingInAr ? undefined : (placeId ?? selectedPlaceId ?? undefined));
   const street = experience === 'street';
+  // The map layer for the street scene: real buildings around the wearer.
+  // The scene only draws what this publishes. Routes come from the shared
+  // NavigationSession (useStreetNavigation).
+  useStreetMapLoader(street, placeId ?? selectedPlaceId ?? undefined);
 
   if (isNavigatingInAr) {
     return (
@@ -111,7 +117,7 @@ const PANEL_COPY: Record<ArSceneMode, { title: (place: string) => string; body: 
   },
   street: {
     title: (place) => `Stand at ${place}`,
-    body: 'Harlem around you at full size: gold pillars mark places and the walking route runs along the ground. Point at the ground and select to move. Turn with the buttons in front of you.',
+    body: 'Harlem around you at full size: the real buildings on satellite ground, with gold pillars at places. Point at the ground and select to move. Select a pillar to see a place, or Go there to stand at it.',
     enter: 'Enter Harlem',
   },
 };
@@ -137,6 +143,10 @@ function ArPanel({
         : route.status === 'ready'
           ? 'No walking route available. Straight lines are shown instead.'
           : '';
+  const mapLine =
+    mode === 'street' && mapboxToken().kind !== 'public'
+      ? 'This build has no public Mapbox token, so Harlem shows without real buildings or satellite ground.'
+      : '';
   return (
     <View className="flex-1 items-center justify-center gap-4 bg-surface p-8">
       <MightsHeading level={1} size="title">
@@ -144,6 +154,7 @@ function ArPanel({
       </MightsHeading>
       <MightsText>{copy.body}</MightsText>
       {routeLine ? <MightsText>{routeLine}</MightsText> : null}
+      {mapLine ? <MightsText>{mapLine}</MightsText> : null}
       <View className="flex-row gap-3">
         <MightsButton variant="primary" onPress={onEnter}>
           {copy.enter}

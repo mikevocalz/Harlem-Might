@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { MightsButton } from '@acme/ui/mights';
 import { Text, View } from '@acme/ui/tw';
 import {
@@ -12,7 +12,10 @@ import {
 import { useExploreType } from './explore-type';
 import { focusTargetRef, markerFocusId } from './focus-registry';
 import { FocusPressable } from './FocusPressable';
-import { markerLabel, projectSchematic } from './schematic-map';
+import { markerLabel, projectSchematic, schematicBounds } from './schematic-map';
+import { useNavigationStore } from '../navigation/session/navigationStore';
+import { RouteSchematicLayer } from '../navigation/ui/RouteSchematicLayer';
+import { selectDisplayedRoute, toLngLat } from '../navigation/view/routeLine';
 
 /** Space in dp the markers keep clear of, so overlays never cover a place. */
 export interface MapInsets {
@@ -39,7 +42,7 @@ export interface ExploreMapPaneProps {
 const EDGE = 48;
 
 const byId = new Map(HARLEM_PLACE_PREVIEWS.map((place) => [place.id, place]));
-const POINTS = projectSchematic(HARLEM_PLACE_PREVIEWS);
+const PLACE_LNGLATS = HARLEM_PLACE_PREVIEWS.flatMap((place) => (place.lngLat ? [place.lngLat] : []));
 
 /**
  * The map region (handoff §3), the permanent centre of Explore.
@@ -58,6 +61,21 @@ export function ExploreMapPane({ onSelectPlace, onShowPlaces, insets, children }
   const selectedPlaceId = useExplore((state) => state.selectedPlaceId);
   const pad = insets ?? { top: 0, right: 0, bottom: 0, left: 0 };
   const unmapped = UNMAPPED_PLACES.length;
+  // The session's route, when there is one. The fit grows to hold it, so a
+  // route starting outside the catalogue's corner still lands in the box and
+  // the markers move with it.
+  const session = useNavigationStore((s) => s.session);
+  const displayed = useMemo(() => selectDisplayedRoute({ session }), [session]);
+  const routeKey = displayed ? `${displayed.route.id}:${displayed.generation}` : '';
+  const { points, bounds } = useMemo(() => {
+    const line = displayed ? toLngLat(displayed.route.geometry.coordinates) : [];
+    return {
+      points: projectSchematic(HARLEM_PLACE_PREVIEWS, line),
+      bounds: schematicBounds([...PLACE_LNGLATS, ...line]),
+    };
+    // routeKey identifies the geometry; the route object is immutable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeKey]);
 
   return (
     <View
@@ -81,7 +99,8 @@ export function ExploreMapPane({ onSelectPlace, onShowPlaces, insets, children }
           left: pad.left + EDGE,
         }}
       >
-        {POINTS.map((point) => {
+        {displayed && bounds ? <RouteSchematicLayer route={displayed} bounds={bounds} /> : null}
+        {points.map((point) => {
           const place = byId.get(point.placeId);
           if (!place) return null;
           const selected = selectedPlaceId === place.id;
@@ -128,7 +147,9 @@ export function ExploreMapPane({ onSelectPlace, onShowPlaces, insets, children }
       >
         <View className="shrink gap-1">
           <Text className={type.caption + ' self-start bg-surface-raised px-2 py-1 font-sans text-text'}>
-            Schematic map. Street map coming.
+            {displayed
+              ? 'Schematic map. The route’s shape is real; streets aren’t drawn yet.'
+              : 'Schematic map. Street map coming.'}
           </Text>
           {unmapped > 0 ? (
             <Text className={type.caption + ' self-start bg-surface-raised px-2 py-1 font-sans text-text-muted'}>
