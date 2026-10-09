@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
+import { haptics } from '@acme/ui/haptics';
 import { refreshPublicSnapshot } from '../widgets/public-feed';
 import { publishHomeWidgets } from '../widgets/sync';
 import { DarkTheme, Slot, ThemeProvider } from "expo-router";
@@ -49,6 +50,10 @@ const NAV_THEME = {
 
 export default function RootLayout() {
   useEffect(() => {
+    haptics.setForeground(AppState.currentState === 'active');
+    const listener = AppState.addEventListener('change', state => {
+      haptics.setForeground(state === 'active');
+    });
     let active = true;
     const refresh = async () => {
       try {
@@ -64,7 +69,7 @@ export default function RootLayout() {
     const subscription = AppState.addEventListener('change', state => {
       if (state === 'active') void refresh();
     });
-    return () => { active = false; subscription.remove(); };
+    return () => { active = false; subscription.remove(); listener.remove(); };
   }, []);
 
   return (
