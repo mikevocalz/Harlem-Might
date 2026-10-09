@@ -6,9 +6,6 @@ import { buildWidgetSnapshot, type EventSummary, type StorySummary } from '@acme
  * Read-only, curated public feed. Never returns member identities, auth
  * sessions, saved private locations, or unpublished CMS documents.
  */
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
 export async function GET(): Promise<NextResponse> {
   const now = new Date().toISOString();
   const day = harlemToday(new Date(now));
