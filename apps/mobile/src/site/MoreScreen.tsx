@@ -13,11 +13,10 @@ type SecondaryLabel = (typeof secondaryNav)[number]['label'];
 // in the app. Every other secondaryNav entry keeps the site's label and order.
 const STRUCK: ReadonlySet<SecondaryLabel> = new Set(['The app']);
 
-// AR concept is the one entry with a native page (app/(tabs)/(more)/ar.tsx,
-// served at the site's own path).
-// About, Press and the legal pages open on the site: their copy lives in
-// apps/web/content and is not shared with the app yet (DEFER, PARITY_AUDIT P3).
-const NATIVE_PAGES: ReadonlySet<SecondaryLabel> = new Set(['AR concept']);
+// AR concept, Sign in and Create account have native routes. About, Press and
+// the legal pages open on the site: their copy lives in apps/web/content and is
+// not shared with the app yet (DEFER, PARITY_AUDIT P3).
+const NATIVE_PAGES: ReadonlySet<SecondaryLabel> = new Set(['AR concept', 'Sign in', 'Create account']);
 
 async function openOnSite(label: string, url: string) {
   try {

@@ -43,20 +43,6 @@ export function WalksScreen() {
   );
 }
 
-export function StoriesScreen() {
-  return (
-    <SitePage
-      title="Stories"
-      lead="The history behind a block, kept on the block where it happened. Every story names its sources."
-    >
-      <ContentNotice title="No stories published yet" actions={<OpenTheMap />}>
-        Each story will be sourced and attached to the place where it happened. Until the first ones are published, start
-        from a place on the map.
-      </ContentNotice>
-    </SitePage>
-  );
-}
-
 // Same heading as the site's Today page: shared in event-format.ts, and the
 // date is Harlem's, never the device's time zone.
 export function TodayScreen() {
