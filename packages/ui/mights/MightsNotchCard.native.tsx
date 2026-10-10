@@ -22,17 +22,18 @@ export function MightsNotchCard({
   className = '',
   innerClassName = '',
   state = 'rest',
+  tone = 'raised',
   label,
 }: MightsNotchCardProps) {
   if (!href) {
     return (
-      <CardBody className={className} innerClassName={innerClassName} state={state} pressed={false}>
+      <CardBody className={className} innerClassName={innerClassName} state={state} tone={tone} pressed={false}>
         {children}
       </CardBody>
     );
   }
   return (
-    <CardLink href={href} label={label} className={className} innerClassName={innerClassName} state={state}>
+    <CardLink href={href} label={label} className={className} innerClassName={innerClassName} state={state} tone={tone}>
       {children}
     </CardLink>
   );
@@ -44,8 +45,9 @@ function CardLink({
   className,
   innerClassName,
   state,
+  tone,
   children,
-}: Required<Pick<MightsNotchCardProps, 'href' | 'className' | 'innerClassName' | 'state'>> &
+}: Required<Pick<MightsNotchCardProps, 'href' | 'className' | 'innerClassName' | 'state' | 'tone'>> &
   Pick<MightsNotchCardProps, 'label' | 'children'>) {
   const [pressed, setPressed] = useState(false);
   return (
@@ -56,7 +58,7 @@ function CardLink({
       accessibilityLabel={label}
       className={`flex-col ${className}`}
     >
-      <CardBody className="flex-1" innerClassName={innerClassName} state={state} pressed={pressed}>
+      <CardBody className="flex-1" innerClassName={innerClassName} state={state} tone={tone} pressed={pressed}>
         {children}
       </CardBody>
     </PressableLink>
@@ -67,12 +69,14 @@ function CardBody({
   className,
   innerClassName,
   state,
+  tone,
   pressed,
   children,
 }: {
   className: string;
   innerClassName: string;
   state: NonNullable<MightsNotchCardProps['state']>;
+  tone: NonNullable<MightsNotchCardProps['tone']>;
   pressed: boolean;
   children: React.ReactNode;
 }) {
@@ -86,7 +90,7 @@ function CardBody({
         path={notchPath}
         layers={[
           { inset: 0, color: rail },
-          { inset: RAIL, color: colors.surfaceRaised },
+          { inset: RAIL, color: tone === 'inverted' ? colors.primary : colors.surfaceRaised },
         ]}
       />
       <View className={`flex-1 flex-col p-rail pt-2.5 pb-2.5 ${innerClassName}`}>{children}</View>

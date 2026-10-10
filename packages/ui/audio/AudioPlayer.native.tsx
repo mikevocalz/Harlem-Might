@@ -1,15 +1,15 @@
-'use client';
-import { useEffect, useRef } from 'react';
-import { createStore, useStore } from 'zustand';
-import { AudioContext, decodeAudioData } from 'react-native-audio-api';
-import { View, Pressable } from '../tw';
-import { Text } from '../Text';
-import { Play, Pause, AudioLines } from '../icons';
-import { haptics } from '../haptics';
-import { Slider } from '../Slider';
-import { Waveform } from './Waveform.tsx';
-import { summarise } from './waveform.ts';
-import type { AudioPlayerProps } from './AudioPlayer.types.ts';
+"use client";
+import { useMemo, useEffect, useRef } from "react";
+import { createStore, useStore } from "zustand";
+import { AudioContext, decodeAudioData } from "react-native-audio-api";
+import { View, Pressable } from "../tw";
+import { Text } from "../Text";
+import { Play, Pause, AudioLines } from "../icons";
+import { haptics } from "../haptics";
+import { Slider } from "../Slider";
+import { Waveform } from "./Waveform.tsx";
+import { summarise } from "./waveform.ts";
+import type { AudioPlayerProps } from "./AudioPlayer.types.ts";
 
 const TICK_MS = 60;
 
@@ -20,7 +20,15 @@ function createPlayerStore() {
     total: number;
     bars: number[];
     error: string | null;
-    set: (next: Partial<{ playing: boolean; elapsed: number; total: number; bars: number[]; error: string | null }>) => void;
+    set: (
+      next: Partial<{
+        playing: boolean;
+        elapsed: number;
+        total: number;
+        bars: number[];
+        error: string | null;
+      }>,
+    ) => void;
   }>((set) => ({
     playing: false,
     elapsed: 0,
@@ -32,7 +40,7 @@ function createPlayerStore() {
 }
 
 const clock = (seconds: number) =>
-  `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+  `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 
 /**
  * Play a voice note.
@@ -47,18 +55,27 @@ const clock = (seconds: number) =>
  * from the context's own time rather than a counter, so pausing and resuming
  * cannot drift away from the audio.
  */
-export function AudioPlayer({ uri, duration, levels, label, className }: AudioPlayerProps) {
-  const store = useRef<ReturnType<typeof createPlayerStore> | null>(null);
-  store.current ??= createPlayerStore();
-  const playing = useStore(store.current, (state) => state.playing);
-  const elapsed = useStore(store.current, (state) => state.elapsed);
-  const total = useStore(store.current, (state) => state.total);
-  const bars = useStore(store.current, (state) => state.bars);
-  const error = useStore(store.current, (state) => state.error);
+export function AudioPlayer({
+  uri,
+  duration,
+  levels,
+  label,
+  className,
+}: AudioPlayerProps) {
+  const store = useMemo(() => createPlayerStore(), []);
+  const playing = useStore(store, (state) => state.playing);
+  const elapsed = useStore(store, (state) => state.elapsed);
+  const total = useStore(store, (state) => state.total);
+  const bars = useStore(store, (state) => state.bars);
+  const error = useStore(store, (state) => state.error);
 
   const context = useRef<AudioContext | null>(null);
-  const buffer = useRef<Awaited<ReturnType<typeof decodeAudioData>> | null>(null);
-  const source = useRef<ReturnType<AudioContext['createBufferSource']> | null>(null);
+  const buffer = useRef<Awaited<ReturnType<typeof decodeAudioData>> | null>(
+    null,
+  );
+  const source = useRef<ReturnType<AudioContext["createBufferSource"]> | null>(
+    null,
+  );
   const ticker = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAt = useRef(0);
   const offset = useRef(0);
@@ -78,10 +95,14 @@ export function AudioPlayer({ uri, duration, levels, label, className }: AudioPl
             ? summarise(levels)
             : summarise(Array.from(decoded.getChannelData(0)));
 
-        store.current?.getState().set({ total: duration ?? decoded.duration, bars: shape });
+        store
+          ?.getState()
+          .set({ total: duration ?? decoded.duration, bars: shape });
       } catch {
         if (!cancelled) {
-          store.current?.getState().set({ error: 'This recording could not be opened.' });
+          store
+            ?.getState()
+            .set({ error: "This recording could not be opened." });
         }
       }
     };
@@ -109,17 +130,18 @@ export function AudioPlayer({ uri, duration, levels, label, className }: AudioPl
     node.onended = () => {
       if (ticker.current !== null) clearInterval(ticker.current);
       offset.current = 0;
-      store.current?.getState().set({ playing: false, elapsed: 0 });
+      store?.getState().set({ playing: false, elapsed: 0 });
     };
 
     node.start(0, offset.current);
     source.current = node;
     startedAt.current = audioContext.currentTime;
-    store.current?.getState().set({ playing: true });
+    store?.getState().set({ playing: true });
 
     ticker.current = setInterval(() => {
-      const played = offset.current + (audioContext.currentTime - startedAt.current);
-      store.current?.getState().set({ elapsed: played });
+      const played =
+        offset.current + (audioContext.currentTime - startedAt.current);
+      store?.getState().set({ elapsed: played });
     }, TICK_MS);
   };
 
@@ -132,7 +154,7 @@ export function AudioPlayer({ uri, duration, levels, label, className }: AudioPl
     }
     source.current?.stop();
     source.current = null;
-    store.current?.getState().set({ playing: false });
+    store?.getState().set({ playing: false });
   };
 
   /**
@@ -150,7 +172,7 @@ export function AudioPlayer({ uri, duration, levels, label, className }: AudioPl
     source.current = null;
 
     offset.current = Math.max(0, Math.min(seconds, total));
-    store.current?.getState().set({ elapsed: offset.current, playing: false });
+    store?.getState().set({ elapsed: offset.current, playing: false });
     if (wasPlaying) play();
   };
 
@@ -158,19 +180,21 @@ export function AudioPlayer({ uri, duration, levels, label, className }: AudioPl
 
   return (
     <View
-      className={`my-2 gap-2 rounded-md border-2 border-border bg-surface-raised p-3 shadow-card ${className ?? ''}`}
+      className={`my-2 gap-2 rounded-md border-2 border-border bg-surface-raised p-3 shadow-card ${className ?? ""}`}
     >
       {label ? (
         <View className="flex-row items-center gap-2">
           <AudioLines size={16} className="text-accent" />
-          <Text className="flex-1 text-sm font-medium text-text md:text-base">{label}</Text>
+          <Text className="flex-1 text-sm font-medium text-text md:text-base">
+            {label}
+          </Text>
         </View>
       ) : null}
 
       <View className="flex-row items-center gap-3">
         <Pressable
           role="button"
-          aria-label={playing ? 'Pause' : 'Play'}
+          aria-label={playing ? "Pause" : "Play"}
           onPress={() => (playing ? pause() : play())}
           className="h-12 w-12 items-center justify-center rounded-md border-2 border-border bg-primary shadow-card transition-colors duration-fast hover:bg-primary-pressed active:bg-primary-pressed motion-reduce:transition-none"
         >
@@ -199,8 +223,12 @@ export function AudioPlayer({ uri, duration, levels, label, className }: AudioPl
           />
 
           <View className="flex-row justify-between">
-            <Text className="text-xs text-text-muted md:text-sm">{clock(elapsed)}</Text>
-            <Text className="text-xs text-text-muted md:text-sm">{clock(total)}</Text>
+            <Text className="text-xs text-text-muted md:text-sm">
+              {clock(elapsed)}
+            </Text>
+            <Text className="text-xs text-text-muted md:text-sm">
+              {clock(total)}
+            </Text>
           </View>
         </View>
       </View>

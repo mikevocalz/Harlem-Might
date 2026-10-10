@@ -1,16 +1,20 @@
 'use client';
 
-import { MightsButton, MightsHeading, MightsText } from '@acme/ui/mights';
+import { MightsButton, MightsEditorialImage, MightsHeading, MightsText } from '@acme/ui/mights';
 import { ScrollView, Text, TextInput, View } from '@acme/ui/tw';
 import { noResultsCopy, resultsSummary } from './explore-copy';
 import {
   HARLEM_CATEGORIES,
+  HARLEM_PLACE_PREVIEWS,
   filterHarlemPlacePreviews,
   useExplore,
   type HarlemPlacePreview,
 } from './explore.store';
 import { useExploreType } from './explore-type';
+import { getHarlemArchivalImage } from '../../content';
 import { PlaceRow } from './PlaceRow';
+
+const archiveImage = getHarlemArchivalImage('nypl-pushcart-vendors-eighth-avenue-1939');
 
 export interface ExploreMasterPaneProps {
   /** A row was chosen. The caller opens the place. */
@@ -47,6 +51,8 @@ export function ExploreMasterPane({ onSelectPlace, onShowMap, onClose, padding =
   const setQuery = useExplore((state) => state.setQuery);
   const setCategory = useExplore((state) => state.setCategory);
   const places = filterHarlemPlacePreviews(query, category);
+  const recentIds = useExplore((state) => state.recentIds);
+  const recents = recentIds.flatMap((id) => HARLEM_PLACE_PREVIEWS.filter((p) => p.id === id));
   const mapped = places.filter((place) => place.lngLat).length;
   const summary = resultsSummary(places.length, mapped, query, category, 'All');
   const pad = padding === 'window' ? 'px-window' : 'px-4';
@@ -116,12 +122,42 @@ export function ExploreMasterPane({ onSelectPlace, onShowMap, onClose, padding =
           })}
         </ScrollView>
 
+        {/* Recently viewed — the same session strip the site renders under
+            its filters (shared `recentIds` in the explore store). */}
+        {recents.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            accessibilityLabel="Recently viewed"
+            contentContainerClassName={type.inlineGap + ' flex-row items-center py-1'}
+          >
+            <Text className={type.summary + ' font-sans text-text-muted'}>Recent</Text>
+            {recents.map((place) => (
+              <MightsButton
+                key={place.id}
+                size={type.buttons.control}
+                variant="ghost"
+                pressed={place.id === selectedPlaceId}
+                aria-label={`Open ${place.name} again`}
+                onPress={() => onSelectPlace(place)}
+              >
+                {place.name}
+              </MightsButton>
+            ))}
+          </ScrollView>
+        ) : null}
+
         <Text accessibilityLiveRegion="polite" className={type.summary + ' font-sans text-text-muted'}>
           {summary}
         </Text>
       </View>
 
       <ScrollView className="flex-1" contentContainerClassName="pb-24" showsVerticalScrollIndicator={false}>
+        {archiveImage ? (
+          <View className={padding === 'window' ? 'px-window py-4' : 'px-4 py-4'}>
+            <MightsEditorialImage image={archiveImage} screenId="explore-discover" ratio="wide" />
+          </View>
+        ) : null}
         {places.length === 0 ? (
           <View className={'items-start py-5 ' + type.stackGap + ' ' + pad}>
             <MightsText tone="default">{noResultsCopy(query, category, 'All')}</MightsText>

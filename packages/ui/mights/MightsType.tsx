@@ -1,10 +1,17 @@
+import { Heading, Paragraph } from '../html';
 import { tv } from '../tv';
 import { condensed } from './geometry';
+
+// Both render React Native Web text on web, which ships browser-style heading
+// and paragraph margins and pre-wrap white space; `my-0 whitespace-normal`
+// restores the Tailwind preflight the raw tags had. Margin utilities a caller
+// passes still win (they sort after my-0).
+const reset = 'my-0 whitespace-normal';
 
 // Type roles on the 1.25 modular scale. Display sizes run Mona Sans at the
 // condensed end of wdth; UI sizes stay at normal width. Sentence case only.
 const heading = tv({
-  base: 'font-sans text-text text-balance',
+  base: `${reset} font-sans text-text text-balance`,
   variants: {
     size: {
       marquee: `text-display-lg md:text-display-xl xl:text-display-2xl font-bold ${condensed}`,
@@ -26,16 +33,15 @@ export interface MightsHeadingProps {
 }
 
 export function MightsHeading({ level = 2, size, className, children, id }: MightsHeadingProps) {
-  const Tag = `h${level}` as const;
   return (
-    <Tag id={id} className={heading({ size, className })}>
+    <Heading level={level} id={id} className={heading({ size, className })}>
       {children}
-    </Tag>
+    </Heading>
   );
 }
 
 const text = tv({
-  base: 'font-sans max-w-[75ch] text-pretty',
+  base: `${reset} font-sans max-w-[75ch] text-pretty`,
   variants: {
     size: {
       lead: 'text-lead-sm md:text-lead',
@@ -58,5 +64,5 @@ export function MightsText({
   className?: string;
   children: React.ReactNode;
 }) {
-  return <p className={text({ size, tone, className })}>{children}</p>;
+  return <Paragraph className={text({ size, tone, className })}>{children}</Paragraph>;
 }

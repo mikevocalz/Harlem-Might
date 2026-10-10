@@ -39,6 +39,8 @@ Access control filters every read/update/delete to the authenticated member ID. 
 
 ## Routes
 
-- `/profile` — optional sign in/create account + saved places
+- `/sign-in` — member email sign-in through `/payload-api/auth/sign-in/email`
+- `/sign-up` — member account creation through `/payload-api/auth/sign-up/email`, followed by sign-in when the signup does not issue a session
+- `/profile` — saved places/profile surface; the current implementation lives in `apps/web-vite` pending the Next.js member profile route
 - all other public routes remain signed-out capable
 - `/admin` is curator tooling and is not the member profile

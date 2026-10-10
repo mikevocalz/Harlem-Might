@@ -24,6 +24,8 @@ export const routes = {
   // takes no date. Events have no page of their own: a row links to the
   // venue's site and to the venue's place page.
   today: () => '/today',
+  signIn: () => '/sign-in',
+  signUp: () => '/sign-up',
   ar: () => '/ar',
   download: () => '/download',
   about: () => '/about',
@@ -50,6 +52,8 @@ export function activeSection(pathname: string): PrimaryNavLabel | null {
 // a concept (home ch.3 "About the AR concept"), so neither label promises a
 // download or a working preview.
 export const secondaryNav = [
+  { label: 'Sign in', href: routes.signIn() },
+  { label: 'Create account', href: routes.signUp() },
   { label: 'The app', href: routes.download() },
   { label: 'AR concept', href: routes.ar() },
   { label: 'About', href: routes.about() },

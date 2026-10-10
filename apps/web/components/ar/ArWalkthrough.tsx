@@ -1,4 +1,6 @@
 import { getHarlemPlacePreview } from '@acme/app/features/explore/explore.store.ts';
+import { Figcaption, Figure, ListItem, OrderedList, Section, Text } from '@acme/ui/html';
+import { View } from '@acme/ui/tw';
 import {
   MapAttribution,
   MightsAccentFrame,
@@ -38,12 +40,12 @@ const steps = [
 
 export function ArWalkthrough() {
   return (
-    <section aria-labelledby="ar-walkthrough" className="flex flex-col gap-8 border-t border-rule-rail pt-6">
+    <Section aria-labelledby="ar-walkthrough" className="flex flex-col gap-8 border-t border-rule-rail pt-6">
       <MightsHeading id="ar-walkthrough">How it would work on 125th Street</MightsHeading>
-      <div className="grid grid-cols-1 items-start gap-10 md:grid-cols-12 md:gap-6">
-        <figure className="flex flex-col gap-2 md:col-span-7">
+      <View className="grid grid-cols-1 items-start gap-10 md:grid-cols-12 md:gap-6">
+        <Figure className="flex flex-col gap-2 md:col-span-7">
           <MightsAccentFrame tone="cobalt" className="p-3">
-            <div className="relative aspect-4/3 overflow-hidden bg-surface-raised">
+            <View className="relative aspect-4/3 overflow-hidden bg-surface-raised">
               <MightsMapImage
                 center={apollo.lngLat!}
                 zoom={18.6}
@@ -62,33 +64,33 @@ export function ArWalkthrough() {
                 tone="dark"
                 className="absolute bottom-3 left-3"
               />
-            </div>
+            </View>
           </MightsAccentFrame>
-          <div className="flex flex-row flex-wrap items-baseline justify-between gap-2">
-            <figcaption className="text-small text-text-muted">
+          <View className="flex flex-row flex-wrap items-baseline justify-between gap-2">
+            <Figcaption className="text-small text-text-muted">
               Map view at the Apollo Theater. AR is a concept, no capture yet.
-            </figcaption>
+            </Figcaption>
             <MapAttribution />
-          </div>
-        </figure>
-        <div className="flex flex-col gap-8 md:col-span-5">
+          </View>
+        </Figure>
+        <View className="flex flex-col gap-8 md:col-span-5">
           {/* A real sequence, so an ordered list; the numeral is visual only. */}
-          <ol className="flex flex-col gap-6">
+          <OrderedList className="flex flex-col gap-6">
             {steps.map((step, i) => (
-              <li key={step.title} className="flex gap-4">
-                <span aria-hidden className="w-6 shrink-0 font-sans text-title font-bold text-primary tabular-nums">
+              <ListItem key={step.title} className="flex gap-4">
+                <Text aria-hidden className="w-6 shrink-0 font-sans text-title font-bold text-primary tabular-nums">
                   {i + 1}
-                </span>
-                <div className="flex min-w-0 flex-col gap-1">
+                </Text>
+                <View className="flex min-w-0 flex-col gap-1">
                   <MightsHeading level={3} size="card">
                     {step.title}
                   </MightsHeading>
                   <MightsText>{step.body}</MightsText>
-                </div>
-              </li>
+                </View>
+              </ListItem>
             ))}
-          </ol>
-          <div className="flex flex-col gap-2 border-l-2 border-rule-rail pl-4">
+          </OrderedList>
+          <View className="flex flex-col gap-2 border-l-2 border-rule-rail pl-4">
             <MightsHeading level={3} size="card">
               Your camera
             </MightsHeading>
@@ -96,12 +98,12 @@ export function ArWalkthrough() {
               The app would ask for the camera only when you open the AR view, never at install or on the map. Say no
               and the map and place pages work the same. This page never asks for it.
             </MightsText>
-          </div>
-          <div className="flex flex-row">
+          </View>
+          <View className="flex flex-row">
             <MightsButton href={routes.explore({ place: APOLLO_ID })}>Open the map</MightsButton>
-          </div>
-        </div>
-      </div>
-    </section>
+          </View>
+        </View>
+      </View>
+    </Section>
   );
 }

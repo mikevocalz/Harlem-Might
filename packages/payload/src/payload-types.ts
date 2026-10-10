@@ -251,6 +251,35 @@ export interface Member {
 export interface Media {
   id: number;
   alt: string;
+  role?: ('hero' | 'gallery' | 'historical' | 'thumbnail' | 'map_pin') | null;
+  source?:
+    | (
+        | 'commissioned'
+        | 'nypl'
+        | 'loc'
+        | 'wikimedia_commons'
+        | 'google_places'
+        | 'unsplash'
+        | 'pexels'
+        | 'venue_supplied'
+        | 'other'
+      )
+    | null;
+  sourceUrl?: string | null;
+  license?: string | null;
+  licenseUrl?: string | null;
+  creator?: string | null;
+  credit?: string | null;
+  attributionText?: string | null;
+  /**
+   * Capture date or era as stated by the source.
+   */
+  capturedAt?: string | null;
+  ingestedAt?: string | null;
+  placeholderHash?: string | null;
+  dominantColor?: string | null;
+  shareAlike?: boolean | null;
+  noDerivatives?: boolean | null;
   createdBy?:
     | ({
         relationTo: 'users';
@@ -331,11 +360,24 @@ export interface Place {
   id: number;
   name: string;
   slug: string;
+  /**
+   * Old generated public paths. These stay resolvable and redirect to the current name-led slug.
+   */
+  legacySlugs?:
+    | {
+        slug: string;
+        id?: string | null;
+      }[]
+    | null;
   kind: 'business' | 'culture' | 'historic' | 'outdoors' | 'public-art' | 'community';
   lifecycle: 'open' | 'temporarily_closed' | 'seasonal' | 'permanently_closed' | 'historical_only' | 'unknown';
   primaryCategory?: string | null;
   primaryArea?: string | null;
   logo?: (number | null) | Media;
+  /**
+   * Editorial images. Each image must include a verified source, license, credit and attribution before it can render.
+   */
+  images?: (number | Media)[] | null;
   summary?: string | null;
   /**
    * @minItems 2
@@ -370,6 +412,21 @@ export interface Place {
   };
   website?: string | null;
   phone?: string | null;
+  /**
+   * Hours as published by the source. `osm` holds the raw OpenStreetMap opening_hours value; never transcribe it by hand.
+   */
+  openingHours?: {
+    /**
+     * Raw opening_hours tag, e.g. "Mo-Fr 11:00-23:00; Sa 12:00-24:00".
+     */
+    osm?: string | null;
+    /**
+     * Human-readable hours when a source gives prose instead of a parseable value.
+     */
+    note?: string | null;
+    sourceUrl?: string | null;
+    verifiedAt?: string | null;
+  };
   /**
    * Restaurant/bar menus. Keep image galleries, PDFs, and official menu webpages as separate menu records.
    */
@@ -502,6 +559,10 @@ export interface Walk {
     note?: string | null;
     id?: string | null;
   }[];
+  /**
+   * Cover and route images. Each image must include a verified source, license, credit and attribution before it can render.
+   */
+  images?: (number | Media)[] | null;
   distanceMeters: number;
   /**
    * Expected time at an easy pace, stops included.
@@ -576,6 +637,10 @@ export interface Story {
    * Every place this story is about. Each place page links back.
    */
   places?: (number | Place)[] | null;
+  /**
+   * Lead and inline images. Each image must include a verified source, license, credit and attribution before it can render.
+   */
+  images?: (number | Media)[] | null;
   /**
    * Archival or commissioned images. Every item needs a credit and a rights basis.
    */
@@ -656,6 +721,10 @@ export interface Event {
   endsAt_tz: 'America/New_York';
   lifecycle: 'scheduled' | 'cancelled' | 'postponed';
   place?: (number | null) | Place;
+  /**
+   * Event art and venue images. Each image must include a verified source, license, credit and attribution before it can render.
+   */
+  images?: (number | Media)[] | null;
   venueName?: string | null;
   venueUrl?: string | null;
   /**
@@ -1007,6 +1076,20 @@ export interface MembersSelect<T extends boolean = true> {
  */
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
+  role?: T;
+  source?: T;
+  sourceUrl?: T;
+  license?: T;
+  licenseUrl?: T;
+  creator?: T;
+  credit?: T;
+  attributionText?: T;
+  capturedAt?: T;
+  ingestedAt?: T;
+  placeholderHash?: T;
+  dominantColor?: T;
+  shareAlike?: T;
+  noDerivatives?: T;
   createdBy?: T;
   updatedBy?: T;
   updatedAt?: T;
@@ -1055,11 +1138,18 @@ export interface PagesSelect<T extends boolean = true> {
 export interface PlacesSelect<T extends boolean = true> {
   name?: T;
   slug?: T;
+  legacySlugs?:
+    | T
+    | {
+        slug?: T;
+        id?: T;
+      };
   kind?: T;
   lifecycle?: T;
   primaryCategory?: T;
   primaryArea?: T;
   logo?: T;
+  images?: T;
   summary?: T;
   location?: T;
   locationAccuracy?: T;
@@ -1086,6 +1176,14 @@ export interface PlacesSelect<T extends boolean = true> {
       };
   website?: T;
   phone?: T;
+  openingHours?:
+    | T
+    | {
+        osm?: T;
+        note?: T;
+        sourceUrl?: T;
+        verifiedAt?: T;
+      };
   menus?:
     | T
     | {
@@ -1156,6 +1254,7 @@ export interface WalksSelect<T extends boolean = true> {
         note?: T;
         id?: T;
       };
+  images?: T;
   distanceMeters?: T;
   durationMinutes?: T;
   startDescription?: T;
@@ -1191,6 +1290,7 @@ export interface StoriesSelect<T extends boolean = true> {
   dek?: T;
   body?: T;
   places?: T;
+  images?: T;
   archive?:
     | T
     | {
@@ -1233,6 +1333,7 @@ export interface EventsSelect<T extends boolean = true> {
   endsAt_tz?: T;
   lifecycle?: T;
   place?: T;
+  images?: T;
   venueName?: T;
   venueUrl?: T;
   sourceUrl?: T;

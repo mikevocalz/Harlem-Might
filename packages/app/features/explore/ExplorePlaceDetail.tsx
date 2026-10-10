@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { MightsButton, MightsHeading, MightsLocationStamp, MightsText } from '@acme/ui/mights';
 import { Pressable, ScrollView, Text, View } from '@acme/ui/tw';
+import { PlaceMasthead } from '@acme/app/features/site/place/PlaceHero.tsx';
 import { directionsUrl } from './explore-copy';
 import { formatDistance, getHarlemPlacePreview, nearbyPlaces, placeStreetLine, type HarlemPlacePreview } from './explore.store';
 import { useExploreType } from './explore-type';
@@ -140,6 +141,10 @@ export function ExplorePlaceDetail({
           contentContainerClassName={'max-w-content-prose py-5 pb-12 ' + type.sectionGap + ' ' + pad}
           showsVerticalScrollIndicator={false}
         >
+          {/* The masthead is always the shared carousel: the place's photos
+              when the catalogue has them, else the satellite frame plus
+              archival Harlem pictures, same as the site place page. */}
+          <PlaceMasthead place={place} images={[]} />
           <MightsLocationStamp name={place.category} street={placeStreetLine(place)} size={type.buttons.stamp} />
           <MightsText tone="default" className={type.body}>
             {place.shortDescription}
@@ -208,7 +213,8 @@ export function ExplorePlaceDetail({
               Description written by Harlem Might.
             </MightsText>
             <MightsText size="small" className={type.caption}>
-              No photos yet. We only show photos the venue or an archive has cleared for use.
+              Masthead shows the satellite frame and Harlem in the archive, not photographs of this place — we only
+              show photos the venue or an archive has cleared for use.
             </MightsText>
           </View>
         </ScrollView>

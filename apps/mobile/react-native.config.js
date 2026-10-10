@@ -9,5 +9,13 @@ module.exports = {
     '@mapbox/react-native-mapbox-ar': {
       platforms: { android: null, ios: null },
     },
+    // Viro stays out of autolinking on every platform: expo.autolinking.exclude
+    // in package.json covers Expo autolinking, this entry covers the community
+    // CLI path. iOS pins ViroReact/ViroKit in the Podfile against the
+    // node_modules dist (device-arm64 binaries only, so simulator builds pass
+    // HARLEM_VIRO=skip); Android is wired through settings.gradle by the fork.
+    '@reactvision/react-viro': {
+      platforms: { android: null, ios: null },
+    },
   },
 };

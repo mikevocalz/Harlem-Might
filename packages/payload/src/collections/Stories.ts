@@ -36,6 +36,13 @@ export const Stories: CollectionConfig = {
       admin: { description: 'Every place this story is about. Each place page links back.' },
     },
     {
+      name: 'images',
+      type: 'relationship',
+      relationTo: 'media',
+      hasMany: true,
+      admin: { description: 'Lead and inline images. Each image must include a verified source, license, credit and attribution before it can render.' },
+    },
+    {
       name: 'archive',
       type: 'array',
       admin: { description: 'Archival or commissioned images. Every item needs a credit and a rights basis.' },

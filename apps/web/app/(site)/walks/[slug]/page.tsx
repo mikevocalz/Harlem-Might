@@ -2,10 +2,12 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import type { WalkRecord } from '@acme/app/content';
+import { Link, Time } from '@acme/ui/html';
 import { View } from '@acme/ui/tw';
 import {
   MapAttribution,
   MightsButton,
+  MightsEditorialImage,
   MightsHeading,
   MightsMapImage,
   MightsNotchCard,
@@ -14,14 +16,14 @@ import {
   MightsText,
   routes,
 } from '@acme/ui/mights';
-import { ContentNotice } from '@/components/content/ContentNotice';
-import { SourcesList } from '@/components/content/SourcesList';
-import { WalkStops } from '@/components/walks/WalkStops';
-import { loadWalk } from '@/components/walks/load';
-import { linkPlace, locatePlace } from '@/components/content/place-link';
-import { walkFactModules, walkMapView } from '@/components/walks/walk-facts';
-import { storyDate } from '@/components/stories/story-format';
-import { safeHttpUrl } from '@/components/content/safe-url';
+import { ContentNotice } from '@acme/app/features/site/content/ContentNotice.tsx';
+import { SourcesList } from '@acme/app/features/site/content/SourcesList.tsx';
+import { WalkStops } from '@acme/app/features/site/walks/WalkStops.tsx';
+import { cachedWalk as loadWalk } from '@/lib/cached-content';
+import { linkPlace, locatePlace } from '@acme/app/features/site/content/place-link.ts';
+import { walkFactModules, walkMapView } from '@acme/app/features/site/walks/walk-facts.ts';
+import { storyDate } from '@acme/app/features/site/stories/story-format.ts';
+import { safeHttpUrl } from '@acme/app/features/site/content/safe-url.ts';
 
 // References (structure only): AllTrails trail overview facts block
 // (mobbin.com/screens/fc4f4c20-dc64-4ee6-b5f9-a3f093e30db7) for the B7 strip,
@@ -57,7 +59,7 @@ async function WalkContent({ params }: Params) {
   const result = await loadWalk(slug);
   if (result.status === 'not-found') notFound();
   if (result.status === 'unavailable') {
-    if (result.reason === 'query-failed') console.error('walk read failed', slug, result.error);
+    if (result.reason === 'query-failed') console.error('walk read failed', slug);
     return (
       <MightsPage title="Walk" crumbs={[{ label: 'Walks', href: routes.walks() }]}>
         <ContentNotice
@@ -130,15 +132,15 @@ function Walk({ walk }: { walk: WalkRecord }) {
               </MightsHeading>
               <MightsText tone="default">{walk.accessibility.note}</MightsText>
               <MightsText size="small">
-                <a
+                <Link
                   href={accessSource}
                   className="mights-focus text-primary underline underline-offset-4 hover:no-underline"
                 >
                   Source for this note
-                </a>
+                </Link>
                 {walk.accessibility.verifiedAt ? (
                   <>
-                    , checked <time dateTime={walk.accessibility.verifiedAt}>{storyDate(walk.accessibility.verifiedAt)}</time>
+                    , checked <Time dateTime={walk.accessibility.verifiedAt}>{storyDate(walk.accessibility.verifiedAt)}</Time>
                   </>
                 ) : null}
               </MightsText>
@@ -168,6 +170,22 @@ function Walk({ walk }: { walk: WalkRecord }) {
           </View>
         ) : null}
       </View>
+
+      {walk.images.length ? (
+        <View className="grid grid-cols-1 gap-6 md:grid-cols-12">
+          {walk.images.map((image, index) => (
+            <View key={image.id} className={index === 0 ? 'md:col-span-7' : 'md:col-span-5'}>
+              <MightsEditorialImage
+                image={image}
+                screenId={`walk-${walk.slug}`}
+                ratio={index === 0 ? 'wide' : 'standard'}
+                sizes={index === 0 ? '(min-width: 768px) 58vw, 100vw' : '(min-width: 768px) 42vw, 100vw'}
+                priority={index === 0}
+              />
+            </View>
+          ))}
+        </View>
+      ) : null}
 
       <WalkStops stops={walk.stops} />
       <SourcesList sources={walk.sources} />

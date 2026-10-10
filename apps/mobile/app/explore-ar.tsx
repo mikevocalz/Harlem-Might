@@ -5,6 +5,8 @@ import { selectArTracking, selectSession, useNavigationStore } from '@acme/app/f
 import { getHarlemPlacePreview, useExplore } from '@acme/app';
 import { MightsButton, MightsHeading, MightsText, routes } from '@acme/ui/mights';
 import { View } from '@acme/ui/tw';
+import { useReducedMotion } from '@acme/ui';
+import { ExploreLoader } from '@acme/spatial/explore-loader';
 import { HarlemStreetScene } from '../src/ar/HarlemStreetScene';
 import { HarlemTabletopScene } from '../src/ar/HarlemTabletopScene';
 import { sceneModeFor, useArSession, type ArSceneMode } from '../src/ar/arSession.store';
@@ -135,8 +137,10 @@ function ArPanel({
 }) {
   const copy = PANEL_COPY[mode];
   const route = useArSession((s) => s.route);
+  const reducedMotion = useReducedMotion();
+  const routing = route.status === 'loading';
   const routeLine =
-    route.status === 'loading'
+    routing
       ? 'Finding a walking route to nearby places.'
       : route.status === 'ready' && route.route.kind === 'walking'
         ? 'Walking route to the two nearest places.'
@@ -153,6 +157,11 @@ function ArPanel({
         {copy.title(placeName ?? 'Harlem')}
       </MightsHeading>
       <MightsText>{copy.body}</MightsText>
+      {/* The one real wait in the AR flow: the walking-route read. The
+          orbital loader marks it; reduce-motion gets the pulse variant. */}
+      {routing ? (
+        <ExploreLoader size={120} phase={reducedMotion ? 'reduced' : 'loading'} label="Finding a walking route" />
+      ) : null}
       {routeLine ? <MightsText>{routeLine}</MightsText> : null}
       {mapLine ? <MightsText>{mapLine}</MightsText> : null}
       <View className="flex-row gap-3">

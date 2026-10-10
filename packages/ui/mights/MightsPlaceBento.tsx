@@ -1,3 +1,4 @@
+import { View } from '../tw';
 import { MapAttribution, MightsMapImage, type MapPin } from './MightsMapImage';
 import { MightsFigure } from './MightsFigure';
 import { MightsLocationStamp, type MightsLocationStampProps } from './MightsLocationStamp';
@@ -45,6 +46,8 @@ export interface BentoCustomModule {
   id: string;
   content: React.ReactNode;
   href?: string;
+  /** Card fill; see MightsNotchCard `tone`. */
+  tone?: 'raised' | 'inverted';
 }
 
 export type BentoModule = BentoPlaceModule | BentoFactModule | BentoCustomModule;
@@ -104,7 +107,7 @@ type BentoLayout =
   | {
       /** One editorial image leads; modules are text-first. B3, B8, B9. */
       variant: 'story-dominant';
-      lead: BentoFigureLead;
+      lead: BentoFigureLead | BentoCustomLead;
     }
   | {
       /** A short strip of text modules, no media. Module 0 is widest. B7, B13. */
@@ -196,7 +199,7 @@ function moduleKey(m: BentoModule) {
 function PlaceBody({ place, level, dominant, dense }: { place: BentoPlace; level: 2 | 3; dominant: boolean; dense: boolean }) {
   // The dominant card's map well takes the spare height, so its body stays content-sized.
   return (
-    <div className={`flex flex-col gap-1 p-5 ${dominant ? '' : 'flex-1'}`}>
+    <View className={`flex flex-col gap-1 p-5 ${dominant ? '' : 'flex-1'}`}>
       <MightsHeading level={level} size={dominant ? 'title' : 'card'}>
         {place.name}
       </MightsHeading>
@@ -206,7 +209,7 @@ function PlaceBody({ place, level, dominant, dense }: { place: BentoPlace; level
           {place.shortDescription}
         </MightsText>
       )}
-    </div>
+    </View>
   );
 }
 
@@ -214,7 +217,7 @@ function PlaceMap({ place, media, span }: { place: BentoPlace; media: Media; spa
   if (media === 'none' || media === 'dense') return null;
   const well = media === 'map-dominant' ? 'h-64 md:min-h-80 md:flex-1' : 'h-40 md:h-44';
   return (
-    <div className={`${well} shrink-0 border-b border-rule-hairline`}>
+    <View className={`${well} shrink-0 border-b border-rule-hairline`}>
       {place.lngLat ? (
         <MightsMapImage
           center={place.lngLat}
@@ -227,11 +230,11 @@ function PlaceMap({ place, media, span }: { place: BentoPlace; media: Media; spa
           alt={`Map of ${place.name}`}
         />
       ) : (
-        <div className="flex h-full items-end bg-surface-sunken p-4">
+        <View className="flex h-full items-end bg-surface-sunken p-4">
           <MightsText size="small">Location pending</MightsText>
-        </div>
+        </View>
       )}
-    </div>
+    </View>
   );
 }
 
@@ -259,7 +262,7 @@ function ModuleCard({
   if (module.kind === 'fact') {
     return (
       <MightsNotchCard href={module.href} label={`${module.label}: ${module.value}`} className="flex-1">
-        <div className="flex flex-1 flex-col gap-1 p-5">
+        <View className="flex flex-1 flex-col gap-1 p-5">
           {/* A fact is a label and a value, not a section: no heading, so a
               facts strip doesn't add four headings to the outline. */}
           <MightsText size="small">{module.label}</MightsText>
@@ -271,12 +274,12 @@ function ModuleCard({
               {module.note}
             </MightsText>
           ) : null}
-        </div>
+        </View>
       </MightsNotchCard>
     );
   }
   return (
-    <MightsNotchCard href={module.href} className="flex-1">
+    <MightsNotchCard href={module.href} tone={module.tone} className="flex-1">
       {module.content}
     </MightsNotchCard>
   );
@@ -286,7 +289,7 @@ function LeadCard({ lead }: { lead: BentoLead }) {
   if (lead.kind === 'map') {
     return (
       <MightsNotchCard className="flex-1">
-        <div className="relative h-72 shrink-0 md:h-auto md:min-h-96 md:flex-1">
+        <View className="relative h-72 shrink-0 md:h-auto md:min-h-96 md:flex-1">
           <MightsMapImage
             center={lead.center}
             zoom={lead.zoom}
@@ -298,11 +301,11 @@ function LeadCard({ lead }: { lead: BentoLead }) {
             alt={lead.alt}
           />
           {lead.stamp ? <MightsLocationStamp {...lead.stamp} className="absolute bottom-4 left-4" /> : null}
-        </div>
+        </View>
         {lead.caption ? (
-          <div className="border-t border-rule-hairline p-5">
+          <View className="border-t border-rule-hairline p-5">
             <MightsText size="small">{lead.caption}</MightsText>
-          </div>
+          </View>
         ) : null}
       </MightsNotchCard>
     );
@@ -374,15 +377,15 @@ export function MightsPlaceBento(props: MightsPlaceBentoProps) {
       modules.some((m) => m.kind === 'place' && m.place.lngLat));
 
   return (
-    <div className="flex flex-col gap-2">
-      <div id={ids?.trigger} className="grid grid-cols-1 gap-4 md:grid-cols-12">
+    <View className="flex flex-col gap-2">
+      <View nativeID={ids?.trigger} className="grid grid-cols-1 gap-4 md:grid-cols-12">
         {cells.map((cell, i) => (
-          <div key={cell.key} id={ids?.modules[i]} className={`flex flex-col ${cell.span}`}>
+          <View key={cell.key} nativeID={ids?.modules[i]} className={`flex flex-col ${cell.span}`}>
             {cell.node}
-          </div>
+          </View>
         ))}
-      </div>
+      </View>
       {showsMap ? <MapAttribution /> : null}
-    </div>
+    </View>
   );
 }

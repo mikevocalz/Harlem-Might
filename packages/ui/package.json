@@ -26,9 +26,10 @@
   "scripts": {
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --test 'tv.test.ts' 'mights/geometry.native.test.ts' 'haptic-policy.test.ts'"
+    "test": "node --test 'tv.test.ts' 'mights/geometry.native.test.ts' 'mights/editorialImage.store.test.ts' 'haptic-policy.test.ts'"
   },
   "dependencies": {
+    "@acme/assets": "workspace:*",
     "@acme/theme": "workspace:*",
     "@expo/html-elements": "catalog:",
     "@expo/material-symbols": "catalog:",

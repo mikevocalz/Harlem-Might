@@ -4,4 +4,13 @@
 // files for the web (next/font localFont, apps/web/app/fonts.ts) and their
 // static TTF instances in ./fonts/native for the app (expo-font plugin,
 // apps/mobile/app.config.ts). Neither loader imports through this module.
-export {};
+export {
+  HARLEM_ARCHIVAL_IMAGES,
+  editorialImageContentFit,
+  getHarlemArchivalImage,
+  imageAspect,
+  isDisplayableEditorialImage,
+} from './editorial-images.ts';
+export type { EditorialImage, EditorialImageRole, EditorialImageSource } from './editorial-images.ts';
+export { createEditorialImageStore, editorialImageStateKey, useEditorialImageStore } from './editorialImage.store.ts';
+export type { EditorialImageStatus } from './editorialImage.store.ts';

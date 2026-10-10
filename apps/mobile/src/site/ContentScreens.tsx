@@ -1,5 +1,6 @@
 import { useRouter } from 'solito/navigation';
 import { routes } from '@acme/ui/mights';
+import { todayHeading } from '@acme/app/features/site/today/event-format.ts';
 import { ContentNotice, SiteAction, SitePage } from './SitePage';
 
 // Walks, Stories and Today on native.
@@ -42,34 +43,12 @@ export function WalksScreen() {
   );
 }
 
-export function StoriesScreen() {
-  return (
-    <SitePage
-      title="Stories"
-      lead="The history behind a block, kept on the block where it happened. Every story names its sources."
-    >
-      <ContentNotice title="No stories published yet" actions={<OpenTheMap />}>
-        Each story will be sourced and attached to the place where it happened. Until the first ones are published, start
-        from a place on the map.
-      </ContentNotice>
-    </SitePage>
-  );
-}
-
-// Same formatter as apps/web/app/(site)/today/page.tsx: the date is Harlem's,
-// never the device's time zone.
-const heading = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/New_York',
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-});
-
+// Same heading as the site's Today page: shared in event-format.ts, and the
+// date is Harlem's, never the device's time zone.
 export function TodayScreen() {
-  const parts = Object.fromEntries(heading.formatToParts(new Date()).map((part) => [part.type, part.value]));
   return (
     <SitePage
-      title={`Today in Harlem, ${parts.weekday} ${parts.day} ${parts.month}`}
+      title={`Today in Harlem, ${todayHeading(new Date())}`}
       lead="Events with a date and a source, and when we last checked each one."
     >
       <ContentNotice title="No events listed for today" actions={<OpenTheMap />}>

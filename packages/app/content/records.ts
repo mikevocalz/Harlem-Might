@@ -1,3 +1,5 @@
+import type { EditorialImage } from '@acme/assets';
+
 // Plain, serialisable shapes the readers return. They hide Payload internals
 // (`_status`, `_tz` siblings, unpopulated ids) so routes and client components
 // depend on this contract, not on the CMS schema.
@@ -7,6 +9,52 @@ export interface PlaceRef {
   id: number;
   slug: string;
   name: string;
+  /** Present only when populated media passed the rights/provenance gate. */
+  images?: EditorialImage[];
+  /** `[lng, lat]`, when the place has a map point; cards render it as a satellite image. */
+  lngLat?: readonly [number, number];
+}
+
+export type PlaceKind = 'business' | 'culture' | 'historic' | 'outdoors' | 'public-art' | 'community';
+
+export type PlaceLifecycle =
+  | 'open'
+  | 'temporarily_closed'
+  | 'seasonal'
+  | 'permanently_closed'
+  | 'historical_only'
+  | 'unknown';
+
+export type LocationAccuracy = 'verified' | 'approx' | 'pending';
+
+/** A catalogue place. `unknown`/`pending`/`unverified` fields pass through, never dressed up. */
+export interface PlaceRecord {
+  id: number;
+  slug: string;
+  name: string;
+  kind: PlaceKind;
+  lifecycle: PlaceLifecycle;
+  category?: string;
+  area?: string;
+  summary?: string;
+  /** WGS84 [lng, lat]; absent while `locationAccuracy` is 'pending'. */
+  location?: readonly [number, number];
+  locationAccuracy: LocationAccuracy;
+  /** Source the point was read from (e.g. an openstreetmap.org object URL). */
+  locationSourceUrl?: string;
+  /** ISO instant the point's source was last read. */
+  locationSourceReadAt?: string;
+  /** Formatted postal address when the record carries one. */
+  address?: string;
+  website?: string;
+  phone?: string;
+  /** Hours exactly as the source published them; `osm` is the raw opening_hours value. */
+  openingHours?: { osm?: string; note?: string; sourceUrl?: string; verifiedAt?: string };
+  /** Official menu links (web/PDF); only rows still marked active. */
+  menus?: { label: string; url?: string; sourceUrl?: string; mealPeriod?: string }[];
+  /** Curator-picked landmark. */
+  featured: boolean;
+  images: EditorialImage[];
 }
 
 /** One citation from a record's `sources` list. */
@@ -47,6 +95,7 @@ export interface WalkRecord {
   startDescription: string;
   endDescription: string;
   accessibility?: AccessibilityNote;
+  images: EditorialImage[];
   stops: WalkStop[];
   sources: SourceRef[];
   /** ISO instant. */
@@ -78,6 +127,7 @@ export interface StoryRecord {
   body: string;
   author: string;
   places: PlaceRef[];
+  images: EditorialImage[];
   archive: ArchiveItem[];
   sources: SourceRef[];
   /** ISO instant. */
@@ -103,6 +153,7 @@ export interface EventRecord {
   /** IANA zone the times were entered in. Always America/New_York today. */
   timeZone: string;
   status: EventStatus;
+  images: EditorialImage[];
   /** The catalogue venue, when the venue is in Places. */
   place?: PlaceRef;
   /** Venue name when the venue is not catalogued. */

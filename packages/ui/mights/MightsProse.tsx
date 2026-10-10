@@ -1,7 +1,15 @@
+import { Article, Heading, Link, List, ListItem, Nav, Paragraph, Section, Text } from '../html';
+import { View } from '../tw';
 import { MightsFigure } from './MightsFigure';
 
 // Long-form reading layout: Newsreader body at a ~70ch measure, Mona Sans
 // section headings, and a sticky contents list from 1280px up.
+//
+// Kit primitives render React Native Web views and text on web. Views are flex
+// columns, so the old <div> flow is kept with `block`/`grid`/`flex`. Text
+// resets: `my-0` drops the browser heading/paragraph margins the kit text
+// brings back, `whitespace-normal` its pre-wrap, and `font-sans` its system
+// font stack. List items need `list-item` to show their square marker.
 
 export interface ProseSection {
   id: string;
@@ -13,41 +21,55 @@ export interface ProseSection {
 
 export function MightsProse({ sections, updated }: { sections: readonly ProseSection[]; updated?: string }) {
   return (
-    <div className="grid grid-cols-1 gap-12 xl:grid-cols-12 xl:gap-6">
-      <nav aria-label="On this page" className="hidden xl:col-span-3 xl:block">
-        <div className="sticky top-24 flex flex-col gap-3 border-l border-rule-rail pl-5">
-          <span className="text-label font-semibold text-text-muted">On this page</span>
+    <View className="grid grid-cols-1 gap-12 xl:grid-cols-12 xl:gap-6">
+      <Nav aria-label="On this page" className="hidden xl:col-span-3 xl:block">
+        <View className="sticky top-24 flex flex-col gap-3 border-l border-rule-rail pl-5">
+          <Text className="whitespace-normal font-sans text-label font-semibold text-text-muted">On this page</Text>
           {sections.map((s) => (
-            <a key={s.id} href={`#${s.id}`} className="mights-focus text-ui text-text hover:text-primary">
+            <Link
+              key={s.id}
+              href={`#${s.id}`}
+              className="mights-focus whitespace-normal font-sans text-ui text-text hover:text-primary"
+            >
               {s.title}
-            </a>
+            </Link>
           ))}
-        </div>
-      </nav>
-      <article className="flex max-w-[70ch] flex-col gap-12 xl:col-span-8 xl:col-start-5">
-        {updated ? <p className="text-small text-text-muted">Last updated {updated}</p> : null}
+        </View>
+      </Nav>
+      <Article className="flex max-w-[70ch] flex-col gap-12 xl:col-span-8 xl:col-start-5">
+        {updated ? (
+          <Paragraph className="my-0 whitespace-normal font-sans text-small text-text-muted">Last updated {updated}</Paragraph>
+        ) : null}
         {sections.map((s) => (
-          <section key={s.id} id={s.id} className="flex scroll-mt-24 flex-col gap-5 border-t border-rule-hairline pt-8">
-            <h2 className="font-sans text-title font-semibold text-text md:text-title-lg">{s.title}</h2>
+          <Section key={s.id} id={s.id} className="flex scroll-mt-24 flex-col gap-5 border-t border-rule-hairline pt-8">
+            <Heading
+              level={2}
+              className="my-0 whitespace-normal font-sans text-title font-semibold text-text md:text-title-lg"
+            >
+              {s.title}
+            </Heading>
             {s.body.map((block, i) =>
               typeof block === 'string' ? (
-                <p key={i} className="font-serif text-prose text-text">
+                <Paragraph key={i} className="my-0 whitespace-normal font-serif text-prose text-text">
                   {block}
-                </p>
+                </Paragraph>
               ) : (
-                <ul key={i} className="flex flex-col gap-3 pl-5">
+                <List key={i} className="flex flex-col gap-3 pl-5">
                   {block.map((item) => (
-                    <li key={item} className="list-[square] font-serif text-prose text-text marker:text-primary">
+                    <ListItem
+                      key={item}
+                      className="list-item list-[square] whitespace-normal font-serif text-prose text-text marker:text-primary"
+                    >
                       {item}
-                    </li>
+                    </ListItem>
                   ))}
-                </ul>
+                </List>
               ),
             )}
             {s.figure ? <MightsFigure {...s.figure} ratio="standard" className="mt-2" /> : null}
-          </section>
+          </Section>
         ))}
-      </article>
-    </div>
+      </Article>
+    </View>
   );
 }

@@ -1,3 +1,13 @@
-export function MightsJsonLd({ data }: { data: Record<string, unknown> }) {
-  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data).replace(/</g, '\\u003c') }} />;
+export interface JsonLdProps {
+  data: Record<string, unknown>;
 }
+
+export function JsonLd({ data }: JsonLdProps) {
+  const json = JSON.stringify(data).replace(/</g, '\\u003c');
+
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: json }} />;
+}
+
+// Keep the branded name for existing call sites while new primitives use the
+// semantic name.
+export const MightsJsonLd = JsonLd;

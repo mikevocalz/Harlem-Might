@@ -19,6 +19,10 @@
       "react-native": "./rive-fx/index.native.ts",
       "default": "./rive-fx/index.web.ts"
     },
+    "./explore-loader": {
+      "react-native": "./explore-loader/index.native.ts",
+      "default": "./explore-loader/index.web.ts"
+    },
     "./mcp": "./mcp/index.ts",
     "./arSurface": "./arSurface.ts",
     "./audio": {
@@ -36,7 +40,10 @@
     "test": "node --test 'lightcycle/**/*.test.ts' 'mcp/**/*.test.ts'",
     "rive-fx:verify": "cd rive-fx/rive && rive . --verify",
     "rive-fx:inspect": "cd rive-fx/rive && rive inspect . --summary",
-    "rive-fx:spinner-shot": "cd rive-fx/rive && mkdir -p build && rive . --screenshot=build/grid-core-spinner.png --advance=30"
+    "rive-fx:spinner-shot": "cd rive-fx/rive && mkdir -p build && rive . --screenshot=build/grid-core-spinner.png --advance=30",
+    "explore-loader:verify": "cd explore-loader/rive && rive . --verify",
+    "explore-loader:build": "cd explore-loader/rive && rive . --once && cp build/explore-loader.riv ../explore-loader.riv",
+    "explore-loader:shot": "cd explore-loader/rive && mkdir -p build && rive . --screenshot=build/explore-loader.png --advance=60"
   },
   "dependencies": {
     "@acme/theme": "workspace:*",

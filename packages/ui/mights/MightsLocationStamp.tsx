@@ -1,6 +1,8 @@
 'use client';
 
 import { Link } from 'solito/link';
+import { Text } from '../html';
+import { View } from '../tw';
 
 // Replaces eyebrows. Sits on the image, names the real place shown, links to it.
 export interface MightsLocationStampProps {
@@ -22,11 +24,16 @@ export function MightsLocationStamp({ name, street, href, tone = 'light', classN
     tone === 'dark'
       ? 'bg-mights-night/70 text-white'
       : 'bg-paper/90 text-text';
+  // The name and street are text nested in a text root, so they inherit the
+  // stamp's colour, size and font instead of React Native Web's black 14px
+  // default. `contents` keeps that root out of the flex layout.
   const content = (
     <>
-      <span aria-hidden className="h-2 w-2 shrink-0 rotate-45 bg-primary" />
-      <span className="font-semibold">{name}</span>
-      {street ? <span className="opacity-75">{street}</span> : null}
+      <View aria-hidden className="h-2 w-2 shrink-0 rotate-45 bg-primary" />
+      <Text className="contents text-inherit [font:inherit] whitespace-normal">
+        <Text className="font-semibold">{name}</Text>
+        {street ? <Text className="opacity-75">{street}</Text> : null}
+      </Text>
     </>
   );
   const textSize = size === 'xr' ? 'text-xr-label' : 'text-sm';
@@ -36,6 +43,6 @@ export function MightsLocationStamp({ name, street, href, tone = 'light', classN
       {content}
     </Link>
   ) : (
-    <span className={cls}>{content}</span>
+    <View className={`flex-row ${cls}`}>{content}</View>
   );
 }

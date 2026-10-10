@@ -1,9 +1,15 @@
 // Native counterpart of geometry.ts. React Native has no clip-path, so the
 // same NeonBlade cuts are drawn as react-native-svg paths sized from
-// onLayout. The web class strings are re-exported unchanged so `index.ts`
-// exposes one surface on both platforms; the explicit `.ts` extension keeps
+// onLayout. The web class strings are re-exported unchanged (all but `notch`,
+// which is redefined below) so `index.ts` exposes one surface on both platforms; the explicit `.ts` extension keeps
 // Metro from resolving this file back to itself.
-export * from './geometry.ts';
+export {
+  condensed,
+  cornerCut,
+  cornerCutSm,
+  expanded,
+  semiCondensed,
+} from "./geometry.ts";
 
 /**
  * A measured box in dp, as reported by `onLayout`.
@@ -20,7 +26,7 @@ export interface Size {
  * button, 20px) and `cornerCutSm` (compact controls, 12px) on the web. The
  * Horizon sizes reuse them: `xr` takes the small cut, `xr-primary` the md one.
  */
-export const CORNER_CUT = { md: 20, sm: 12, xr: 12, 'xr-primary': 20 } as const;
+export const CORNER_CUT = { md: 20, sm: 12, xr: 12, "xr-primary": 20 } as const;
 
 /**
  * Card silhouette from the web `notch` clip-path: trapezoid notches centred on
@@ -46,7 +52,9 @@ export const NOTCH = {
 const fmt = (n: number) => String(Math.round(n * 100) / 100);
 
 const toPath = (points: readonly (readonly [number, number])[]) =>
-  points.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${fmt(x)} ${fmt(y)}`).join(' ') + ' Z';
+  points
+    .map(([x, y], i) => `${i === 0 ? "M" : "L"}${fmt(x)} ${fmt(y)}`)
+    .join(" ") + " Z";
 
 /** The box left after insetting every edge, or undefined when nothing is left. */
 function insetBox({ width, height }: Size, inset: number) {
@@ -73,7 +81,7 @@ function insetBox({ width, height }: Size, inset: number) {
  */
 export function cornerCutPath(size: Size, cut: number, inset = 0): string {
   const box = insetBox(size, inset);
-  if (!box) return '';
+  if (!box) return "";
   const { x0, y0, x1, y1 } = box;
   const c = Math.max(0, Math.min(cut, x1 - x0, y1 - y0));
   return toPath([
@@ -99,9 +107,10 @@ export function cornerCutPath(size: Size, cut: number, inset = 0): string {
  * @returns An SVG path string, or `''` when the inset box is empty.
  */
 export function notchPath(size: Size, inset = 0): string {
-  if (size.width < NOTCH.minWidth) return cornerCutPath(size, NOTCH.cornerCut, inset);
+  if (size.width < NOTCH.minWidth)
+    return cornerCutPath(size, NOTCH.cornerCut, inset);
   const box = insetBox(size, inset);
-  if (!box) return '';
+  if (!box) return "";
   const { x0, y0, x1, y1 } = box;
   const { outerHalfWidth: ow, innerHalfWidth: iw, depth: d } = NOTCH;
   const c = Math.max(0, Math.min(NOTCH.cornerCut, x1 - x0, y1 - y0));
@@ -122,3 +131,6 @@ export function notchPath(size: Size, inset = 0): string {
     [x0, y1],
   ]);
 }
+
+/** The web's clip-path notch class. React Native cannot clip to a path, so it is inert here; shared files can still compose it. */
+export const notch = "";

@@ -58,6 +58,19 @@ body {
   animation: gallery-slide-enter 220ms ease-out both;
 }
 
+/* Suspense fallbacks: stay invisible for the first 250 ms so a fast read
+   renders no skeleton at all, then fade in rather than pop. */
+.hm-suspense-in {
+  opacity: 0;
+  animation: hm-suspense-in 160ms ease-out 250ms forwards;
+}
+
+@keyframes hm-suspense-in {
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes gallery-slide-enter {
   from {
     opacity: 0;
@@ -145,11 +158,6 @@ body {
 }
 
 /* Bottom sheet: native <dialog> pinned to the bottom edge. */
-dialog.mights-sheet[open] {
-  position: fixed;
-  inset: auto 0 0 0;
-}
-
 .skip-link {
   position: absolute;
   left: 1rem;
