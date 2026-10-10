@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { cachedStories } from "@/lib/cached-content";
 import { MightsText } from "@acme/ui/mights";
 import { StoriesScreen } from "@acme/app/features/site/stories/StoriesScreen.tsx";
+import { ContentLoader } from "@acme/app/features/site/content/ContentLoader.tsx";
 
 export const metadata: Metadata = {
   title: "Stories",
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
 export default function StoriesPage() {
   return (
     <Suspense
-      fallback={<MightsText>Checking for published stories.</MightsText>}
+      fallback={<ContentLoader label="Checking for published stories" />}
     >
       <StoriesContent />
     </Suspense>

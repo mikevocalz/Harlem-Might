@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@acme/assets": "workspace:*",
+    "@acme/spatial": "workspace:*",
     "@acme/theme": "workspace:*",
     "@acme/ui": "workspace:*",
     "@tanstack/react-query": "catalog:",
