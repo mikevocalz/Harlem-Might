@@ -21,15 +21,57 @@ jobs:
           # Bump .nvmrc and the root package.json "engines" together.
           node-version-file: .nvmrc
           cache: pnpm
+      - name: Verify private spatial dependency access
+        env:
+          DEPENDENCY_TOKEN: ${{ secrets.SPATIAL_DEPENDENCIES_TOKEN }}
+        run: |
+          if [ -z "$DEPENDENCY_TOKEN" ]; then
+            echo "::error::Configure SPATIAL_DEPENDENCIES_TOKEN with read-only Contents access to mikevocalz/viro and mikevocalz/viro-external to validate mobile."
+            exit 1
+          fi
+      - name: Checkout Viro fork
+        uses: actions/checkout@v7
+        with:
+          repository: mikevocalz/viro
+          ref: 99b1d87c55ca9f43a6452144183a0b32a2bfb3c9
+          token: ${{ secrets.SPATIAL_DEPENDENCIES_TOKEN }}
+          path: .spatial-deps/viro
+          persist-credentials: false
+      - name: Checkout Viro External
+        uses: actions/checkout@v7
+        with:
+          repository: mikevocalz/viro-external
+          ref: 2331527d50ffda0a8882c6fb832b10895c7c39f4
+          token: ${{ secrets.SPATIAL_DEPENDENCIES_TOKEN }}
+          path: .spatial-deps/viro-external
+          persist-credentials: false
+      - name: Checkout Mapbox native bridge
+        uses: actions/checkout@v7
+        with:
+          repository: mikevocalz/nitro-mapbox-ar
+          ref: 5ef7c59947155f9a2e6565b9263c3f47e124bf49
+          path: .spatial-deps/nitro-mapbox-ar
+          persist-credentials: false
+      - name: Place linked spatial packages
+        run: |
+          mv .spatial-deps/viro ../viro
+          mv .spatial-deps/viro-external ../viro-external
+          mv .spatial-deps/nitro-mapbox-ar ../nitro-mapbox-ar
       - run: pnpm install --frozen-lockfile
+      - name: Install linked package dependencies
+        run: |
+          pnpm --dir ../viro-external install --frozen-lockfile --strict-peer-dependencies=false
+          npm ci --prefix ../nitro-mapbox-ar --ignore-scripts --no-audit --no-fund
+          mkdir -p ../viro/node_modules/@types
+          ln -sfn "$GITHUB_WORKSPACE/apps/mobile/node_modules/react" ../viro/node_modules/react
+          ln -sfn "$GITHUB_WORKSPACE/apps/mobile/node_modules/react-native" ../viro/node_modules/react-native
+          ln -sfn "$GITHUB_WORKSPACE/apps/mobile/node_modules/@types/react" ../viro/node_modules/@types/react
       - run: pnpm spatial:verify-android
       - run: pnpm spatial:verify-typegpu
       - run: pnpm --filter @acme/spatial test
       - run: pnpm --filter @acme/app test
-      # DEFER (2026-10-07): mobile is left out until its /viro-external headset
-      # test route resolves in CI. That route imports PanelStack, PanelStat and
-      # friends, which exist only on viro-external's unmerged
-      # codex/specs-generated-preview branch, and viro-external is private, so
-      # this job cannot clone it. Put mobile back when that branch is on
-      # viro-external main and CI has read access to the repo.
-      - run: pnpm turbo build typecheck lint --filter='!mobile'
+      - name: Validate mobile dependency contract
+        run: pnpm --filter mobile viro:assert-fork
+      - run: pnpm --filter mobile test
+      - run: pnpm --filter mobile test:scripts
+      - run: pnpm turbo run build typecheck lint
