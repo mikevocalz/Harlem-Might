@@ -13,6 +13,7 @@ export { MightsAssistant, type MightsAssistantProps } from './features/explore/M
 export { ExploreTypeContext, useExploreType, type ExploreTypeScale } from './features/explore/explore-type';
 export { moveFocusTo, rowFocusId, markerFocusId } from './features/explore/focus-registry';
 export type { MapInsets } from './features/explore/ExploreMapPane';
+export { registerNativeMap, type NativeMapModule } from './features/explore/native-map-module.ts';
 export {
   HARLEM_PLACE_PREVIEWS,
   HARLEM_CATEGORIES,

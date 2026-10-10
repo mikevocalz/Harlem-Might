@@ -1,4 +1,4 @@
-import type { GeographicCoordinate, RouteLeg } from '@mapbox/react-native-mapbox-ar/navigation';
+import type { GeographicCoordinate, RouteLeg } from '@mikevocalz/nitro-mapbox-ar/navigation';
 
 /**
  * What the street scene needs from the shared NavigationSession

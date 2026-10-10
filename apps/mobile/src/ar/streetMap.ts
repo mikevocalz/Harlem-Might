@@ -1,4 +1,4 @@
-import type { MapboxVectorClient } from '@mapbox/react-native-mapbox-ar/mapbox';
+import type { MapboxVectorClient } from '@mikevocalz/nitro-mapbox-ar/mapbox';
 import { extrudeBuildings, type BuildingMesh } from '@mapbox/react-native-mapbox-ar-reactvision/src/buildings.ts';
 import { tilesAroundEnuPoint } from '@mapbox/react-native-mapbox-ar-reactvision/src/ground.ts';
 import { tileKey, type XyzTile } from '@mapbox/react-native-mapbox-ar-reactvision/src/tile.ts';

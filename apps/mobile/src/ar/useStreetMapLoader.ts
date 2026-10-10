@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { MapboxVectorClient } from '@mapbox/react-native-mapbox-ar/mapbox';
+import { MapboxVectorClient } from '@mikevocalz/nitro-mapbox-ar/mapbox';
 import type { BuildingMesh } from '@mapbox/react-native-mapbox-ar-reactvision/src/buildings.ts';
 import { getHarlemPlacePreview } from '@acme/app';
 import { useArSession } from './arSession.store';

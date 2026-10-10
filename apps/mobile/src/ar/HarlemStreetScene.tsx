@@ -15,7 +15,7 @@ import {
   ViroText,
   exitVRScene,
 } from '@reactvision/react-viro';
-import { MapboxRasterClient } from '@mapbox/react-native-mapbox-ar/mapbox';
+import { MapboxRasterClient } from '@mikevocalz/nitro-mapbox-ar/mapbox';
 import {
   MapboxViroBuildings,
   MapboxViroGround,

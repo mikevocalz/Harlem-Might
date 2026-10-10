@@ -1,4 +1,4 @@
-import type { RouteLeg } from '@mapbox/react-native-mapbox-ar/navigation';
+import type { RouteLeg } from '@mikevocalz/nitro-mapbox-ar/navigation';
 import type { EnuOrigin } from '@mapbox/react-native-mapbox-ar-reactvision/src/types.ts';
 import { projectToEnu } from '@mapbox/react-native-mapbox-ar-reactvision/src/enu.ts';
 import { DIORAMA_ALTITUDE_M } from './arTabletop.ts';

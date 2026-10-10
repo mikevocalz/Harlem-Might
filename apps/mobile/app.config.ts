@@ -22,6 +22,12 @@ const config: ExpoConfig = {
     // Viro's dist binaries are device-arm64 only, so the iOS build must run on a
     // physical iPhone; signing needs the team that owns the paired device.
     appleTeamId: 'GK27ABX7SN',
+    infoPlist: {
+      // Explore's "My location" puck on the Mapbox map (docs/adr/0007). The
+      // Maps SDK shows the system prompt the first time the puck turns on.
+      NSLocationWhenInUseUsageDescription:
+        'Harlem Might shows where you are on the Explore map, so you can see which places are near you.',
+    },
   },
   android: {
     package: 'com.harlemmight.app',
@@ -151,6 +157,10 @@ const config: ExpoConfig = {
       './modules/spatial-panels/app.plugin.js',
       { defaultWidth: '400dp', defaultHeight: '600dp' },
     ],
+    // Location permissions for the Explore map's "My location" puck, in the
+    // mobile flavor manifest only (docs/adr/0007). Finalized, so it runs
+    // after the plugins above that rewrite the flavor manifests.
+    './plugins/with-mobile-location-permission.js',
     // PICO: uncomment and set your PICO Developer Console app ID to add the pico flavor.
     // [
     //   '@expo-pico/core',

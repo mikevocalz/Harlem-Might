@@ -49,8 +49,9 @@ export function projectToSchematic(
 /**
  * Places a set of mapped places inside a box by their real coordinates.
  *
- * This is a stand-in until the native Mapbox surface lands (DECISIONS S11):
- * a linear fit of the places' own [lng, lat] bounds into 0–100%, north up.
+ * Web and the headset build draw this; phones and foldables draw the native
+ * Mapbox map (docs/adr/0007). The fit is a linear fit
+ * of the places' own [lng, lat] bounds into 0–100%, north up.
  * Relative positions are true to the OpenStreetMap points; distances are not
  * to scale because the box's aspect ratio is not the bounds' aspect ratio.
  * Places without `lngLat` are left out, never given an invented spot.

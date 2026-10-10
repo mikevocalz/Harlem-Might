@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import type { RouteLeg, RouteStep } from '@mapbox/react-native-mapbox-ar/navigation';
+import type { RouteLeg, RouteStep } from '@mikevocalz/nitro-mapbox-ar/navigation';
 import { MAPPED_PLACES } from '@acme/app/features/explore/explore.store.ts';
 import { tabletopOrigin } from './arTabletop.ts';
 import {

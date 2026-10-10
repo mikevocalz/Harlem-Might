@@ -51,7 +51,8 @@ const VENDORED_NAVIGATION = {
 const LINKED_CHECKOUTS = [
   path.resolve(__dirname, "../../../viro"),
   path.resolve(__dirname, "../../../viro-external"),
-  // nitro-mapbox-ar: the ReactVision adapter and the Directions client.
+  // nitro-mapbox-ar: the ReactVision adapter, the Directions client and the
+  // native map view (packages/native-mapbox).
   path.resolve(__dirname, "../../../nitro-mapbox-ar"),
 ];
 config.watchFolders = [...(config.watchFolders ?? []), ...LINKED_CHECKOUTS];
