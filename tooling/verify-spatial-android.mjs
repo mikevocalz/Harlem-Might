@@ -21,8 +21,9 @@ const failures = [];
 // --- 1. config contract ----------------------------------------------------
 
 const { default: config } = await import(pathToFileURL(join(appDir, 'app.config.ts')).href);
+const findPlugin = (name) => config.plugins?.find((p) => (Array.isArray(p) ? p[0] : p) === name);
 const plugin = (name) => {
-  const entry = config.plugins?.find((p) => (Array.isArray(p) ? p[0] : p) === name);
+  const entry = findPlugin(name);
   if (!entry) failures.push(`app.config.ts: plugin ${name} missing`);
   return Array.isArray(entry) ? (entry[1] ?? {}) : {};
 };
@@ -39,26 +40,35 @@ expect('expo-build-properties android.minSdkVersion', plugin('expo-build-propert
 const horizon = plugin('expo-horizon-core');
 expect('expo-horizon-core supportedDevices', horizon.supportedDevices, 'quest2|questpro|quest3|quest3s');
 expect('expo-horizon-core disableVrHeadtracking', horizon.disableVrHeadtracking, false);
+// One owner for the Meta VR Layout SDK BOM: expo-horizon-core's quest plugin,
+// quest flavor only.
+expect('expo-horizon-core metaLayoutSdk', horizon.metaLayoutSdk, true);
+
+// The pico flavor exists only when the @expo-pico/core block is present with a
+// picoAppId. The block stays commented out until a PICO build is wanted.
+const picoEntry = findPlugin('@expo-pico/core');
+const picoEnabled = Boolean(picoEntry);
+const pico = Array.isArray(picoEntry) ? (picoEntry[1] ?? {}) : {};
 
 const viro = plugin('@reactvision/react-viro').android ?? {};
-expect('@reactvision/react-viro android.xRMode', viro.xRMode, ['AR', 'QUEST', 'PICO']);
+expect('@reactvision/react-viro android.xRMode', viro.xRMode, picoEnabled ? ['AR', 'QUEST', 'PICO'] : ['AR', 'QUEST']);
 expect('@reactvision/react-viro android.questArm64Only', viro.questArm64Only, true);
-// One owner for the Meta VR Layout SDK BOM: @expo-pico/core, quest flavor only.
+// Viro's own Layout SDK option would add the BOM to every flavor.
 expect('@reactvision/react-viro android.metaSpatialLayout', viro.metaSpatialLayout, false);
 
-const pico = plugin('@expo-pico/core');
-expect('@expo-pico/core buildVariant', pico.buildVariant, 'pico');
-expect('@expo-pico/core metaLayoutSdk', pico.metaLayoutSdk, true);
+if (picoEnabled) {
+  expect('@expo-pico/core buildVariant', pico.buildVariant, 'pico');
+  if (!pico.picoAppId) {
+    failures.push('app.config.ts: @expo-pico/core is enabled without a picoAppId; set the PICO Developer Console app ID');
+  }
+  if ('metaLayoutSdk' in pico) {
+    failures.push('app.config.ts: metaLayoutSdk belongs on expo-horizon-core, not @expo-pico/core');
+  }
+}
 // Place Detail panel (DECISIONS S20, ADR 0006): 400x600dp, quest flavor only.
 const panels = plugin('./modules/spatial-panels/app.plugin.js');
 expect('spatial-panels defaultWidth', panels.defaultWidth, '400dp');
 expect('spatial-panels defaultHeight', panels.defaultHeight, '600dp');
-
-if ('picoAppId' in pico && !pico.picoAppId) {
-  // An explicit undefined replaces the plugin's '' default and prebuild dies
-  // writing an empty <string name="pico_app_id">.
-  failures.push('app.config.ts: @expo-pico/core picoAppId is present but empty; omit the key when PICO_APP_ID is unset');
-}
 
 // --- 2. generated tree -----------------------------------------------------
 
@@ -133,9 +143,9 @@ const treeChecks = [
     'android:defaultWidth="400dp"',
     'android:defaultHeight="600dp"',
   ]],
-  ['app/src/pico/AndroidManifest.xml', [
+  ...(picoEnabled ? [['app/src/pico/AndroidManifest.xml', [
     'com.picovr.intent.category.VR',
-  ]],
+  ]]] : []),
   ['app/src/main/res/values/strings.xml', [
     '<string name="app_name">Harlem Might</string>',
   ]],
@@ -179,6 +189,9 @@ if (existsSync(android)) {
 
   // The panel activity is Meta multi-panel only; PICO must never declare it.
   const picoManifestPath = 'app/src/pico/AndroidManifest.xml';
+  if (!picoEnabled && existsSync(join(android, picoManifestPath))) {
+    failures.push(`android/${picoManifestPath}: present although @expo-pico/core is commented out`);
+  }
   if (existsSync(join(android, picoManifestPath)) && read(picoManifestPath).includes('SpatialPanelActivity')) {
     failures.push(`android/${picoManifestPath}: SpatialPanelActivity belongs in the quest manifest only`);
   }
@@ -191,7 +204,7 @@ if (existsSync(android)) {
     for (const needle of [
       'ReactViroPackage.ViroPlatform.AR',
       'ReactViroPackage.ViroPlatform.QUEST',
-      'ReactViroPackage.ViroPlatform.PICO',
+      ...(picoEnabled ? ['ReactViroPackage.ViroPlatform.PICO'] : []),
     ]) {
       if (!body.includes(needle)) failures.push(`android/${mainApplication}: missing ${needle}`);
     }

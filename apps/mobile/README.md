@@ -25,4 +25,4 @@ Leave off `--install` to build and check without a headset. With more than one d
 
 CI cannot run prebuild because the Viro fork is private, so `pnpm spatial:verify-android` in CI checks the plugin options in `app.config.ts`. The generated tree is checked by the quest command on every local build.
 
-The PICO build is `pnpm --filter mobile android:pico` (picoDebug).
+There is no PICO build by default. The `@expo-pico/core` block in `app.config.ts` is commented out, so prebuild makes only the `mobile` and `quest` flavors. To add the `pico` flavor, uncomment that block, set `picoAppId` to the app ID from the PICO Developer Console, and add `'PICO'` back to Viro's `xRMode`. Then build with `expo run:android --variant picoDebug`.

@@ -165,7 +165,7 @@ if (!isRequiredNode(process.versions.node)) {
     fail(`${result.leaks.length} PICO entries in the Quest manifest`, 'a PICO plugin wrote into src/main or src/quest; it must write only app/src/pico/AndroidManifest.xml');
   }
   if (!result.hasVolumetric) {
-    fail('MANAGE_APP_VOLUMETRIC_WINDOWS missing from the Quest manifest', 'keep metaLayoutSdk: true in the @expo-pico/core options in app.config.ts');
+    fail('MANAGE_APP_VOLUMETRIC_WINDOWS missing from the Quest manifest', 'keep metaLayoutSdk: true in the expo-horizon-core options in app.config.ts');
   }
   ok(`aapt2 ${newest}: 0 pico/pvr entries, MANAGE_APP_VOLUMETRIC_WINDOWS present`);
 }
