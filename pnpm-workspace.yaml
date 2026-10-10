@@ -75,7 +75,7 @@ catalog:
   # Expo SDK 58 stable / React Native 0.88 lane
   react: 19.3.0
   react-dom: 19.3.0
-  react-native: 0.88.0-rc.3
+  react-native: 0.88.0-rc.4
   react-native-web: 0.21.3
   expo: 58.0.1
   "@expo/env": 2.5.0
@@ -219,4 +219,4 @@ catalog:
 
 patchedDependencies:
   "@seshuk/payload-storage-bunny@3.0.0": patches/@seshuk__payload-storage-bunny@3.0.0.patch
-  react-native@0.88.0-rc.3: patches/react-native@0.88.0-rc.3.patch
+  react-native@0.88.0-rc.4: patches/react-native@0.88.0-rc.4.patch
