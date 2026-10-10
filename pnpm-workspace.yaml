@@ -219,3 +219,4 @@ catalog:
 
 patchedDependencies:
   "@seshuk/payload-storage-bunny@3.0.0": patches/@seshuk__payload-storage-bunny@3.0.0.patch
+  react-native@0.88.0-rc.3: patches/react-native@0.88.0-rc.3.patch

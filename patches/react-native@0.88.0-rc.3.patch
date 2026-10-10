@@ -1,0 +1,33 @@
+diff --git a/scripts/cocoapods/spm.rb b/scripts/cocoapods/spm.rb
+index f49230270d1fc097293498031794b5420a1b6d22..dbd40069c5f746c1950c854dd39cdda002d8f095 100644
+--- a/scripts/cocoapods/spm.rb
++++ b/scripts/cocoapods/spm.rb
+@@ -95,6 +95,28 @@ class SPMManager
+         config_file.save_as(aggregate_target.xcconfig_path(config_name))
+       end
+     end
++
++    # Pods that depend on a flattened pod carry the same stale
++    # -fmodule-map-file path in their own xcconfigs, and clang fails with
++    # "module map file '<Pod>/<Pod>.modulemap' not found". Their xcconfigs
++    # are already on disk by post_install, so rewrite them in place.
++    installer.pod_targets.each do |pod_target|
++      next if pod_names.include?(pod_target.name)
++
++      pod_target.build_settings.each_key do |config_name|
++        path = pod_target.xcconfig_path(config_name)
++        next unless File.exist?(path)
++
++        contents = File.read(path)
++        updated = pod_names.reduce(contents) do |acc, pod_name|
++          acc.gsub(
++            "${PODS_CONFIGURATION_BUILD_DIR}/#{pod_name}/#{pod_name}.modulemap",
++            "${PODS_CONFIGURATION_BUILD_DIR}/#{pod_name}.modulemap"
++          )
++        end
++        File.write(path, updated) if updated != contents
++      end
++    end
+   end
+ 
+   # Creates a new object in the project with a UUID guaranteed not to collide
