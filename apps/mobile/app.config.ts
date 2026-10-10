@@ -106,13 +106,20 @@ const config: ExpoConfig = {
         // Horizon OS opens a 2D app at phone size unless the activity names a
         // window size. 1440x900dp (16:10) fits Explore's three columns,
         // Discover 360 | map | Detail 400, in one window (DECISIONS S17);
-        // 1440 is Meta's documented maximum panel width. The PICO window
-        // below keeps its own size.
+        // 1440 is Meta's documented maximum panel width. The commented PICO
+        // block below keeps its own size.
         defaultWidth: '1440dp',
         defaultHeight: '900dp',
         supportedDevices: 'quest2|questpro|quest3|quest3s',
         disableVrHeadtracking: false,
         allowBackup: false,
+        // Quest-flavor options, handled by the quest plugin that
+        // release/horizon-core runs after the upstream one.
+        // Meta VR Layout SDK (@metavr/layout-compat + layout-window-compat):
+        // BOM and both artifacts as questImplementation, excluded from the
+        // mobile classpath, with stub ReactPackages there so the shared
+        // PackageList compiles. JS gates on isHorizonBuild.
+        metaLayoutSdk: true,
       },
     ],
     [
@@ -123,11 +130,12 @@ const config: ExpoConfig = {
         rvProjectId: process.env.EXPO_PUBLIC_REACTVISION_PROJECT_ID,
         rvEndpoint: process.env.EXPO_PUBLIC_REACTVISION_ENDPOINT,
         android: {
-          xRMode: ['AR', 'QUEST', 'PICO'],
+          // Add 'PICO' back together with the @expo-pico/core block below.
+          xRMode: ['AR', 'QUEST'],
           questAppId:
             process.env.EXPO_PUBLIC_META_QUEST_APP_ID ??
             process.env.META_QUEST_APP_ID,
-          // The Meta VR Layout SDK is linked by @expo-pico/core below
+          // The Meta VR Layout SDK is linked by expo-horizon-core above
           // (metaLayoutSdk), quest flavor only. Viro's option would add it to
           // every flavor, so it stays off: one owner for the BOM.
           metaSpatialLayout: false,
@@ -143,42 +151,32 @@ const config: ExpoConfig = {
       './modules/spatial-panels/app.plugin.js',
       { defaultWidth: '400dp', defaultHeight: '600dp' },
     ],
-    // Adds the pico flavor: PICO OS 5 OpenXR loader, manifest and SDK levels.
-    // Build with `pnpm --filter mobile android:pico` (picoDebug).
-    [
-      '@expo-pico/core',
-      {
-        // PICO Platform Services (account, IAP, social) need the developer-portal app id.
-        // Omit the key when unset: @expo-pico/core spreads options over its
-        // defaults, so an explicit `undefined` replaces the '' default and
-        // prebuild dies writing <string name="pico_app_id"> with no text.
-        ...(process.env.PICO_APP_ID ? { picoAppId: process.env.PICO_APP_ID } : {}),
-        buildVariant: 'pico',
-        xrMode: 'pico-os5',
-        appType: 'mr',
-        targetProfile: 'auto',
-        targetDevices: ['pico-4-ultra'],
-        spatialMode: 'windowed',
-        defaultContainerMode: 'window-container',
-        defaultWidth: '1024dp',
-        defaultHeight: '640dp',
-        handTracking: true,
-        passthrough: true,
-        sceneUnderstanding: false,
-        highSamplingRateSensors: true,
-        refreshRates: [72, 90],
-        ndkAbiFilters: true,
-        openXrLoaderDeclaration: true,
-        developerTools: true,
-        enableEmulatorOptimizations: false,
-        targetSdkVersion: 34,
-        // Meta VR Layout SDK (@metavr/layout-compat + layout-window-compat):
-        // BOM and both artifacts as questImplementation, excluded from the
-        // pico and mobile classpaths, with stub ReactPackages there so the
-        // shared PackageList compiles. JS gates on isHorizonBuild.
-        metaLayoutSdk: true,
-      },
-    ],
+    // PICO: uncomment and set your PICO Developer Console app ID to add the pico flavor.
+    // [
+    //   '@expo-pico/core',
+    //   {
+    //     picoAppId: '1234567',
+    //     buildVariant: 'pico',
+    //     xrMode: 'pico-os5',
+    //     appType: 'mr',
+    //     targetProfile: 'auto',
+    //     targetDevices: ['pico-4-ultra'],
+    //     spatialMode: 'windowed',
+    //     defaultContainerMode: 'window-container',
+    //     defaultWidth: '1024dp',
+    //     defaultHeight: '640dp',
+    //     handTracking: true,
+    //     passthrough: true,
+    //     sceneUnderstanding: false,
+    //     highSamplingRateSensors: true,
+    //     refreshRates: [72, 90],
+    //     ndkAbiFilters: true,
+    //     openXrLoaderDeclaration: true,
+    //     developerTools: true,
+    //     enableEmulatorOptimizations: false,
+    //     targetSdkVersion: 34,
+    //   },
+    // ],
   ],
   experiments: {
     typedRoutes: true,
