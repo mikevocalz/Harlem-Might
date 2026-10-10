@@ -1,3 +1,4 @@
+import { createElement } from 'react';
 import { NitroModules, callback } from 'react-native-nitro-modules';
 import { registerNativeMap, type NativeMapModule } from '@acme/app';
 import { mapboxTokenFromEnv } from '@acme/app/features/navigation/providers/mapboxToken.ts';
@@ -31,10 +32,17 @@ export function registerExploreNativeMap(): void {
   // The view reads this process-wide token when it creates its native map.
   MapboxAR.accessToken = token.token;
 
+  // Nitro's host component is a string element type, like every native host
+  // component. @acme/ui/tw's View is an @expo/html-elements Div, which throws in
+  // dev on any string-typed child ("unsupported React DOM element"), so Explore
+  // gets a function component that renders the host component instead.
+  const HostMapView = maps.MapboxMapView;
+  const MapView = (props: object) => createElement(HostMapView as never, props);
+  MapView.displayName = 'MapboxMapView';
+
   const module: NativeMapModule = {
-    // HostComponent's class statics (defaultProps) do not line up with a plain
-    // ComponentType, and hybridRef's wrapper type only exists in the library.
-    MapView: maps.MapboxMapView as unknown as NativeMapModule['MapView'],
+    // hybridRef's wrapper type only exists in the library.
+    MapView: MapView as unknown as NativeMapModule['MapView'],
     callback,
     supportsLocationPuck: maps.MapboxMaps.capabilities.supportsLocationPuck,
   };

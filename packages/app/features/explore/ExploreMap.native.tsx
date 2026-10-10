@@ -116,7 +116,7 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
   const locationDenied = useNativeMap((s) => s.locationDenied);
   const reduceMotion = useReducedMotion();
   // Style loaded and Explore's layers are on it; read from the store, not React state.
-  const ready = status === 'ready';
+  const ready = useNativeMap((s) => s.status === 'ready');
 
   const styleRef = useRef<NativeMapStyle | null>(null);
   const mapRef = useRef<NativeMapViewRef | null>(null);
