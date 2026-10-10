@@ -42,6 +42,17 @@
         "!.next/cache/**"
       ]
     },
+    "web-vite#build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULTS$",
+        ".env*",
+        "../../.env*",
+        "../../packages/ui/**",
+        "../../packages/theme/**"
+      ],
+      "outputs": [".output/**"]
+    },
     "storybook#build": {
       "dependsOn": [
         "^build"
