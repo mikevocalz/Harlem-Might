@@ -2,7 +2,7 @@
 
 This is the design handoff for Explore on Horizon, tablet, foldable and phone. It was written for `feat/spatial-explore-ux` (PR D) and updated 2026-10-08 for `feat/mobile-site-parity` P2, which made native Explore look like the site's Explore (`apps/web/components/explore/ExploreWorkspace.tsx`, `docs/design/handoff/EXPLORE.md`). Sections 2, 3 and 5 describe the P2 look; the layout rules in §1 and §4 are unchanged except where noted. Each section says where the code is and how it differs from the original spec. The original spec, critique, a11y audit, token audit and copy deck were written before the build. Where this file and those disagree, this file is the current state.
 
-Decisions referenced: DECISIONS S4 (map stays in the main window), S5 (Detail exists only while a place is selected), S7 (assistant is inline, never a window), S11 (native Mapbox surface, not built yet), S12 (Discover inline; its Place Detail window is superseded by S17), S13 (tab shell from the site's nav), S14 (dark only), S15 (native Mights kit), S16 (street map deferred; schematic map with an honest caption), S17 (one 1440x900dp window, three columns; Detail window deferred, ADR 0004), S18 (rail as its own window, windows rendered at the surface origin, Detail still in the main window; ADR 0005), S20 (More struck on Horizon; Place Detail as a second Activity panel, S17 column as the fallback; ADR 0006).
+Decisions referenced: DECISIONS S4 (map stays in the main window), S5 (Detail exists only while a place is selected), S7 (assistant is inline, never a window), S11 (native Mapbox surface, not built yet), S12 (Discover inline; its Place Detail window is superseded by S17), S13 (tab shell from the site's nav), S14 (dark only), S15 (native Mights kit), S16 (street map deferred; schematic map with an honest caption. Settled for phone and foldable by ADR docs/adr/0007, headset still deferred), S17 (one 1440x900dp window, three columns; Detail window deferred, ADR 0004), S18 (rail as its own window, windows rendered at the surface origin, Detail still in the main window; ADR 0005), S20 (More struck on Horizon; Place Detail as a second Activity panel, S17 column as the fallback; ADR 0006).
 
 ### References (Mobbin, pulled 2026-10-08)
 
@@ -61,9 +61,9 @@ Removed in P2: the "Discover" title, `SearchBar`, `Chip`, the rounded bordered r
 
 ## 3. Map
 
-`packages/app/features/explore/ExploreMapPane.tsx`, `schematic-map.ts`.
+`packages/app/features/explore/ExploreMapPane.tsx` (the frame), `ExploreMap.native.tsx` / `ExploreMap.web.tsx`, `ExploreSchematicMap.tsx`, `schematic-map.ts`.
 
-The native street map is deferred (S16: blocked on the D2 style and a Horizon-compatible map SDK). The schematic map stays and says what it is. Markers sit on `bg-map-canvas` (`#070604` dark) at their real OpenStreetMap coordinates; `projectSchematic` fits the mapped places' own bounds into the box, north up. Relative positions are true; distances aren't to scale.
+Phones and foldables draw the native Mapbox map (ADR `docs/adr/0007-native-mapbox-map-mobile.md`, which settles S16 for those flavors). The headset build keeps the schematic below: S16 stays open there until a Horizon-compatible Mapbox SDK exists. On the headset the schematic stays and says what it is. Markers sit on `bg-map-canvas` (`#070604` dark) at their real OpenStreetMap coordinates; `projectSchematic` fits the mapped places' own bounds into the box, north up. Relative positions are true; distances aren't to scale.
 
 | Element | Built (P2) |
 |---|---|

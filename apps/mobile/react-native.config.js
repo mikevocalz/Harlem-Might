@@ -1,14 +1,14 @@
 /**
- * The app imports only `@mapbox/react-native-mapbox-ar/navigation` (the
- * Directions client, plain TypeScript). The package root also ships a Nitro
- * C++ module for terrain, which the Quest build does not use, so it is kept
- * out of native autolinking on both platforms.
+ * `@mikevocalz/nitro-mapbox-ar` (core) and `@mikevocalz/nitro-mapbox-ar-maps`
+ * (the `MapboxMapView` hybrid view) autolink on both platforms: Explore draws
+ * the native Mapbox map on phones and foldables (docs/adr/0007). The maps
+ * package's Android module depends on the core by its autolinked project
+ * name, `:mikevocalz_nitro-mapbox-ar`, so the core keeps its real npm name.
+ * Autolinking cannot scope a library to one product flavor, so the quest APK
+ * carries both too; JS keeps the headset on the schematic (isHorizonBuild).
  */
 module.exports = {
   dependencies: {
-    '@mapbox/react-native-mapbox-ar': {
-      platforms: { android: null, ios: null },
-    },
     // Viro stays out of autolinking on every platform: expo.autolinking.exclude
     // in package.json covers Expo autolinking, this entry covers the community
     // CLI path. iOS pins ViroReact/ViroKit in the Podfile against the

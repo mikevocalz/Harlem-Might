@@ -15,7 +15,12 @@ import { palette, semantic } from "@acme/theme";
 import { metaWindows } from "../src/spatial/metaWindows";
 import { SpatialWindowHost } from "../src/spatial/SpatialWindowHost";
 import { MainRouteRelay } from "../src/spatial/MainRouteRelay";
+import { registerExploreNativeMap } from "../src/map/registerNativeMap";
 import "../global.css";
+
+// Before any screen renders, so Explore's first frame already knows whether
+// it draws the native Mapbox map or the schematic.
+registerExploreNativeMap();
 
 // className-capable gesture root (third-party component → withUniwind).
 // Module scope, not render scope — withUniwind builds the wrapper eagerly.

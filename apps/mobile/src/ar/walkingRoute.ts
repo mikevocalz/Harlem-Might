@@ -2,7 +2,7 @@ import {
   MapboxNavigationClient,
   routeGeometryToCoordinates,
   type RouteGeometryCoordinate,
-} from '@mapbox/react-native-mapbox-ar/navigation';
+} from '@mikevocalz/nitro-mapbox-ar/navigation';
 
 /** A place a walking route visits; `lngLat` is `[longitude, latitude]`. */
 export interface RoutePlace {
