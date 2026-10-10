@@ -1,6 +1,6 @@
-'use client';
-import { useRef, type ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+"use client";
+import { useMemo, type ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 /**
  * §4 data layer defaults — one QueryClient per app, composed in each app's
@@ -10,19 +10,19 @@ export function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 60_000,          // sensible default for slowly-changing data
+        staleTime: 60_000, // sensible default for slowly-changing data
         gcTime: 30 * 60_000,
         retry: 2,
         refetchOnWindowFocus: false, // deliberate refresh via invalidation
       },
-      mutations: { retry: 0 },       // mutations surface errors, never silently retry
+      mutations: { retry: 0 }, // mutations surface errors, never silently retry
     },
   });
 }
 
 export function AppQueryProvider({ children }: { children: ReactNode }) {
-  // Stable per-tree instance via ref (repo rule: no React useState).
-  const ref = useRef<QueryClient | null>(null);
-  ref.current ??= createQueryClient();
-  return <QueryClientProvider client={ref.current}>{children}</QueryClientProvider>;
+  // Stable per-tree instance (repo rule: no React useState). useMemo, not a
+  // ref: reading ref.current during render breaks react-hooks/refs.
+  const client = useMemo(() => createQueryClient(), []);
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
