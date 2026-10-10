@@ -75,3 +75,21 @@ jobs:
       - run: pnpm --filter mobile test
       - run: pnpm --filter mobile test:scripts
       - run: pnpm turbo run build typecheck lint
+      - name: Require deployable build artifacts
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          for (const file of [
+            'apps/web/.next/BUILD_ID',
+            'apps/web-vite/.output/server/index.mjs',
+            'apps/storybook/storybook-static/index.json',
+          ]) {
+            if (!fs.existsSync(file) || fs.statSync(file).size === 0) {
+              throw new Error(`Build passed without a deployable artifact: ${file}`);
+            }
+          }
+          const catalogue = JSON.parse(fs.readFileSync('apps/storybook/storybook-static/index.json', 'utf8'));
+          if (!Object.values(catalogue.entries).some(entry => entry.type === 'story')) {
+            throw new Error('Storybook built without any indexed stories');
+          }
+          NODE
