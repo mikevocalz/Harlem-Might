@@ -96,7 +96,7 @@ catalog:
   expo-splash-screen: 58.0.2
   expo-status-bar: 58.0.2
   expo-system-ui: 58.0.4
-  react-native-audio-api: audio-api-nightly
+  react-native-audio-api: 1.0.0-nightly-93404ee-20261009
   react-native-youtube-bridge: 2.2.3
   react-native-keyboard-controller: 1.22.6
   react-native-mmkv: 4.3.2
