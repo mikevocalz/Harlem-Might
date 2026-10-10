@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { PermissionsAndroid, Platform, type LayoutChangeEvent } from 'react-native';
 import { useReducedMotion } from '@acme/ui';
 import { MightsButton } from '@acme/ui/mights';
@@ -115,7 +115,8 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
   const showUserLocation = useNativeMap((s) => s.showUserLocation);
   const locationDenied = useNativeMap((s) => s.locationDenied);
   const reduceMotion = useReducedMotion();
-  const [ready, setReady] = useState(false);
+  // Style loaded and Explore's layers are on it; read from the store, not React state.
+  const ready = status === 'ready';
 
   const styleRef = useRef<NativeMapStyle | null>(null);
   const mapRef = useRef<NativeMapViewRef | null>(null);
@@ -241,7 +242,6 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
         styleRef.current = style;
         routeKey = '';
         useNativeMap.getState().setStatus('ready');
-        setReady(true);
         drawRoute(style);
         drawFix(style);
         // Frame the catalogue once; a later style reload keeps the person's camera.
