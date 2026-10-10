@@ -19,6 +19,9 @@ const config: ExpoConfig = {
   ios: {
     bundleIdentifier: 'com.harlemmight.app',
     supportsTablet: true,
+    // Viro's dist binaries are device-arm64 only, so the iOS build must run on a
+    // physical iPhone; signing needs the team that owns the paired device.
+    appleTeamId: 'GK27ABX7SN',
   },
   android: {
     package: 'com.harlemmight.app',
