@@ -1,7 +1,7 @@
 import { primaryNav } from '@acme/ui/mights';
 
 /** The app's tabs, by the site path each one opens on. */
-export type AppTabRoute = 'explore' | 'walks' | 'stories' | 'today' | 'more';
+export type AppTabRoute = 'explore' | 'walks' | 'stories' | 'music' | 'today' | 'more';
 
 /**
  * The tab navigator's screen name for a tab: the file or folder under
@@ -12,6 +12,7 @@ export const TAB_SCREEN: Record<AppTabRoute, string> = {
   explore: 'explore',
   walks: 'walks',
   stories: 'stories',
+  music: 'music',
   today: 'today',
   more: '(more)',
 };
