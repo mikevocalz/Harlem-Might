@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { PermissionsAndroid, Platform, type LayoutChangeEvent } from 'react-native';
 import { useReducedMotion } from '@acme/ui';
 import { MightsButton } from '@acme/ui/mights';
@@ -34,7 +34,8 @@ import {
   tapBox,
   type MapPlacePoint,
 } from './explore-map-layers.ts';
-import { HARLEM_PLACE_PREVIEWS, useExplore } from './explore.store';
+import { useExplore } from './explore.store';
+import { usePlaceCatalogue } from './place-catalogue.store.ts';
 import { useExploreType } from './explore-type';
 import type { ExploreMapProps, MapInsets } from './ExploreMap.types.ts';
 import { ExploreSchematicMap } from './ExploreSchematicMap';
@@ -44,44 +45,8 @@ import { navigationFixStore, useNavigationStore } from '../navigation/session/na
 import { selectDisplayedRoute, splitRouteAt, toLngLat } from '../navigation/view/routeLine';
 import type { GeographicCoordinate } from '../navigation/model/geo';
 
-const byId = new Map(HARLEM_PLACE_PREVIEWS.map((place) => [place.id, place]));
-const MAP_POINTS: MapPlacePoint[] = HARLEM_PLACE_PREVIEWS.flatMap((p) =>
-  p.lngLat ? [{ id: p.id, name: p.name, lngLat: p.lngLat }] : [],
-);
-const PLACE_BOUNDS = boundsOf(MAP_POINTS.map((p) => p.lngLat));
-const pointFor = (id: string | null) => (id ? (MAP_POINTS.find((p) => p.id === id) ?? null) : null);
-
 /** First frame before the fit: central Harlem, so the map never opens on the globe. */
 const START_CAMERA = { center: { latitude: 40.8089, longitude: -73.9482 }, zoom: 14 };
-
-/**
- * The mounted view's ref and the effect waiting for it. Module scope, not
- * React state: Explore mounts one map at a time, the ref handler fires
- * outside render, and the effects below are the only readers.
- */
-const link: {
-  map: NativeMapViewRef | null;
-  connect: ((map: NativeMapViewRef) => void) | null;
-} = { map: null, connect: null };
-
-let wrappedRef: { native: NativeMapModule; ref: unknown } | null = null;
-
-/**
- * Nitro needs every function prop wrapped by its callback(). Built once per
- * module, so the view never sees a new ref handler.
- */
-function hybridRefFor(native: NativeMapModule): unknown {
-  if (wrappedRef?.native !== native) {
-    wrappedRef = {
-      native,
-      ref: native.callback((ref: NativeMapViewRef | null) => {
-        link.map = ref;
-        if (ref) link.connect?.(ref);
-      }),
-    };
-  }
-  return wrappedRef.ref;
-}
 
 /** Promises from a stale style or a map mid-teardown reject; nothing to do about it. */
 const quiet = (promise: Promise<unknown>) => {
@@ -89,12 +54,12 @@ const quiet = (promise: Promise<unknown>) => {
 };
 
 /**
- * Explore's map on phones and foldables: Mapbox Maps SDK v11 through
+ * Explore's map on phones, foldables and Quest: Mapbox Maps SDK v11 through
  * `MapboxMapView` (docs/adr/0007-native-mapbox-map-mobile.md).
  *
  * The schematic stays the fallback, used only when this build did not
- * register the native view (the headset build, or a build without the
- * library) or the map reported a loading error.
+ * register the native view (a build without the library or public token)
+ * or the map reported a loading error.
  */
 export function ExploreMap(props: ExploreMapProps) {
   const native = getNativeMap();
@@ -111,6 +76,11 @@ export function ExploreMap(props: ExploreMapProps) {
  */
 function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & { native: NativeMapModule }) {
   const type = useExploreType();
+  const catalogue = usePlaceCatalogue((s) => s.places);
+  const byId = useMemo(() => new Map(catalogue.map((p) => [p.id, p])), [catalogue]);
+  const mapPoints = useMemo(() => catalogue.flatMap((p): MapPlacePoint[] =>
+    p.lngLat ? [{ id: p.id, name: p.name, lngLat: p.lngLat }] : []), [catalogue]);
+  const placeBounds = useMemo(() => boundsOf(mapPoints.map((p) => p.lngLat)), [mapPoints]);
   const selectedPlaceId = useExplore((state) => state.selectedPlaceId);
   const showUserLocation = useNativeMap((s) => s.showUserLocation);
   const locationDenied = useNativeMap((s) => s.locationDenied);
@@ -121,20 +91,25 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
   const styleRef = useRef<NativeMapStyle | null>(null);
   const mapRef = useRef<NativeMapViewRef | null>(null);
   const sizeRef = useRef({ width: 0, height: 0 });
-  const latest = useRef({ onSelectPlace, insets, selectedPlaceId, reduceMotion });
+  const latest = useRef({ onSelectPlace, insets, selectedPlaceId, reduceMotion, mapPoints, byId, placeBounds });
   useEffect(() => {
-    latest.current = { onSelectPlace, insets, selectedPlaceId, reduceMotion };
+    latest.current = { onSelectPlace, insets, selectedPlaceId, reduceMotion, mapPoints, byId, placeBounds };
   });
 
-  const hybridRef = hybridRefFor(native);
+  const link = useRef<{
+    map: NativeMapViewRef | null;
+    connect: ((map: NativeMapViewRef) => void) | null;
+  }>({ map: null, connect: null });
+  const receiveMap = useCallback((map: NativeMapViewRef | null) => {
+    link.current.map = map;
+    if (map) link.current.connect?.(map);
+  }, []);
+  // Nitro callback only wraps the function in { f }; native invokes it after commit.
+  // eslint-disable-next-line react-hooks/refs -- verified callback wrapper does not execute receiveMap
+  const hybridRef = useMemo(() => native.callback(receiveMap), [native, receiveMap]);
 
   useEffect(() => {
-    const { setStatus } = useNativeMap.getState();
-    setStatus('loading');
     return () => {
-      // Back to "off" unless the map failed: a failed map leaves the schematic
-      // and its retry note in place.
-      if (useNativeMap.getState().status !== 'failed') setStatus('off');
       // The OS permission can change while Explore is closed; ask again next time.
       useNativeMap.getState().setShowUserLocation(false);
     };
@@ -142,7 +117,8 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
 
   // Listeners attach as soon as the view hands over its ref (hybridRef above),
   // before its first style finishes loading.
-  useEffect(() => {
+  useLayoutEffect(() => {
+    useNativeMap.getState().setStatus('loading');
     let cancelled = false;
     let detach: (() => void) | null = null;
 
@@ -153,9 +129,9 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
       const durationMs = (ms: number) => (latest.current.reduceMotion ? 0 : ms);
 
       const frameCatalogue = () => {
-        if (!PLACE_BOUNDS) return;
+        if (!latest.current.placeBounds) return;
         quiet(
-          map.fitBounds(PLACE_BOUNDS, {
+          map.fitBounds(latest.current.placeBounds, {
             padding: framePadding(latest.current.insets, sizeRef.current, FIT_PADDING),
             maxZoom: FIT_MAX_ZOOM,
             pitchDeg: BUILDING_PITCH,
@@ -223,10 +199,10 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
         // support still gets the layers, just in Standard's default colours.
         await style.setStandardConfig(EXPLORE_MAP_STANDARD_CONFIG).catch(() => {});
         try {
-          await style.addGeoJsonSource({ id: PLACES_SOURCE, data: placesGeoJson(MAP_POINTS) });
+          await style.addGeoJsonSource({ id: PLACES_SOURCE, data: placesGeoJson(latest.current.mapPoints) });
           await style.addGeoJsonSource({
             id: SELECTED_SOURCE,
-            data: selectedGeoJson(pointFor(latest.current.selectedPlaceId)),
+            data: selectedGeoJson(latest.current.mapPoints.find((p) => p.id === latest.current.selectedPlaceId) ?? null),
           });
           for (const id of [ROUTE_ALTERNATIVES_SOURCE, ROUTE_AHEAD_SOURCE, ROUTE_WALKED_SOURCE]) {
             await style.addGeoJsonSource({ id, data: lineGeoJson([]) });
@@ -268,7 +244,7 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
               .queryRenderedFeatures({ area: tapBox(event.point, sizeRef.current), layerIds: TAPPABLE_LAYERS })
               .then((features) => {
                 const id = features.map((f) => placeIdFromFeature(f.toGeoJson())).find(Boolean);
-                const place = id ? byId.get(id) : undefined;
+                const place = id ? latest.current.byId.get(id) : undefined;
                 if (place) latest.current.onSelectPlace(place);
               }),
           );
@@ -302,16 +278,16 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
       styleRef.current = null;
       detach = attach(map);
     };
-    link.connect = connect;
-    if (link.map) connect(link.map);
+    const connection = link.current;
+    connection.connect = connect;
+    if (connection.map) connect(connection.map);
 
     return () => {
       cancelled = true;
-      // A later mount gets a new view and a new ref; never let it attach to
-      // this one. (A Fast Refresh that re-runs this effect without remounting
-      // the view loses the listeners until the next reload. Dev only.)
-      link.connect = null;
-      link.map = null;
+      // Effect replay keeps the same mounted native view. Keep its ref so
+      // listeners can reconnect; a new component instance owns a fresh ref.
+      connection.connect = null;
+      if (useNativeMap.getState().status !== 'failed') useNativeMap.getState().setStatus('off');
       detach?.();
       styleRef.current = null;
       mapRef.current = null;
@@ -324,7 +300,7 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
     const style = styleRef.current;
     const map = mapRef.current;
     if (!ready || !style || !map) return;
-    const place = pointFor(selectedPlaceId);
+    const place = mapPoints.find((p) => p.id === selectedPlaceId) ?? null;
     quiet(style.setGeoJsonSourceData(SELECTED_SOURCE, selectedGeoJson(place)));
     if (!place) return;
     quiet(
@@ -342,7 +318,22 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
       ),
     );
     // insetsKey: a drawer or Detail opening moves the visible part; re-centre in it.
-  }, [ready, selectedPlaceId, insetsKey]);
+  }, [ready, selectedPlaceId, insetsKey, mapPoints]);
+
+  // Catalogue reads finish independently of the map style. Update its source
+  // without remounting the native view or losing its listeners/camera.
+  useEffect(() => {
+    const style = styleRef.current;
+    const map = mapRef.current;
+    if (!ready || !style || !map) return;
+    quiet(style.setGeoJsonSourceData(PLACES_SOURCE, placesGeoJson(mapPoints)));
+    if (placeBounds && !latest.current.selectedPlaceId) {
+      quiet(map.fitBounds(placeBounds, {
+        padding: framePadding(latest.current.insets, sizeRef.current, FIT_PADDING),
+        maxZoom: FIT_MAX_ZOOM, pitchDeg: BUILDING_PITCH, bearingDeg: BUILDING_BEARING, durationMs: 0,
+      }));
+    }
+  }, [ready, mapPoints, placeBounds]);
 
   const onLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;

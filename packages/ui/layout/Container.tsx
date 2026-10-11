@@ -10,6 +10,7 @@ const container = tv({
   base: 'w-full self-center px-4 sm:px-6',
   variants: {
     width: {
+      editorial: 'max-w-4xl',
       form: 'max-w-content-form',
       feed: 'max-w-content-feed',
       prose: 'max-w-content-prose',
@@ -23,7 +24,7 @@ const container = tv({
 });
 
 export interface ContainerProps extends React.ComponentProps<typeof View> {
-  width?: 'form' | 'feed' | 'prose' | 'detail' | 'screen' | 'wide' | 'full';
+  width?: 'editorial' | 'form' | 'feed' | 'prose' | 'detail' | 'screen' | 'wide' | 'full';
 }
 
 export function Container({ width, className, ...props }: ContainerProps) {

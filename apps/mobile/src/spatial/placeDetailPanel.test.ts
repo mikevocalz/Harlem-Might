@@ -53,9 +53,10 @@ describe('placeDetailPlacement', () => {
     assert.deepEqual(layoutFor('open').detail, { kind: 'promoted' });
   });
 
-  it('falls back to the S17 column when the panel is closed or failed', () => {
-    assert.equal(layoutFor('failed').detail?.kind, 'tiled');
-    assert.equal(layoutFor('closed').detail?.kind, 'tiled');
+  it('falls back to the S17 overlay inspector when the panel is closed or failed', () => {
+    for (const status of ['failed', 'closed'] as const) {
+      assert.deepEqual(layoutFor(status).detail, { kind: 'overlay', width: 1440 * 0.3 });
+    }
   });
 
   it('is 400x600dp', () => {

@@ -1,4 +1,4 @@
-import type { HarlemPlacePreview } from './explore.store';
+import type { ExplorePlace } from './explore.store';
 
 /** A marker position as percentages of the marker area, origin top-left. */
 export interface SchematicPoint {
@@ -62,7 +62,7 @@ export function projectToSchematic(
  * A single place, or places sharing one coordinate, sit at the centre.
  */
 export function projectSchematic(
-  places: readonly HarlemPlacePreview[],
+  places: readonly ExplorePlace[],
   extend: readonly (readonly [number, number])[] = [],
 ): SchematicPoint[] {
   const mapped = places.flatMap((place) => (place.lngLat ? [{ id: place.id, lngLat: place.lngLat }] : []));

@@ -27,8 +27,8 @@ describe('outwardWindowGapDp (Horizon OS 207, measured on a Quest 3S; ADR 0005)'
 });
 
 describe('RAIL_WINDOW', () => {
-  it('sits outside the main window start edge at the same depth', () => {
-    assert.deepEqual(RAIL_WINDOW.anchor, { parent: 'start', child: 'end' });
+  it('sits outside the main window end edge at the same depth', () => {
+    assert.deepEqual(RAIL_WINDOW.anchor, { parent: 'end', child: 'start' });
     assert.equal(RAIL_WINDOW.offset, undefined);
   });
 

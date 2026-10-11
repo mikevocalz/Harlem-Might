@@ -17,7 +17,7 @@ export type { EditorialImage };
 const resolveImageUrl = (url: string | null | undefined): string | undefined => {
   if (!url) return undefined;
   if (/^https?:\/\//i.test(url)) return url;
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.EXPO_PUBLIC_PAYLOAD_API_BASE;
+  const base = process.env.EXPO_PUBLIC_PAYLOAD_API_BASE ?? process.env.EXPO_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
   if (!base || !url.startsWith('/')) return undefined;
   try {
     return new URL(url, base).href;

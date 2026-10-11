@@ -5,12 +5,10 @@ import { mapboxTokenFromEnv } from '@acme/app/features/navigation/providers/mapb
 import { isHorizonBuild } from '../spatial/horizonBuild';
 
 /**
- * Hands Explore the native Mapbox map view on phones and foldables
+ * Hands Explore the native Mapbox map view on phones, foldables and Quest
  * (docs/adr/0007-native-mapbox-map-mobile.md). Explore keeps the schematic
  * when this registers nothing:
  *
- * - the quest build (`isHorizonBuild`): the headset keeps the schematic until
- *   a Mapbox SDK is supported on Horizon OS (DECISIONS S16);
  * - a build that does not link the `MapboxMapView` hybrid view;
  * - no public `pk.` token in `EXPO_PUBLIC_MAPBOX_TOKEN`.
  *
@@ -18,7 +16,6 @@ import { isHorizonBuild } from '../spatial/horizonBuild';
  * objects on a build that skips the map.
  */
 export function registerExploreNativeMap(): void {
-  if (isHorizonBuild) return;
   if (!NitroModules.hasHybridObject('MapboxMapView') || !NitroModules.hasHybridObject('MapboxAR')) return;
   const token = mapboxTokenFromEnv();
   if (token.kind !== 'public') return;
@@ -44,7 +41,9 @@ export function registerExploreNativeMap(): void {
     // hybridRef's wrapper type only exists in the library.
     MapView: MapView as unknown as NativeMapModule['MapView'],
     callback,
-    supportsLocationPuck: maps.MapboxMaps.capabilities.supportsLocationPuck,
+    // Quest uses the same map, but its flavor does not declare phone location
+    // permissions. Keep the phone-only location action out of the headset UI.
+    supportsLocationPuck: !isHorizonBuild && maps.MapboxMaps.capabilities.supportsLocationPuck,
   };
   registerNativeMap(module);
 }

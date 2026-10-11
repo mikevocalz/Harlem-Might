@@ -50,6 +50,9 @@ function withBodyText<P extends object>(Component: React.FC<P & CN>, displayName
   return Wrapped;
 }
 
+// Behavioral list, with the same native/web virtualization contract.
+export { FlatList } from 'react-native';
+
 // ---- generic containers (html-elements backed) ------------------------------
 
 // <div> on web, View on native.

@@ -1,0 +1,8 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+group = 'com.harlemmight.devicecapabilities'
+version = '1.0.0'
+android { namespace 'com.harlemmight.devicecapabilities' }
+dependencies { implementation 'androidx.window:window:1.5.1' }

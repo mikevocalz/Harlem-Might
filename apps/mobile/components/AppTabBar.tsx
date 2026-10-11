@@ -1,12 +1,13 @@
 // Expo Router 58 exposes the JavaScript tab navigator and its public types
 // from this stable export; do not reach into expo-router/build internals.
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
-import { Pressable, Text, View } from '@acme/ui/tw';
+import { Pressable, ScrollView, Text, View } from '@acme/ui/tw';
 import { BookOpen, CalendarClock, Ellipsis, Footprints, MapPinned } from '@acme/ui/icons';
 import { haptics } from '@acme/ui/haptics';
 import { APP_TABS, TAB_SCREEN, type AppTabRoute } from '@/src/site/app-tabs';
 import { isTabShown } from '@/src/site/tabVisibility';
 import { isHorizonBuild } from '@/src/spatial/horizonBuild';
+import { useNavigationPresentation } from '@/src/navigation/useNavigationPresentation';
 import { RAIL_WINDOW_DP } from '@/src/spatial/railWindow';
 
 /** Material 3 navigation rail width. Items keep the 48dp target floor. */
@@ -15,8 +16,8 @@ export const RAIL_WIDTH = 88;
 /**
  * Where the tab bar draws.
  *
- * - `bar`: along the bottom, below 600dp.
- * - `rail`: a leading column inside the window, from 600dp up.
+ * - `bar`: bottom navigation for ordinary phones.
+ * - `rail`: tablets and foldables, including the folded cover display.
  * - `window`: the whole of its own Horizon window beside the main one
  *   (DECISIONS S18): 60dp icon-and-label items, like a visionOS tab bar
  *   ornament.
@@ -53,6 +54,7 @@ export function AppTabBar({
   insets,
   layout,
 }: Pick<BottomTabBarProps, 'state' | 'emitter' | 'navigateToTab' | 'insets'> & { layout: AppTabBarLayout }) {
+  const { hardwareColumnWidth } = useNavigationPresentation();
   const rail = layout !== 'bar';
   const xr = layout === 'window';
   const items = state.routes.map((route, index) => {
@@ -132,10 +134,16 @@ export function AppTabBar({
   return (
     <View
       role="tablist"
-      style={{ width: RAIL_WIDTH, paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }}
-      className="h-full items-center gap-target-gap border-r border-rule-hairline bg-paper"
+      style={{ width: hardwareColumnWidth || RAIL_WIDTH + insets.right, paddingRight: hardwareColumnWidth ? 0 : insets.right }}
+      className="h-full border-l border-rule-hairline bg-paper"
     >
-      {items}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerClassName="grow items-center justify-center gap-target-gap"
+        contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }}
+      >
+        {items}
+      </ScrollView>
     </View>
   );
 }

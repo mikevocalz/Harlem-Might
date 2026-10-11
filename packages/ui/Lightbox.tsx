@@ -1,6 +1,7 @@
 'use client';
 import { useEffect } from 'react';
 import { Modal } from 'react-native';
+import { useSafeAreaInsets } from './use-safe-area-insets';
 import { SolitoImage } from 'solito/image';
 import { useInstanceStore, useStore } from './use-instance-store';
 import { View, Text, Pressable } from './tw';
@@ -13,6 +14,7 @@ export interface LightboxProps {
 }
 
 export function Lightbox({ images, initialIndex = 0, open, onClose }: LightboxProps) {
+  const insets = useSafeAreaInsets();
   const store = useInstanceStore<{ index: number }>(() => ({ index: initialIndex }));
   const index = useStore(store, (s) => s.index);
   const setIndex = (updater: (i: number) => number) =>
@@ -49,7 +51,8 @@ export function Lightbox({ images, initialIndex = 0, open, onClose }: LightboxPr
         <Pressable
           onPress={onClose}
           accessibilityLabel="Close image"
-          className="absolute right-4 top-4 z-10 rounded-md bg-ink-800/80 p-2 active:opacity-70"
+          style={{ right: insets.right + 16, top: insets.top + 16 }}
+          className="absolute z-20 h-16 w-16 items-center justify-center rounded-md bg-ink-800/80 active:opacity-70"
         >
           <Text className="text-xl leading-none text-ink-50">×</Text>
         </Pressable>
@@ -59,7 +62,8 @@ export function Lightbox({ images, initialIndex = 0, open, onClose }: LightboxPr
             onPress={() => setIndex((i) => Math.max(0, i - 1))}
             disabled={index === 0}
             accessibilityLabel="Previous image"
-            className="absolute bottom-0 left-0 top-0 z-10 w-16 justify-center pl-4 active:opacity-70"
+            style={{ left: insets.left, top: insets.top + 80, bottom: insets.bottom + 80 }}
+            className="absolute z-10 w-16 justify-center pl-4 active:opacity-70"
           >
             <Text className={`text-3xl leading-none ${index === 0 ? 'text-ink-700' : 'text-ink-50'}`}>‹</Text>
           </Pressable>
@@ -72,7 +76,8 @@ export function Lightbox({ images, initialIndex = 0, open, onClose }: LightboxPr
             onPress={() => setIndex((i) => Math.min(images.length - 1, i + 1))}
             disabled={index === images.length - 1}
             accessibilityLabel="Next image"
-            className="absolute bottom-0 right-0 top-0 z-10 w-16 items-end justify-center pr-4 active:opacity-70"
+            style={{ right: insets.right, top: insets.top + 80, bottom: insets.bottom + 80 }}
+            className="absolute z-10 w-16 items-end justify-center pr-4 active:opacity-70"
           >
             <Text className={`text-3xl leading-none ${index === images.length - 1 ? 'text-ink-700' : 'text-ink-50'}`}>›</Text>
           </Pressable>

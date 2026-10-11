@@ -1,14 +1,15 @@
 'use client';
 
+import { useMemo } from 'react';
+import { usePlaceCatalogue } from './place-catalogue.store.ts';
+import { exploreCategories } from './catalogue.ts';
 import { MightsButton, MightsEditorialImage, MightsHeading, MightsText } from '@acme/ui/mights';
-import { ScrollView, Text, TextInput, View } from '@acme/ui/tw';
+import { FlatList, ScrollView, Text, TextInput, View } from '@acme/ui/tw';
 import { noResultsCopy, resultsSummary } from './explore-copy';
 import {
-  HARLEM_CATEGORIES,
-  HARLEM_PLACE_PREVIEWS,
-  filterHarlemPlacePreviews,
+  filterPlaces,
   useExplore,
-  type HarlemPlacePreview,
+  type ExplorePlace,
 } from './explore.store';
 import { useExploreType } from './explore-type';
 import { getHarlemArchivalImage } from '../../content';
@@ -18,7 +19,7 @@ const archiveImage = getHarlemArchivalImage('nypl-pushcart-vendors-eighth-avenue
 
 export interface ExploreMasterPaneProps {
   /** A row was chosen. The caller opens the place. */
-  onSelectPlace: (place: HarlemPlacePreview) => void;
+  onSelectPlace: (place: ExplorePlace) => void;
   /** Shows the map. Pass only where this pane covers the map (compact). */
   onShowMap?: () => void;
   /**
@@ -50,9 +51,13 @@ export function ExploreMasterPane({ onSelectPlace, onShowMap, onClose, padding =
   const selectedPlaceId = useExplore((state) => state.selectedPlaceId);
   const setQuery = useExplore((state) => state.setQuery);
   const setCategory = useExplore((state) => state.setCategory);
-  const places = filterHarlemPlacePreviews(query, category);
+  const catalogue = usePlaceCatalogue((s) => s.places);
+  const loadState = usePlaceCatalogue((s) => s.loadState);
+  const refresh = usePlaceCatalogue((s) => s.refresh);
+  const categories = useMemo(() => exploreCategories(catalogue), [catalogue]);
+  const places = useMemo(() => filterPlaces(catalogue, query, category), [catalogue, query, category]);
   const recentIds = useExplore((state) => state.recentIds);
-  const recents = recentIds.flatMap((id) => HARLEM_PLACE_PREVIEWS.filter((p) => p.id === id));
+  const recents = recentIds.flatMap((id) => catalogue.filter((p) => p.id === id));
   const mapped = places.filter((place) => place.lngLat).length;
   const summary = resultsSummary(places.length, mapped, query, category, 'All');
   const pad = padding === 'window' ? 'px-window' : 'px-4';
@@ -106,7 +111,7 @@ export function ExploreMasterPane({ onSelectPlace, onShowMap, onClose, padding =
           accessibilityLabel="Filter by category"
           contentContainerClassName={type.inlineGap + ' flex-row py-1'}
         >
-          {HARLEM_CATEGORIES.map((item) => {
+          {categories.map((item) => {
             const on = item === category;
             return (
               <MightsButton
@@ -148,35 +153,48 @@ export function ExploreMasterPane({ onSelectPlace, onShowMap, onClose, padding =
         ) : null}
 
         <Text accessibilityLiveRegion="polite" className={type.summary + ' font-sans text-text-muted'}>
-          {summary}
+          {loadState.status === 'idle' || loadState.status === 'loading' ? 'Loading places…'
+            : loadState.status === 'unavailable' ? loadState.message : summary}
         </Text>
       </View>
 
-      <ScrollView className="flex-1" contentContainerClassName="pb-24" showsVerticalScrollIndicator={false}>
-        {archiveImage ? (
+      {loadState.status === 'unavailable' ? (
+        <View className={pad + ' py-2'}>
+          {catalogue.length > 0 ? <MightsText>Showing the last loaded places.</MightsText> : null}
+          <MightsButton onPress={() => void refresh()}>Try again</MightsButton>
+        </View>
+      ) : null}
+      <FlatList
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 96 }}
+        initialNumToRender={12}
+        windowSize={5}
+        showsVerticalScrollIndicator={false}
+        data={places}
+        keyExtractor={(place) => place.id}
+        extraData={selectedPlaceId}
+        ListHeaderComponent={archiveImage ? (
           <View className={padding === 'window' ? 'px-window py-4' : 'px-4 py-4'}>
             <MightsEditorialImage image={archiveImage} screenId="explore-discover" ratio="wide" />
           </View>
-        ) : null}
-        {places.length === 0 ? (
+        ) : undefined}
+        ListEmptyComponent={loadState.status === 'ready' ? (
           <View className={'items-start py-5 ' + type.stackGap + ' ' + pad}>
             <MightsText tone="default">{noResultsCopy(query, category, 'All')}</MightsText>
             <MightsButton size={type.buttons.control} variant="secondary" onPress={clearAll}>
               Clear search and filters
             </MightsButton>
           </View>
-        ) : (
-          places.map((place) => (
+        ) : undefined}
+        renderItem={({ item: place }) => (
             <PlaceRow
-              key={place.id}
               place={place}
               padding={padding}
               selected={selectedPlaceId === place.id}
               onPress={() => onSelectPlace(place)}
             />
-          ))
         )}
-      </ScrollView>
+      />
     </View>
   );
 }

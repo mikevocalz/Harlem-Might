@@ -3,7 +3,8 @@
 import type { ReactNode } from 'react';
 import { MightsButton } from '@acme/ui/mights';
 import { Text, View } from '@acme/ui/tw';
-import { UNMAPPED_PLACES, type HarlemPlacePreview } from './explore.store';
+import { type ExplorePlace } from './explore.store';
+import { usePlaceCatalogue } from './place-catalogue.store.ts';
 import { useExploreType } from './explore-type';
 import { ExploreMap } from './ExploreMap';
 import type { MapInsets } from './ExploreMap.types.ts';
@@ -14,7 +15,7 @@ export type { MapInsets } from './ExploreMap.types.ts';
 
 export interface ExploreMapPaneProps {
   /** A marker was chosen. The caller opens the place. */
-  onSelectPlace: (place: HarlemPlacePreview) => void;
+  onSelectPlace: (place: ExplorePlace) => void;
   /** Shows the place list. Pass only where Discover is hidden (compact, medium). */
   onShowPlaces?: () => void;
   /**
@@ -32,9 +33,8 @@ const MAPBOX_ORNAMENT_CLEARANCE = 40;
 /**
  * The map region (handoff §3), the permanent centre of Explore.
  *
- * Phones and foldables get the native Mapbox street map; web and the headset
- * build get the schematic (docs/adr/0007-native-mapbox-map-mobile.md,
- * resolving DECISIONS S16 for phone and foldable). `ExploreMap` picks one;
+ * Phones, foldables and Quest get the native Mapbox street map when its
+ * module and public token are available (ADR 0007). `ExploreMap` picks one;
  * this pane is the frame around it: the Places toggle, the insets, the
  * caption and the attribution. Places with no coordinates get no marker, and
  * a notice counts them.
@@ -42,7 +42,7 @@ const MAPBOX_ORNAMENT_CLEARANCE = 40;
 export function ExploreMapPane({ onSelectPlace, onShowPlaces, insets, children }: ExploreMapPaneProps) {
   const type = useExploreType();
   const pad = insets ?? { top: 0, right: 0, bottom: 0, left: 0 };
-  const unmapped = UNMAPPED_PLACES.length;
+  const unmapped = usePlaceCatalogue((s) => s.places.filter((p) => !p.lngLat).length);
   const hasRoute = useNavigationStore((s) => s.session.phase === 'routeReady' || 'activeRoute' in s.session);
   const nativeLive = useNativeMapLive();
   const nativeError = useNativeMap((s) => (s.status === 'failed' ? s.error : null));

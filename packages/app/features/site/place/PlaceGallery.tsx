@@ -1,13 +1,15 @@
 'use client';
 
-import { create } from 'zustand';
+import { useMemo } from 'react';
+import { createStore } from 'zustand/vanilla';
+import { useStore } from 'zustand';
 import type { EditorialImage } from '@acme/app/content';
 import { Image, Lightbox } from '@acme/ui';
 import { MightsButton, MightsEditorialImage, MightsLocationStamp } from '@acme/ui/mights';
 import { Pressable, View } from '@acme/ui/tw';
 
-// One gallery per page, so one store (repo rule: zustand for UI state).
-const useGallery = create<{
+// Each mounted gallery owns its selection and lightbox; panels can coexist.
+const createGallery = () => createStore<{
   index: number;
   open: boolean;
   show: (index: number) => void;
@@ -37,9 +39,10 @@ export function PlaceGallery({
   name: string;
   street?: string;
 }) {
-  const stored = useGallery((s) => s.index);
-  const open = useGallery((s) => s.open);
-  const { show, openAt, close } = useGallery.getState();
+  const gallery = useMemo(() => createGallery(), []);
+  const stored = useStore(gallery, (s) => s.index);
+  const open = useStore(gallery, (s) => s.open);
+  const { show, openAt, close } = gallery.getState();
   const index = stored < images.length ? stored : 0;
   const current = images[index];
   if (!current) return null;

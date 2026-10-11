@@ -20,7 +20,7 @@ import {
   projectToEnu,
   routeLengthM,
 } from '@mapbox/react-native-mapbox-ar-reactvision';
-import { MAPPED_PLACES, getHarlemPlacePreview, useExplore } from '@acme/app';
+import { usePlaceCatalogue, catalogueNearbyPlaces, getCataloguePlace, useExplore } from '@acme/app';
 import { acceptsGameSurface } from '@acme/spatial/arSurface';
 import { palette } from '@acme/theme';
 import { resolveArMode } from './arMode';
@@ -110,12 +110,16 @@ export function HarlemTabletopScene() {
   const degraded = useArSession((s) => s.degraded);
   const selectedPlaceId = useExplore((s) => s.selectedPlaceId);
 
-  const originPlace = getHarlemPlacePreview(requestedPlaceId ?? selectedPlaceId);
+  const originPlace = getCataloguePlace(requestedPlaceId ?? selectedPlaceId);
+  const catalogue = usePlaceCatalogue((s) => s.places);
+  // Keep the immersive scene local to the selected place, with bounded geometry.
+  const scenePlaces = useMemo(() => originPlace ? [originPlace,
+    ...catalogueNearbyPlaces(originPlace, catalogue, 23).map((entry) => entry.place)] : [], [originPlace, catalogue]);
   const origin = useMemo(
     () => (originPlace?.lngLat ? tabletopOrigin(originPlace) : null),
     [originPlace],
   );
-  const extent = useMemo(() => (origin ? placeEnuExtent(origin, MAPPED_PLACES) : null), [origin]);
+  const extent = useMemo(() => (origin ? placeEnuExtent(origin, scenePlaces) : null), [origin, scenePlaces]);
 
   // Passthrough and the room model are only readable once the headset view
   // exists (the query needs its view tag).
@@ -199,7 +203,7 @@ export function HarlemTabletopScene() {
 
   const pins = useMemo(() => {
     if (!origin) return [];
-    return MAPPED_PLACES.map((place) => {
+    return scenePlaces.map((place) => {
       const enu = projectToEnu(origin, {
         latitude: place.lngLat![1],
         longitude: place.lngLat![0],
@@ -207,7 +211,7 @@ export function HarlemTabletopScene() {
       });
       return { place, world: [enu.eastM, enu.upM, -enu.northM] as const };
     });
-  }, [origin]);
+  }, [origin, scenePlaces]);
 
   const playhead = projectedRoute ? toTable(pointAlongRoute(projectedRoute, playheadM)) : null;
   const playheadFraction = routeLength > 0 ? Math.min(1, playheadM / routeLength) : 0;

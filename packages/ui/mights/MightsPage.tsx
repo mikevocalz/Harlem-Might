@@ -9,6 +9,7 @@ export function MightsPage({
   lead,
   crumbs,
   media,
+  mediaLayout = 'stacked',
   children,
 }: {
   title: string;
@@ -16,27 +17,30 @@ export function MightsPage({
   crumbs?: Crumb[];
   /** Licensed photo or map module for the masthead; omitted on dense records. */
   media?: React.ReactNode;
+  mediaLayout?: 'stacked' | 'leading';
   children?: React.ReactNode;
 }) {
+  const leading = mediaLayout === 'leading';
   return (
     <Main className="flex flex-1 flex-col bg-surface pb-24">
       {crumbs ? <MightsBreadcrumb items={crumbs} /> : null}
       <View className="border-b border-rule-hairline bg-paper/45">
         <View
-          className={`mx-auto grid w-full max-w-screen-2xl gap-10 px-4 pb-14 pt-12 sm:px-6 md:pt-20 ${
-            media ? 'md:grid-cols-12 md:items-end md:gap-6' : ''
+          className={`mx-auto grid w-full ${leading ? 'max-w-4xl' : 'max-w-screen-2xl'} gap-10 px-4 pb-14 pt-12 sm:px-6 md:pt-20 ${
+            media ? leading ? 'md:grid-cols-5 md:items-center md:gap-0' : 'md:grid-cols-12 md:items-end md:gap-6' : ''
           }`}
         >
-          <View className={`border-l-2 border-primary pl-5 md:pl-7 ${media ? 'md:col-span-7' : ''}`}>
+          {media && leading ? <View className="md:col-span-3">{media}</View> : null}
+          <View className={`border-l-2 border-primary pl-5 md:pl-7 ${media ? leading ? 'md:col-span-2 md:ml-5' : 'md:col-span-7' : ''}`}>
             <MightsHeading level={1} size="display-lg" className="max-w-[18ch]">
               {title}
             </MightsHeading>
             {lead ? <MightsText size="lead" className="mt-5 max-w-content-detail">{lead}</MightsText> : null}
           </View>
-          {media ? <View className="md:col-span-5">{media}</View> : null}
+          {media && !leading ? <View className="md:col-span-5">{media}</View> : null}
         </View>
       </View>
-      <View className="mx-auto flex w-full max-w-screen-2xl flex-col gap-16 px-4 pt-10 sm:px-6 md:pt-14">{children}</View>
+      <View className={`mx-auto flex w-full ${leading ? 'max-w-4xl' : 'max-w-screen-2xl'} flex-col gap-16 px-4 pt-10 sm:px-6 md:pt-14`}>{children}</View>
     </Main>
   );
 }

@@ -80,7 +80,7 @@ export function PlaceMasthead({ place, images }: { place: ExplorePlace; images: 
   const slides = images.length
     ? images
     : [mapSlide(place, where), ...archivesFor(place.id, 2)].filter((i): i is EditorialImage => i !== undefined);
-  if (slides.length) return <PlaceGallery images={slides} placeId={place.id} name={place.name} street={where} />;
+  if (slides.length) return <PlaceGallery key={place.id} images={slides} placeId={place.id} name={place.name} street={where} />;
   return (
     <MightsNotchCard className="aspect-4/3">
       <View className="h-full items-start justify-end bg-surface-sunken p-5">

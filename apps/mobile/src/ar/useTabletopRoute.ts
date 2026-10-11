@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { getHarlemPlacePreview, placesNear } from '@acme/app';
+import { getCataloguePlace, catalogueNearbyPlaces, usePlaceCatalogue } from '@acme/app';
 import { useArSession } from './arSession.store';
 import { mapboxToken } from './mapboxToken';
 import { fetchWalkingRoute } from './walkingRoute';
@@ -13,15 +13,16 @@ const NEARBY_STOPS = 2;
  * scene only draws what lands there (spec §6A: AR never calls Directions).
  */
 export function useTabletopRoute(placeId: string | undefined) {
+  const catalogue = usePlaceCatalogue((s) => s.places);
   useEffect(() => {
-    const from = getHarlemPlacePreview(placeId);
+    const from = getCataloguePlace(placeId);
     if (!from?.lngLat) return;
     const controller = new AbortController();
     const token = mapboxToken();
     useArSession.getState().setRouteLoading();
     fetchWalkingRoute({
       from,
-      to: placesNear(from.id, NEARBY_STOPS),
+      to: catalogueNearbyPlaces(from, catalogue, NEARBY_STOPS).map((entry) => entry.place),
       accessToken: token.kind === 'public' ? token.token : undefined,
       signal: controller.signal,
     }).then(
@@ -31,5 +32,5 @@ export function useTabletopRoute(placeId: string | undefined) {
       },
     );
     return () => controller.abort();
-  }, [placeId]);
+  }, [placeId, catalogue]);
 }

@@ -1,6 +1,6 @@
 import { useRouter } from 'solito/navigation';
 import { isMetaHorizonXR } from '@reactvision/react-viro';
-import { getHarlemPlacePreview, useExplore } from '@acme/app';
+import { getCataloguePlace, usePlaceCatalogue, useExplore } from '@acme/app';
 import type { ArModeRequest } from '@viro-external/xr-contract';
 import { MightsButton } from '@acme/ui/mights';
 import { View } from '@acme/ui/tw';
@@ -17,7 +17,8 @@ import { useArSession } from './arSession.store';
  */
 export function ViewInArButton({ placeId }: { placeId: string }) {
   const router = useRouter();
-  const place = getHarlemPlacePreview(placeId) ?? undefined;
+  usePlaceCatalogue((s) => s.places);
+  const place = getCataloguePlace(placeId) ?? undefined;
   if (!canViewInAr({ isHorizonBuild, isMetaHorizonXR, place })) return null;
 
   const open = (mode: Extract<ArModeRequest, 'tabletop' | 'street'>) => {

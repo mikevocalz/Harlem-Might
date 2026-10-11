@@ -2,7 +2,8 @@
 
 import { useMemo } from 'react';
 import { Text, View } from '@acme/ui/tw';
-import { HARLEM_PLACE_PREVIEWS, useExplore } from './explore.store';
+import { useExplore } from './explore.store';
+import { usePlaceCatalogue } from './place-catalogue.store.ts';
 import { useExploreType } from './explore-type';
 import type { ExploreMapProps } from './ExploreMap.types.ts';
 import { focusTargetRef, markerFocusId } from './focus-registry';
@@ -14,9 +15,6 @@ import { selectDisplayedRoute, toLngLat } from '../navigation/view/routeLine';
 
 const EDGE = 48;
 
-const byId = new Map(HARLEM_PLACE_PREVIEWS.map((place) => [place.id, place]));
-const PLACE_LNGLATS = HARLEM_PLACE_PREVIEWS.flatMap((place) => (place.lngLat ? [place.lngLat] : []));
-
 /**
  * The schematic map: markers on the dark map canvas at their real
  * OpenStreetMap coordinates, fitted to the box, with no streets drawn. Each is
@@ -25,12 +23,15 @@ const PLACE_LNGLATS = HARLEM_PLACE_PREVIEWS.flatMap((place) => (place.lngLat ? [
  * name beside it and sets the `selected` state, so it never rests on colour
  * alone. Places with no coordinates get no marker.
  *
- * Web and the headset build draw this. Phones and foldables draw the native
+ * The web fallback draws this. Native builds, including Quest, draw the
  * Mapbox map instead and fall back to this only when that view is not linked
  * or fails to load (docs/adr/0007-native-mapbox-map-mobile.md).
  */
 export function ExploreSchematicMap({ onSelectPlace, insets }: ExploreMapProps) {
   const type = useExploreType();
+  const catalogue = usePlaceCatalogue((s) => s.places);
+  const byId = useMemo(() => new Map(catalogue.map((p) => [p.id, p])), [catalogue]);
+  const lngLats = useMemo(() => catalogue.flatMap((p) => p.lngLat ? [p.lngLat] : []), [catalogue]);
   const selectedPlaceId = useExplore((state) => state.selectedPlaceId);
   // The session's route, when there is one. The fit grows to hold it, so a
   // route starting outside the catalogue's corner still lands in the box and
@@ -41,12 +42,12 @@ export function ExploreSchematicMap({ onSelectPlace, insets }: ExploreMapProps) 
   const { points, bounds } = useMemo(() => {
     const line = displayed ? toLngLat(displayed.route.geometry.coordinates) : [];
     return {
-      points: projectSchematic(HARLEM_PLACE_PREVIEWS, line),
-      bounds: schematicBounds([...PLACE_LNGLATS, ...line]),
+      points: projectSchematic(catalogue, line),
+      bounds: schematicBounds([...lngLats, ...line]),
     };
     // routeKey identifies the geometry; the route object is immutable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeKey]);
+  }, [routeKey, catalogue, lngLats]);
 
   return (
     <View

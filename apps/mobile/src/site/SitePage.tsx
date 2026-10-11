@@ -1,5 +1,6 @@
+import { useNavigationPresentation } from '../navigation/useNavigationPresentation';
 import type { ReactNode } from 'react';
-import { SafeArea } from '@acme/ui';
+import { Container, SafeArea } from '@acme/ui';
 import { Pressable, ScrollView, Text, View } from '@acme/ui/tw';
 
 /**
@@ -10,7 +11,7 @@ import { Pressable, ScrollView, Text, View } from '@acme/ui/tw';
 export function SitePage({
   title,
   lead,
-  underHeader = false,
+  underHeader = true,
   children,
 }: {
   title: string;
@@ -19,9 +20,12 @@ export function SitePage({
   underHeader?: boolean;
   children?: ReactNode;
 }) {
+  const { hardwareColumnWidth } = useNavigationPresentation();
+  const horizontalEdges = hardwareColumnWidth ? ['left'] as const : ['left', 'right'] as const;
   return (
-    <SafeArea edges={underHeader ? ['left', 'right'] : ['top', 'left', 'right']} className="flex-1 bg-surface">
-      <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerClassName="gap-8 px-6 pb-12 pt-8">
+    <SafeArea edges={underHeader ? horizontalEdges : ['top', ...horizontalEdges]} className="flex-1 bg-surface">
+      <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerClassName="pb-12 pt-8">
+        <Container width="editorial" className="gap-8">
         <View className="max-w-content-detail gap-4">
           <Text role="heading" aria-level={1} className="font-sans text-title-lg font-bold text-text">
             {title}
@@ -29,6 +33,7 @@ export function SitePage({
           {lead ? <Text className="font-sans text-lead-sm text-text-muted">{lead}</Text> : null}
         </View>
         {children}
+        </Container>
       </ScrollView>
     </SafeArea>
   );
