@@ -24,8 +24,16 @@ describe('normalizeArtistName', () => {
 });
 
 describe('resolveArtistPhoto', () => {
-  it('uses an exact Deezer artist-profile match for a real artist photo', async () => {
+  it('uses an exact Deezer artist-profile match only after reusable image sources miss', async () => {
+    const calls: string[] = [];
     const fetcher: ArtistPhotoFetch = async (url) => {
+      calls.push(url);
+      if (url.startsWith('https://en.wikipedia.org/')) {
+        return response({ query: { pages: {} } });
+      }
+      if (url.startsWith('https://commons.wikimedia.org/')) {
+        return response({ query: { pages: {} } });
+      }
       assert.match(url, /^https:\/\/api\.deezer\.com\/search\/artist/);
       return response({
         data: [
@@ -42,8 +50,10 @@ describe('resolveArtistPhoto', () => {
 
     const result = await resolveArtistPhoto("Cam'ron", fetcher);
     assert.equal(result?.provider, 'deezer');
+    assert.equal(result?.rightsStatus, 'provider-reference');
     assert.equal(result?.name, "Cam'ron");
     assert.match(result?.url ?? '', /dzcdn\.net/);
+    assert.equal(calls.length, 3);
   });
 
   it('pins T-Rex and Bloodshed to curated correct-person photos', async () => {
@@ -123,7 +133,7 @@ describe('resolveArtistPhoto', () => {
     assert.equal(result?.provider, 'wikimedia_commons');
     assert.equal(result?.rightsStatus, 'rights-cleared');
     assert.equal(result?.license, 'CC BY-SA 4.0');
-    assert.equal(calls.length, 3);
+    assert.equal(calls.length, 2);
   });
 
   it('rejects Commons files whose subject does not match the artist', async () => {
@@ -202,6 +212,12 @@ describe('artistPhotoProviderLabel', () => {
 
 it('resolveArtistPhotos preserves every requested artist key', async () => {
   const fetcher: ArtistPhotoFetch = async (url) => {
+    if (url.startsWith('https://en.wikipedia.org/')) {
+      return response({ query: { pages: {} } });
+    }
+    if (url.startsWith('https://commons.wikimedia.org/')) {
+      return response({ query: { pages: {} } });
+    }
     const parsed = new URL(url);
     const name = parsed.searchParams.get('q') ?? 'Artist';
     return response({
