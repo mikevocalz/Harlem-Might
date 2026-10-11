@@ -1,0 +1,5 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": { "modules": ["WalkCompanionModule"] },
+  "android": { "modules": ["com.harlemmight.companion.WalkCompanionModule"] }
+}

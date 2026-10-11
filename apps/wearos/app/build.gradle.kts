@@ -5,9 +5,11 @@ plugins {
 
 android {
     namespace = "com.harlemmight.watch"
-    compileSdk = 36
+    // Wear Compose 1.7.x AAR metadata requires API 37; validate on SDK host.
+    compileSdk = 37
     defaultConfig {
-        applicationId = "com.harlemmight.watch"
+        // Data Layer enforces identical application ID and signing on phone/watch.
+        applicationId = "com.harlemmight.app"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
@@ -23,9 +25,11 @@ android {
         compose = true
         buildConfig = true
     }
+    sourceSets["main"].java.srcDir("../../mobile/modules/walk-companion/shared/android")
 }
 
 dependencies {
+    implementation("com.google.android.gms:play-services-wearable:20.0.1")
     val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     implementation("androidx.activity:activity-compose:1.13.0")

@@ -88,6 +88,7 @@ final class HarlemWatchStore: ObservableObject {
 
 struct ContentView: View {
     @ObservedObject var store: HarlemWatchStore
+    @ObservedObject var walkStore: WatchWalkStore
 
     var body: some View {
         TabView {
@@ -123,14 +124,7 @@ struct ContentView: View {
             .tag("now")
 
             NavigationStack {
-                ScrollView {
-                    if let walk = store.currentWalk {
-                        CardSection(card: walk, leading: "TAKE ME THERE")
-                    } else {
-                        EmptySection(title: "Take Me There", detail: "Choose a cultural walk on your phone. This watch will show your next stop after the secure handoff is enabled.")
-                    }
-                }
-                .navigationTitle("Walks")
+                PairedWalkView(store: walkStore)
             }
             .tag("walks")
 
