@@ -7,6 +7,7 @@ import { MightsEditorialImage, MightsText } from '@acme/ui/mights';
 import { Text, View } from '@acme/ui/tw';
 import { useQuery } from '@tanstack/react-query';
 import { fetchArtistPhotos } from './artist-photo-client.ts';
+import { artistPhotoProviderLabel } from './artist-photo.ts';
 
 export function MusicArtistPhoto({ artist }: { artist: MusicArtistRecord }) {
   const query = useQuery({
@@ -57,7 +58,7 @@ export function MusicArtistPhoto({ artist }: { artist: MusicArtistRecord }) {
               rel="noreferrer"
               className="underline underline-offset-2"
             >
-              {photo.provider === 'wikimedia_commons' ? 'Wikimedia Commons source' : 'Deezer artist profile'}
+              {`${artistPhotoProviderLabel(photo.provider)} source`}
             </Link>
             {photo.license && photo.licenseUrl ? (
               <>
