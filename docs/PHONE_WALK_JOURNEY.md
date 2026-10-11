@@ -111,7 +111,7 @@ revision conflicts, uncertain start retry, duplicate stop confirmation, refresh
 concurrent with a member save, storage corruption/expiry/failure, source dates,
 rights-safe story excerpts, haptic opt-out and event deduplication. Pending GPS
 requests capture the walk session/revision/current stop and cancel when another
-destination takes over. Pause, stop, clear and timeout release a request-owned
+destination is selected or its trip takes over. Pause, stop, clear and timeout release a request-owned
 feed before its first fix; an existing device-origin trip can retain its own feed.
 
 Shared app TypeScript and scoped shared/mobile ESLint have been exercised. The

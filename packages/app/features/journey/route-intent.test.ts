@@ -12,11 +12,12 @@ const trip = (placeId = 'apollo', kind = 'device-location', phase = 'navigating'
   phase, destination: { placeId }, origin: { kind }, ...(phase === 'navigating' ? { activeRoute: {} } : {}),
 }) as NavigationSession;
 
-function setup(running = false) {
+function setup(running = false, initialSelection: string | null = null) {
   let journey: JourneyRouteIdentity | undefined = identity;
   let navigation: NavigationSession = { phase: 'idle' };
   let lastFix: NavigationFixState['lastFix'];
   let location: 'granted' | 'denied' = 'granted';
+  let selection = initialSelection;
   const calls: string[] = [];
   const errors: string[] = [];
   const listeners = new Set<() => void>();
@@ -25,6 +26,7 @@ function setup(running = false) {
   let staleListener = () => {};
   const cancel = startJourneyRouteIntent({
     identity, getJourney: () => journey, getNavigation: () => navigation,
+    getDirectionsPlaceId: () => selection,
     getLastFix: () => lastFix, getLocation: () => location, now: () => now,
     isLocationRunning: () => running,
     startLocation() { calls.push('start'); running = true; },
@@ -38,6 +40,7 @@ function setup(running = false) {
   return {
     calls, errors, cancel,
     navigation(value: NavigationSession) { navigation = value; },
+    selection(value: string | null) { selection = value; },
     journey(value: JourneyRouteIdentity | undefined) { journey = value; },
     fix(value = fix) { lastFix = value; },
     denied() { location = 'denied'; },
@@ -75,6 +78,21 @@ it('rechecks destination immediately before either request or reroute, even with
     test.navigation(trip('another-place', 'device-location', phase)); test.fix(); test.emit();
     assert.deepEqual(test.calls, ['start']); assert.match(test.errors[0]!, /Another trip/);
   }
+});
+
+it('a newer Explore selection cancels before its trip has a destination or a GPS fix', () => {
+  const test = setup(); test.selection('new-explore-place'); test.emit();
+  test.navigation({ phase: 'selectingDestination', origin: { kind: 'device-location' } });
+  test.fix(); test.lateNotification();
+  assert.deepEqual(test.calls, ['start', 'stop']); assert.match(test.errors[0]!, /Another destination was selected/);
+  assert.equal(test.listeners(), 0);
+});
+
+it('reopening the same preexisting Explore selection is also a newer destination intent', () => {
+  const test = setup(false, 'other-place');
+  test.navigation({ phase: 'selectingDestination', origin: { kind: 'device-location' } });
+  test.fix(); test.emit();
+  assert.deepEqual(test.calls, ['start', 'stop']); assert.match(test.errors[0]!, /Another destination was selected/);
 });
 
 it('a changed session, revision, stop or inactive journey cannot use the captured destination', () => {

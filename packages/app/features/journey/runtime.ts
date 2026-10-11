@@ -119,13 +119,15 @@ export function requestJourneyDirections(): void {
   routeCleanup = startJourneyRouteIntent({
     identity, getJourney: currentRouteIdentity,
     getNavigation: () => useNavigationStore.getState().session,
+    getDirectionsPlaceId: () => useNavigationUi.getState().directionsPlaceId,
     getLastFix: () => navigationFixStore.getState().lastFix,
     getLocation: () => useNavigationUi.getState().location,
     isLocationRunning, startLocation, stopLocation,
     subscribe(listener) {
       const fix = navigationFixStore.subscribe(listener);
       const trip = useNavigationStore.subscribe(listener);
-      return () => { fix(); trip(); };
+      const selection = useNavigationUi.subscribe(listener);
+      return () => { fix(); trip(); selection(); };
     },
     reroute: () => navigationController().reroute(),
     request: () => requestDirections({ destination, mode: 'walking', originChoice: { kind: 'device' } }),

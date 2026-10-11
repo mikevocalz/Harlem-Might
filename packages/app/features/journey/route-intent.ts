@@ -20,6 +20,7 @@ export function startJourneyRouteIntent(input: {
   identity: JourneyRouteIdentity;
   getJourney(): JourneyRouteIdentity | undefined;
   getNavigation(): NavigationSession;
+  getDirectionsPlaceId(): string | null;
   getLastFix(): NavigationFixState['lastFix'];
   getLocation(): LocationAvailability;
   isLocationRunning(): boolean;
@@ -34,6 +35,8 @@ export function startJourneyRouteIntent(input: {
 }): () => void {
   const now = input.now ?? Date.now;
   const requestedAt = now();
+  const initialTrip = input.getNavigation();
+  const initialSelection = input.getDirectionsPlaceId();
   let done = false;
   let planning = false;
   let ownsFeed = false;
@@ -55,6 +58,14 @@ export function startJourneyRouteIntent(input: {
       cancel('This walk or stop changed while location was loading. Choose directions again for the current stop.'); return;
     }
     const trip = input.getNavigation();
+    const selection = input.getDirectionsPlaceId();
+    // Explore records its chosen place in UI state before a planned trip exists.
+    // Observe newer selections as well as full trips, without treating an old,
+    // unchanged panel choice as a new action after this explicit walk request.
+    if (selection !== null && selection !== captured.stopSlug &&
+        (selection !== initialSelection || (trip.phase === 'selectingDestination' && trip !== initialTrip))) {
+      cancel('Another destination was selected while location was loading. Close those directions before getting directions to this stop.'); return;
+    }
     const destination = 'destination' in trip ? trip.destination : trip.phase === 'error' ? trip.trip?.destination : undefined;
     if (destination && destination.placeId !== captured.stopSlug) {
       cancel('Another trip was opened while location was loading. End that trip before getting directions to this stop.'); return;
