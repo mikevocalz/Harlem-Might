@@ -17,7 +17,7 @@ import { Text, View } from '@acme/ui/tw';
 import { ContentLoader } from '../site/content/ContentLoader.tsx';
 import { ContentNotice } from '../site/content/ContentNotice.tsx';
 import type { ScreenResult } from '../site/stories/StoriesScreen.tsx';
-import { musicConnectionLabel } from './music-format.ts';
+import { musicConnectionLabel, youTubeThumbnailUrl } from './music-format.ts';
 
 const heroImage = getHarlemArchivalImage('nypl-seventh-avenue-west-125th-1934');
 const archiveImage = getHarlemArchivalImage('nypl-harlem-storefronts-1939');
@@ -32,7 +32,17 @@ const hero = heroImage ? (
   />
 ) : undefined;
 
-/** The card's portrait well: the rights-cleared headshot with its credit, or an archival frame. */
+/**
+ * The card's media well.
+ *
+ * Order matters:
+ * 1. Rights-cleared CMS headshot.
+ * 2. This artist's own featured-performance thumbnail from YouTube.
+ * 3. The archival Harlem frame only when neither artist-specific source exists.
+ *
+ * The performance thumbnail is deliberately labelled as performance artwork,
+ * never as a licensed portrait.
+ */
 function ArtistPortrait({ artist }: { artist: MusicArtistRecord }) {
   const image = artist.headshot;
   if (image) {
@@ -58,6 +68,35 @@ function ArtistPortrait({ artist }: { artist: MusicArtistRecord }) {
       </View>
     );
   }
+
+  const performanceImage = artist.featuredSong?.youtubeUrl
+    ? youTubeThumbnailUrl(artist.featuredSong.youtubeUrl)
+    : undefined;
+
+  if (performanceImage) {
+    return (
+      <View
+        className="relative w-full shrink-0 overflow-hidden border-b border-rule-hairline bg-mights-night"
+        style={{ aspectRatio: 16 / 9 }}
+      >
+        <Image
+          src={performanceImage}
+          alt={`${artist.name} featured performance artwork`}
+          fill
+          contentFit="cover"
+          sizes="(min-width: 1024px) 30vw, (min-width: 640px) 45vw, 100vw"
+          className="h-full w-full"
+        />
+        <Text
+          numberOfLines={1}
+          className="absolute bottom-0 right-0 max-w-full bg-mights-night/80 px-2 py-0.5 font-sans text-caption text-text-muted"
+        >
+          Featured performance · YouTube
+        </Text>
+      </View>
+    );
+  }
+
   const archive = getHarlemArchivalImage('nypl-lenox-avenue-135th-1939');
   return archive ? (
     <View className="w-full shrink-0 border-b border-rule-hairline">
