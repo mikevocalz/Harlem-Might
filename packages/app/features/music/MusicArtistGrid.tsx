@@ -11,38 +11,9 @@ import {
 } from '@acme/ui/mights';
 import { Text, View } from '@acme/ui/tw';
 import { useQuery } from '@tanstack/react-query';
-import {
-  isArtistPhotoResult,
-  type ArtistPhotoResult,
-} from './artist-photo.ts';
+import { type ArtistPhotoResult } from './artist-photo.ts';
+import { fetchArtistPhotos } from './artist-photo-client.ts';
 import { musicConnectionLabel } from './music-format.ts';
-
-const endpointFor = (names: readonly string[]): string => {
-  const path = `/api/music/artist-photo?names=${encodeURIComponent(names.join('|'))}`;
-  const base =
-    process.env.EXPO_PUBLIC_APP_URL ??
-    process.env.NEXT_PUBLIC_SITE_URL;
-  if (!base) return path;
-  try {
-    return new URL(path, base).href;
-  } catch {
-    return path;
-  }
-};
-
-async function fetchPhotos(names: readonly string[]): Promise<Record<string, ArtistPhotoResult | null>> {
-  const response = await fetch(endpointFor(names), {
-    headers: { accept: 'application/json' },
-  });
-  if (!response.ok) throw new Error(`Artist photo service answered ${response.status}`);
-  const body = (await response.json()) as { photos?: Record<string, unknown> };
-  const photos: Record<string, ArtistPhotoResult | null> = {};
-  for (const name of names) {
-    const value = body.photos?.[name];
-    photos[name] = isArtistPhotoResult(value) ? value : null;
-  }
-  return photos;
-}
 
 function ArtistPortrait({
   artist,
@@ -155,7 +126,7 @@ export function MusicArtistGrid({ artists }: { artists: readonly MusicArtistReco
   const unresolvedNames = artists.filter((artist) => !artist.headshot).map((artist) => artist.name);
   const query = useQuery({
     queryKey: ['music-artist-photos', unresolvedNames],
-    queryFn: () => fetchPhotos(unresolvedNames),
+    queryFn: () => fetchArtistPhotos(unresolvedNames),
     enabled: unresolvedNames.length > 0,
     staleTime: 24 * 60 * 60 * 1000,
   });
