@@ -6,13 +6,14 @@
 // checked, an invisible spacer holds the space — a member should never see a
 // "Sign in" flash.
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'solito/navigation';
 import { Menu } from '@acme/ui';
 import { MightsButton, routes } from '@acme/ui/mights';
 import { View , Text } from '@acme/ui/tw';
 import { MemberAvatar } from './MemberAvatar.tsx';
 import { memberFirstName, useMemberSession } from './member-session.ts';
+import { memberMenuMode } from './member-menu-state.ts';
 
 export function MemberMenu({ siteUrl, menuSide }: { siteUrl: string; menuSide?: 'down' | 'up' }) {
   const status = useMemberSession((s) => s.status);
@@ -23,6 +24,13 @@ export function MemberMenu({ siteUrl, menuSide }: { siteUrl: string; menuSide?: 
   const signOutError = useMemberSession((s) => s.signOutError);
 
   const refresh = useMemberSession((s) => s.refresh);
+  const [checkedSite, setCheckedSite] = useState<string | null>(null);
+  // Remember a completed check for presentation only. A guarded render-time
+  // adjustment avoids an effect-driven extra render and resets with idle.
+  const nextCheckedSite = status === 'signed-in' || status === 'signed-out'
+    ? siteUrl : status === 'idle' ? null : checkedSite;
+  if (checkedSite !== nextCheckedSite) setCheckedSite(nextCheckedSite);
+  const mode = memberMenuMode(status, member !== null, nextCheckedSite, siteUrl);
 
   useEffect(() => {
     void hydrate(siteUrl);
@@ -52,7 +60,7 @@ export function MemberMenu({ siteUrl, menuSide }: { siteUrl: string; menuSide?: 
     return <MightsButton onPress={() => void signOut()} variant="outline" size="sm">Retry sign out</MightsButton>;
   }
 
-  if (status === 'signed-in' && member) {
+  if (mode === 'member' && member) {
     const label = member.name?.trim() || 'Member';
     return (
       <Menu
@@ -75,7 +83,7 @@ export function MemberMenu({ siteUrl, menuSide }: { siteUrl: string; menuSide?: 
     );
   }
 
-  if (status === 'signed-out') {
+  if (mode === 'signed-out') {
     return (
       <MightsButton href={routes.signIn()} variant="outline" size="sm">
         Sign in

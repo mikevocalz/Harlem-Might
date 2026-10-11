@@ -22,6 +22,12 @@ those repairs plus the follow-on fixes below. #54 remains a backend prerequisite
   owner, origin, and session lifetime, including authentication before cookie writes.
 - A photo picker opened by an older identity or a closed profile cannot upload into
   the current account. Same-owner refresh preserves the open picker and edit form.
+- A same-owner profile save keeps its confirmed session through a transient
+  follow-on read failure. Explicit 401/403/null responses still revoke it; initial,
+  ordinary and auth-boundary reads retain their fail-closed behavior. Old-owner
+  failures cannot restore data after logout or another identity generation.
+- Account chrome retains the current member avatar, or an already-confirmed Sign
+  in control, during focus refreshes without flashing it on the initial check.
 - Failed HTTP/network logout presents a retry path. Private data stays cleared even
   when window focus tries to refresh the still-valid cookie.
 - Post-login navigation has one profile destination; blank names fall back to email.
@@ -52,9 +58,9 @@ those repairs plus the follow-on fixes below. #54 remains a backend prerequisite
 
 ## Validation
 
-- Shared app: 449 passing tests; Payload: 38; web: 22; mobile: 173; mobile scripts:
+- Shared app: 471 passing tests; Payload: 38; web: 22; mobile: 173; mobile scripts:
   7; spatial/widgets: 28. Two additional mobile test files cannot load the private
-  Viro dependency. Total successful tests: 717.
+  Viro dependency. Total successful tests: 739.
 - App/content, Payload, and web typechecks pass. Aggregate build/typecheck/lint passes
   25 of 28 tasks; mobile lint/typecheck require the private spatial dependencies.
   The parallel Next build was killed with exit 137. An isolated Next production
@@ -69,6 +75,9 @@ those repairs plus the follow-on fixes below. #54 remains a backend prerequisite
   candidate (tree `79675ce`) separately passed its complete Next production build
   including these same admission/storage/photo changes; that is integration
   evidence, not a claim that standalone #56 was rebuilt.
+- The final background-refresh/menu follow-up adds 22 regressions and passes all
+  471 app tests, app/content typechecks, and affected auth lint. It postdates the
+  production-build evidence above; no new standalone full build is claimed.
 - Existing dependencies were reused/copied for validation. This is not a fresh
   frozen-install pass. Exact-head hosted CI must still validate private dependency
   access and all required gates.
