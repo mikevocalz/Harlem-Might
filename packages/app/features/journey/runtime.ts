@@ -11,16 +11,15 @@ import { journeyStorage } from './storage';
 import { createMemberJourneyTransport } from './member-transport.ts';
 import { applyJourneyNavigationCommand } from './navigation-effects.ts';
 import { createJourneyCueTracker } from './cues.ts';
+import { startJourneyRouteIntent, type JourneyRouteIdentity } from './route-intent.ts';
 import { synopsisFromRoute, verifiedDestination } from './model.ts';
-import { endNavigation, navigationController, requestDirections, startLocation, stopLocation } from '../navigation/view/runtime.ts';
+import { endNavigation, isLocationRunning, navigationController, requestDirections, startLocation, stopLocation } from '../navigation/view/runtime.ts';
 import { navigationFixStore, useNavigationStore } from '../navigation/session/navigationStore.ts';
-import { DEFAULT_NAVIGATION_CONFIG } from '../navigation/config.ts';
 
 let configured: { readers: ContentReaders; transport?: JourneyTransport } | undefined;
 let controller: ReturnType<typeof createJourneyController> | undefined;
-let routeIntent = 0;
 let routeCleanup: (() => void) | undefined;
-const cancelRouteIntent = () => { routeIntent++; routeCleanup?.(); routeCleanup = undefined; };
+const cancelRouteIntent = () => { routeCleanup?.(); routeCleanup = undefined; };
 
 /** Host data binding only. Native deliberately supplies no member transport until secure native auth exists. */
 export function configureJourneyRuntime(options: { readers: ContentReaders; transport?: JourneyTransport }): void {
@@ -83,6 +82,12 @@ export function currentJourneyStop() {
   if (!state.session || state.session.status === 'stopped' || state.session.status === 'completed') return undefined;
   return state.plan?.stops[state.session.completedStopIds.length];
 }
+function currentRouteIdentity(): JourneyRouteIdentity | undefined {
+  const session = journeyController().getSnapshot().session;
+  const stop = currentJourneyStop();
+  if (session?.status !== 'active' || !stop) return undefined;
+  return { sessionId: session.sessionId, revision: session.revision, stopId: stop.id, stopSlug: stop.slug };
+}
 export function journeyCommand(type: 'pause' | 'resume' | 'stop' | 'confirm-stop', confirmed?: true) {
   const state = journeyController().getSnapshot();
   const session = state.session;
@@ -97,12 +102,12 @@ export function journeyCommand(type: 'pause' | 'resume' | 'stop' | 'confirm-stop
 /** Opt-in starts foreground location. The first precise fresh fix plans via the existing shared provider. */
 export function requestJourneyDirections(): void {
   cancelRouteIntent();
-  const intent = routeIntent;
   const journey = journeyController();
   const state = journey.getSnapshot();
   const stop = currentJourneyStop();
   const destination = state.place && verifiedDestination(state.place);
-  if (!stop || state.session?.status !== 'active') return;
+  const identity = currentRouteIdentity();
+  if (!stop || !identity) return;
   if (!destination || state.place?.slug !== stop.slug) {
     journey.setError('We need a freshly checked, sourced location for this stop. You can still read the walk and confirm a visit yourself.'); return;
   }
@@ -111,26 +116,19 @@ export function requestJourneyDirections(): void {
     journey.setError('End the other trip before getting directions to this stop.'); return;
   }
   journey.setError(null);
-  let done = false;
-  const requestedAt = Date.now();
-  const tryPlan = () => {
-    if (done || intent !== routeIntent) return;
-    const last = navigationFixStore.getState().lastFix;
-    if (useNavigationUi.getState().location !== 'granted' || last?.kind !== 'accepted' || last.fix.timestampMs < requestedAt || last.fix.source !== 'device-gps' || last.fix.accuracy.horizontalM > DEFAULT_NAVIGATION_CONFIG.matching.maxSnapAccuracyM ||
-        Date.now() - last.fix.timestampMs > DEFAULT_NAVIGATION_CONFIG.location.maxFixAgeMs || Date.now() < last.fix.timestampMs) return;
-    const trip = useNavigationStore.getState().session;
-    const requested = 'activeRoute' in trip && trip.phase !== 'arrived' && trip.phase !== 'paused'
-      ? navigationController().reroute()
-      : requestDirections({ destination, mode: 'walking', originChoice: { kind: 'device' } });
-    if (requested) {
-      done = true; routeCleanup?.(); routeCleanup = undefined;
-    }
-  };
-  const unsubscribe = navigationFixStore.subscribe(tryPlan);
-  const timeout = setTimeout(() => {
-    if (!done && intent === routeIntent) journey.setError('No precise, recent location yet. Check location access and try again. The saved walk remains available.');
-    unsubscribe(); routeCleanup = undefined;
-  }, 25_000);
-  routeCleanup = () => { unsubscribe(); clearTimeout(timeout); };
-  startLocation(); tryPlan();
+  routeCleanup = startJourneyRouteIntent({
+    identity, getJourney: currentRouteIdentity,
+    getNavigation: () => useNavigationStore.getState().session,
+    getLastFix: () => navigationFixStore.getState().lastFix,
+    getLocation: () => useNavigationUi.getState().location,
+    isLocationRunning, startLocation, stopLocation,
+    subscribe(listener) {
+      const fix = navigationFixStore.subscribe(listener);
+      const trip = useNavigationStore.subscribe(listener);
+      return () => { fix(); trip(); };
+    },
+    reroute: () => navigationController().reroute(),
+    request: () => requestDirections({ destination, mode: 'walking', originChoice: { kind: 'device' } }),
+    setError: message => journey.setError(message),
+  });
 }
