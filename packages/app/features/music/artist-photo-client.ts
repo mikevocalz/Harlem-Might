@@ -3,11 +3,25 @@ import {
   type ArtistPhotoResult,
 } from './artist-photo.ts';
 
+const photoServiceBase = (): string | undefined => {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+
+  const payloadBase = process.env.EXPO_PUBLIC_PAYLOAD_API_BASE;
+  if (payloadBase) {
+    try {
+      return new URL(payloadBase).origin;
+    } catch {
+      // Fall through to the explicit app URL only if it is itself an HTTP origin.
+    }
+  }
+
+  const appUrl = process.env.EXPO_PUBLIC_APP_URL;
+  return appUrl && /^https?:\/\//i.test(appUrl) ? appUrl : undefined;
+};
+
 export const artistPhotoEndpoint = (names: readonly string[]): string => {
   const path = `/api/music/artist-photo?names=${encodeURIComponent(names.join('|'))}`;
-  const base =
-    process.env.EXPO_PUBLIC_APP_URL ??
-    process.env.NEXT_PUBLIC_SITE_URL;
+  const base = photoServiceBase();
   if (!base) return path;
   try {
     return new URL(path, base).href;
