@@ -33,7 +33,7 @@ export const MusicArtists: CollectionConfig = {
     ] },
     { name: 'featuredSong', type: 'group', fields: [
       { name: 'title', type: 'text' },
-      { name: 'youtubeUrl', type: 'text', validate: (value) => {
+      { name: 'youtubeUrl', type: 'text', validate: (value: unknown) => {
         if (!value) return true;
         if (typeof value !== 'string' || !/^https:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[a-zA-Z0-9_-]{11}(?:[&#?].*)?$/.test(value)) return 'Use a verified public YouTube watch/share URL';
         return true;

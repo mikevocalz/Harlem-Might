@@ -77,6 +77,7 @@ export interface Config {
     walks: Walk;
     stories: Story;
     events: Event;
+    'music-artists': MusicArtist;
     sessions: Session;
     accounts: Account;
     verifications: Verification;
@@ -97,6 +98,7 @@ export interface Config {
     walks: WalksSelect<false> | WalksSelect<true>;
     stories: StoriesSelect<false> | StoriesSelect<true>;
     events: EventsSelect<false> | EventsSelect<true>;
+    'music-artists': MusicArtistsSelect<false> | MusicArtistsSelect<true>;
     sessions: SessionsSelect<false> | SessionsSelect<true>;
     accounts: AccountsSelect<false> | AccountsSelect<true>;
     verifications: VerificationsSelect<false> | VerificationsSelect<true>;
@@ -763,6 +765,73 @@ export interface Event {
   _status?: ('draft' | 'published') | null;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "music-artists".
+ */
+export interface MusicArtist {
+  id: number;
+  name: string;
+  slug: string;
+  genre: string;
+  era?: string | null;
+  connection: 'born-raised' | 'resident' | 'scene' | 'east-harlem';
+  shortBio: string;
+  biography: string;
+  /**
+   * Only upload imagery with documented rights and credit.
+   */
+  headshot?: (number | null) | Media;
+  /**
+   * Licensed artwork for the vinyl center label.
+   */
+  albumArt?: (number | null) | Media;
+  featuredAlbumTitle?: string | null;
+  xrSceneEnabled?: boolean | null;
+  vinylRpm?: ('33' | '45') | null;
+  spatialTrack?: {
+    url?: string | null;
+    licenseSourceUrl?: string | null;
+    format?: ('mono' | 'stereo' | 'ambisonic') | null;
+  };
+  featuredSong?: {
+    title?: string | null;
+    youtubeUrl?: string | null;
+    verifiedAt?: string | null;
+  };
+  sources?:
+    | {
+        url: string;
+        description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Document disputed origin claims, video embed restrictions, and pending copyright clearance.
+   */
+  editorialNote?: string | null;
+  createdBy?:
+    | ({
+        relationTo: 'users';
+        value: number | User;
+      } | null)
+    | ({
+        relationTo: 'members';
+        value: number | Member;
+      } | null);
+  updatedBy?:
+    | ({
+        relationTo: 'users';
+        value: number | User;
+      } | null)
+    | ({
+        relationTo: 'members';
+        value: number | Member;
+      } | null);
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
  * Auto-generated from Better Auth schema (session)
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -926,6 +995,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'events';
         value: number | Event;
+      } | null)
+    | ({
+        relationTo: 'music-artists';
+        value: number | MusicArtist;
       } | null)
     | ({
         relationTo: 'sessions';
@@ -1348,6 +1421,51 @@ export interface EventsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "music-artists_select".
+ */
+export interface MusicArtistsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  genre?: T;
+  era?: T;
+  connection?: T;
+  shortBio?: T;
+  biography?: T;
+  headshot?: T;
+  albumArt?: T;
+  featuredAlbumTitle?: T;
+  xrSceneEnabled?: T;
+  vinylRpm?: T;
+  spatialTrack?:
+    | T
+    | {
+        url?: T;
+        licenseSourceUrl?: T;
+        format?: T;
+      };
+  featuredSong?:
+    | T
+    | {
+        title?: T;
+        youtubeUrl?: T;
+        verifiedAt?: T;
+      };
+  sources?:
+    | T
+    | {
+        url?: T;
+        description?: T;
+        id?: T;
+      };
+  editorialNote?: T;
+  createdBy?: T;
+  updatedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "sessions_select".
  */
 export interface SessionsSelect<T extends boolean = true> {
@@ -1487,6 +1605,7 @@ export interface CollectionQueryWidget {
       | 'walks'
       | 'stories'
       | 'events'
+      | 'music-artists'
       | 'sessions'
       | 'accounts'
       | 'verifications';
@@ -1522,6 +1641,7 @@ export interface ActivityWidget {
           | 'walks'
           | 'stories'
           | 'events'
+          | 'music-artists'
           | 'sessions'
           | 'accounts'
           | 'verifications'
