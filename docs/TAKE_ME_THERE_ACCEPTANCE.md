@@ -69,9 +69,12 @@ PR 54 owns the Member Account/Session FK correction; this work does not change
 those relationships or the auth fork. PR 56 at `54cd4a5` introduces
 `useMemberSession` in `packages/app/features/auth/member-session.ts`, including
 profile/photo changes. The journey does not copy that unmerged store. When
-combined, clear the journey/native epoch immediately on its identity/sign-out
-transitions, retaining server checks on every command. A profile UI does not
-prove secure native authentication. No other PR's CI result is evidence for
+combined, `journey/runtime.ts` subscribes `useMemberSession` identity
+transitions to `journeyController().checkIdentity()` — a sign-out or owner
+switch fails the server re-verify and performs the clear + handoff revocation,
+while a same-member hydrate and local anonymous journeys are untouched. Server
+checks remain on every command. A profile UI does not prove secure native
+authentication. No other PR's CI result is evidence for
 these integrated changes.
 
 See [session security](WALK_SESSIONS.md), [paired transport](PAIRED_WALK_TRANSPORT.md)

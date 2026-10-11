@@ -4,6 +4,7 @@ import { createContentReaders } from '../../content/readers.ts';
 import type { ContentReaders } from '../../content/readers.ts';
 import { createRestContentSource } from '../../content/rest-source.ts';
 import { useMemberAuth } from '../auth/member-auth.store.ts';
+import { useMemberSession } from '../auth/member-session.ts';
 import { haptics } from '@acme/ui/haptics';
 import type { WalkCommand } from '@acme/widgets';
 import { createJourneyController, commandId, type JourneyTransport } from './controller.ts';
@@ -58,6 +59,13 @@ export function journeyController() {
   });
   // Account changes clear private UI on every platform, before any login request.
   useMemberAuth.subscribe((state, previous) => { if (state.pending && !previous.pending) { endNavigation(); controller?.clear(); } });
+  // The session mirror is the other identity signal the form flag misses:
+  // sign-out, a different member appearing, or a refresh that names another
+  // owner re-verifies against the server and clears on a real owner change.
+  // Local anonymous journeys are the device's own data and are left alone.
+  useMemberSession.subscribe((state, previous) => {
+    if ((state.member?.id ?? null) !== (previous.member?.id ?? null)) void controller?.checkIdentity();
+  });
   // Save only route synopsis, never the route geometry or raw sensor feed.
   let routeId: string | undefined;
   const cues = createJourneyCueTracker();

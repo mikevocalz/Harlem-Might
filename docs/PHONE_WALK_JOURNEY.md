@@ -123,10 +123,14 @@ Those are merge gates, not implied by pure tests.
 
 Concurrent PR #56 (`feat/member-session-ui`, reviewed at `54cd4a5`) uses the same
 `/payload-api/auth/get-session` endpoint and exposes a richer member store. This
-slice does not duplicate profile UI or import its unmerged store. Once combined,
-wire that store's identity/sign-out transitions to `journeyController().clear()`
-(and native handoff revocation) immediately; keep the per-command cookie ownership
-check. Do not treat a member menu as proof of secure native credential storage.
+slice does not duplicate profile UI or import its unmerged store. On the
+combined tree, `runtime.ts` subscribes to `useMemberSession` member-id
+transitions and calls `journeyController().checkIdentity()`: a sign-out or
+owner change fails the server re-verify, performs the full clear, and revokes
+the native handoff through its session-mismatch guard; a same-member hydrate
+passes, and local anonymous journeys are untouched as the device's own data.
+The per-command cookie ownership check stays. Do not treat a member menu as
+proof of secure native credential storage.
 
 The combined follow-up audit is recorded in `TAKE_ME_THERE_ACCEPTANCE.md`; it
 separates host/source tests from native build and device evidence.
