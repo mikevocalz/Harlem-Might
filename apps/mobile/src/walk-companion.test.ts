@@ -216,6 +216,79 @@ test('native lifecycle revocation cannot be undone by an old JS publisher', () =
   assert.match(kotlin, /authorizedHandoff = null/);
 });
 
+test('Android foreground authority follows lifecycle state rather than transient window focus', () => {
+  const source = readFileSync(new URL('../modules/walk-companion/android/src/main/java/com/harlemmight/companion/WalkCompanionModule.kt', import.meta.url), 'utf8');
+  const build = readFileSync(new URL('../modules/walk-companion/android/build.gradle', import.meta.url), 'utf8');
+  assert.match(build, /implementation 'com\.facebook\.react:react-android'/);
+  assert.doesNotMatch(source, /hasWindowFocus/);
+  assert.match(source, /private var foreground = false/);
+  assert.match(source, /private fun active\(\) = observing && foreground/);
+  assert.match(source, /OnStartObserving[\s\S]*foreground = context\?\.lifecycleState == LifecycleState\.RESUMED/);
+  assert.match(source, /OnActivityEntersForeground \{ main\.post \{ foreground = true \} \}/);
+  assert.match(source, /OnActivityEntersBackground \{ main\.post \{ foreground = false; clearState\(\) \} \}/);
+  for (const event of ['OnStopObserving', 'OnDestroy']) {
+    assert.ok(source.includes(`${event} { main.post { observing = false; foreground = false; clearState(); removeListeners() } }`));
+  }
+});
+
+test('Android accepts watch revocation only from the current paired node and handoff before freshness checks', () => {
+  const source = readFileSync(new URL('../modules/walk-companion/android/src/main/java/com/harlemmight/companion/WalkCompanionModule.kt', import.meta.url), 'utf8');
+  const receive = source.slice(source.indexOf('override fun onMessageReceived('));
+  assert.match(receive, /if \(event\.path == CompanionWire\.CLEAR\) \{[\s\S]*event\.sourceNodeId == targetNode && handoffId\.isNotEmpty\(\) &&[\s\S]*event\.data\.toString\(Charsets\.UTF_8\) == handoffId\) clearState\(\)[\s\S]*return@post/);
+  assert.ok(receive.indexOf('event.path == CompanionWire.CLEAR') < receive.indexOf('val current = snapshotJSON'));
+});
+
+test('Apple phone revocation matches the current handoff before foreground and snapshot checks', () => {
+  const source = readFileSync(new URL('../modules/walk-companion/ios/WalkCompanionModule.swift', import.meta.url), 'utf8');
+  const receive = source.slice(source.indexOf('didReceiveMessage message:'));
+  assert.match(receive, /if message\["kind"\] as\? String == "clear" \{[\s\S]*CompanionWire\.text\(cleared\), cleared == self\.handoffId[\s\S]*self\.clear\(\)[\s\S]*replyHandler\(\["accepted": true\]\)/);
+  assert.ok(receive.indexOf('message["kind"] as? String == "clear"') < receive.indexOf('guard UIApplication.shared.applicationState'));
+});
+
+test('both watches notify revocation without echoing phone-originated clears or reviving old snapshots', () => {
+  const swift = readFileSync(new URL('../targets/harlem-watch/WalkCompanion.swift', import.meta.url), 'utf8');
+  const kotlin = readFileSync(new URL('../../wearos/app/src/main/java/com/harlemmight/watch/WalkCompanion.kt', import.meta.url), 'utf8');
+  assert.match(swift, /if notifyPhone \{ notifyPhoneCleared\(snapshot\.handoffId\) \}/);
+  assert.match(swift, /if invalidHandoffs\.contains\(next\.handoffId\) \{ notifyPhoneCleared\(next\.handoffId\); return \}/);
+  assert.match(swift, /clear\("Share your walk again from the phone\.", notifyPhone: false\)/);
+  // A reply handler selects the phone's reply-bearing WCSession delegate method.
+  assert.match(swift, /session\.sendMessage\(\["kind": "clear", "handoffId": handoff\], replyHandler: \{ _ in \}, errorHandler: nil\)/);
+  assert.match(kotlin, /if \(notifyPhone\) notifyPhoneCleared\(it\.getString\("handoffId"\)\)/);
+  assert.match(kotlin, /if \(next\.getString\("handoffId"\) in invalidHandoffs\) \{[\s\S]*notifyPhoneCleared\(next\.getString\("handoffId"\)\); return@post/);
+  assert.match(kotlin, /clear\("Share your walk again from the phone\.", notifyPhone = false\)/);
+  assert.match(kotlin, /sendMessage\(node, CompanionWire\.CLEAR, handoff\.toByteArray\(Charsets\.UTF_8\)\)/);
+});
+
+test('source-derived CLEAR guards reject wrong peers and stale epochs after revocation or renewed opt-in', () => {
+  const kotlin = readFileSync(new URL('../modules/walk-companion/android/src/main/java/com/harlemmight/companion/WalkCompanionModule.kt', import.meta.url), 'utf8');
+  const swift = readFileSync(new URL('../modules/walk-companion/ios/WalkCompanionModule.swift', import.meta.url), 'utf8');
+  const androidGuard = kotlin.match(/if \((event\.sourceNodeId == targetNode && handoffId\.isNotEmpty\(\) &&\s*event\.data\.toString\(Charsets\.UTF_8\) == handoffId)\) clearState\(\)/)?.[1];
+  const appleGuard = swift.match(/if (CompanionWire\.text\(cleared\), cleared == self\.handoffId) \{\s*self\.clear\(\)/)?.[1];
+  assert.ok(androidGuard); assert.ok(appleGuard);
+  // Exercise the actual source predicates after syntax-only translation. This
+  // does not execute native transport/lifecycle code or replace device tests.
+  const android = new Function('sourceNode', 'pairedNode', 'incoming', 'current', `return ${androidGuard
+    .replaceAll('event.sourceNodeId', 'sourceNode').replaceAll('targetNode', 'pairedNode')
+    .replaceAll('handoffId.isNotEmpty()', '(current.length > 0)')
+    .replaceAll('event.data.toString(Charsets.UTF_8)', 'incoming').replaceAll('handoffId', 'current')};`);
+  const apple = new Function('cleared', 'current', `return ${appleGuard
+    .replace('CompanionWire.text(cleared)', '(cleared.length > 0 && cleared.length <= 160)')
+    .replace(', ', ' && ').replace('self.handoffId', 'current')};`);
+  assert.equal(android('paired', 'paired', 'old-epoch', 'old-epoch'), true);
+  assert.equal(android('other-watch', 'paired', 'old-epoch', 'old-epoch'), false);
+  assert.equal(apple('old-epoch', 'old-epoch'), true);
+  for (const current of ['', 'new-epoch']) {
+    // Duplicate tombstoned snapshots can resend this CLEAR. Neither a cleared
+    // phone nor a newer explicit opt-in may be revoked by that old message.
+    for (let duplicate = 0; duplicate < 2; duplicate++) {
+      assert.equal(android('paired', 'paired', 'old-epoch', current), false);
+      assert.equal(apple('old-epoch', current), false);
+    }
+  }
+  assert.equal(android('paired', 'paired', '', ''), false);
+  assert.equal(apple('', ''), false);
+});
+
 // Structural source invariants, not a Swift/Kotlin or paired-device runtime test.
 // The nil-to-first-snapshot adoption must invalidate the generation captured by
 // reconnect, just like replacement of a non-null older handoff does.

@@ -103,6 +103,15 @@ private final class PhoneWalkBridge: NSObject, WCSessionDelegate {
     }
     func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
         DispatchQueue.main.async {
+            // A paired watch may revoke an expired snapshot or while the phone pauses.
+            if message["kind"] as? String == "clear" {
+                let cleared = message["handoffId"] as? String ?? ""
+                if CompanionWire.text(cleared), cleared == self.handoffId {
+                    self.clear()
+                    replyHandler(["accepted": true])
+                } else { replyHandler(["accepted": false]) }
+                return
+            }
             guard UIApplication.shared.applicationState == .active, self.observing,
                   let json = self.snapshotJSON, let snapshot = CompanionSnapshot.decode(json) else {
                 self.snapshotJSON = nil

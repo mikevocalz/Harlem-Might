@@ -3,6 +3,7 @@ package com.harlemmight.companion
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import com.facebook.react.common.LifecycleState
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
 import com.google.android.gms.wearable.MessageClient
@@ -22,28 +23,31 @@ class WalkCompanionModule : Module(), MessageClient.OnMessageReceivedListener, C
     private var targetNode: String? = null
     private var generation = 0
     private var observing = false
+    private var foreground = false
     private var handoffId = ""
     private var authorizedHandoff: String? = null
     private var expiry: Runnable? = null
     private var listenerContext: Context? = null
     private val commands = mutableSetOf<String>()
     private val context get() = appContext.reactContext
-    private fun active() = observing && appContext.currentActivity?.hasWindowFocus() == true
+    private fun active() = observing && foreground
 
     override fun definition() = ModuleDefinition {
         Name("WalkCompanion")
         Events("onCommand")
         OnStartObserving { main.post {
             observing = true
+            foreground = context?.lifecycleState == LifecycleState.RESUMED
             context?.let {
                 listenerContext = it.applicationContext
                 Wearable.getMessageClient(it).addListener(this@WalkCompanionModule)
                 Wearable.getCapabilityClient(it).addListener(this@WalkCompanionModule, CompanionWire.WATCH)
             }
         } }
-        OnStopObserving { main.post { observing = false; clearState(); removeListeners() } }
-        OnActivityEntersBackground { main.post { clearState() } }
-        OnDestroy { main.post { observing = false; clearState(); removeListeners() } }
+        OnStopObserving { main.post { observing = false; foreground = false; clearState(); removeListeners() } }
+        OnActivityEntersForeground { main.post { foreground = true } }
+        OnActivityEntersBackground { main.post { foreground = false; clearState() } }
+        OnDestroy { main.post { observing = false; foreground = false; clearState(); removeListeners() } }
         AsyncFunction("createHandoffId") {
             clearState()
             UUID.randomUUID().toString().also { authorizedHandoff = it }
@@ -115,6 +119,12 @@ class WalkCompanionModule : Module(), MessageClient.OnMessageReceivedListener, C
     } }
     override fun onMessageReceived(event: MessageEvent) { main.post {
         if (event.data.size > 8192) return@post
+        // Revocation is valid even after the snapshot expires or the phone pauses.
+        if (event.path == CompanionWire.CLEAR) {
+            if (event.sourceNodeId == targetNode && handoffId.isNotEmpty() &&
+                event.data.toString(Charsets.UTF_8) == handoffId) clearState()
+            return@post
+        }
         val current = snapshotJSON?.let { CompanionWire.snapshot(it) }
         if (event.sourceNodeId != targetNode || !active() || current == null) {
             if (event.path == CompanionWire.REQUEST) send(event.sourceNodeId, CompanionWire.CLEAR, event.data.toString(Charsets.UTF_8))
