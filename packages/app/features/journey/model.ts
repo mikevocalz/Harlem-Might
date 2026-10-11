@@ -71,7 +71,7 @@ export function liveProgress(state: NavigationState, fixes: NavigationFixState, 
   const maxAge = DEFAULT_NAVIGATION_CONFIG.location.maxFixAgeMs;
   const age = now - last.fix.timestampMs;
   const progressAge = now - progress.progress.timestampMs;
-  if (age < 0 || age > maxAge || progressAge < 0 || progressAge > maxAge) return undefined;
+  if (!Number.isFinite(age) || !Number.isFinite(progressAge) || age < 0 || age > maxAge || progressAge < 0 || progressAge > maxAge) return undefined;
   return progress.progress;
 }
 

@@ -197,9 +197,13 @@ export function createJourneyController(options: {
       if (state.mode === 'local' && !starting) options.transport.invalidateIdentity?.();
       else clear();
     },
-    async checkIdentity() {
-      // A start has no committed mode yet. It must not escape identity cancellation.
-      if (starting && options.transport) { clear(); return; }
+    async checkIdentity(trigger: 'mount' | 'boundary' = 'boundary') {
+      // Remounting a screen is not an account boundary. An in-flight begin
+      // authenticates before it commits; focus/auth boundaries still revoke it.
+      if (starting && options.transport) {
+        if (trigger === 'boundary') clear();
+        return;
+      }
       if (state.mode !== 'member' || !options.transport?.verifyIdentity) return;
       const version = epoch;
       try { await options.transport.verifyIdentity(); } catch {

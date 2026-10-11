@@ -46,9 +46,16 @@ class WearWalkStore(private val context: Context) : MessageClient.OnMessageRecei
         Wearable.getMessageClient(context).removeListener(this)
         Wearable.getCapabilityClient(context).removeListener(this, CompanionWire.PHONE)
     }
-    private fun clear(reason: String) {
+    private fun notifyPhoneCleared(handoff: String) {
+        val node = phone ?: return
+        Wearable.getMessageClient(context).sendMessage(node, CompanionWire.CLEAR, handoff.toByteArray(Charsets.UTF_8))
+    }
+    private fun clear(reason: String, notifyPhone: Boolean = true) {
         generation++
-        snapshot?.let { invalidHandoffs.add(it.getString("handoffId")) }
+        snapshot?.let {
+            invalidHandoffs.add(it.getString("handoffId"))
+            if (notifyPhone) notifyPhoneCleared(it.getString("handoffId"))
+        }
         snapshot = null; pending = false; pendingCommand = null; reachable = false
         expiry?.let { main.removeCallbacks(it) }; timeout?.let { main.removeCallbacks(it) }
         status = reason
@@ -76,12 +83,14 @@ class WearWalkStore(private val context: Context) : MessageClient.OnMessageRecei
             val cleared = event.data.toString(Charsets.UTF_8)
             // Clear can precede the corresponding snapshot on the transport.
             if (cleared.isNotEmpty() && cleared.length <= 160) invalidHandoffs.add(cleared)
-            if (snapshot == null || cleared == snapshot?.optString("handoffId")) clear("Share your walk again from the phone.")
+            if (snapshot == null || cleared == snapshot?.optString("handoffId")) clear("Share your walk again from the phone.", notifyPhone = false)
             return@post
         }
         if (event.path != CompanionWire.SNAPSHOT) return@post
         val next = CompanionWire.snapshot(event.data.toString(Charsets.UTF_8)) ?: return@post
-        if (next.getString("handoffId") in invalidHandoffs) return@post
+        if (next.getString("handoffId") in invalidHandoffs) {
+            notifyPhoneCleared(next.getString("handoffId")); return@post
+        }
         val previous = snapshot
         if (previous != null) {
             if (previous.getString("handoffId") == next.getString("handoffId") &&
