@@ -63,9 +63,15 @@ jobs:
           pnpm --dir ../viro-external install --frozen-lockfile --strict-peer-dependencies=false
           npm ci --prefix ../nitro-mapbox-ar --ignore-scripts --no-audit --no-fund
           mkdir -p ../viro/node_modules/@types
-          ln -sfn "$GITHUB_WORKSPACE/apps/mobile/node_modules/react" ../viro/node_modules/react
-          ln -sfn "$GITHUB_WORKSPACE/apps/mobile/node_modules/react-native" ../viro/node_modules/react-native
-          ln -sfn "$GITHUB_WORKSPACE/apps/mobile/node_modules/@types/react" ../viro/node_modules/@types/react
+          # Resolve the real package dirs the way TypeScript does: the pnpm
+          # catalog layout keeps them out of apps/mobile/node_modules, so
+          # hardcoded paths there would be dangling symlinks.
+          for pkg in react react-native @types/react; do
+            target=$(node -p "require.resolve('$pkg/package.json', { paths: ['$GITHUB_WORKSPACE/apps/mobile'] })" | xargs dirname)
+            link=../viro/node_modules/$pkg
+            mkdir -p "$(dirname "$link")"
+            ln -sfn "$target" "$link"
+          done
       - run: pnpm spatial:verify-android
       - run: pnpm spatial:verify-typegpu
       - run: pnpm --filter @acme/spatial test
