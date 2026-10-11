@@ -70,8 +70,11 @@ const api = (siteUrl: string, path: string) => `${siteUrl.replace(/\/$/, '')}/pa
 
 const getSession = async (siteUrl: string, signal: AbortSignal): Promise<MemberProfile | null> => {
   const response = await fetch(api(siteUrl, '/auth/get-session'), { credentials: 'include', signal });
+  if (response.status >= 500 || response.status === 408 || response.status === 429) {
+    throw new Error(`Session read temporarily failed (${response.status}).`);
+  }
   if (!response.ok) return null;
-  const body = (await response.json().catch(() => null)) as { user?: MemberProfile | null } | null;
+  const body = (await response.json()) as { user?: MemberProfile | null } | null;
   return body?.user ?? null;
 };
 
@@ -145,7 +148,7 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
     }
   };
 
-  const load = async (siteUrl: string, newSession = false) => {
+  const load = async (siteUrl: string, newSession = false, confirmedScope?: MemberScope) => {
     // A login may already have changed the cookie before its response body
     // settles. No read may certify an identity inside that window.
     if (authentication) return;
@@ -163,7 +166,11 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
     const startedGeneration = generation;
     const current = () => generation === startedGeneration && sessionRead === controller
       && !controller.signal.aborted && get().siteUrl === siteUrl;
-    set({ status: 'loading', siteUrl, ...(boundary ? { member: null, savedPlaces: [], signOutError: null } : {}) });
+    // Only an already-confirmed owner's post-save read may stay in the
+    // background. Initial/auth-boundary and ordinary refreshes remain fail-closed.
+    const backgroundScope = !boundary && confirmedScope && owns(confirmedScope)
+      && get().status === 'signed-in' ? confirmedScope : null;
+    if (!backgroundScope) set({ status: 'loading', siteUrl, ...(boundary ? { member: null, savedPlaces: [], signOutError: null } : {}) });
     try {
       if (!current()) return;
       const member = await getSession(siteUrl, controller.signal);
@@ -179,6 +186,9 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
       await readSavedPlaces(scope);
     } catch {
       if (!current()) return;
+      // A successful profile write does not revoke a confirmed session when
+      // its follow-on read has a transient failure. Never restore an old owner.
+      if (backgroundScope && owns(backgroundScope)) return;
       invalidate();
       set({ status: 'signed-out', member: null, savedPlaces: [] });
     } finally {
@@ -204,7 +214,7 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
         if (!active(scope, controller)) return sessionChanged;
         return { ok: false, message: errorText(body, `The member service returned ${response.status}.`) };
       }
-      await load(scope.siteUrl);
+      await load(scope.siteUrl, false, scope);
       return active(scope, controller) ? { ok: true } : sessionChanged;
     } catch {
       return active(scope, controller) ? unreachable : sessionChanged;
