@@ -399,13 +399,13 @@ export async function resolveArtistPhoto(
   const curated = CURATED_WEB_PHOTOS[key];
   if (curated) return { ...curated, name: trimmed };
 
-  const deezer = await resolveDeezer(trimmed, fetcher);
-  if (deezer) return deezer;
-
   const wikipedia = await resolveWikipedia(trimmed, fetcher);
   if (wikipedia) return wikipedia;
 
-  return resolveCommons(trimmed, fetcher);
+  const commons = await resolveCommons(trimmed, fetcher);
+  if (commons) return commons;
+
+  return resolveDeezer(trimmed, fetcher);
 }
 
 /** Resolve many artists with a small worker pool instead of 100+ simultaneous calls. */
