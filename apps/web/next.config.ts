@@ -23,11 +23,10 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/index.php',
       },
-      // Artist portraits: entity-verified Wikimedia/Wikipedia plus two
-      // manually curated editorial overrides for ambiguous battle-rap names.
+      // Rights-cleared artist portraits can load directly from Wikimedia.
+      // Editorial/provider-reference photos are served by our allowlisted
+      // same-origin proxy and therefore need no third-party image hosts here.
       { protocol: 'https', hostname: 'upload.wikimedia.org', port: '', pathname: '/wikipedia/**' },
-      { protocol: 'https', hostname: 'battlerapstats.wordpress.com', port: '', pathname: '/wp-content/uploads/**' },
-      { protocol: 'https', hostname: 'townsquare.media', port: '', pathname: '/site/**' },
       // MightsMapImage renders Mapbox Static Images through the kit Image (next/image).
       { protocol: 'https', hostname: 'api.mapbox.com', port: '', pathname: '/styles/v1/**' },
       // Payload uploads: mapEditorialImages absolutizes /payload-api/media/…
