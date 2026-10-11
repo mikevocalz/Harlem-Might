@@ -843,7 +843,7 @@ export interface Session {
   token: string;
   ipAddress?: string | null;
   userAgent?: string | null;
-  user: number | User;
+  user: number | Member;
   createdBy?:
     | ({
         relationTo: 'users';
@@ -875,7 +875,7 @@ export interface Account {
   id: number;
   accountId: string;
   providerId: string;
-  user: number | User;
+  user: number | Member;
   accessToken?: string | null;
   refreshToken?: string | null;
   idToken?: string | null;
