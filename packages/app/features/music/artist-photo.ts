@@ -9,6 +9,7 @@ export type ArtistPhotoResult = {
   url: string;
   sourceUrl: string;
   provider: ArtistPhotoProvider;
+  rightsStatus: 'rights-cleared' | 'provider-reference';
   credit: string;
   license?: string;
   licenseUrl?: string;
@@ -82,6 +83,7 @@ const CURATED_WEB_PHOTOS: Readonly<Record<string, ArtistPhotoResult>> = {
     url: 'https://battlerapstats.wordpress.com/wp-content/uploads/2012/04/dhfzg.png?h=300&w=210',
     sourceUrl: 'https://battlerapstats.wordpress.com/2012/04/24/harlem-bettle-rapper-t-rex/',
     provider: 'curated_web',
+    rightsStatus: 'provider-reference',
     credit: 'BattleRapStats artist profile',
     width: 210,
     height: 300,
@@ -91,6 +93,7 @@ const CURATED_WEB_PHOTOS: Readonly<Record<string, ArtistPhotoResult>> = {
     url: 'https://townsquare.media/site/812/files/2015/03/bloodshed.jpg?q=75&w=980',
     sourceUrl: 'https://www.xxlmag.com/today-hip-hop-rip-bloodshed-july-31-1975-march-2-1997/',
     provider: 'curated_web',
+    rightsStatus: 'provider-reference',
     credit: 'XXL artist memorial',
   },
 };
@@ -195,6 +198,7 @@ const commonsPhoto = (
     url: info.url,
     sourceUrl,
     provider: 'wikimedia_commons',
+    rightsStatus: 'rights-cleared',
     credit: creator,
     license,
     licenseUrl,
@@ -302,6 +306,7 @@ async function resolveWikipedia(
     url: best.original.source,
     sourceUrl: wikipediaSourceUrl(best.title ?? name),
     provider: 'wikipedia',
+    rightsStatus: 'provider-reference',
     credit: 'Wikipedia / Wikimedia contributor',
     width: best.original.width,
     height: best.original.height,
@@ -345,6 +350,7 @@ async function resolveDeezer(
     sourceUrl:
       match.link ?? `https://www.deezer.com/search/${encodeURIComponent(name)}`,
     provider: 'deezer',
+    rightsStatus: 'provider-reference',
     credit: 'Deezer artist profile',
   };
 }
@@ -414,6 +420,8 @@ export const isArtistPhotoResult = (
       asString(object?.url) &&
       asString(object?.sourceUrl) &&
       asString(object?.credit) &&
+      (object?.rightsStatus === 'rights-cleared' ||
+        object?.rightsStatus === 'provider-reference') &&
       (provider === 'wikimedia_commons' ||
         provider === 'wikipedia' ||
         provider === 'deezer' ||
