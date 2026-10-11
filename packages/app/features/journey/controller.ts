@@ -9,6 +9,10 @@ export interface JourneyTransport {
   identity(): Promise<'local' | 'member'>;
   send(command: WalkCommand): Promise<WalkSession>;
   verifyIdentity?(): Promise<void>;
+  /** Revoke all identity lookups and commands from an earlier controller lifetime. */
+  invalidateIdentity?(): void;
+  /** True only for the owner verified in this transport lifetime, never a pending lookup. */
+  matchesIdentity?(owner: string): boolean;
 }
 export class JourneyIdentityChanged extends Error {
   constructor() { super('Your login changed or expired. The previous walk has been cleared from this device.'); }
@@ -71,10 +75,18 @@ export function createJourneyController(options: {
   let epoch = 0;
   let contentEpoch = 0;
   let hydrated = false;
+  let starting = false;
   let startAttempt: { slug: string; command: Extract<WalkCommand, { type: 'start' }> } | undefined;
   const listeners = new Set<() => void>();
   const receipts = new Map<string, string>();
   const update = (patch: Partial<JourneyState>) => { state = { ...state, ...patch }; listeners.forEach(listener => listener()); };
+  const clear = (error: string | null = null) => {
+    epoch++; contentEpoch++; starting = false; startAttempt = undefined; receipts.clear();
+    options.transport?.invalidateIdentity?.();
+    options.onClear?.();
+    try { options.storage.remove(CACHE_KEY); } catch { /* No further writes after clear. */ }
+    update({ ...EMPTY, hapticsEnabled: state.hapticsEnabled, error });
+  };
   const persist = () => {
     if (state.mode !== 'local' || !state.session || !state.plan) return;
     try {
@@ -112,8 +124,9 @@ export function createJourneyController(options: {
         if (state.plan?.slug !== slug) update({ error: 'Finish or stop your current walk before starting another.' });
         return;
       }
-      update({ busy: true, error: null });
+      starting = true;
       const version = ++epoch;
+      update({ busy: true, error: null });
       try {
         const result = await options.readers.getWalk(slug);
         if (result.status !== 'ok') throw new Error(result.status === 'not-found' ? 'This walk is no longer published.' : 'Connect to check the published stops before starting a new walk.');
@@ -130,10 +143,16 @@ export function createJourneyController(options: {
           startAttempt = undefined;
           throw new Error('The published walk changed. Refresh it before starting again.');
         }
+        starting = false;
         update({ plan, session, mode, busy: false, synopsis: null });
         startAttempt = undefined; receipts.clear(); persist(); options.onTransition?.(null, session, command);
         void loadStop();
-      } catch (error) { if (version === epoch) update({ busy: false, error: error instanceof Error ? error.message : 'Could not start this walk.' }); }
+      } catch (error) {
+        if (version !== epoch) return;
+        starting = false;
+        if (error instanceof JourneyIdentityChanged) clear(error.message);
+        else update({ busy: false, error: error instanceof Error ? error.message : 'Could not start this walk.' });
+      }
     },
     async dispatch(command: WalkCommand) {
       if (!state.session || state.busy) return false;
@@ -160,8 +179,7 @@ export function createJourneyController(options: {
       } catch (error) {
         if (version !== epoch) return false;
         if (error instanceof JourneyIdentityChanged) {
-          epoch++; contentEpoch++; receipts.clear(); options.onClear?.();
-          update({ ...EMPTY, hapticsEnabled: state.hapticsEnabled, error: error.message });
+          clear(error.message);
         } else if (error instanceof JourneyConflict) {
           update({ session: error.session, busy: false, error: error.message, synopsis: null });
           options.onClear?.(); void loadStop();
@@ -170,23 +188,29 @@ export function createJourneyController(options: {
       }
     },
     refresh: loadStop,
+    /** A known account boundary revokes pending starts synchronously, before another HTTP check. */
+    identityChanged(owner: string | null = null) {
+      if (!options.transport) return;
+      // The session mirror can hydrate after a journey independently verified
+      // this same owner. That first observation is not an account switch.
+      if (owner !== null && options.transport.matchesIdentity?.(owner)) return;
+      if (state.mode === 'local' && !starting) options.transport.invalidateIdentity?.();
+      else clear();
+    },
     async checkIdentity() {
+      // A start has no committed mode yet. It must not escape identity cancellation.
+      if (starting && options.transport) { clear(); return; }
       if (state.mode !== 'member' || !options.transport?.verifyIdentity) return;
       const version = epoch;
       try { await options.transport.verifyIdentity(); } catch {
         if (version !== epoch) return;
-        epoch++; contentEpoch++; receipts.clear(); options.onClear?.();
-        update({ ...EMPTY, hapticsEnabled: state.hapticsEnabled, error: 'We could not verify the same login. Reopen your walk after signing in.' });
+        clear('We could not verify the same login. Reopen your walk after signing in.');
       }
     },
     cacheRoute(synopsis: RouteSynopsis) { if (state.synopsis?.generatedAt === synopsis.generatedAt && state.synopsis?.stopId === synopsis.stopId) return; update({ synopsis }); persist(); },
     setHapticsEnabled(hapticsEnabled: boolean) { update({ hapticsEnabled }); try { options.storage.set('walk-haptics', hapticsEnabled ? 'on' : 'off'); } catch { /* In-memory preference still applies. */ } },
     setError(error: string | null) { update({ error }); },
-    clear() {
-      epoch++; contentEpoch++; startAttempt = undefined; receipts.clear(); options.onClear?.();
-      try { options.storage.remove(CACHE_KEY); } catch { /* No further writes after clear. */ }
-      state = { ...EMPTY, hapticsEnabled: state.hapticsEnabled }; listeners.forEach(listener => listener());
-    },
+    clear: () => clear(),
   };
 }
 export type JourneyController = ReturnType<typeof createJourneyController>;

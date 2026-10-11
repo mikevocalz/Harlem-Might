@@ -127,7 +127,7 @@ class WalkCompanionModule : Module(), MessageClient.OnMessageReceivedListener, C
         if (command == null || commands.size >= 128 || !commands.add(command.getString("commandId"))) {
             send(event.sourceNodeId, CompanionWire.SNAPSHOT, snapshotJSON!!); return@post
         }
-        sendEvent("onCommand", mapOf("json" to json))
+        sendEvent("onCommand", mapOf("json" to json, "expiresAt" to current.getString("expiresAt")))
         // Only a later authoritative snapshot confirms a state change.
     } }
 }

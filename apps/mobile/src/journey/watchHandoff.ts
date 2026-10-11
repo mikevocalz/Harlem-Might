@@ -19,26 +19,42 @@ const update = (patch: Partial<HandoffState>) => { state = { ...state, ...patch 
 export const watchHandoffState = { getSnapshot: () => state, subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; } };
 
 export async function stopWatchHandoff(message = 'Watch handoff ended. Keep reading on your phone or opt in again.') {
-  generation++; handoff = null; update({ enabled: false, busy: false, message });
-  try { await nativeCall(() => watchTransport.clear()); } catch { /* The native/watch expiry also clears stale state. */ }
+  generation++; handoff = null; publishing = null; republish = false;
+  // Revocation must reach native while an older send is still pending. Native
+  // clear invalidates its authorization/generation on the main queue; restart
+  // waits for this barrier, never for delivery of the revoked publication.
+  const cleared = watchTransport.clear().catch(() => { /* Native/watch expiry also clears stale state. */ });
+  nativeQueue = cleared;
+  update({ enabled: false, busy: false, message });
+  await cleared;
 }
-let publishing = false;
+let publishing: number | null = null;
 let republish = false;
 async function publish() {
-  if (!handoff || AppState.currentState !== 'active') return;
-  if (publishing) { republish = true; return; }
+  if (!handoff) return;
   const current = handoff;
   const journey = journeyController().getSnapshot();
   const session = journey.session;
   if (!session || current.sessionId !== session.sessionId) { await stopWatchHandoff(); return; }
+  // Session revocation takes priority over coalescing and foreground checks.
+  const epoch = generation;
+  const ended = session.status === 'stopped' || session.status === 'completed';
+  if (ended && (publishing === epoch || AppState.currentState !== 'active')) {
+    // A terminal state must revoke native authorization even if an older
+    // publication never settles. Deliver the final acknowledgment only when
+    // it can start immediately; it must not hold the clear barrier hostage.
+    await stopWatchHandoff('The walk ended. Watch handoff is closed.'); return;
+  }
+  if (AppState.currentState !== 'active') return;
+  if (publishing === epoch) { republish = true; return; }
   const stop = currentJourneyStop();
   const now = Date.now();
   const ui = useNavigationUi.getState();
   const progress = stop && session.status === 'active' ? liveProgress(useNavigationStore.getState(), navigationFixStore.getState(), now, ui.online, stop.slug, ui.location) : undefined;
-  publishing = true;
+  publishing = epoch;
   try {
     await nativeCall(async () => {
-      if (handoff?.id !== current.id || AppState.currentState !== 'active') return;
+      if (generation !== epoch || handoff?.id !== current.id || AppState.currentState !== 'active') return;
       await watchTransport.publish({ schemaVersion: 1, handoffId: current.id, sessionId: session.sessionId, revision: session.revision,
       status: session.status, walkTitle: session.walkTitle.slice(0, 160), nextStopId: stop?.id ?? null, nextStopTitle: stop?.title.slice(0, 160) ?? null,
       completedCount: session.completedStopIds.length, totalStops: session.stopIds.length,
@@ -48,9 +64,15 @@ async function publish() {
       hapticsEnabled: journey.hapticsEnabled,
       });
     });
-    if (handoff?.id === current.id && (session.status === 'stopped' || session.status === 'completed')) await stopWatchHandoff('The walk ended. Watch handoff is closed.');
+    if (handoff?.id === current.id && ended) await stopWatchHandoff('The walk ended. Watch handoff is closed.');
   } catch { if (handoff?.id === current.id) await stopWatchHandoff('The paired watch disconnected. Reopen both apps and hand off again.'); }
-  finally { publishing = false; if (republish) { republish = false; void publish(); } }
+  finally {
+    // A revoked send may settle after a new epoch starts publishing.
+    if (publishing === epoch) {
+      publishing = null;
+      if (republish) { republish = false; void publish(); }
+    }
+  }
 }
 export async function startWatchHandoff() {
   if (state.busy || handoff) return;
@@ -59,11 +81,11 @@ export async function startWatchHandoff() {
   const epoch = ++generation;
   update({ busy: true });
   try {
-    const status = await nativeCall(() => watchTransport.getStatus());
-    if (epoch !== generation || AppState.currentState !== 'active') return;
+    const status = await nativeCall(async () => epoch === generation ? watchTransport.getStatus() : undefined);
+    if (!status || epoch !== generation || AppState.currentState !== 'active') return;
     if (!status.available || !status.reachable) { update({ busy: false, message: status.available ? 'Open Harlem Might on your paired watch and try again.' : 'Paired-watch support is not available in this build.' }); return; }
-    const id = await nativeCall(() => watchTransport.createHandoffId());
-    if (epoch !== generation || AppState.currentState !== 'active' || journeyController().getSnapshot().session?.sessionId !== session.sessionId) { if (epoch === generation) update({ busy: false }); return; }
+    const id = await nativeCall(async () => epoch === generation ? watchTransport.createHandoffId() : undefined);
+    if (!id || epoch !== generation || AppState.currentState !== 'active' || journeyController().getSnapshot().session?.sessionId !== session.sessionId) { if (epoch === generation) update({ busy: false }); return; }
     handoff = { id, sessionId: session.sessionId };
     update({ enabled: true, busy: false, message: 'Sharing this walk with your paired watch while both apps stay open.' });
     await publish();
