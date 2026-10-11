@@ -5,7 +5,7 @@
  */
 export const WIDGET_SCHEMA_VERSION = 1 as const;
 export type WidgetKind = 'story' | 'event' | 'place' | 'walk';
-export type WalkStatus = 'active' | 'paused' | 'completed';
+export type WalkStatus = 'active' | 'paused' | 'completed' | 'stopped';
 
 export interface PlaceSummary {
   id: string;

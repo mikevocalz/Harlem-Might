@@ -14,6 +14,8 @@ import { Places } from './collections/Places';
 import { Members } from './collections/Members';
 import { SavedPlaces } from './collections/SavedPlaces';
 import { Walks } from './collections/Walks';
+import { WalkSessions } from './collections/WalkSessions';
+import { walkSessionEndpoints } from './walk-sessions/endpoints';
 import { Stories } from './collections/Stories';
 import { Events } from './collections/Events';
 import { MusicArtists } from './collections/MusicArtists';
@@ -60,7 +62,8 @@ export default buildConfig({
   routes: {
     api: PAYLOAD_API_ROUTE,
   },
-  collections: [Users, Members, Media, Pages, Places, SavedPlaces, Walks, Stories, Events, MusicArtists],
+  collections: [Users, Members, Media, Pages, Places, SavedPlaces, Walks, WalkSessions, Stories, Events, MusicArtists],
+  endpoints: walkSessionEndpoints,
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URL,
@@ -113,7 +116,7 @@ export default buildConfig({
         ]
       : []),
     mcpPlugin({
-      // `users`, `members`, `saved-places` and the better-auth collections are
+      // `users`, `members`, `saved-places`, `walk-sessions` and the better-auth collections are
       // deliberately absent: identity and member-owned rows stay off the
       // machine-readable surface.
       collections: {

@@ -206,6 +206,9 @@ settings:
 
 catalogs:
   default:
+    '@electric-sql/pglite':
+      specifier: 0.5.4
+      version: 0.5.4
     '@delmaredigital/payload-better-auth':
       specifier: github:mikevocalz/payload-better-auth#5134d0b3b14f4dd5f59acbd0a0c09b2326c48f80
       version: https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/5134d0b3b14f4dd5f59acbd0a0c09b2326c48f80
@@ -1251,6 +1254,9 @@ importers:
       '@acme/app':
         specifier: workspace:*
         version: link:../app
+      '@acme/widgets':
+        specifier: workspace:*
+        version: link:../widgets
       '@delmaredigital/payload-better-auth':
         specifier: 'catalog:'
         version: https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/5134d0b3b14f4dd5f59acbd0a0c09b2326c48f80(86da4e8b647e92ca2ffec3a9b723d0c5)
@@ -1279,6 +1285,9 @@ importers:
       '@acme/config':
         specifier: workspace:*
         version: link:../config
+      '@electric-sql/pglite':
+        specifier: 'catalog:'
+        version: 0.5.4
       '@types/pg':
         specifier: 'catalog:'
         version: 8.23.1
