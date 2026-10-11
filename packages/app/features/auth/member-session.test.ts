@@ -558,3 +558,77 @@ it('focus refresh cannot restore private data after an unconfirmed logout', asyn
   assertOwner(B);
   assert.equal(members.getState().signOutError, null);
 });
+
+for (const failure of ['http-503', 'http-408', 'http-429', 'network', 'body'] as const) {
+  it(`keeps a confirmed same-owner profile during a transient post-save ${failure}`, async () => {
+    const pending = deferred<Response>();
+    const started = deferred<void>();
+    intercept = ({ url }) => {
+      if (url.endsWith('/auth/get-session')) { started.resolve(); return pending.promise; }
+      return undefined;
+    };
+    const saving = members.getState().updateProfile({ name: 'Updated A' });
+    await started.promise;
+    const duringRefresh = members.getState().status;
+    if (failure.startsWith('http-')) pending.resolve(response({}, Number(failure.slice(5))));
+    else if (failure === 'body') {
+      const truncated = response({});
+      truncated.json = async () => { throw new Error('Interrupted response body'); };
+      pending.resolve(truncated);
+    } else pending.reject(new Error('Temporary network failure'));
+    const result = await saving;
+    assertOwner(A);
+    assert.deepEqual(result, { ok: true });
+    assert.equal(duringRefresh, 'signed-in', 'post-save refresh must stay in the background');
+  });
+}
+
+for (const outcome of ['http-401', 'http-403', 'session-null'] as const) {
+  it(`revokes the confirmed owner after post-save ${outcome}`, async () => {
+    intercept = ({ url }) => url.endsWith('/auth/get-session')
+      ? response({ user: null }, outcome === 'http-401' ? 401 : outcome === 'http-403' ? 403 : 200)
+      : undefined;
+    assert.equal((await members.getState().updateProfile({ name: 'Updated A' })).ok, false);
+    assert.equal(members.getState().status, 'signed-out');
+    assert.equal(members.getState().member, null);
+    assert.deepEqual(members.getState().savedPlaces, []);
+  });
+}
+
+for (const loadKind of ['ordinary-refresh', 'auth-boundary', 'initial-hydrate'] as const) {
+  it(`does not preserve a profile on ${loadKind} failure`, async () => {
+    intercept = ({ url }) => url.endsWith('/auth/get-session') ? response({}, 503) : undefined;
+    if (loadKind === 'ordinary-refresh') await members.getState().refresh();
+    else if (loadKind === 'auth-boundary') await members.getState().signedIn('');
+    else {
+      members.setState({ status: 'idle', member: null, savedPlaces: [] });
+      await members.getState().hydrate('');
+    }
+    assert.equal(members.getState().status, 'signed-out');
+    assert.equal(members.getState().member, null);
+    assert.deepEqual(members.getState().savedPlaces, []);
+  });
+}
+
+for (const transition of ['new-owner', 'new-same-owner', 'logout'] as const) {
+  it(`ignores an old post-save network failure after ${transition}`, async () => {
+    const pending = deferred<Response>();
+    const started = deferred<void>();
+    intercept = ({ url }) => {
+      if (url.endsWith('/auth/get-session')) { started.resolve(); return pending.promise; }
+      return undefined;
+    };
+    const saving = members.getState().updateProfile({ name: 'Old A' });
+    await started.promise;
+    intercept = () => undefined;
+    if (transition === 'logout') await members.getState().signOut();
+    else await signIn(transition === 'new-owner' ? B : A);
+    pending.reject(new Error('Obsolete failure'));
+    assert.equal((await saving).ok, false);
+    if (transition === 'logout') {
+      assert.equal(members.getState().status, 'signed-out');
+      assert.equal(members.getState().member, null);
+      assert.deepEqual(members.getState().savedPlaces, []);
+    } else assertOwner(transition === 'new-owner' ? B : A);
+  });
+}
