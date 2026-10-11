@@ -37,6 +37,8 @@ struct CompanionSnapshot: Codable {
               s.nextStopId.map({ CompanionWire.text($0) }) ?? true,
               s.nextStopTitle.map({ CompanionWire.text($0) }) ?? true,
               s.instruction.map({ CompanionWire.text($0, max: 500) }) ?? true, s.isFresh else { return nil }
+        let minimumRevision = s.completedCount + (["paused", "stopped"].contains(s.status) ? 1 : 0)
+        guard s.revision >= minimumRevision else { return nil }
         return s
     }
 }

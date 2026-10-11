@@ -40,6 +40,8 @@ object CompanionWire {
             (!s.isNull("nextStopId") && !text(s, "nextStopId")) ||
             (!s.isNull("nextStopTitle") && !text(s, "nextStopTitle")) ||
             (!s.isNull("instruction") && !text(s, "instruction", 500)) || !fresh(s)) return null
+        val minimumRevision = s.getLong("completedCount") + (if (s.getString("status") in listOf("paused", "stopped")) 1 else 0)
+        if (s.getLong("revision") < minimumRevision) return null
         return s
     }
     fun command(json: String, s: JSONObject): JSONObject? {

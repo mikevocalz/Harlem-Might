@@ -24,6 +24,41 @@ test('paired snapshot is a bounded expiring projection, not a session/token cont
   assert.equal(isCompanionSnapshot({ ...sample, hapticsEnabled: 'yes' }, now), false);
 });
 
+test('paired snapshots reject revisions below confirmed progress and status transitions', () => {
+  for (const fields of [
+    { status: 'active', completedCount: 1, revision: 0 },
+    { status: 'completed', completedCount: 2, revision: 1, nextStopId: null, nextStopTitle: null },
+    { status: 'paused', completedCount: 0, revision: 0 },
+    { status: 'stopped', completedCount: 0, revision: 0, nextStopId: null, nextStopTitle: null },
+    { status: 'paused', completedCount: 1, revision: 1 },
+    { status: 'stopped', completedCount: 1, revision: 1, nextStopId: null, nextStopTitle: null },
+  ]) assert.equal(isCompanionSnapshot({ ...sample, ...fields }, now), false, JSON.stringify(fields));
+});
+
+test('paired snapshots retain minimum revisions and histories with extra pause/resume commands', () => {
+  for (const fields of [
+    { status: 'active', completedCount: 0, revision: 0 },
+    { status: 'active', completedCount: 1, revision: 1 },
+    { status: 'active', completedCount: 1, revision: 7 },
+    { status: 'completed', completedCount: 2, revision: 2, nextStopId: null, nextStopTitle: null },
+    { status: 'completed', completedCount: 2, revision: 8, nextStopId: null, nextStopTitle: null },
+    { status: 'paused', completedCount: 0, revision: 1 },
+    { status: 'paused', completedCount: 1, revision: 2 },
+    { status: 'stopped', completedCount: 0, revision: 1, nextStopId: null, nextStopTitle: null },
+    { status: 'stopped', completedCount: 1, revision: 2, nextStopId: null, nextStopTitle: null },
+  ]) assert.equal(isCompanionSnapshot({ ...sample, ...fields }, now), true, JSON.stringify(fields));
+});
+
+// Source parity checks only; Swift/Kotlin execution still needs native builds.
+test('native snapshot validators enforce the same progress and status revision floor', () => {
+  const swift = readFileSync(new URL('../modules/walk-companion/ios/CompanionWire.swift', import.meta.url), 'utf8');
+  const kotlin = readFileSync(new URL('../modules/walk-companion/shared/android/com/harlemmight/companion/CompanionWire.kt', import.meta.url), 'utf8');
+  assert.match(swift, /let minimumRevision = s\.completedCount \+ \(\["paused", "stopped"\]\.contains\(s\.status\) \? 1 : 0\)/);
+  assert.match(swift, /guard s\.revision >= minimumRevision else \{ return nil \}/);
+  assert.match(kotlin, /val minimumRevision = s\.getLong\("completedCount"\) \+ \(if \(s\.getString\("status"\) in listOf\("paused", "stopped"\)\) 1 else 0\)/);
+  assert.match(kotlin, /if \(s\.getLong\("revision"\) < minimumRevision\) return null/);
+});
+
 test('expired, long-lived, stale and future guidance fails closed', () => {
   assert.equal(isCompanionSnapshot(sample, now + 60_000), false);
   assert.equal(isCompanionSnapshot({ ...sample, expiresAt: new Date(now + 300_001).toISOString() }, now), false);
