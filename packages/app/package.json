@@ -19,6 +19,7 @@
     "@acme/spatial": "workspace:*",
     "@acme/theme": "workspace:*",
     "@acme/ui": "workspace:*",
+    "@acme/widgets": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "date-fns": "catalog:",
     "expo-document-picker": "catalog:",
