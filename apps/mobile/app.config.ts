@@ -161,6 +161,9 @@ const config: ExpoConfig = {
     // mobile flavor manifest only (docs/adr/0007). Finalized, so it runs
     // after the plugins above that rewrite the flavor manifests.
     './plugins/with-mobile-location-permission.js',
+    // Copies and signs the Mapbox dynamic frameworks (MapboxCommon, MapboxCoreMaps)
+    // into the app; without it iOS refuses to launch with "Library not loaded".
+    '@mikevocalz/nitro-mapbox-ar',
     // PICO: uncomment and set your PICO Developer Console app ID to add the pico flavor.
     // [
     //   '@expo-pico/core',
