@@ -19,6 +19,8 @@ export const routes = {
   /** A position inside a walk is `walk(slug) + '#stop-' + n`; a stop's own page is its place. */
   walk: (slug: string) => `/walks/${slug}`,
   stories: () => '/stories',
+  music: () => '/music',
+  musician: (slug: string) => `/music/${slug}`,
   story: (slug: string) => `/stories/${slug}`,
   // /today/[date] is deferred until listings exist (audit §11), so the builder
   // takes no date. Events have no page of their own: a row links to the
@@ -39,6 +41,7 @@ export const primaryNav = [
   { label: 'Explore', href: routes.explore(), matches: [/^\/explore(\/|$)/, /^\/places(\/|$)/] },
   { label: 'Walks', href: routes.walks(), matches: [/^\/walks(\/|$)/] },
   { label: 'Stories', href: routes.stories(), matches: [/^\/stories(\/|$)/] },
+  { label: 'Music', href: routes.music(), matches: [/^\/music(\/|$)/] },
   { label: 'Today', href: routes.today(), matches: [/^\/today(\/|$)/] },
 ] as const;
 

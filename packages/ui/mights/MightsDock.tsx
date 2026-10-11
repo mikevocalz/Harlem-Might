@@ -3,18 +3,19 @@
 import { useState } from 'react';
 import { Link } from 'solito/link';
 import { usePathname } from 'solito/navigation';
-import { BookOpen, CalendarClock, Ellipsis, Footprints, MapPinned } from 'lucide-react';
+import { BookOpen, CalendarClock, Ellipsis, Footprints, MapPinned, Music, type LucideIcon } from 'lucide-react';
 import { Button, List, ListItem, Nav } from '../html';
 import { View } from '../tw';
 import { BottomSheet } from '../BottomSheet';
-import { activeSection, primaryNav, secondaryNav } from './routes';
+import { activeSection, primaryNav, secondaryNav, type PrimaryNavLabel } from './routes';
 
 const ICONS = {
   Explore: MapPinned,
   Walks: Footprints,
   Stories: BookOpen,
+  Music,
   Today: CalendarClock,
-} as const;
+} as const satisfies Record<PrimaryNavLabel, LucideIcon>;
 
 const item =
   'mights-focus relative flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-1 text-caption font-medium me:w-full me:flex-none me:py-2.5';

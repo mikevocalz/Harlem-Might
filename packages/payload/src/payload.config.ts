@@ -16,6 +16,7 @@ import { SavedPlaces } from './collections/SavedPlaces';
 import { Walks } from './collections/Walks';
 import { Stories } from './collections/Stories';
 import { Events } from './collections/Events';
+import { MusicArtists } from './collections/MusicArtists';
 import { AUTH_BASE_PATH, AUTH_ORIGINS, PAYLOAD_API_ROUTE, betterAuthOptions } from './auth/options';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -59,7 +60,7 @@ export default buildConfig({
   routes: {
     api: PAYLOAD_API_ROUTE,
   },
-  collections: [Users, Members, Media, Pages, Places, SavedPlaces, Walks, Stories, Events],
+  collections: [Users, Members, Media, Pages, Places, SavedPlaces, Walks, Stories, Events, MusicArtists],
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URL,
@@ -127,6 +128,7 @@ export default buildConfig({
         walks: { tools: curatorMcpTools },
         stories: { tools: curatorMcpTools },
         events: { tools: curatorMcpTools },
+        'music-artists': { tools: curatorMcpTools },
       },
       // Off unless switched on — the plugin's default access is
       // `Boolean(req.user)`, which would hand the whole tool surface to any
