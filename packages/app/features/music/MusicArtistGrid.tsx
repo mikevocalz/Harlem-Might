@@ -11,7 +11,7 @@ import {
 } from '@acme/ui/mights';
 import { Text, View } from '@acme/ui/tw';
 import { useQuery } from '@tanstack/react-query';
-import { type ArtistPhotoResult } from './artist-photo.ts';
+import { artistPhotoProviderLabel, type ArtistPhotoResult } from './artist-photo.ts';
 import { fetchArtistPhotos } from './artist-photo-client.ts';
 import { musicConnectionLabel } from './music-format.ts';
 
@@ -69,7 +69,7 @@ function ArtistPortrait({
           numberOfLines={1}
           className="absolute bottom-0 right-0 max-w-full bg-mights-night/80 px-2 py-0.5 font-sans text-caption text-text-muted"
         >
-          Artist photo · {photo.provider === 'wikimedia_commons' ? 'Wikimedia Commons' : 'Deezer'}
+          Artist photo · {artistPhotoProviderLabel(photo.provider)}
         </Text>
       </View>
     );
