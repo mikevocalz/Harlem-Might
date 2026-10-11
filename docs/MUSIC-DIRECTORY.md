@@ -59,3 +59,43 @@ and a fail-closed adapter, not yet a functioning React Native Audio API engine.*
 - Turning on one source pauses/stops the other to prevent simultaneous music.
 - Use semantic UI package controls and platform haptics; state should live in
   Zustand, not scattered per-frame React updates.
+
+## Responsive artist detail and vinyl XR (approved)
+
+### Screen architecture
+- Public web: `apps/web/app/(site)/music/[slug]/page.tsx`; native Expo Router: `apps/mobile/app/(tabs)/music/[slug].tsx` (or nested Stack detail under Music tab).
+- Reuse one domain layer under `packages/app/features/music`: `MusicArtistDetailScreen`, `MusicArtistSplitView`, `MusicYouTubePanel`, `PlayInXRButton` and `MusicArtistStore` (Zustand). Product UI must use `@acme/ui` semantic components, no raw HTML outside platform adapters.
+- Tablet/desktop/expanded foldable: actual two-pane split layout, typically 42/58, resizable where existing split-view primitives support it. Left: headshot, artist name, genre/era, Harlem connection, short facts, full sourced biography; right: 16:9 YouTube player, *Play in XR* immediately below, track metadata, credited album art and appropriate unavailable-state.
+- Phone / narrow foldables: stacked left then right, deep-linkable, keyboard/screen reader safe. For tabletop foldable posture respect hinge and do not span interactive media across the crease.
+- XR action is enabled when device XR presentation works AND a 3D playback-compatible source is available. Video-only artists keep a standard video player. Do not present playing a YouTube iframe as spatial audio.
+- One transport/audio focus owner: suspend embedded YouTube when entering XR, restore previous page position and player intent safely when exiting. No autoplay.
+
+### Viro tabletop vinyl record player
+- Shared `VinylTurntableXRScene` loaded through existing Viro spatial scene router. Native/Meta/PICO/visionOS use fork-supported Viro/OpenXR; web uses existing Viro web renderer if supported.
+- World-locked table-height turntable with a base, spinning platter/record mesh, physically centered round record-label UV, and independently rigged tonearm. Use the CC0 Direct Spin candidate only after downloading, inspecting GLB mesh topology and verifying license: https://www.innerscene.com/tools/library/3d-parts/direct-spin-dj-turntable-ae143e16
+- Texture at disc center uses **licensed album artwork** from the artist's `albumArt` media relation; UV clipping must be circular, correctly oriented and not stretched. Fall back to a tasteful generated text/graphic label when no rights-cleared art is available.
+- 33⅓ RPM default (or explicit 45 RPM where recorded). Couple phase to authoritative playing time and elapsed playback time rather than frame count; stop on pause; accelerate/decelerate naturally; on pause/exit, lift tonearm and dispose media listeners, nodes and controllers.
+- Add a **Go Back** control as a reachable, right-side world-locked XR panel with hand/controller/gaze activation and an accessible non-XR equivalent. Button closes the immersive scene and returns to the originating artist URL, preserving navigation stack and history; never trap users in XR.
+- Other controls: Play/Pause, Restart, Volume, and optional spatial source positioning if source supports the engine. Show subtitles for instructions and no-motion alternatives for motion sensitivity.
+- Stereo YouTube playback remains on profile page; separately licensed audio file with provenance is spatialized via the engine. True ambisonic 360 playback is allowed only when the engine actually decodes ambisonics; a rotating model does not imply 360 sound.
+
+### Payload additions
+Extend `music-artists` with `albumArt` (upload → media), `featuredAlbumTitle`, `spatialTrackUrl` (HTTPS), `spatialTrackLicenseSourceUrl`, `spatialTrackFormat` (mono/stereo/ambisonic), `vinylRpm` (33⅓/45), `xrSceneEnabled` (default false). Public XR play availability must require full licensing, valid media and platform support.
+
+### Engineering steps
+1. Connect a published-only Payload music reader to the shared content transport, preserve data unavailable/empty/error states; generate types and DB migration.
+2. Implement shared list/artist detail routes, rails/header (existing shared route registry), and split-view semantics/accessibility.
+3. Integrate cross-platform YouTube bridge with safe watch URLs and player lifecycle.
+4. Inspect chosen free turntable GLB and its license, rig platter/tonearm/label; do not commit third-party assets unless rights and provenance have been verified.
+5. Wire XR scene lifecycle, music metadata, texture loading, media transport, animation and return navigation.
+6. Bind headtracked listener to Viro viewer pose for a separately licensed spatial audio recording; capability gate true HRTF/ambisonics.
+7. Audit npm latest compatible catalog+lock, test web/iOS/Android/tablet/foldables/headsets and add regression coverage before declaring ready.
+
+### Acceptance criteria
+- [ ] 2-pane details on wide layouts, stacked on phone, hinge-safe on foldables.
+- [ ] Verified headshot/bio left; usable YouTube player right; Play in XR button below.
+- [ ] Button opens world-locked turntable scene; center record label displays album image; platter/tonearm follow actual playback.
+- [ ] In-scene right-hand Go Back returns to the originating profile with navigation history intact.
+- [ ] Audio is spatial only when backed by correctly licensed files and verified rendering capabilities; never scrape YouTube.
+- [ ] Missing media, permissions, audio output and XR capabilities degrade gracefully.
+- [ ] App builds, accessible interactions pass, required CI green.
