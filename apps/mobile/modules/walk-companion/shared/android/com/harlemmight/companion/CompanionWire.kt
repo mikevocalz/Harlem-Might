@@ -40,6 +40,9 @@ object CompanionWire {
             (!s.isNull("nextStopId") && !text(s, "nextStopId")) ||
             (!s.isNull("nextStopTitle") && !text(s, "nextStopTitle")) ||
             (!s.isNull("instruction") && !text(s, "instruction", 500)) || !fresh(s)) return null
+        if ((s.getString("status") == "completed") != (s.getLong("completedCount") == s.getLong("totalStops")) ||
+            (!s.isNull("nextStopId")) != (s.getString("status") in listOf("active", "paused")) ||
+            (s.getString("routeState") != "ready" && !s.isNull("instruction"))) return null
         val minimumRevision = s.getLong("completedCount") + (if (s.getString("status") in listOf("paused", "stopped")) 1 else 0)
         if (s.getLong("revision") < minimumRevision) return null
         return s

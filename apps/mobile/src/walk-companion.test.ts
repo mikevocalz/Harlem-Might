@@ -49,6 +49,47 @@ test('paired snapshots retain minimum revisions and histories with extra pause/r
   ]) assert.equal(isCompanionSnapshot({ ...sample, ...fields }, now), true, JSON.stringify(fields));
 });
 
+test('only ready routes may carry maneuver guidance', () => {
+  for (const routeState of ['offline', 'unavailable']) {
+    assert.equal(isCompanionSnapshot({ ...sample, routeState, instruction: 'Turn right' }, now), false);
+    assert.equal(isCompanionSnapshot({ ...sample, routeState, instruction: null }, now), true);
+  }
+  assert.equal(isCompanionSnapshot({ ...sample, routeState: 'ready', instruction: 'Turn right' }, now), true);
+  assert.equal(isCompanionSnapshot({ ...sample, routeState: 'ready', instruction: null }, now), true);
+});
+
+test('status, confirmed progress and next stop must describe one canonical walk state', () => {
+  for (const fields of [
+    { status: 'completed', completedCount: 0 },
+    { status: 'completed', completedCount: 1, nextStopId: null, nextStopTitle: null },
+    { status: 'completed', completedCount: 2 },
+    { status: 'active', completedCount: 2 },
+    { status: 'active', completedCount: 2, nextStopId: null, nextStopTitle: null },
+    { status: 'paused', completedCount: 2, nextStopId: null, nextStopTitle: null },
+    { status: 'stopped', completedCount: 2, nextStopId: null, nextStopTitle: null },
+    { status: 'active', completedCount: 1, nextStopId: null, nextStopTitle: null },
+    { status: 'paused', completedCount: 1, nextStopId: null, nextStopTitle: null },
+    { status: 'stopped', completedCount: 1 },
+  ]) assert.equal(isCompanionSnapshot({ ...sample, revision: 4, ...fields }, now), false, JSON.stringify(fields));
+});
+
+// Structural parity checks; native execution remains a separate acceptance gate.
+test('native validators reject non-ready maneuver guidance before returning a snapshot', () => {
+  const swift = readFileSync(new URL('../modules/walk-companion/ios/CompanionWire.swift', import.meta.url), 'utf8');
+  const kotlin = readFileSync(new URL('../modules/walk-companion/shared/android/com/harlemmight/companion/CompanionWire.kt', import.meta.url), 'utf8');
+  assert.match(swift, /s\.routeState == "ready" \|\| s\.instruction == nil else \{ return nil \}/);
+  assert.match(kotlin, /s\.getString\("routeState"\) != "ready" && !s\.isNull\("instruction"\)/);
+});
+
+test('native validators enforce canonical completion and outstanding next-stop relationships', () => {
+  const swift = readFileSync(new URL('../modules/walk-companion/ios/CompanionWire.swift', import.meta.url), 'utf8');
+  const kotlin = readFileSync(new URL('../modules/walk-companion/shared/android/com/harlemmight/companion/CompanionWire.kt', import.meta.url), 'utf8');
+  assert.match(swift, /guard \(s\.status == "completed"\) == \(s\.completedCount == s\.totalStops\)/);
+  assert.match(swift, /\(s\.nextStopId != nil\) == \["active", "paused"\]\.contains\(s\.status\)/);
+  assert.match(kotlin, /\(s\.getString\("status"\) == "completed"\) != \(s\.getLong\("completedCount"\) == s\.getLong\("totalStops"\)\)/);
+  assert.match(kotlin, /\(!s\.isNull\("nextStopId"\)\) != \(s\.getString\("status"\) in listOf\("active", "paused"\)\)/);
+});
+
 // Source parity checks only; Swift/Kotlin execution still needs native builds.
 test('native snapshot validators enforce the same progress and status revision floor', () => {
   const swift = readFileSync(new URL('../modules/walk-companion/ios/CompanionWire.swift', import.meta.url), 'utf8');
