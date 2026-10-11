@@ -3,9 +3,10 @@
  *
  * These records mirror the verified/enriched Payload catalogue instead of the
  * old name+genre-only shortlist that produced cloned placeholder biographies.
- * CMS headshots remain rights-managed media relations; when a headshot is not
- * yet cleared, the product UI uses this artist's featured YouTube artwork as a
- * distinct presentation fallback rather than one shared generic Harlem image.
+ * CMS headshots remain the preferred rights-managed media relation. When a
+ * record has no CMS headshot, the product resolves a real artist-profile photo
+ * from Wikimedia Commons or Deezer; music-video artwork is never used as a
+ * portrait fallback.
  */
 export const musicArtistCandidates = [
   {
