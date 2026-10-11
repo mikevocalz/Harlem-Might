@@ -1,5 +1,4 @@
-import { getHarlemArchivalImage, type MusicArtistRecord } from '@acme/app/content';
-import { Image } from '@acme/ui';
+import type { MusicArtistRecord } from '@acme/app/content';
 import { Link, Section } from '@acme/ui/html';
 import {
   MightsButton,
@@ -14,25 +13,14 @@ import { ContentLoader } from '../site/content/ContentLoader.tsx';
 import { ContentNotice } from '../site/content/ContentNotice.tsx';
 import { SourcesList } from '../site/content/SourcesList.tsx';
 import type { ScreenResult } from '../site/stories/StoriesScreen.tsx';
+import { MusicArtistPhoto } from './MusicArtistPhoto.tsx';
 import { YouTubeEmbed } from './YouTubeEmbed';
 import {
   biographyParagraphs,
   musicConnectionLabel,
-  youTubeThumbnailUrl,
   youTubeVideoId,
 } from './music-format.ts';
 
-const heroImage = getHarlemArchivalImage('nypl-seventh-avenue-west-125th-1934');
-const archiveImage = getHarlemArchivalImage('nypl-harlem-storefronts-1939');
-
-const hero = heroImage ? (
-  <MightsEditorialImage
-    image={heroImage}
-    screenId="music-hero"
-    ratio="wide"
-    sizes="(min-width: 768px) 60vw, 100vw"
-  />
-) : undefined;
 
 function Fact({ label, value }: { label: string; value: string }) {
   return (
@@ -41,55 +29,6 @@ function Fact({ label, value }: { label: string; value: string }) {
       <MightsText size="small">{value}</MightsText>
     </View>
   );
-}
-
-/**
- * Prefer the licensed CMS portrait. When editorial headshot clearance is still
- * pending, use the artist's own featured-performance thumbnail rather than
- * repeating one generic Harlem image across every profile.
- */
-function ArtistLeadMedia({ artist }: { artist: MusicArtistRecord }) {
-  if (artist.headshot) {
-    return (
-      <MightsEditorialImage
-        image={artist.headshot}
-        screenId={`music-${artist.slug}`}
-        ratio="standard"
-        priority
-        sizes="(min-width: 768px) 60vw, 100vw"
-      />
-    );
-  }
-
-  const performanceImage = artist.featuredSong?.youtubeUrl
-    ? youTubeThumbnailUrl(artist.featuredSong.youtubeUrl)
-    : undefined;
-
-  if (performanceImage) {
-    return (
-      <View
-        className="relative w-full overflow-hidden bg-mights-night"
-        style={{ aspectRatio: 16 / 9 }}
-      >
-        <Image
-          src={performanceImage}
-          alt={`${artist.name} featured performance artwork`}
-          fill
-          contentFit="cover"
-          sizes="(min-width: 768px) 60vw, 100vw"
-          className="h-full w-full"
-        />
-        <Text
-          numberOfLines={1}
-          className="absolute bottom-0 right-0 max-w-full bg-mights-night/80 px-2 py-0.5 font-sans text-caption text-text-muted"
-        >
-          Featured performance · YouTube
-        </Text>
-      </View>
-    );
-  }
-
-  return hero ?? null;
 }
 
 /** The featured-song panel: an embedded player inside the UI boundary, never a raw third-party iframe. */
@@ -209,7 +148,6 @@ export function MusicArtistScreen({
       <MightsPage title="Harlem Music" crumbs={[{ label: 'Music', href: routes.music() }]}>
         <ContentNotice
           title="This artist isn’t published"
-          image={archiveImage}
           actions={<MightsButton href={routes.music()}>All artists</MightsButton>}
         >
           The profile may still be in editorial review, or it was taken down.
@@ -223,7 +161,6 @@ export function MusicArtistScreen({
       <MightsPage title="Harlem Music" crumbs={[{ label: 'Music', href: routes.music() }]}>
         <ContentNotice
           title="We couldn’t load this artist right now"
-          image={archiveImage}
           actions={
             <>
               <MightsButton href={routes.musician(slug)}>Try again</MightsButton>
@@ -249,7 +186,7 @@ export function MusicArtistScreen({
         { label: artist.name, href: routes.musician(artist.slug) },
       ]}
       mediaLayout="leading"
-      media={<ArtistLeadMedia artist={artist} />}
+      media={<MusicArtistPhoto artist={artist} />}
     >
       <ArtistBody artist={artist} />
       <SourcesList sources={artist.sources} />

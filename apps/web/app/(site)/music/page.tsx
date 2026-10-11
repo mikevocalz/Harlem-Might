@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { cachedMusicArtists } from '@/lib/cached-content';
-import { MusicIndexScreen } from '@acme/app/features/music/MusicIndexScreen.tsx';
+import { cachedMusicArtistsPage } from '@/lib/cached-content';
+import { MusicIndexClient } from '@/components/site/MusicIndexClient';
 import { ContentLoader } from '@acme/app/features/site/content/ContentLoader.tsx';
 
 export const metadata: Metadata = {
@@ -20,5 +20,5 @@ export default function MusicPage() {
 }
 
 async function MusicIndexContent() {
-  return <MusicIndexScreen result={await cachedMusicArtists()} />;
+  return <MusicIndexClient firstPage={await cachedMusicArtistsPage(1)} />;
 }

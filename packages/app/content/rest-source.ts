@@ -1,4 +1,4 @@
-import type { ContentDocs, ContentQuery, ContentSource } from './readers.ts';
+import type { ContentDocs, ContentPage, ContentQuery, ContentSource } from './readers.ts';
 
 /** The slice of WHATWG `fetch` the REST source calls. */
 export type ContentFetch = (url: string, init: { headers: Record<string, string> }) => Promise<{
@@ -40,6 +40,25 @@ export function createRestContentSource({ apiUrl, fetch }: RestContentSourceOpti
       if (!Array.isArray(body.docs)) throw new Error(`Payload REST ${query.collection} returned no docs array`);
       return body.docs;
     },
+    async findPage<TSlug extends keyof ContentDocs>(
+      query: ContentQuery<TSlug>,
+    ): Promise<ContentPage<ContentDocs[TSlug]>> {
+      if (!base) throw new Error('No Payload API URL configured for the REST content source.');
+      const url = `${base}/${query.collection}?${restQueryString(query)}`;
+      const response = await fetch(url, { headers: { accept: 'application/json' } });
+      if (!response.ok) throw new Error(`Payload REST ${query.collection} answered ${response.status}`);
+      const body = (await response.json()) as {
+        docs?: ContentDocs[TSlug][];
+        hasNextPage?: boolean;
+        totalDocs?: number;
+      };
+      if (!Array.isArray(body.docs)) throw new Error(`Payload REST ${query.collection} returned no docs array`);
+      return {
+        docs: body.docs,
+        hasNextPage: body.hasNextPage === true,
+        totalDocs: body.totalDocs ?? body.docs.length,
+      };
+    },
   };
 }
 
@@ -60,6 +79,7 @@ export function restQueryString(query: ContentQuery<keyof ContentDocs>): string 
   add('where', query.where);
   add('depth', query.depth);
   add('limit', query.limit);
+  add('page', query.page);
   add('sort', query.sort);
   for (const field of query.select ?? []) add(`select[${field}]`, true);
   add('draft', false);

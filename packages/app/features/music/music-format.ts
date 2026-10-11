@@ -37,16 +37,6 @@ export const youTubeEmbedUrl = (url: string): string | undefined => {
   return id ? `https://www.youtube-nocookie.com/embed/${id}?rel=0` : undefined;
 };
 
-/**
- * A YouTube-hosted high-resolution thumbnail for the artist's own featured
- * performance. This is presentation fallback media, not a CMS headshot and
- * must never be credited as a portrait.
- */
-export const youTubeThumbnailUrl = (url: string): string | undefined => {
-  const id = youTubeVideoId(url);
-  return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : undefined;
-};
-
 /** The plain-text biography as paragraphs (blank-line separated in the CMS). */
 export const biographyParagraphs = (biography: string): string[] =>
   biography

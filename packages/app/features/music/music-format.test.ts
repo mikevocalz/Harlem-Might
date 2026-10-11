@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   musicConnectionLabel,
-  youTubeThumbnailUrl,
   youTubeVideoId,
 } from './music-format.ts';
 
@@ -15,19 +14,6 @@ describe('youTubeVideoId', () => {
 
   it('rejects URLs without a valid 11-character video id', () => {
     assert.equal(youTubeVideoId('https://www.youtube.com/watch?v=short'), undefined);
-  });
-});
-
-describe('youTubeThumbnailUrl', () => {
-  it('uses YouTube high-quality artwork for an artist-specific fallback', () => {
-    assert.equal(
-      youTubeThumbnailUrl('https://www.youtube.com/watch?v=m60XKqEEnfg'),
-      'https://i.ytimg.com/vi/m60XKqEEnfg/hqdefault.jpg',
-    );
-  });
-
-  it('does not invent artwork for an invalid video URL', () => {
-    assert.equal(youTubeThumbnailUrl('not-a-youtube-url'), undefined);
   });
 });
 
