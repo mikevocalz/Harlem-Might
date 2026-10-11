@@ -14,7 +14,7 @@ index f49230270d1fc097293498031794b5420a1b6d22..dbd40069c5f746c1950c854dd39cdda0
 +    installer.pod_targets.each do |pod_target|
 +      next if pod_names.include?(pod_target.name)
 +
-+      pod_target.build_settings.each_key do |config_name|
++      pod_target.user_build_configurations.each_key do |config_name|
 +        path = pod_target.xcconfig_path(config_name)
 +        next unless File.exist?(path)
 +
