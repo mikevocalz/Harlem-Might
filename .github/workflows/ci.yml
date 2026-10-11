@@ -76,6 +76,8 @@ jobs:
       - run: pnpm spatial:verify-typegpu
       - run: pnpm --filter @acme/spatial test
       - run: pnpm --filter @acme/app test
+      - run: pnpm --filter @acme/payload test
+      - run: pnpm --filter web test
       - name: Validate mobile dependency contract
         run: pnpm --filter mobile viro:assert-fork
       - run: pnpm --filter mobile test

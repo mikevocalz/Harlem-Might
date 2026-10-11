@@ -1,4 +1,4 @@
-import { getHarlemArchivalImage, type MusicArtistRecord } from '@acme/app/content';
+import type { MusicArtistRecord } from '@acme/app/content';
 import { Link, Section } from '@acme/ui/html';
 import {
   MightsButton,
@@ -13,10 +13,14 @@ import { ContentLoader } from '../site/content/ContentLoader.tsx';
 import { ContentNotice } from '../site/content/ContentNotice.tsx';
 import { SourcesList } from '../site/content/SourcesList.tsx';
 import type { ScreenResult } from '../site/stories/StoriesScreen.tsx';
+import { MusicArtistPhoto } from './MusicArtistPhoto.tsx';
 import { YouTubeEmbed } from './YouTubeEmbed';
-import { artistArchiveFallback, biographyParagraphs, musicConnectionLabel, youTubeVideoId } from './music-format.ts';
+import {
+  biographyParagraphs,
+  musicConnectionLabel,
+  youTubeVideoId,
+} from './music-format.ts';
 
-const archiveImage = getHarlemArchivalImage('nypl-harlem-storefronts-1939');
 
 function Fact({ label, value }: { label: string; value: string }) {
   return (
@@ -144,7 +148,6 @@ export function MusicArtistScreen({
       <MightsPage title="Harlem Music" crumbs={[{ label: 'Music', href: routes.music() }]}>
         <ContentNotice
           title="This artist isn’t published"
-          image={archiveImage}
           actions={<MightsButton href={routes.music()}>All artists</MightsButton>}
         >
           The profile may still be in editorial review, or it was taken down.
@@ -158,7 +161,6 @@ export function MusicArtistScreen({
       <MightsPage title="Harlem Music" crumbs={[{ label: 'Music', href: routes.music() }]}>
         <ContentNotice
           title="We couldn’t load this artist right now"
-          image={archiveImage}
           actions={
             <>
               <MightsButton href={routes.musician(slug)}>Try again</MightsButton>
@@ -175,7 +177,6 @@ export function MusicArtistScreen({
     );
   }
   const artist = result.data;
-  const fallback = artistArchiveFallback(artist.slug);
   return (
     <MightsPage
       title={artist.name}
@@ -185,25 +186,7 @@ export function MusicArtistScreen({
         { label: artist.name, href: routes.musician(artist.slug) },
       ]}
       mediaLayout="leading"
-      media={
-        artist.headshot ? (
-          <MightsEditorialImage
-            image={artist.headshot}
-            screenId={`music-${artist.slug}`}
-            ratio="standard"
-            priority
-            sizes="(min-width: 768px) 60vw, 100vw"
-          />
-        ) : fallback ? (
-          <MightsEditorialImage
-            image={fallback}
-            screenId={`music-${artist.slug}`}
-            ratio="wide"
-            priority
-            sizes="(min-width: 768px) 60vw, 100vw"
-          />
-        ) : undefined
-      }
+      media={<MusicArtistPhoto artist={artist} />}
     >
       <ArtistBody artist={artist} />
       <SourcesList sources={artist.sources} />

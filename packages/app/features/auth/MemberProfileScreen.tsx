@@ -3,9 +3,10 @@
 // The member's own page: their photo, name and saved places, all editable in
 // place — and the way out. Signed-out visitors get the door back to sign-in.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { List, ListItem, TextField, notify } from '@acme/ui';
-import { Link, Section } from '@acme/ui/html';
+import { Section } from '@acme/ui/html';
+import { TextLink } from 'solito/link';
 import {
   MightsButton,
   MightsHeading,
@@ -19,6 +20,7 @@ import { ContentLoader } from '../site/content/ContentLoader.tsx';
 import { ContentNotice } from '../site/content/ContentNotice.tsx';
 import { MemberAvatar } from './MemberAvatar.tsx';
 import { pickMemberPhoto } from './member-photo';
+import { pickAndUploadMemberAvatar } from './member-avatar-action.ts';
 import { useMemberSession, type MemberProfile, type SavedPlaceEntry } from './member-session.ts';
 
 function savedPlaceLink(entry: SavedPlaceEntry): { name: string; href: string } | undefined {
@@ -78,25 +80,39 @@ function FrameMarks() {
 
 /** The masthead photo: the member's own image or initials inside accent-frame marks, tappable to change. */
 function MemberPhoto({ member }: { member: MemberProfile }) {
-  const uploadAvatar = useMemberSession((s) => s.uploadAvatar);
   const updateProfile = useMemberSession((s) => s.updateProfile);
   const [previewUri, setPreviewUri] = useState<string | undefined>();
   const [busy, setBusy] = useState<'uploading' | 'removing' | undefined>();
   const label = member.name?.trim() || member.email;
+  const mounted = useRef(true);
+  const picking = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+  useEffect(() => () => {
+    if (previewUri?.startsWith('blob:')) URL.revokeObjectURL(previewUri);
+  }, [previewUri]);
 
   const change = async () => {
-    const photo = await pickMemberPhoto();
-    if (!photo) return;
-    setPreviewUri(photo.uri);
+    if (picking.current) return;
+    picking.current = true;
     setBusy('uploading');
-    const result = await uploadAvatar(photo);
-    setBusy(undefined);
-    if (!result.ok) {
-      setPreviewUri(undefined);
-      notify.error('Photo not saved', { description: result.message });
-      return;
+    try {
+      const result = await pickAndUploadMemberAvatar(pickMemberPhoto, () => mounted.current, (photo) => setPreviewUri(photo.uri));
+      if (!mounted.current || !result) return;
+      if (!result.ok) {
+        setPreviewUri(undefined);
+        notify.error('Photo not saved', { description: result.message });
+        return;
+      }
+      notify.success('Photo updated');
+    } catch {
+      if (mounted.current) notify.error('Photo not saved', { description: 'Could not open the photo picker. Please try again.' });
+    } finally {
+      picking.current = false;
+      if (mounted.current) setBusy(undefined);
     }
-    notify.success('Photo updated');
   };
 
   const remove = async () => {
@@ -185,15 +201,28 @@ export function MemberProfileScreen({ siteUrl }: { siteUrl: string }) {
   const savedPlaces = useMemberSession((s) => s.savedPlaces);
   const hydrate = useMemberSession((s) => s.hydrate);
   const signOut = useMemberSession((s) => s.signOut);
+  const signOutError = useMemberSession((s) => s.signOutError);
 
   useEffect(() => {
     void hydrate(siteUrl);
   }, [hydrate, siteUrl]);
 
-  if (status === 'idle' || status === 'loading') {
+  // Same-owner refreshes retain the existing profile while the cookie is
+  // checked. Do not unmount a photo picker or discard unsaved form state.
+  if ((status === 'idle' || status === 'loading') && !member) {
     return (
       <MightsPage title="Your profile" crumbs={[{ label: 'Profile', href: routes.profile() }]}>
         <ContentLoader label="Checking your member session" />
+      </MightsPage>
+    );
+  }
+
+  if (signOutError) {
+    return (
+      <MightsPage title="Your profile" crumbs={[{ label: 'Profile', href: routes.profile() }]}>
+        <ContentNotice title="Sign-out is not confirmed" actions={<MightsButton onPress={() => void signOut()}>Retry sign out</MightsButton>}>
+          {signOutError}
+        </ContentNotice>
       </MightsPage>
     );
   }
@@ -229,9 +258,9 @@ export function MemberProfileScreen({ siteUrl }: { siteUrl: string }) {
         { label: 'Profile', href: routes.profile() },
       ]}
       mediaLayout="leading"
-      media={<MemberPhoto member={member} />}
+      media={<MemberPhoto key={`${siteUrl}:${member.id}`} member={member} />}
     >
-      <MemberDetails member={member} />
+      <MemberDetails key={`${siteUrl}:${member.id}`} member={member} />
       <SavedPlaces entries={savedPlaces} />
       <Section aria-label="Account" className="flex max-w-content-detail flex-col gap-4 border-t border-rule-rail pt-8">
         <MightsHeading level={2} size="title">
@@ -243,9 +272,9 @@ export function MemberProfileScreen({ siteUrl }: { siteUrl: string }) {
           </MightsButton>
           <MightsText size="small" className="text-text-muted">
             Save a place from{' '}
-            <Link href={routes.explore()} className="mights-focus text-primary underline underline-offset-4">
+            <TextLink href={routes.explore()} className="mights-focus text-primary underline underline-offset-4">
               the map
-            </Link>{' '}
+            </TextLink>{' '}
             and it shows up here.
           </MightsText>
         </View>

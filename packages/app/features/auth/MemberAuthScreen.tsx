@@ -42,7 +42,6 @@ export function MemberAuthScreen({ intent, siteUrl }: MemberAuthScreenProps) {
   const succeed = useMemberAuth((s) => s.succeed);
   const sessionStatus = useMemberSession((s) => s.status);
   const hydrate = useMemberSession((s) => s.hydrate);
-  const signedIn = useMemberSession((s) => s.signedIn);
   const create = intent === 'sign-up';
   const emailOk = EMAIL_PATTERN.test(email.trim());
   const passwordOk = password.length >= MIN_PASSWORD_LENGTH;
@@ -72,10 +71,8 @@ export function MemberAuthScreen({ intent, siteUrl }: MemberAuthScreenProps) {
       return;
     }
     succeed();
-    // The cookie is set; pulling the session names the member and the
-    // session-status effect below lands them on their profile.
-    void signedIn(siteUrl);
-    router.replace(routes.explore());
+    // Auth actions already started the guarded session read. The session
+    // effect below lands the confirmed member on their profile.
   };
 
   // The session is checked once on mount: a member who reaches this screen

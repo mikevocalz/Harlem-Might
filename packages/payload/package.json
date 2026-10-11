@@ -8,11 +8,13 @@
   "exports": {
     ".": "./index.ts",
     "./server": "./server.ts",
-    "./config": "./src/payload.config.ts"
+    "./config": "./src/payload.config.ts",
+    "./artist-photo-fetch": "./src/artist-photo-fetch.ts"
   },
   "scripts": {
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "test": "node --test 'src/**/*.test.ts'",
     "build": "pnpm generate:types",
     "generate:types": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload generate:types",
     "seed:events": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/seed-events.ts",
@@ -38,7 +40,8 @@
     "@delmaredigital/payload-better-auth": "catalog:",
     "better-auth": "catalog:",
     "@acme/app": "workspace:*",
-    "server-only": "0.0.1"
+    "server-only": "0.0.1",
+    "file-type": "catalog:"
   },
   "devDependencies": {
     "@acme/config": "workspace:*",
