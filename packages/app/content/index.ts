@@ -15,7 +15,7 @@ export {
 } from './editorial-images.ts';
 export type { EditorialImage } from './editorial-images.ts';
 export type { ContentDocs, ContentQuery, ContentReaders, ContentSource, ContentWhere } from './readers.ts';
-export type { EventDoc, MediaDoc, PlaceDoc, SourceDoc, StoryDoc, WalkDoc } from './docs.ts';
+export type { EventDoc, MediaDoc, MusicArtistDoc, PlaceDoc, SourceDoc, StoryDoc, WalkDoc } from './docs.ts';
 export { harlemDayBounds, harlemToday, isHarlemDate, HARLEM_TIME_ZONE } from './harlem-time.ts';
 export { isGeneratedPlaceSlug, placeNameSlug, uniquePlaceSlug } from './place-slug.ts';
 export type { ContentResult, ContentUnavailable, DetailResult, UnavailableReason } from './result.ts';
@@ -25,12 +25,16 @@ export type {
   ArchiveRights,
   EventRecord,
   EventStatus,
+  FeaturedSongRef,
   LocationAccuracy,
+  MusicArtistRecord,
+  MusicConnection,
   PlaceKind,
   PlaceLifecycle,
   PlaceRecord,
   PlaceRef,
   SourceRef,
+  SpatialTrackRef,
   StoryRecord,
   WalkRecord,
   WalkStop,

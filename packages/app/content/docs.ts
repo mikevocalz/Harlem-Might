@@ -120,6 +120,34 @@ export interface StoryDoc {
   updatedAt: string;
 }
 
+export interface MusicArtistDoc {
+  id: number;
+  name: string;
+  slug: string;
+  genre: string;
+  era?: Nullable<string>;
+  connection: 'born-raised' | 'resident' | 'scene' | 'east-harlem';
+  shortBio: string;
+  biography: string;
+  headshot?: Nullable<number | MediaDoc>;
+  albumArt?: Nullable<number | MediaDoc>;
+  featuredAlbumTitle?: Nullable<string>;
+  xrSceneEnabled?: Nullable<boolean>;
+  vinylRpm?: Nullable<'33' | '45'>;
+  spatialTrack?: Nullable<{
+    url?: Nullable<string>;
+    licenseSourceUrl?: Nullable<string>;
+    format?: Nullable<'mono' | 'stereo' | 'ambisonic'>;
+  }>;
+  featuredSong?: Nullable<{
+    title?: Nullable<string>;
+    youtubeUrl?: Nullable<string>;
+    verifiedAt?: Nullable<string>;
+  }>;
+  sources?: Nullable<{ url: string; description?: Nullable<string> }[]>;
+  updatedAt: string;
+}
+
 export interface EventDoc {
   id: number;
   slug: string;

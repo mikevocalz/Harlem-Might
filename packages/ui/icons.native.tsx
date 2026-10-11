@@ -91,6 +91,7 @@ export const Settings2 = icon(L.Settings2 as React.ComponentType<object>, 'Setti
 export const CloudUpload = icon(L.CloudUpload as React.ComponentType<object>, 'CloudUpload');
 export const FileUp = icon(L.FileUp as React.ComponentType<object>, 'FileUp');
 export const Mic = icon(L.Mic as React.ComponentType<object>, 'Mic');
+export const Music = icon(L.Music as React.ComponentType<object>, 'Music');
 export const Square = icon(L.Square as React.ComponentType<object>, 'Square');
 export const AudioLines = icon(L.AudioLines as React.ComponentType<object>, 'AudioLines');
 export const Play = icon(L.Play as React.ComponentType<object>, 'Play');

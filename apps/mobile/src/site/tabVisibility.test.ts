@@ -9,14 +9,14 @@ describe('tab visibility (DECISIONS S20)', () => {
     assert.deepEqual([...HORIZON_STRUCK_TABS], ['more']);
   });
 
-  it('keeps Explore, Walks, Stories and Today on every build', () => {
-    for (const route of ['explore', 'walks', 'stories', 'today'] as const) {
+  it('keeps Explore, Walks, Stories, Music and Today on every build', () => {
+    for (const route of ['explore', 'walks', 'stories', 'music', 'today'] as const) {
       assert.equal(isTabShown(route, true), true, route);
       assert.equal(isTabShown(route, false), true, route);
     }
   });
 
-  it('gives the Horizon rail four items', () => {
-    assert.equal(HORIZON_TAB_COUNT, 4);
+  it('gives the Horizon rail five items', () => {
+    assert.equal(HORIZON_TAB_COUNT, 5);
   });
 });

@@ -5,11 +5,11 @@ import 'server-only';
 import { createContentReaders, type ContentDocs, type ContentQuery, type ContentSource } from '@acme/app/content';
 import { getPayload, type Where } from 'payload';
 import config from './src/payload.config';
-import type { Event, Place, Story, Walk } from './src/payload-types';
+import type { Event, MusicArtist, Place, Story, Walk } from './src/payload-types';
 
 // Compile-time drift check: the generated CMS documents must satisfy the
 // reader contract in packages/app/content/docs.ts.
-type GeneratedDocs = { walks: Walk; stories: Story; events: Event; places: Place };
+type GeneratedDocs = { walks: Walk; stories: Story; events: Event; places: Place; 'music-artists': MusicArtist };
 type AssertDocsMatch<T extends ContentDocs> = T;
 export type CheckedContentDocs = AssertDocsMatch<GeneratedDocs>;
 
@@ -80,6 +80,8 @@ export const {
   listExplorePoints,
   listStories,
   getStory,
+  listMusicArtists,
+  getMusicArtist,
   listEventsForDate,
 } = createContentReaders(payloadSource);
 
@@ -88,6 +90,7 @@ export type {
   ContentResult,
   DetailResult,
   EventRecord,
+  MusicArtistRecord,
   PlaceRecord,
   PlaceRef,
   StoryRecord,

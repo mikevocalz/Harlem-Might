@@ -2,7 +2,7 @@
 // from this stable export; do not reach into expo-router/build internals.
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { Pressable, ScrollView, Text, View } from '@acme/ui/tw';
-import { BookOpen, CalendarClock, Ellipsis, Footprints, MapPinned } from '@acme/ui/icons';
+import { BookOpen, CalendarClock, Ellipsis, Footprints, MapPinned, Music } from '@acme/ui/icons';
 import { haptics } from '@acme/ui/haptics';
 import { APP_TABS, TAB_SCREEN, type AppTabRoute } from '@/src/site/app-tabs';
 import { isTabShown } from '@/src/site/tabVisibility';
@@ -29,6 +29,7 @@ const ICONS: Record<AppTabRoute, typeof MapPinned> = {
   explore: MapPinned,
   walks: Footprints,
   stories: BookOpen,
+  music: Music,
   today: CalendarClock,
   more: Ellipsis,
 };
