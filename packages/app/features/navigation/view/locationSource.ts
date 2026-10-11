@@ -1,4 +1,4 @@
-import type { LocationFix } from '../model/location.ts';
+import type { HeadingSample, LocationFix } from '../model/location.ts';
 
 /**
  * What the app may do with device location right now, as the directions
@@ -17,6 +17,7 @@ export type LocationAvailability = 'unknown' | 'granted' | 'approximate' | 'deni
 /** Callbacks a {@linkcode LocationSource} reports to. */
 export interface LocationWatchHandlers {
   onFix(fix: LocationFix): void;
+  onHeading?(heading: HeadingSample): void;
   onAvailability(availability: LocationAvailability): void;
 }
 
@@ -27,7 +28,7 @@ export interface LocationWatchHandlers {
  */
 export interface LocationSource {
   /** `browser` (W3C Geolocation) or `none` (no source in this build). */
-  readonly kind: 'browser' | 'none';
+  readonly kind: 'browser' | 'native' | 'none';
   /** Reads the permission state without prompting. */
   check(): Promise<LocationAvailability>;
   /** Starts watching. The first call may show the platform prompt. Returns a stop function. */

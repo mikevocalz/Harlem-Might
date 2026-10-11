@@ -1,3 +1,4 @@
+import { useWalkJourneyHost } from '../src/journey/host';
 import '../src/site/content-readers';
 import { placeCatalogueStore } from '@acme/app/features/explore/place-catalogue.store.ts';
 import { useEffect } from 'react';
@@ -56,6 +57,7 @@ const NAV_THEME = {
 };
 
 export default function RootLayout() {
+  useWalkJourneyHost();
   useEffect(() => {
     void placeCatalogueStore.getState().refresh();
     haptics.setForeground(AppState.currentState === 'active');

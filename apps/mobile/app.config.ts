@@ -26,7 +26,7 @@ const config: ExpoConfig = {
       // Explore's "My location" puck on the Mapbox map (docs/adr/0007). The
       // Maps SDK shows the system prompt the first time the puck turns on.
       NSLocationWhenInUseUsageDescription:
-        'Harlem Might shows where you are on the Explore map, so you can see which places are near you.',
+        'Harlem Might uses your location while open to show walking directions and nearby places.',
     },
   },
   android: {
@@ -43,6 +43,12 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
+    ['expo-location', {
+      locationWhenInUsePermission: 'Harlem Might uses your location while open to show walking directions and nearby places.',
+      isIosBackgroundLocationEnabled: false,
+      isAndroidBackgroundLocationEnabled: false,
+      isAndroidForegroundServiceEnabled: false,
+    }],
     // Registers native watchOS application in apps/mobile/targets/harlem-watch.
     // Expo Widgets remains sole owner of the iPhone WidgetKit extension.
     '@bacons/apple-targets',
