@@ -44,3 +44,18 @@ Access control filters every read/update/delete to the authenticated member ID. 
 - `/profile` — saved places/profile surface; the current implementation lives in `apps/web-vite` pending the Next.js member profile route
 - all other public routes remain signed-out capable
 - `/admin` is curator tooling and is not the member profile
+
+
+## Better Auth relationship invariant
+
+Harlem Might renames Better Auth's semantic `user` model to `member`:
+
+```ts
+user: { modelName: 'member' }
+```
+
+Therefore the generated Better Auth credential/session collections must resolve their
+`user` relationship to Payload `members`, not curator `users`. In Postgres,
+`payload.accounts.user_id` and `payload.sessions.user_id` must reference
+`payload.members(id)`. The pinned `payload-better-auth` fork includes regression
+coverage for this custom-model relationship resolution.
