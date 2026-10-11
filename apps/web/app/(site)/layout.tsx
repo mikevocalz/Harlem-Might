@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { AppQueryProvider } from '@acme/app/providers/query-provider.tsx';
+import { AppQueryProvider } from '@acme/app/providers/query-provider';
 import { Toaster } from '@acme/ui';
 import { Document } from '../Document';
 import { SiteMotionShell } from '../../components/site/SiteMotionShell';
