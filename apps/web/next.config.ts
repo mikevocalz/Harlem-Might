@@ -23,6 +23,10 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/index.php',
       },
+      // Rights-cleared artist portraits can load directly from Wikimedia.
+      // Editorial/provider-reference photos are served by our allowlisted
+      // same-origin proxy and therefore need no third-party image hosts here.
+      { protocol: 'https', hostname: 'upload.wikimedia.org', port: '', pathname: '/wikipedia/**' },
       // MightsMapImage renders Mapbox Static Images through the kit Image (next/image).
       { protocol: 'https', hostname: 'api.mapbox.com', port: '', pathname: '/styles/v1/**' },
       // Payload uploads: mapEditorialImages absolutizes /payload-api/media/…
@@ -95,8 +99,7 @@ const nextConfig: NextConfig = {
       { source: '/schedule', destination: '/today', permanent },
       { source: '/spatial', destination: '/ar', permanent },
       { source: '/notifications', destination: '/', permanent },
-      { source: '/profile', destination: '/', permanent },
-      { source: '/settings', destination: '/', permanent },
+      { source: '/settings', destination: '/profile', permanent },
       { source: '/legal', destination: '/legal/privacy', permanent: false },
     ];
   },

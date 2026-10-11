@@ -15,7 +15,8 @@ export function applyJourneyNavigationCommand(input: {
   stopLocation(): void;
 }): void {
   const active = input.session;
-  if (!('destination' in active) || active.destination.placeId !== input.targetSlug) return;
+  const destination = 'destination' in active ? active.destination : active.phase === 'error' ? active.trip?.destination : undefined;
+  if (!destination || destination.placeId !== input.targetSlug) return;
   if (input.type === 'pause') {
     // A pending route/reroute has no pausable route state. Cancel its request;
     // retain the tour's synopsis so Resume can request a fresh route.

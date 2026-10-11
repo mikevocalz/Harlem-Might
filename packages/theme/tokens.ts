@@ -303,6 +303,10 @@ export const spacing = {
   rail: '0.125rem',
   /** Mobile dock bar height (MightsDock), excluding the safe-area inset. */
   dock: '3.5rem',
+  /** Foldable/tablet navigation rail (MightsDock at `me`): Material 3's 88px,
+   *  same constant as the native AppTabBar's RAIL_WIDTH. Reserves the column
+   *  so page content never slides under the rail. */
+  'rail-width': '5.5rem',
   // Absolute px, like the xr-* type steps, so the rem-14 polyfill cannot
   // shrink a hit area below Meta's 48dp floor (design-system.md §4).
   /** Minimum hit area for anything pressable in Explore. */

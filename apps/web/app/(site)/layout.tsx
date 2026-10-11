@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { AppQueryProvider } from '@acme/app/providers/query-provider.tsx';
+import { Toaster } from '@acme/ui';
 import { Document } from '../Document';
 import { SiteMotionShell } from '../../components/site/SiteMotionShell';
 import '../rn-globals';
@@ -16,7 +18,10 @@ export const metadata: Metadata = {
 export default function SiteLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <Document>
-      <SiteMotionShell>{children}</SiteMotionShell>
+      <AppQueryProvider>
+        <SiteMotionShell>{children}</SiteMotionShell>
+      </AppQueryProvider>
+      <Toaster />
     </Document>
   );
 }

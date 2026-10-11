@@ -14,7 +14,7 @@ import { createJourneyCueTracker } from './cues.ts';
 import { startJourneyRouteIntent, type JourneyRouteIdentity } from './route-intent.ts';
 import { synopsisFromRoute, verifiedDestination } from './model.ts';
 import { endNavigation, isLocationRunning, navigationController, requestDirections, startLocation, stopLocation } from '../navigation/view/runtime.ts';
-import { navigationFixStore, useNavigationStore } from '../navigation/session/navigationStore.ts';
+import { navigationFixStore, selectDestination, useNavigationStore } from '../navigation/session/navigationStore.ts';
 
 let configured: { readers: ContentReaders; transport?: JourneyTransport } | undefined;
 let controller: ReturnType<typeof createJourneyController> | undefined;
@@ -37,8 +37,8 @@ export function journeyController() {
     transport: configured ? configured.transport : createMemberJourneyTransport(),
     onClear() {
       cancelRouteIntent();
-      const active = useNavigationStore.getState().session;
-      if ('destination' in active && controller?.getSnapshot().plan?.stops.some(stop => stop.slug === active.destination.placeId)) endNavigation();
+      const destination = selectDestination(useNavigationStore.getState());
+      if (destination && controller?.getSnapshot().plan?.stops.some(stop => stop.slug === destination.placeId)) endNavigation();
     },
     onTransition(previous, session, command) {
       cancelRouteIntent();
@@ -57,7 +57,7 @@ export function journeyController() {
     },
   });
   // Account changes clear private UI on every platform, before any login request.
-  useMemberAuth.subscribe((state, previous) => { if (state.pending && !previous.pending) { endNavigation(); controller?.clear(); } });
+  useMemberAuth.subscribe((state, previous) => { if (state.pending && !previous.pending) { controller?.clear(); } });
   // Save only route synopsis, never the route geometry or raw sensor feed.
   let routeId: string | undefined;
   const cues = createJourneyCueTracker();
@@ -111,8 +111,8 @@ export function requestJourneyDirections(): void {
   if (!destination || state.place?.slug !== stop.slug) {
     journey.setError('We need a freshly checked, sourced location for this stop. You can still read the walk and confirm a visit yourself.'); return;
   }
-  const active = useNavigationStore.getState().session;
-  if ('destination' in active && active.destination.placeId !== stop.slug) {
+  const activeDestination = selectDestination(useNavigationStore.getState());
+  if (activeDestination && activeDestination.placeId !== stop.slug) {
     journey.setError('End the other trip before getting directions to this stop.'); return;
   }
   journey.setError(null);

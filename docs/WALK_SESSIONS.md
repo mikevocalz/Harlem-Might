@@ -62,7 +62,12 @@ Each request resolves the member through the plugin-owned
 `payload.betterAuth.api.getSession` with `disableCookieCache: true` and
 `disableRefresh: true`. It checks expiration and matching user/session identity.
 The member comes from verified authentication only; neither `req.user` nor a
-body/header owner hint can override it. Mutations recheck login after lookup I/O.
+body/header owner hint can override it. Every storage read rechecks login after
+I/O before exposing a snapshot, including replay and conflict responses. Mutations
+recheck immediately before and after the storage write. If revocation overlaps
+an already committed write, the response is 401 without private state; the
+atomic receipt still makes a later authorized retry safe. These checks do not
+claim a cross-table transaction that retroactively cancels a committed write.
 The configured Better Auth model is `member`; curator `users` are separate.
 PR #54's auth relationship repair remains a prerequisite and is unchanged here.
 

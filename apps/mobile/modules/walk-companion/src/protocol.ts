@@ -53,6 +53,11 @@ export function isCompanionSnapshot(value: unknown, now = Date.now()): value is 
     !(s.nextStopId === null || text(s.nextStopId)) || !(s.nextStopTitle === null || text(s.nextStopTitle)) ||
     (s.nextStopId === null) !== (s.nextStopTitle === null) ||
     !(s.instruction === null || text(s.instruction, 500)) || !text(s.updatedAt) || !text(s.expiresAt)) return false;
+  if ((s.status === 'completed') !== (s.completedCount === s.totalStops) ||
+    (s.nextStopId !== null) !== (s.status === 'active' || s.status === 'paused') ||
+    (s.routeState !== 'ready' && s.instruction !== null)) return false;
+  const minimumRevision = s.completedCount + (s.status === 'paused' || s.status === 'stopped' ? 1 : 0);
+  if (s.revision < minimumRevision) return false;
   const updated = Date.parse(s.updatedAt), expires = Date.parse(s.expiresAt);
   return Number.isFinite(now) && Number.isFinite(updated) && Number.isFinite(expires) &&
     updated <= now + 30_000 && expires > now && expires > updated &&
