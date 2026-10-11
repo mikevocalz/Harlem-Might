@@ -19,7 +19,7 @@ public class WalkCompanionModule: Module {
         OnDestroy { [weak self] in DispatchQueue.main.async { self?.bridge.clear(); self?.bridge.onCommand = nil } }
         AsyncFunction("createHandoffId") { [weak self] () -> String in
             guard let self else { throw NSError(domain: "WalkCompanion", code: 1) }
-            return self.bridge.createHandoffId()
+            return try self.bridge.createHandoffId()
         }.runOnQueue(.main)
         AsyncFunction("getStatus") { [weak self] () -> [String: Bool] in
             self?.bridge.status ?? ["available": false, "reachable": false]
@@ -49,8 +49,13 @@ private final class PhoneWalkBridge: NSObject, WCSessionDelegate {
          "reachable": session?.activationState == .activated && session?.isReachable == true]
     }
     func activate() { session?.delegate = self; session?.activate() }
-    func createHandoffId() -> String {
+    func createHandoffId() throws -> String {
         clear()
+        guard UIApplication.shared.applicationState == .active, observing,
+              let session, session.activationState == .activated, session.isPaired,
+              session.isWatchAppInstalled, session.isReachable else {
+            throw NSError(domain: "WalkCompanion", code: 2, userInfo: [NSLocalizedDescriptionKey: "Open both phone and watch apps to share this walk."])
+        }
         let id = UUID().uuidString
         authorizedHandoff = id
         return id
