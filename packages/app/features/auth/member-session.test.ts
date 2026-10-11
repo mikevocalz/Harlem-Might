@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, it } from 'node:test';
-import { useMemberSession as members, type MemberProfile } from './member-session.ts';
+import { pickAndUploadMemberAvatar } from './member-avatar-action.ts';
+import { useMemberSession as members, memberFirstName, type MemberProfile } from './member-session.ts';
 
 const A: MemberProfile = { id: 'A', email: 'a@example.invalid', name: 'Member A' };
 const B: MemberProfile = { id: 'B', email: 'b@example.invalid', name: 'Member B' };
@@ -178,11 +179,13 @@ it('ignores rejection of an obsolete logout after B signs in', async () => {
 
 it('allows logout retry after a current network failure without restoring private data', async () => {
   intercept = ({ url }) => url.endsWith('/auth/sign-out') ? Promise.reject(new Error('Offline')) : undefined;
-  await assert.rejects(members.getState().signOut(), /Offline/);
+  await members.getState().signOut();
+  assert.match(members.getState().signOutError ?? '', /not be confirmed/);
   assert.equal(members.getState().member, null);
   intercept = () => undefined;
   await members.getState().signOut();
   assert.equal(matching('/auth/sign-out').length, 2);
+  assert.equal(members.getState().signOutError, null);
 });
 
 it('rejects an old saved-place response after A switches to B', async () => {
@@ -470,4 +473,88 @@ it('checks the owner independently of abort and session generation', async () =>
   assert.equal((await uploading).ok, false);
   assert.equal(matching('/auth/update-user').length, 0);
   assertOwner(B);
+});
+
+
+it('reports failed HTTP logout without exposing private data and clears the warning on retry', async () => {
+  intercept = ({ url }) => url.endsWith('/auth/sign-out') ? response({}, 500) : undefined;
+  await members.getState().signOut();
+  assert.match(members.getState().signOutError ?? '', /500/);
+  assert.equal(members.getState().member, null);
+  assert.deepEqual(members.getState().savedPlaces, []);
+  intercept = () => undefined;
+  await members.getState().signOut();
+  assert.equal(members.getState().signOutError, null);
+});
+
+it('an obsolete failed logout cannot attach a warning to B', async () => {
+  const pending = deferred<Response>();
+  intercept = ({ url }) => url.endsWith('/auth/sign-out') ? pending.promise : undefined;
+  const logout = members.getState().signOut();
+  intercept = () => undefined;
+  await signIn(B);
+  pending.resolve(response({}, 500));
+  await logout;
+  assertOwner(B);
+  assert.equal(members.getState().signOutError, null);
+});
+
+for (const owner of [A, B]) {
+  it(`does not upload a photo chosen in an earlier session after a new ${owner.id} login`, async () => {
+    const selected = deferred<typeof photo>();
+    let previewed = false;
+    const action = pickAndUploadMemberAvatar(() => selected.promise, () => true, () => { previewed = true; });
+    await signIn(owner);
+    selected.resolve(photo);
+    const result = await action;
+    assert.equal(result?.ok, false);
+    assert.equal(previewed, false);
+    assert.equal(matching('/media').length, 0);
+    assert.equal(matching('/auth/update-user').length, 0);
+    assertOwner(owner);
+  });
+}
+
+it('does not upload when the profile closes while its picker is open', async () => {
+  const selected = deferred<typeof photo>();
+  let mounted = true;
+  const action = pickAndUploadMemberAvatar(() => selected.promise, () => mounted, () => assert.fail('No preview after close'));
+  mounted = false;
+  selected.resolve(photo);
+  assert.equal((await action)?.ok, false);
+  assert.equal(matching('/media').length, 0);
+});
+
+it('cancelled selection causes no preview or upload', async () => {
+  assert.equal(await pickAndUploadMemberAvatar(async () => null, () => true, () => assert.fail('No preview after cancellation')), null);
+  assert.equal(matching('/media').length, 0);
+});
+
+it('uploads a photo chosen in the current member lifetime', async () => {
+  let previewed = false;
+  const result = await pickAndUploadMemberAvatar(async () => photo, () => true, () => { previewed = true; });
+  assert.equal(result?.ok, true);
+  assert.equal(previewed, true);
+  assert.equal(matching('/media').length, 1);
+  assert.equal(matching('/auth/update-user').length, 1);
+});
+
+it('account labels fall back to email for missing or blank display names', () => {
+  for (const name of [null, undefined, '', '  ']) assert.equal(memberFirstName({ ...A, name }), A.email);
+  assert.equal(memberFirstName({ ...A, name: '  Ada Lovelace ' }), 'Ada');
+});
+
+it('focus refresh cannot restore private data after an unconfirmed logout', async () => {
+  intercept = ({ url }) => url.endsWith('/auth/sign-out') ? response({}, 500) : undefined;
+  await members.getState().signOut();
+  intercept = () => undefined;
+  await members.getState().refresh();
+  await members.getState().hydrate('');
+  assert.equal(matching('/auth/get-session').length, 0);
+  assert.equal(members.getState().member, null);
+  assert.deepEqual(members.getState().savedPlaces, []);
+  assert.match(members.getState().signOutError ?? '', /not be confirmed/);
+  await signIn(B);
+  assertOwner(B);
+  assert.equal(members.getState().signOutError, null);
 });

@@ -2,7 +2,7 @@ import { requireOptionalNativeModule, type EventSubscription, type NativeModule 
 import { isCompanionCommand, isCompanionSnapshot, type CompanionCommand, type CompanionSnapshot } from './src/protocol.ts';
 export type { CompanionCommand, CompanionSnapshot } from './src/protocol.ts';
 
-declare class NativeWalkCompanion extends NativeModule<{ onCommand: (event: { json: string }) => void }> {
+declare class NativeWalkCompanion extends NativeModule<{ onCommand: (event: { json: string; expiresAt: string }) => void }> {
   createHandoffId(): Promise<string>;
   getStatus(): Promise<{ available: boolean; reachable: boolean }>;
   publish(json: string): Promise<void>;
@@ -24,8 +24,12 @@ export const watchTransport = {
   async clear() { await native?.clear(); },
   addCommandListener(listener: (command: CompanionCommand) => void): EventSubscription {
     if (!native) return { remove() {} };
-    return native.addListener('onCommand', ({ json }) => {
+    return native.addListener('onCommand', ({ json, expiresAt }) => {
       try {
+        // Native receipt is not a committed command. JS delivery can lag behind
+        // the snapshot that authorized it, even while both apps remain active.
+        // Keep that original expiry; a newer publication cannot renew this event.
+        if (typeof expiresAt !== 'string' || !(Date.parse(expiresAt) > Date.now())) return;
         const command: unknown = JSON.parse(json);
         if (isCompanionCommand(command)) listener(command);
       } catch { /* Malformed transport data never reaches the session controller. */ }

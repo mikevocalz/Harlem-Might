@@ -48,6 +48,10 @@ async function requireMember(deps: WalkSessionDependencies): Promise<number> {
   return member.memberId;
 }
 
+async function requireSameMember(deps: WalkSessionDependencies, memberId: number): Promise<void> {
+  if (await requireMember(deps) !== memberId) throw new WalkSessionError(401, 'sign-in-required');
+}
+
 function validateStored(record: StoredWalkSession | null, memberId: number, sessionId: string): void {
   if (!record) return;
   validateWalkSession(record.session);
@@ -61,11 +65,19 @@ function validateStored(record: StoredWalkSession | null, memberId: number, sess
   }
 }
 
+async function readOwnedSession(deps: WalkSessionDependencies, memberId: number, sessionId: string): Promise<StoredWalkSession | null> {
+  const record = await deps.repository.read(memberId, sessionId);
+  // Storage I/O can outlive the login that authorized it. This applies to all
+  // private snapshots, including replay and conflict responses on the last retry.
+  await requireSameMember(deps, memberId);
+  validateStored(record, memberId, sessionId);
+  return record;
+}
+
 export async function readWalkSession(deps: WalkSessionDependencies, sessionId: string): Promise<WalkCommandResponse> {
   const memberId = await requireMember(deps);
   if (!validId.test(sessionId)) throw new WalkSessionError(400, 'invalid-session-id');
-  const record = await deps.repository.read(memberId, sessionId);
-  validateStored(record, memberId, sessionId);
+  const record = await readOwnedSession(deps, memberId, sessionId);
   if (!record) throw new WalkSessionError(404, 'session-not-found');
   return { schemaVersion: 1, session: record.session, replayed: false };
 }
@@ -75,9 +87,8 @@ export async function executeWalkCommand(deps: WalkSessionDependencies, input: u
   try { validateWalkCommand(input); } catch { throw new WalkSessionError(400, 'invalid-command'); }
   const command = input;
   const fingerprint = walkCommandFingerprint(command);
-  let record = await deps.repository.read(memberId, command.sessionId);
+  let record = await readOwnedSession(deps, memberId, command.sessionId);
   for (let attempt = 0; attempt < 3; attempt++) {
-    validateStored(record, memberId, command.sessionId);
     const receipt = record?.receipts.find(item => item.commandId === command.commandId);
     if (receipt) {
       if (receipt.fingerprint !== fingerprint) throw new WalkSessionError(409, 'command-id-conflict');
@@ -102,12 +113,15 @@ export async function executeWalkCommand(deps: WalkSessionDependencies, input: u
       receipts: [...(record?.receipts ?? []), { commandId: command.commandId, fingerprint }],
     };
     // Recheck after I/O, immediately before mutation. A revoked login cannot replay a queued command.
-    if (await requireMember(deps) !== memberId) throw new WalkSessionError(401, 'sign-in-required');
+    await requireSameMember(deps, memberId);
     const accepted = record
       ? await deps.repository.compareAndSwap(next, record.generation)
       : await deps.repository.insert(next);
+    // An already committed write is not undone, but a revoked request must not
+    // receive its private result. The receipt makes a later authorized retry safe.
+    await requireSameMember(deps, memberId);
     if (accepted) return { schemaVersion: 1, session, replayed: false };
-    record = await deps.repository.read(memberId, command.sessionId);
+    record = await readOwnedSession(deps, memberId, command.sessionId);
   }
   throw new WalkSessionError(409, 'revision-conflict', record?.session);
 }

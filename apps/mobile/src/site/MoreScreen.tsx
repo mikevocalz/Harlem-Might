@@ -38,6 +38,7 @@ export function MoreScreen() {
   const router = useRouter();
   const sessionStatus = useMemberSession((s) => s.status);
   const member = useMemberSession((s) => s.member);
+  const signOutError = useMemberSession((s) => s.signOutError);
   const hydrate = useMemberSession((s) => s.hydrate);
   const origin = siteOrigin();
 
@@ -55,15 +56,15 @@ export function MoreScreen() {
   return (
     <SitePage title="More">
       <View className="max-w-content-detail border-t border-rule-hairline">
-        {signedIn ? (
+        {signedIn || signOutError ? (
           <Pressable
             role="link"
             onPress={() => router.push(routes.profile())}
             className="min-h-target flex-row items-center gap-3 border-b border-rule-hairline py-3 active:bg-surface-sunken"
           >
             <View className="flex-1 gap-0.5">
-              <Text className="font-sans text-body font-semibold text-text">Your profile</Text>
-              <Text className="font-sans text-small text-text-muted">{member?.email}</Text>
+              <Text className="font-sans text-body font-semibold text-text">{signOutError ? 'Finish signing out' : 'Your profile'}</Text>
+              <Text className="font-sans text-small text-text-muted">{signOutError ?? member?.email}</Text>
             </View>
             <ChevronRight size={20} className="text-text-muted" />
           </Pressable>

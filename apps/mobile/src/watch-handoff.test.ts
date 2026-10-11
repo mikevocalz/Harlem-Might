@@ -76,6 +76,66 @@ test('explicit opt-out invokes native clear without waiting for an older native 
   } finally { h.releasePublish(); await stopped; await flush(); h.unmount(); }
 });
 
+for (const terminal of ['stopped', 'completed'] as const) {
+  for (const outcome of ['resolve', 'reject'] as const) {
+    test(`${terminal} revokes a pending publication before it ${outcome}s and cannot erase a new handoff`, async () => {
+      const h = await setup();
+      try {
+        await h.hook.startWatchHandoff();
+        if (terminal === 'completed') {
+          await h.command({ commandId: 'visit-first', type: 'confirm-stop', confirmed: true, stopId: '1' }); await flush();
+        }
+        h.holdPublish(); await h.tick();
+        const oldSend = h.detachPublish();
+        await h.tick(); // Old coalesced work must also be revoked.
+        const session = h.controller.getSnapshot().session;
+        await h.controller.dispatch({ schemaVersion: 1, commandId: 'end-walk', sessionId: session.sessionId, expectedRevision: session.revision,
+          ...(terminal === 'stopped' ? { type: 'stop', confirmed: true } : { type: 'confirm-stop', stopId: '2', confirmed: true }) });
+        await flush();
+        assert.equal(h.controller.getSnapshot().session.status, terminal);
+        assert.equal(h.hook.watchHandoffState.getSnapshot().enabled, false);
+        assert.equal(h.events.at(-1), 'clear', 'Terminal revocation cannot wait for an older native delivery.');
+        const count = h.publications.length;
+
+        await h.controller.begin('harlem-history');
+        await h.hook.startWatchHandoff(); await flush();
+        assert.equal(h.publications.at(-1).handoffId, 'handoff-2');
+        oldSend[outcome](outcome === 'reject' ? new Error('old send failed') : undefined); await flush();
+        assert.equal(h.hook.watchHandoffState.getSnapshot().enabled, true);
+        assert.equal(h.events.filter(event => event === 'clear').length, 1);
+        assert.equal(h.publications.length, count + 1);
+      } finally { h.releasePublish(); await flush(); h.unmount(); }
+    });
+  }
+}
+
+test('an ended walk revokes native handoff while the phone is inactive', async () => {
+  const h = await setup();
+  try {
+    await h.hook.startWatchHandoff();
+    h.appState.currentState = 'background';
+    const session = h.controller.getSnapshot().session;
+    await h.controller.dispatch({ schemaVersion: 1, commandId: 'end-inactive-walk', sessionId: session.sessionId,
+      expectedRevision: session.revision, type: 'stop', confirmed: true }); await flush();
+    assert.equal(h.hook.watchHandoffState.getSnapshot().enabled, false);
+    assert.equal(h.events.at(-1), 'clear');
+  } finally { h.unmount(); }
+});
+
+test('an unblocked terminal snapshot is still published before closing the handoff', async () => {
+  const gate = deferred(), h = await setup({ idGate: gate });
+  try {
+    const started = h.hook.startWatchHandoff(); await flush();
+    const session = h.controller.getSnapshot().session;
+    await h.controller.dispatch({ schemaVersion: 1, commandId: 'end-during-setup', sessionId: session.sessionId,
+      expectedRevision: session.revision, type: 'stop', confirmed: true });
+    gate.resolve('terminal-handoff'); await started; await flush();
+    assert.equal(h.publications.at(-1).status, 'stopped');
+    assert.deepEqual(h.events.slice(-2), ['publish:1', 'clear']);
+    assert.equal(h.hook.watchHandoffState.getSnapshot().enabled, false);
+  } finally { gate.resolve('terminal-handoff'); h.unmount(); }
+});
+
 test('revocation also runs while the phone is inactive', async () => {
   const h = await setup();
   try {

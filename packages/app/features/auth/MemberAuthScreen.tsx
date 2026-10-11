@@ -73,7 +73,6 @@ export function MemberAuthScreen({ intent, siteUrl }: MemberAuthScreenProps) {
     succeed();
     // Auth actions already started the guarded session read. The session
     // effect below lands the confirmed member on their profile.
-    router.replace(routes.explore());
   };
 
   // The session is checked once on mount: a member who reaches this screen

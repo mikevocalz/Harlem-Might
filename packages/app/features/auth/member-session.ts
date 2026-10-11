@@ -46,6 +46,10 @@ interface MemberSessionState {
   savedPlaces: SavedPlaceEntry[];
   /** Origin the calls were bound to ('' = same-origin on web). */
   siteUrl: string;
+  /** A failed logout remains explicit until it is retried or a new auth starts. */
+  signOutError: string | null;
+  /** Capture the owner/origin/lifetime before awaiting a native or web picker. */
+  captureIdentity: () => (() => boolean);
   /** First read of the session cookie; safe to call on every mount. */
   hydrate: (siteUrl: string) => Promise<void>;
   /** Clears the previous identity before a sign-in/sign-up POST; refuses overlap. */
@@ -148,8 +152,9 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
     const boundary = newSession || get().siteUrl !== siteUrl;
     if (boundary) {
       invalidate();
-    } else if (logout) {
-      // The cookie may still be valid while sign-out is in flight.
+    } else if (logout || get().signOutError) {
+      // The cookie may still be valid during an unconfirmed sign-out. Focus
+      // refreshes must not restore private data before retry or explicit auth.
       return;
     }
     sessionRead?.abort();
@@ -158,7 +163,7 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
     const startedGeneration = generation;
     const current = () => generation === startedGeneration && sessionRead === controller
       && !controller.signal.aborted && get().siteUrl === siteUrl;
-    set({ status: 'loading', siteUrl, ...(boundary ? { member: null, savedPlaces: [] } : {}) });
+    set({ status: 'loading', siteUrl, ...(boundary ? { member: null, savedPlaces: [], signOutError: null } : {}) });
     try {
       if (!current()) return;
       const member = await getSession(siteUrl, controller.signal);
@@ -166,7 +171,7 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
       const changedOwner = ownerOf(member) !== ownerOf(get().member);
       if (changedOwner) invalidate();
       if (!member) {
-        set({ status: 'signed-out', member: null, savedPlaces: [] });
+        set({ status: 'signed-out', member: null, savedPlaces: [], signOutError: null });
         return;
       }
       const scope = { generation, siteUrl, owner: String(member.id) };
@@ -211,6 +216,11 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
     member: null,
     savedPlaces: [],
     siteUrl: '',
+    signOutError: null,
+    captureIdentity: () => {
+      const scope = scopeFor();
+      return () => Boolean(scope && owns(scope));
+    },
 
     hydrate: async (siteUrl) => {
       if (get().status !== 'idle') return;
@@ -225,7 +235,7 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
       const startedGeneration = generation;
       const isCurrent = () => authentication === controller && generation === startedGeneration
         && !controller.signal.aborted && get().siteUrl === siteUrl;
-      set({ status: 'loading', siteUrl, member: null, savedPlaces: [] });
+      set({ status: 'loading', siteUrl, member: null, savedPlaces: [], signOutError: null });
       return {
         signal: controller.signal,
         isCurrent,
@@ -312,19 +322,24 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
       logout = operation;
       // Invalidate and hide private data before the network can yield. A late
       // logout response must never overwrite a newer sign-in.
-      set({ status: 'signed-out', member: null, savedPlaces: [] });
+      set({ status: 'signed-out', member: null, savedPlaces: [], signOutError: null });
       operation.promise = (async () => {
         try {
           if (logout !== operation || operation.controller.signal.aborted) return;
-          await fetch(api(siteUrl, '/auth/sign-out'), {
+          const response = await fetch(api(siteUrl, '/auth/sign-out'), {
             method: 'POST',
             credentials: 'include',
             signal: operation.controller.signal,
             headers: { 'Content-Type': 'application/json' },
             body: '{}',
           });
-        } catch (error) {
-          if (!operation.controller.signal.aborted) throw error;
+          if (logout === operation && !response.ok) {
+            set({ signOutError: `Sign-out could not be confirmed (${response.status}). Please retry before leaving this device.` });
+          }
+        } catch {
+          if (logout === operation && !operation.controller.signal.aborted) {
+            set({ signOutError: 'Sign-out could not be confirmed. Check your connection and retry before leaving this device.' });
+          }
         } finally {
           if (logout === operation) logout = undefined;
         }
@@ -338,5 +353,5 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
 export const memberFirstName = (member: MemberProfile): string => {
   const name = member.name?.trim();
   const first = name?.split(/\s+/)[0];
-  return first ?? member.email;
+  return first || member.email;
 };

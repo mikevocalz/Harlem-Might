@@ -37,8 +37,15 @@ async function publish() {
   const session = journey.session;
   if (!session || current.sessionId !== session.sessionId) { await stopWatchHandoff(); return; }
   // Session revocation takes priority over coalescing and foreground checks.
-  if (AppState.currentState !== 'active') return;
   const epoch = generation;
+  const ended = session.status === 'stopped' || session.status === 'completed';
+  if (ended && (publishing === epoch || AppState.currentState !== 'active')) {
+    // A terminal state must revoke native authorization even if an older
+    // publication never settles. Deliver the final acknowledgment only when
+    // it can start immediately; it must not hold the clear barrier hostage.
+    await stopWatchHandoff('The walk ended. Watch handoff is closed.'); return;
+  }
+  if (AppState.currentState !== 'active') return;
   if (publishing === epoch) { republish = true; return; }
   const stop = currentJourneyStop();
   const now = Date.now();
@@ -57,7 +64,7 @@ async function publish() {
       hapticsEnabled: journey.hapticsEnabled,
       });
     });
-    if (handoff?.id === current.id && (session.status === 'stopped' || session.status === 'completed')) await stopWatchHandoff('The walk ended. Watch handoff is closed.');
+    if (handoff?.id === current.id && ended) await stopWatchHandoff('The walk ended. Watch handoff is closed.');
   } catch { if (handoff?.id === current.id) await stopWatchHandoff('The paired watch disconnected. Reopen both apps and hand off again.'); }
   finally {
     // A revoked send may settle after a new epoch starts publishing.

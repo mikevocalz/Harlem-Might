@@ -9,7 +9,7 @@ public class WalkCompanionModule: Module {
         Events("onCommand")
         OnCreate { [weak self] in
             DispatchQueue.main.async {
-                self?.bridge.onCommand = { [weak self] json in self?.sendEvent("onCommand", ["json": json]) }
+                self?.bridge.onCommand = { [weak self] json, expiresAt in self?.sendEvent("onCommand", ["json": json, "expiresAt": expiresAt]) }
                 self?.bridge.activate()
             }
         }
@@ -35,7 +35,7 @@ public class WalkCompanionModule: Module {
 /// Foreground, memory-only transport. No application-context cache, queued
 /// transferUserInfo, app-group storage, login credentials or background loop.
 private final class PhoneWalkBridge: NSObject, WCSessionDelegate {
-    var onCommand: ((String) -> Void)?
+    var onCommand: ((String, String) -> Void)?
     var observing = false
     private var snapshotJSON: String?
     private var commandIds = Set<String>()
@@ -117,7 +117,7 @@ private final class PhoneWalkBridge: NSObject, WCSessionDelegate {
                 replyHandler(["accepted": false]); return
             }
             self.commandIds.insert(command.commandId)
-            self.onCommand?(commandJSON)
+            self.onCommand?(commandJSON, snapshot.expiresAt)
             // Receipt is not a committed revision; watch waits for a new snapshot.
             replyHandler(["accepted": true])
         }
