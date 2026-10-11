@@ -264,9 +264,13 @@ const artistImgSrc = (html: string, name: string): string | undefined => {
     const alt =
       tag.match(/\balt=["']([^"']+)["']/i)?.[1] ??
       tag.match(/\btitle=["']([^"']+)["']/i)?.[1];
+    const srcset =
+      tag.match(/\bsrcset=["']([^"']+)["']/i)?.[1] ??
+      tag.match(/\bdata-srcset=["']([^"']+)["']/i)?.[1];
     const src =
       tag.match(/\bsrc=["']([^"']+)["']/i)?.[1] ??
-      tag.match(/\bdata-src=["']([^"']+)["']/i)?.[1];
+      tag.match(/\bdata-src=["']([^"']+)["']/i)?.[1] ??
+      srcset?.split(',')[0]?.trim().split(/\s+/)[0];
     if (
       alt &&
       src &&
@@ -294,10 +298,10 @@ async function resolveCuratedProfile(
   const html = await response.text();
   const base = response.url ?? profile.url;
   const candidate =
+    artistImgSrc(html, name) ??
     metaContent(html, 'og:image') ??
     metaContent(html, 'twitter:image') ??
-    metaContent(html, 'twitter:image:src') ??
-    artistImgSrc(html, name);
+    metaContent(html, 'twitter:image:src');
   const imageUrl = absoluteUrl(candidate, base);
   if (!imageUrl) return undefined;
 
