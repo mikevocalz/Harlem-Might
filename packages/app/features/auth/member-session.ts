@@ -6,6 +6,7 @@
 // `/payload-api/auth/get-session` last said — it never holds credentials.
 
 import { create } from 'zustand';
+import type { MemberPhotoAsset } from './member-photo.ts';
 
 export interface MemberProfile {
   id: number | string;
@@ -23,6 +24,14 @@ export interface SavedPlaceEntry {
 
 export type MemberSessionStatus = 'idle' | 'loading' | 'signed-out' | 'signed-in';
 
+export type MemberSessionResult = { ok: true } | { ok: false; message: string };
+
+export interface MemberProfileUpdate {
+  name?: string;
+  /** Absolute URL of an uploaded photo, or null to remove it. */
+  image?: string | null;
+}
+
 interface MemberSessionState {
   status: MemberSessionStatus;
   member: MemberProfile | null;
@@ -33,6 +42,12 @@ interface MemberSessionState {
   hydrate: (siteUrl: string) => Promise<void>;
   /** Credentials were just accepted — fetch the member the cookie now names. */
   signedIn: (siteUrl: string) => Promise<void>;
+  /** Re-reads the session; used after a profile edit. */
+  refresh: () => Promise<void>;
+  /** Saves name/photo through Better Auth's update-user, then refreshes. */
+  updateProfile: (update: MemberProfileUpdate) => Promise<MemberSessionResult>;
+  /** Uploads a picked photo to the media library and sets it as the avatar. */
+  uploadAvatar: (photo: MemberPhotoAsset) => Promise<MemberSessionResult>;
   refreshSavedPlaces: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -45,6 +60,13 @@ const getSession = async (siteUrl: string): Promise<MemberProfile | null> => {
   const body = (await response.json().catch(() => null)) as { user?: MemberProfile | null } | null;
   return body?.user ?? null;
 };
+
+const errorText = (body: unknown, fallback: string): string => {
+  const data = typeof body === 'object' && body !== null ? (body as { message?: unknown; error?: unknown }) : {};
+  return (typeof data.message === 'string' && data.message) || (typeof data.error === 'string' && data.error) || fallback;
+};
+
+const unreachable = { ok: false as const, message: 'Could not reach Harlem Might. Check your connection and try again.' };
 
 export const useMemberSession = create<MemberSessionState>((set, get) => {
   const load = async (siteUrl: string) => {
@@ -74,6 +96,61 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
     },
 
     signedIn: load,
+
+    refresh: async () => {
+      await load(get().siteUrl);
+    },
+
+    updateProfile: async (update) => {
+      const { siteUrl, member } = get();
+      if (!member) return { ok: false, message: 'You are not signed in.' };
+      try {
+        const response = await fetch(api(siteUrl, '/auth/update-user'), {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(update),
+        });
+        if (!response.ok) {
+          const body = (await response.json().catch(() => null)) as unknown;
+          return { ok: false, message: errorText(body, `The member service returned ${response.status}.`) };
+        }
+        await load(siteUrl);
+        return { ok: true };
+      } catch {
+        return unreachable;
+      }
+    },
+
+    uploadAvatar: async (photo) => {
+      const { siteUrl, member } = get();
+      if (!member) return { ok: false, message: 'You are not signed in.' };
+      try {
+        const form = new FormData();
+        // RN's FormData takes { uri, name, type } for a file:// pick; the
+        // browser takes the File itself.
+        if (photo.file) form.append('file', photo.file);
+        else form.append('file', { uri: photo.uri, name: photo.fileName, type: photo.mimeType } as unknown as Blob);
+        form.append('_payload', JSON.stringify({ alt: `Profile photo for ${member.name ?? member.email}` }));
+        const uploaded = await fetch(api(siteUrl, '/media'), {
+          method: 'POST',
+          credentials: 'include',
+          body: form,
+        });
+        if (!uploaded.ok) {
+          const body = (await uploaded.json().catch(() => null)) as unknown;
+          return { ok: false, message: errorText(body, `The photo could not be uploaded (${uploaded.status}).`) };
+        }
+        const body = (await uploaded.json().catch(() => null)) as { doc?: { url?: string | null } } | null;
+        const url = body?.doc?.url;
+        if (!url) return { ok: false, message: 'The photo uploaded but no file URL came back.' };
+        const base = siteUrl || (typeof location === 'undefined' ? '' : location.origin);
+        const image = url.startsWith('http') ? url : `${base}${url}`;
+        return get().updateProfile({ image });
+      } catch {
+        return unreachable;
+      }
+    },
 
     refreshSavedPlaces: async () => {
       const { siteUrl, member } = get();

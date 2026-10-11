@@ -26,10 +26,10 @@ export function MemberMenu({ siteUrl }: { siteUrl: string }) {
   }, [hydrate, siteUrl]);
 
   if (status === 'signed-in' && member) {
-    const label = member.name?.trim() || member.email;
+    const label = member.name?.trim() || 'Member';
     return (
       <Menu
-        title={member.email}
+        title={member.name?.trim() ?? 'Your account'}
         actions={[
           { id: 'profile', title: 'Your profile' },
           { id: 'sign-out', title: 'Sign out', destructive: true },

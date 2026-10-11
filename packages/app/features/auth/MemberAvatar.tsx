@@ -23,11 +23,11 @@ export function MemberAvatar({
 }: {
   name: string;
   imageUri?: string | null;
-  /** 'sm' is the navbar/account control; 'lg' is the profile page. */
-  size?: 'sm' | 'lg';
+  /** 'sm' is the navbar/account control; 'lg' a list row; 'xl' the profile masthead. */
+  size?: 'sm' | 'lg' | 'xl';
 }) {
-  const box = size === 'sm' ? 'h-8 w-8' : 'h-20 w-20';
-  const type = size === 'sm' ? 'text-[10px]' : 'text-2xl';
+  const box = size === 'sm' ? 'h-8 w-8' : size === 'lg' ? 'h-20 w-20' : 'h-28 w-28';
+  const type = size === 'sm' ? 'text-[10px]' : size === 'lg' ? 'text-2xl' : 'text-4xl';
   const initials = initialsOf(name) || 'HM';
   return (
     <View
