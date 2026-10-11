@@ -1,7 +1,7 @@
-import type { EventDoc, PlaceDoc, StoryDoc, WalkDoc } from './docs.ts';
+import type { EventDoc, MusicArtistDoc, PlaceDoc, StoryDoc, WalkDoc } from './docs.ts';
 import { harlemDayBounds } from './harlem-time.ts';
-import { mapEvent, mapPlaceRecord, mapStory, mapWalk } from './map.ts';
-import type { EventRecord, PlaceRecord, StoryRecord, WalkRecord } from './records.ts';
+import { mapEvent, mapMusicArtist, mapPlaceRecord, mapStory, mapWalk } from './map.ts';
+import type { EventRecord, MusicArtistRecord, PlaceRecord, StoryRecord, WalkRecord } from './records.ts';
 import {
   notConfigured,
   ok,
@@ -22,6 +22,7 @@ export interface ContentDocs {
   stories: StoryDoc;
   events: EventDoc;
   places: PlaceDoc;
+  'music-artists': MusicArtistDoc;
 }
 
 /** The subset of a Payload Local API `find` call the readers use. */
@@ -79,6 +80,9 @@ export interface ContentReaders {
   getPlace(slug: string): Promise<DetailResult<PlaceRecord>>;
   /** Resolves a stored generated path (osm-*, lpc-*, mon-*) for a permanent redirect. */
   getPlaceByLegacySlug(slug: string): Promise<DetailResult<PlaceRecord>>;
+  /** Published Harlem artists, name-ordered. Draft candidates never leave the CMS. */
+  listMusicArtists(): Promise<ContentResult<MusicArtistRecord[]>>;
+  getMusicArtist(slug: string): Promise<DetailResult<MusicArtistRecord>>;
 }
 
 /** Hard cap per list read. No route shows more than this today. */
@@ -211,5 +215,8 @@ export const createContentReaders = (source: ContentSource): ContentReaders => {
       const [record] = result.data;
       return record === undefined ? { status: 'not-found' } : ok(record);
     },
+    listMusicArtists: () =>
+      list({ collection: 'music-artists', where: PUBLISHED, depth: 1, limit: LIST_LIMIT, sort: 'name' }, mapMusicArtist),
+    getMusicArtist: (slug) => bySlug('music-artists', slug, mapMusicArtist),
   };
 };

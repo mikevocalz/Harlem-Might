@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
+import { createRequire, findPackageJSON } from 'node:module';
 import { BasePayload, buildConfig } from 'payload';
 import type { CollectionConfig, Field } from 'payload';
 import { postgresAdapter } from '@payloadcms/db-postgres';
@@ -10,6 +12,19 @@ const identities: CollectionConfig[] = [
   { slug: 'users', auth: true, fields: [] },
   { slug: 'members', fields: [{ name: 'email', type: 'email', required: true, unique: true }] },
 ];
+
+test('the selected dependency remains on the Payload 4 compatibility line', () => {
+  const require = createRequire(import.meta.url);
+  const adapter = require('@delmaredigital/payload-better-auth/package.json');
+  for (const name of ['payload', '@payloadcms/ui', '@payloadcms/next']) {
+    assert.equal(adapter.peerDependencies[name], '>=4.0.0-canary.37 <5');
+  }
+  for (const name of ['payload', '@payloadcms/db-postgres', '@payloadcms/ui', '@payloadcms/next']) {
+    const path = findPackageJSON(name, import.meta.url);
+    assert.ok(path, `${name} package metadata is available`);
+    assert.match(JSON.parse(readFileSync(path, 'utf8')).version, /^4\./);
+  }
+});
 
 function field(collection: CollectionConfig, name: string): Field {
   const value = collection.fields.find(candidate => 'name' in candidate && candidate.name === name);

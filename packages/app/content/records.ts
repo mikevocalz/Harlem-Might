@@ -136,6 +136,48 @@ export interface StoryRecord {
   updatedAt: string;
 }
 
+export type MusicConnection = 'born-raised' | 'resident' | 'scene' | 'east-harlem';
+
+/** A separately licensed audio file the spatial engine may play. Never a YouTube stream. */
+export interface SpatialTrackRef {
+  url: string;
+  licenseSourceUrl?: string;
+  format: 'mono' | 'stereo' | 'ambisonic';
+}
+
+/** A verified official YouTube watch/share URL for one song. */
+export interface FeaturedSongRef {
+  title?: string;
+  youtubeUrl: string;
+  /** ISO instant the curator last confirmed the video plays and allows embeds. */
+  verifiedAt?: string;
+}
+
+/** A curated Harlem artist profile. Unverified fields pass through unset, never invented. */
+export interface MusicArtistRecord {
+  id: number;
+  slug: string;
+  name: string;
+  genre: string;
+  era?: string;
+  connection: MusicConnection;
+  shortBio: string;
+  /** Plain text; paragraphs separated by blank lines. */
+  biography: string;
+  /** Rights-cleared portrait; absent until one with documented credit exists. */
+  headshot?: EditorialImage;
+  /** Licensed album artwork for the vinyl label. */
+  albumArt?: EditorialImage;
+  featuredAlbumTitle?: string;
+  xrSceneEnabled: boolean;
+  vinylRpm: '33' | '45';
+  spatialTrack?: SpatialTrackRef;
+  featuredSong?: FeaturedSongRef;
+  sources: SourceRef[];
+  /** ISO instant. */
+  updatedAt: string;
+}
+
 export type EventStatus = 'scheduled' | 'cancelled' | 'postponed';
 
 /**

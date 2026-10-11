@@ -80,6 +80,7 @@ export {
   CloudUpload,
   FileUp,
   Mic,
+  Music,
   Square,
   AudioLines,
   Play,

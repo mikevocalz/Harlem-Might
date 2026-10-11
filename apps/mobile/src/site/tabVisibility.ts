@@ -6,6 +6,7 @@ const ALL_TABS: Record<AppTabRoute, true> = {
   explore: true,
   walks: true,
   stories: true,
+  music: true,
   today: true,
   more: true,
 };
