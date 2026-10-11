@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { createNavigationHostLifecycle } from '../view/hostLifecycle.ts';
 import { AppState, Platform } from 'react-native';
 import { useNavigationStore } from '../session/navigationStore';
 import type { LocationSource } from '../view/locationSource';
@@ -8,6 +9,18 @@ import { useNavigationUi } from '../view/navigationUi.store';
 import { configureNavigationRuntime, isLocationRunning, startLocation, stopLocation } from '../view/runtime';
 
 let configured = false;
+const lifecycle = createNavigationHostLifecycle({
+  running: isLocationRunning,
+  start: startLocation,
+  stop: stopLocation,
+  mayResume: () => {
+    const session = useNavigationStore.getState().session;
+    const ui = useNavigationUi.getState();
+    const permission = ui.location === 'granted' || ui.location === 'approximate';
+    const eligible = !['idle', 'paused', 'arrived', 'error'].includes(session.phase);
+    return permission && eligible && 'origin' in session && session.origin.kind === 'device-location';
+  },
+});
 
 /**
  * Wires the navigation runtime into a host app. Call once, high in the tree
@@ -31,21 +44,9 @@ export function useNavigationHost(locationSource: () => LocationSource): void {
   }, []);
 
   useEffect(() => {
-    let resumeOnActive = false;
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') {
-        if (resumeOnActive) startLocation();
-        resumeOnActive = false;
-        return;
-      }
-      if (isLocationRunning()) {
-        const session = useNavigationStore.getState().session;
-        const fromDevice = 'origin' in session && session.origin.kind === 'device-location';
-        resumeOnActive = fromDevice || useNavigationUi.getState().directionsPlaceId !== null;
-        stopLocation();
-      }
-    });
-    return () => subscription.remove();
+    const release = lifecycle.mount(AppState.currentState === 'active');
+    const subscription = AppState.addEventListener('change', state => lifecycle.setActive(state === 'active'));
+    return () => { subscription.remove(); release(); };
   }, []);
 
   useEffect(() => {
