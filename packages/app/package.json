@@ -8,6 +8,7 @@
     ".": "./index.ts",
     "./content": "./content/index.ts",
     "./features/*": "./features/*",
+    "./providers/*": "./providers/*",
     "./providers/query-provider": "./providers/query-provider.tsx"
   },
   "scripts": {

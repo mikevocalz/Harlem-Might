@@ -36,6 +36,11 @@ export function validateWalkSession(value: unknown): asserts value is WalkSessio
     || (s.status === 'completed') !== (s.completedStopIds.length === s.stopIds.length)) {
     throw new Error('Walk progress must be a confirmed ordered prefix');
   }
+  // Each confirmation advances the revision; pausing or stopping needs another command.
+  const minimumRevision = s.completedStopIds.length + (s.status === 'paused' || s.status === 'stopped' ? 1 : 0);
+  if ((s.revision as number) < minimumRevision) {
+    throw new Error('Walk revision cannot precede confirmed progress or status');
+  }
 }
 
 export function beginWalk(walk: WalkSummary, sessionId: string, now: string): WalkSession {

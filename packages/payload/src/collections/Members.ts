@@ -14,7 +14,10 @@ export const Members: CollectionConfig = {
   slug: 'members',
   auth: {
     disableLocalStrategy: true,
-    strategies: [betterAuthStrategy()],
+    // Resolve Better Auth sessions against `members`, not the plugin's default
+    // `users` — a member id never exists in `users`, so the default left
+    // req.user null and every member REST read/write answered 403.
+    strategies: [betterAuthStrategy({ usersCollection: 'members' })],
   },
   admin: {
     useAsTitle: 'email',

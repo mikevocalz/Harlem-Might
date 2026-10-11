@@ -11,7 +11,7 @@ import {
 } from '@acme/ui/mights';
 import { Text, View } from '@acme/ui/tw';
 import { useQuery } from '@tanstack/react-query';
-import { artistPhotoProviderLabel, type ArtistPhotoResult } from './artist-photo.ts';
+import { artistPhotoImageProps, artistPhotoProviderLabel, type ArtistPhotoResult } from './artist-photo.ts';
 import { fetchArtistPhotos } from './artist-photo-client.ts';
 import { musicConnectionLabel } from './music-format.ts';
 import { musicKeys } from './music.keys.ts';
@@ -58,7 +58,7 @@ function ArtistPortrait({
         style={{ aspectRatio: Math.max(0.72, Math.min(aspect, 1.25)) }}
       >
         <Image
-          src={photo.url}
+          {...artistPhotoImageProps(photo)}
           alt={`${artist.name} artist photo`}
           fill
           contentFit="cover"
