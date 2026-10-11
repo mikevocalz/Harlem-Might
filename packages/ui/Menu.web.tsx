@@ -1,4 +1,5 @@
 'use client';
+import { useEffect, useRef } from 'react';
 import { Pressable, View } from './tw';
 import { Text } from './Text';
 import type { MenuProps } from './Menu.types';
@@ -6,13 +7,35 @@ import type { MenuProps } from './Menu.types';
 /**
  * Web menu, drawn in the kit's language.
  *
- * `details`/`summary` gives open-on-click, close-on-outside-click and Escape
- * for free, with the correct semantics — no state, no listeners, no focus trap
- * to get wrong.
+ * `details`/`summary` gives the toggle semantics for free; the listeners below
+ * add what the element doesn't do on its own — close on outside pointer,
+ * Escape, and after an action is chosen (a menu that stays open after "Sign
+ * out" reads as broken).
  */
 export function Menu({ children, actions, onAction, title, className }: MenuProps) {
+  const root = useRef<HTMLDetailsElement>(null);
+  const close = () => root.current?.removeAttribute('open');
+
+  useEffect(() => {
+    const onPointerDown = (event: Event) => {
+      const el = root.current;
+      if (el?.open && event.target instanceof Node && !el.contains(event.target)) {
+        el.removeAttribute('open');
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') root.current?.removeAttribute('open');
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, []);
+
   return (
-    <details className={`relative ${className ?? ''}`}>
+    <details ref={root} className={`relative ${className ?? ''}`}>
       <summary className="cursor-pointer list-none">{children}</summary>
       <View className="absolute right-0 top-full z-10 mt-1 min-w-48 gap-1 rounded-md border-2 border-border bg-surface-raised p-1 shadow-card">
         {title ? (
@@ -23,7 +46,11 @@ export function Menu({ children, actions, onAction, title, className }: MenuProp
             key={action.id}
             role="menuitem"
             aria-disabled={action.disabled}
-            onPress={() => !action.disabled && onAction(action.id)}
+            onPress={() => {
+              if (action.disabled) return;
+              close();
+              onAction(action.id);
+            }}
             className={`min-h-11 justify-center rounded-sm px-3 py-2 transition-colors duration-fast motion-reduce:transition-none ${
               action.disabled ? 'opacity-50' : 'hover:bg-surface-sunken'
             }`}
