@@ -172,7 +172,7 @@ catalog:
   # auth
   # Same Payload 4 Better Auth fork/pin used by NYC-Mon. Keep this pin aligned
   # with the Payload 4 line below.
-  "@delmaredigital/payload-better-auth": github:mikevocalz/payload-better-auth#86cd39928231944ac1b884048ddfc25f427c559d
+  "@delmaredigital/payload-better-auth": github:mikevocalz/payload-better-auth#f62414cd531efe828f47231bddc8fc0a8c3a5481
 
   # backend / cms
   payload: 4.0.0-canary.39
