@@ -8,10 +8,11 @@ import { Text, View } from '@acme/ui/tw';
 import { useQuery } from '@tanstack/react-query';
 import { fetchArtistPhotos } from './artist-photo-client.ts';
 import { artistPhotoProviderLabel } from './artist-photo.ts';
+import { musicKeys } from './music.keys.ts';
 
 export function MusicArtistPhoto({ artist }: { artist: MusicArtistRecord }) {
   const query = useQuery({
-    queryKey: ['music-artist-photo', artist.name],
+    queryKey: musicKeys.artistPhoto(artist.name),
     queryFn: async () => (await fetchArtistPhotos([artist.name]))[artist.name] ?? null,
     enabled: !artist.headshot,
     staleTime: 24 * 60 * 60 * 1000,
