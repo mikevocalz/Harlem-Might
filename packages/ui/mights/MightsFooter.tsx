@@ -36,7 +36,7 @@ const hydrationSafe = { suppressHydrationWarning: true } as object;
 
 export function MightsFooter() {
   return (
-    <Footer className="block border-t border-rule-hairline bg-surface pb-[calc(var(--spacing-dock)+env(safe-area-inset-bottom))] md:pb-0">
+    <Footer className="block border-t border-rule-hairline bg-surface pb-[calc(var(--spacing-dock)+env(safe-area-inset-bottom))] me:ml-rail-width me:pb-0 md:ml-0">
       <View className="mx-auto grid w-full max-w-screen-2xl gap-8 px-4 py-14 sm:px-6 md:grid-cols-12 md:gap-6">
         <View className="flex flex-col gap-3 md:col-span-6">
           <MightsWordmark height={56} />
