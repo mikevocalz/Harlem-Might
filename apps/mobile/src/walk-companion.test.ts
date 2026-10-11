@@ -223,12 +223,80 @@ test('Android foreground authority follows lifecycle state rather than transient
   assert.doesNotMatch(source, /hasWindowFocus/);
   assert.match(source, /private var foreground = false/);
   assert.match(source, /private fun active\(\) = observing && foreground/);
-  assert.match(source, /OnStartObserving[\s\S]*foreground = context\?\.lifecycleState == LifecycleState\.RESUMED/);
+  // Expo's AppContext exposes Context?, although its runtime holds a ReactApplicationContext.
+  assert.match(source, /import com\.facebook\.react\.bridge\.ReactContext/);
+  assert.match(source, /OnStartObserving[\s\S]*foreground = \(context as\? ReactContext\)\?\.lifecycleState == LifecycleState\.RESUMED/);
   assert.match(source, /OnActivityEntersForeground \{ main\.post \{ foreground = true \} \}/);
   assert.match(source, /OnActivityEntersBackground \{ main\.post \{ foreground = false; clearState\(\) \} \}/);
   for (const event of ['OnStopObserving', 'OnDestroy']) {
     assert.ok(source.includes(`${event} { main.post { observing = false; foreground = false; clearState(); removeListeners() } }`));
   }
+});
+
+test('Android authority creation checks current availability and rejects delayed lookup results', () => {
+  const source = readFileSync(new URL('../modules/walk-companion/android/src/main/java/com/harlemmight/companion/WalkCompanionModule.kt', import.meta.url), 'utf8');
+  const create = source.slice(source.indexOf('AsyncFunction("createHandoffId")'), source.indexOf('AsyncFunction("getStatus")'));
+  assert.match(create, /if \(ctx == null \|\| !active\(\)\)/);
+  assert.match(create, /getCapability\(CompanionWire\.WATCH, CapabilityClient\.FILTER_REACHABLE\)/);
+  const predicate = create.match(/if \((operation != generation \|\| !active\(\) \|\| node == null)\)/)?.[1];
+  assert.ok(predicate);
+  const reject = new Function('operation', 'generation', 'active', 'node', `return ${predicate.replace('active()', 'active')};`);
+  assert.equal(reject(1, 1, true, null), true, 'Already disconnected creation must fail');
+  assert.equal(reject(1, 1, false, { id: 'watch' }), true, 'Background creation must fail');
+  assert.equal(reject(1, 2, true, { id: 'watch' }), true, 'Loss/revocation during lookup invalidates its result');
+  assert.equal(reject(1, 1, true, { id: 'watch' }), false);
+  assert.match(create, /targetNode = node\.id; authorizedHandoff = id\s*promise\.resolve\(id\)/);
+  assert.match(source.slice(source.indexOf('AsyncFunction("publish")')), /node == null \|\| node\.id != targetNode/);
+});
+
+test('Apple authority creation validates current foreground and reachable pairing before minting an epoch', () => {
+  const source = readFileSync(new URL('../modules/walk-companion/ios/WalkCompanionModule.swift', import.meta.url), 'utf8');
+  const create = source.slice(source.indexOf('func createHandoffId()'), source.indexOf('func publish('));
+  assert.match(create, /func createHandoffId\(\) throws -> String/);
+  assert.match(source, /return try self\.bridge\.createHandoffId\(\)/);
+  const predicate = create.match(/guard (UIApplication\.shared\.applicationState == \.active, observing,[\s\S]*?) else \{/ )?.[1];
+  assert.ok(predicate);
+  const allowed = new Function('foreground', 'observing', 'hasSession', 'activated', 'paired', 'installed', 'reachable', `return ${predicate
+    .replace('UIApplication.shared.applicationState == .active', 'foreground').replace('let session', 'hasSession')
+    .replace('session.activationState == .activated', 'activated').replace('session.isPaired', 'paired')
+    .replace('session.isWatchAppInstalled', 'installed').replace('session.isReachable', 'reachable').replaceAll(/,\s*/g, ' && ')};`);
+  assert.equal(allowed(true, true, true, true, true, true, true), true);
+  for (let missing = 0; missing < 7; missing++) {
+    const state = Array(7).fill(true); state[missing] = false;
+    assert.equal(allowed(...state), false);
+  }
+  assert.ok(create.indexOf('guard ') < create.indexOf('UUID().uuidString'));
+});
+
+test('Android capability loss revokes pending authority even before any snapshot is installed', () => {
+  const source = readFileSync(new URL('../modules/walk-companion/android/src/main/java/com/harlemmight/companion/WalkCompanionModule.kt', import.meta.url), 'utf8');
+  const callback = source.slice(source.indexOf('override fun onCapabilityChanged('), source.indexOf('override fun onMessageReceived('));
+  const predicate = callback.match(/if \((info\.nodes\.size != 1 \|\| \(targetNode != null && info\.nodes\.none \{ it\.id == targetNode \}\))\) clearState\(\)/)?.[1];
+  assert.ok(predicate);
+  const revoke = new Function('nodes', 'targetNode', `return ${predicate
+    .replace('info.nodes.size', 'nodes.length').replace('info.nodes.none { it.id == targetNode }', 'nodes.every(id => id !== targetNode)')};`);
+  assert.equal(revoke([], null), true, 'A pending unbound create must be invalidated on loss');
+  assert.equal(revoke([], 'watch-a'), true, 'Created authority must be revoked before first publish');
+  assert.equal(revoke(['watch-a', 'watch-b'], null), true);
+  assert.equal(revoke(['watch-b'], 'watch-a'), true);
+  assert.equal(revoke(['watch-a'], 'watch-a'), false);
+  assert.equal(revoke(['watch-a'], null), false);
+});
+
+test('an installed snapshot still expires while an Android refresh lookup is stalled', () => {
+  const source = readFileSync(new URL('../modules/walk-companion/android/src/main/java/com/harlemmight/companion/WalkCompanionModule.kt', import.meta.url), 'utf8');
+  const predicate = source.match(/expiry = Runnable \{ if \(([^)]*)\) clearState\(\) \}/)?.[1];
+  assert.ok(predicate);
+  const expires = new Function('operation', 'generation', 'snapshotJSON', 'json', `return ${predicate};`);
+  assert.equal(expires(1, 2, 'installed-snapshot', 'installed-snapshot'), true,
+    'Starting a newer capability lookup must not disarm the installed expiry');
+  assert.equal(expires(1, 2, 'replacement-snapshot', 'installed-snapshot'), false);
+  assert.equal(expires(1, 3, null, 'installed-snapshot'), false);
+  assert.match(source, /snapshotJSON = null; targetNode = null; commands\.clear\(\)/);
+  assert.match(source, /private fun clearState\(\) \{\s*generation\+\+/);
+  // Expiry revocation changes the operation generation, so the existing
+  // asynchronous publish guard rejects that lookup when it eventually returns.
+  assert.match(source.slice(source.indexOf('AsyncFunction("publish")')), /operation != generation \|\| !active\(\)/);
 });
 
 test('Android accepts watch revocation only from the current paired node and handoff before freshness checks', () => {
