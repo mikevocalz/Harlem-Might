@@ -16,6 +16,7 @@ final class WatchWalkStore: NSObject, ObservableObject, WCSessionDelegate {
     private var pendingCount = 0
     private var invalidHandoffs = Set<String>()
     private var generation = 0
+    private var reconnectGeneration = 0
 
     override init() {
         super.init()
@@ -30,10 +31,12 @@ final class WatchWalkStore: NSObject, ObservableObject, WCSessionDelegate {
         reachable = foreground && session.activationState == .activated && session.isReachable
         guard reachable else { clear("Phone disconnected. Open both apps to reconnect."); return }
         let operation = generation
+        reconnectGeneration += 1
+        let request = reconnectGeneration
         session.sendMessage(["kind": "request", "handoffId": snapshot?.handoffId ?? ""], replyHandler: { [weak self] message in
-            DispatchQueue.main.async { if self?.generation == operation { self?.receive(message) } }
+            DispatchQueue.main.async { if self?.generation == operation && self?.reconnectGeneration == request { self?.receive(message) } }
         }, errorHandler: { [weak self] _ in
-            DispatchQueue.main.async { if self?.generation == operation { self?.clear("Phone disconnected. Open both apps to reconnect.") } }
+            DispatchQueue.main.async { if self?.generation == operation && self?.reconnectGeneration == request { self?.clear("Phone disconnected. Open both apps to reconnect.") } }
         })
     }
     func clear(_ reason: String) {
@@ -57,10 +60,15 @@ final class WatchWalkStore: NSObject, ObservableObject, WCSessionDelegate {
         if let previous = snapshot {
             if previous.handoffId == next.handoffId && (previous.sessionId != next.sessionId || next.revision < previous.revision ||
                 (previous.revision == next.revision && (CompanionWire.date(previous.updatedAt) ?? .distantFuture) > (CompanionWire.date(next.updatedAt) ?? .distantPast))) { return }
-            if previous.handoffId != next.handoffId {
-                invalidHandoffs.insert(previous.handoffId); generation += 1
-                pending = false; pendingCommand = nil; timeout?.invalidate()
-            }
+        }
+        // Any accepted phone snapshot supersedes older reconnect replies/errors,
+        // even within one handoff. Keep command timeout/ack generations intact.
+        reconnectGeneration += 1
+        if snapshot?.handoffId != next.handoffId {
+            // First adoption also supersedes any older reconnect callback.
+            generation += 1
+            if let previous = snapshot { invalidHandoffs.insert(previous.handoffId) }
+            pending = false; pendingCommand = nil; timeout?.invalidate()
         }
         let command = pendingCommand
         let matches = command?.handoffId == next.handoffId && command?.sessionId == next.sessionId &&
