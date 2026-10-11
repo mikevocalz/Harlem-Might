@@ -207,8 +207,8 @@ settings:
 catalogs:
   default:
     '@delmaredigital/payload-better-auth':
-      specifier: github:mikevocalz/payload-better-auth#f62414cd531efe828f47231bddc8fc0a8c3a5481
-      version: https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/f62414cd531efe828f47231bddc8fc0a8c3a5481
+      specifier: github:mikevocalz/payload-better-auth#5134d0b3b14f4dd5f59acbd0a0c09b2326c48f80
+      version: https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/5134d0b3b14f4dd5f59acbd0a0c09b2326c48f80
     '@eslint/eslintrc':
       specifier: ^3.3.7
       version: 3.3.7
@@ -891,7 +891,7 @@ importers:
         version: link:../../packages/widgets
       '@delmaredigital/payload-better-auth':
         specifier: 'catalog:'
-        version: https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/f62414cd531efe828f47231bddc8fc0a8c3a5481(70d8b106f9147913f3400f3ad6dd13c7)
+        version: https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/5134d0b3b14f4dd5f59acbd0a0c09b2326c48f80(70d8b106f9147913f3400f3ad6dd13c7)
       '@gsap/react':
         specifier: 'catalog:'
         version: 2.1.2(gsap@3.15.0)(react@19.3.0)
@@ -1253,7 +1253,7 @@ importers:
         version: link:../app
       '@delmaredigital/payload-better-auth':
         specifier: 'catalog:'
-        version: https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/f62414cd531efe828f47231bddc8fc0a8c3a5481(86da4e8b647e92ca2ffec3a9b723d0c5)
+        version: https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/5134d0b3b14f4dd5f59acbd0a0c09b2326c48f80(86da4e8b647e92ca2ffec3a9b723d0c5)
       '@payloadcms/db-postgres':
         specifier: 'catalog:'
         version: 4.0.0-canary.39(@electric-sql/pglite@0.5.4)(kysely@0.29.4)(payload@4.0.0-canary.39(graphql@16.14.2)(supports-color@8.1.1)(typescript@6.0.3))(supports-color@8.1.1)
@@ -2047,8 +2047,8 @@ packages:
   '@date-fns/tz@1.2.0':
     resolution: {integrity: sha512-LBrd7MiJZ9McsOgxqWX7AaxrDjcFVjWH/tIKJd7pnR7McaslGYOP1QmmiBXdJH/H/yLCT+rcQ7FaPBUxRGUtrg==}
 
-  '@delmaredigital/payload-better-auth@https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/f62414cd531efe828f47231bddc8fc0a8c3a5481':
-    resolution: {gitHosted: true, integrity: sha512-wNfClFti/SVXvTeA/zJ7IcgnrhxaskqLvsvJ+K8n0pDd0qoFeeT4P/BVNSC50c8WiPtdt08mFZ5ox37YVZAK4w==, tarball: https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/f62414cd531efe828f47231bddc8fc0a8c3a5481}
+  '@delmaredigital/payload-better-auth@https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/5134d0b3b14f4dd5f59acbd0a0c09b2326c48f80':
+    resolution: {gitHosted: true, integrity: sha512-Dp1vsPMvmShQ8j1fZxl0WXThzOebY1yJz3EWINvpVKq8UsZW+aqS/JQfkJooHP8v6IL3KgY+iUUB8BIBOxMP8Q==, tarball: https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/5134d0b3b14f4dd5f59acbd0a0c09b2326c48f80}
     version: 0.13.1
     engines: {node: '>=24.15.0'}
     peerDependencies:
@@ -10873,7 +10873,7 @@ snapshots:
 
   '@date-fns/tz@1.2.0': {}
 
-  '@delmaredigital/payload-better-auth@https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/f62414cd531efe828f47231bddc8fc0a8c3a5481(70d8b106f9147913f3400f3ad6dd13c7)':
+  '@delmaredigital/payload-better-auth@https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/5134d0b3b14f4dd5f59acbd0a0c09b2326c48f80(70d8b106f9147913f3400f3ad6dd13c7)':
     dependencies:
       '@payloadcms/ui': 4.0.0-canary.39(@types/react@19.3.0)(monaco-editor@0.55.1)(payload@4.0.0-canary.39(graphql@16.14.2)(supports-color@8.1.1)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(supports-color@8.1.1)(typescript@6.0.3)
       better-auth: 1.7.7(@tanstack/react-start@1.168.60(crossws@0.4.12(srvx@1.0.5))(esbuild@0.25.12)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(rolldown@1.2.11)(rollup@4.54.0)(supports-color@8.1.1)(webpack@5.108.4(esbuild@0.25.12)(lightningcss@1.30.1)(postcss@8.5.28)))(drizzle-kit@0.31.7(supports-color@8.1.1))(drizzle-orm@0.45.2(@electric-sql/pglite@0.5.4)(@types/pg@8.23.1)(kysely@0.29.4)(pg@8.23.1))(next@16.4.0(@babel/core@7.29.7(supports-color@8.1.1))(@types/node@26.6.4)(babel-plugin-macros@3.1.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(pg@8.23.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -10884,7 +10884,7 @@ snapshots:
       '@payloadcms/next': 4.0.0-canary.39(@types/react@19.3.0)(graphql@16.14.2)(monaco-editor@0.55.1)(next@16.4.0(@babel/core@7.29.7(supports-color@8.1.1))(@types/node@26.6.4)(babel-plugin-macros@3.1.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@4.0.0-canary.39(graphql@16.14.2)(supports-color@8.1.1)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(supports-color@8.1.1)(typescript@6.0.3)
       next: 16.4.0(@babel/core@7.29.7(supports-color@8.1.1))(@types/node@26.6.4)(babel-plugin-macros@3.1.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4)
 
-  '@delmaredigital/payload-better-auth@https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/f62414cd531efe828f47231bddc8fc0a8c3a5481(86da4e8b647e92ca2ffec3a9b723d0c5)':
+  '@delmaredigital/payload-better-auth@https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/5134d0b3b14f4dd5f59acbd0a0c09b2326c48f80(86da4e8b647e92ca2ffec3a9b723d0c5)':
     dependencies:
       '@payloadcms/ui': 4.0.0-canary.39(@types/react@19.3.0)(monaco-editor@0.55.1)(payload@4.0.0-canary.39(graphql@16.14.2)(supports-color@8.1.1)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(supports-color@8.1.1)(typescript@6.0.3)
       better-auth: 1.7.7(@tanstack/react-start@1.168.60(crossws@0.4.12)(esbuild@0.28.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(supports-color@8.1.1)(vite@8.3.2(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.77.4)(terser@5.46.0)(tsx@4.23.15)(yaml@2.8.2)))(drizzle-kit@0.31.7(supports-color@8.1.1))(drizzle-orm@0.45.2(@electric-sql/pglite@0.5.4)(@types/pg@8.23.1)(kysely@0.29.4)(pg@8.23.1))(next@16.3.8(@types/node@26.1.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(pg@8.23.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)

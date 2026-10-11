@@ -57,5 +57,31 @@ user: { modelName: 'member' }
 Therefore the generated Better Auth credential/session collections must resolve their
 `user` relationship to Payload `members`, not curator `users`. In Postgres,
 `payload.accounts.user_id` and `payload.sessions.user_id` must reference
-`payload.members(id)`. The pinned `payload-better-auth` fork includes regression
-coverage for this custom-model relationship resolution.
+`payload.members(id)`, including version mirrors. `memberAuthCollections` uses
+the plugin's supported collection customization hook to enforce these two
+relationships without changing collection access or secret-field protections.
+Offline regressions check the actual generated Payload 4 schema and the fork's
+Payload 4 authentication metadata.
+
+Keep the Payload 4-compatible `payload-better-auth` pin `5134d0b3...`. The earlier
+`f62414cd...` pin was on the Payload 3 branch, lacked the compatible built
+artifacts and carried an incorrect archive checksum. Changing its checksum alone
+does not restore compatibility. The compatible pin and lockfile checksum are
+restored together; the relationship repair is local to this application.
+
+## Database rollout and remaining integration gates
+
+Changing generated relationships does not alter existing database constraints
+when `PAYLOAD_PUSH` is false. Before enabling member signup in each environment,
+inspect `accounts.user_id`, `sessions.user_id`, and their version mirrors; verify
+that every owner is an existing member before a reviewed schema repair. Numeric
+IDs can overlap between curator users and members, so never infer ownership from
+ID existence alone. Rehearse with a staging copy and keep a rollback plan that
+preserves the same identity mapping. Do not use a broad production schema push.
+
+The previously reported production repair is not evidence that every environment
+has been migrated. This PR runs no live migration and removes no account data.
+Member REST authentication also needs the separately reviewed
+`betterAuthStrategy({ usersCollection: 'members' })` configuration in PR #56.
+Real-cookie signup/sign-in, duplicate or interrupted signup, revocation and
+account-deletion integration remain release gates.
