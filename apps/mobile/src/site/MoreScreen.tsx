@@ -1,11 +1,13 @@
 import { Linking } from 'react-native';
+import { useEffect } from 'react';
 import { useRouter } from 'solito/navigation';
 import { notify } from '@acme/ui';
 import { ChevronRight, ExternalLink } from '@acme/ui/icons';
-import { secondaryNav } from '@acme/ui/mights';
+import { secondaryNav, routes } from '@acme/ui/mights';
 import { Pressable, Text, View } from '@acme/ui/tw';
+import { useMemberSession } from '@acme/app/features/auth/member-session.ts';
 import { SitePage } from './SitePage';
-import { siteUrl } from './site-url';
+import { siteOrigin, siteUrl } from './site-url';
 
 type SecondaryLabel = (typeof secondaryNav)[number]['label'];
 
@@ -34,11 +36,38 @@ async function openOnSite(label: string, url: string) {
  */
 export function MoreScreen() {
   const router = useRouter();
-  const rows = secondaryNav.filter((item) => !STRUCK.has(item.label));
+  const sessionStatus = useMemberSession((s) => s.status);
+  const member = useMemberSession((s) => s.member);
+  const hydrate = useMemberSession((s) => s.hydrate);
+  const origin = siteOrigin();
+
+  useEffect(() => {
+    if (origin) void hydrate(origin);
+  }, [hydrate, origin]);
+
+  // A member gets their profile row and never the Sign in doors; a visitor
+  // sees the same secondary nav as the site footer.
+  const signedIn = sessionStatus === 'signed-in' && member !== null;
+  const rows = secondaryNav.filter(
+    (item) => !STRUCK.has(item.label) && !(signedIn && (item.label === 'Sign in' || item.label === 'Create account')),
+  );
 
   return (
     <SitePage title="More">
       <View className="max-w-content-detail border-t border-rule-hairline">
+        {signedIn ? (
+          <Pressable
+            role="link"
+            onPress={() => router.push(routes.profile())}
+            className="min-h-target flex-row items-center gap-3 border-b border-rule-hairline py-3 active:bg-surface-sunken"
+          >
+            <View className="flex-1 gap-0.5">
+              <Text className="font-sans text-body font-semibold text-text">Your profile</Text>
+              <Text className="font-sans text-small text-text-muted">{member?.email}</Text>
+            </View>
+            <ChevronRight size={20} className="text-text-muted" />
+          </Pressable>
+        ) : null}
         {rows.map((item) => {
           const native = NATIVE_PAGES.has(item.label);
           const url = native ? undefined : siteUrl(item.href);

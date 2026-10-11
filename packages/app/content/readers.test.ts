@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { EventDoc as Event, MediaDoc as Media, PlaceDoc as Place, StoryDoc as Story, WalkDoc as Walk } from './docs.ts';
-import { createContentReaders, type ContentDocs, type ContentQuery, type ContentSource } from './readers.ts';
+import type {
+  EventDoc as Event,
+  MediaDoc as Media,
+  MusicArtistDoc as Artist,
+  PlaceDoc as Place,
+  StoryDoc as Story,
+  WalkDoc as Walk,
+} from './docs.ts';
+import { createContentReaders, MUSIC_PAGE_SIZE, type ContentDocs, type ContentQuery, type ContentSource } from './readers.ts';
 
 // Fixtures are synthetic test data for the mapping, not content. They never
 // reach the CMS or a page.
@@ -27,6 +34,17 @@ const walk: Walk = {
 };
 
 const media: Media = { alt: 'Alt', url: '/media/a.jpg', width: 800, height: 600 };
+
+const artist = (id: number, slug: string): Artist => ({
+  id,
+  slug,
+  name: `Artist ${id}`,
+  genre: 'jazz',
+  connection: 'scene',
+  shortBio: 'Short.',
+  biography: 'Long.',
+  updatedAt: '2026-10-01T00:00:00.000Z',
+});
 
 const licensedMedia: Media = {
   id: 17,
@@ -88,6 +106,13 @@ const fakeSource = (options: FakeOptions = {}) => {
       queries.push(query);
       if (options.fail) throw options.fail;
       return (options.docs?.[query.collection] ?? []) as ContentDocs[typeof query.collection][];
+    },
+    async findPage(query) {
+      queries.push(query);
+      if (options.fail) throw options.fail;
+      const all = (options.docs?.[query.collection] ?? []) as ContentDocs[typeof query.collection][];
+      const start = ((query.page ?? 1) - 1) * query.limit;
+      return { docs: all.slice(start, start + query.limit), hasNextPage: start + query.limit < all.length, totalDocs: all.length };
     },
   };
   return { source, queries };
@@ -232,4 +257,36 @@ test('event mapping keeps cancelled status, venue fallback and provenance', asyn
     lastVerifiedAt: '2026-10-06T00:00:00.000Z',
     ticketUrl: undefined,
   });
+});
+
+test('listMusicArtistsPage pages the directory in MUSIC_PAGE_SIZE steps', async () => {
+  const docs = Array.from({ length: 50 }, (_, i) => artist(100 + i, `artist-${i}`));
+  const { source, queries } = fakeSource({ docs: { 'music-artists': docs } });
+  const readers = createContentReaders(source);
+  const first = await readers.listMusicArtistsPage(1);
+  assert.equal(first.status, 'ok');
+  if (first.status !== 'ok') return;
+  assert.equal(first.data.artists.length, MUSIC_PAGE_SIZE);
+  assert.equal(first.data.hasNextPage, true);
+  assert.equal(first.data.totalDocs, 50);
+  const last = await readers.listMusicArtistsPage(3);
+  assert.equal(last.status, 'ok');
+  if (last.status !== 'ok') return;
+  assert.equal(last.data.artists.length, 2);
+  assert.equal(last.data.hasNextPage, false);
+  assert.deepEqual(
+    queries.map((q) => [q.collection, q.page, q.limit]),
+    [
+      ['music-artists', 1, MUSIC_PAGE_SIZE],
+      ['music-artists', 3, MUSIC_PAGE_SIZE],
+    ],
+  );
+});
+
+test('listMusicArtistsPage reports a failed read without leaking it', async () => {
+  const readers = createContentReaders(fakeSource({ fail: new Error('socket hangup') }).source);
+  const result = await readers.listMusicArtistsPage(2);
+  assert.equal(result.status, 'unavailable');
+  if (result.status !== 'unavailable') return;
+  assert.equal(result.reason, 'query-failed');
 });

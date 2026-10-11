@@ -28,6 +28,7 @@ export const routes = {
   today: () => '/today',
   signIn: () => '/sign-in',
   signUp: () => '/sign-up',
+  profile: () => '/profile',
   ar: () => '/ar',
   download: () => '/download',
   about: () => '/about',

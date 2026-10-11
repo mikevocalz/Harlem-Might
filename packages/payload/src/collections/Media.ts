@@ -9,7 +9,13 @@ const staticDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 
 export const Media: CollectionConfig = {
   slug: 'media',
-  access: { read: () => true },
+  access: {
+    read: () => true,
+    // Payload's default create access only admits `users` (curators). Members
+    // upload their own profile photo through the media library, so any
+    // authenticated account may create — edits and deletes stay curator-only.
+    create: ({ req: { user } }) => Boolean(user),
+  },
   upload: {
     staticDir,
     adminThumbnail: ({ doc }) => (typeof doc.url === 'string' ? doc.url : ''),

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'solito/navigation';
 import { ErrorMessage, KeyboardAwareScroll, TextField } from '@acme/ui';
 import { Form } from '@acme/ui/primitives';
@@ -7,6 +8,7 @@ import { View, Text } from '@acme/ui/tw';
 import { MightsButton, MightsHeading, MightsText, routes } from '@acme/ui/mights';
 import { createMemberAuthActions } from './member-auth';
 import { useMemberAuth } from './member-auth.store';
+import { useMemberSession } from './member-session.ts';
 
 export type MemberAuthIntent = 'sign-in' | 'sign-up';
 
@@ -38,6 +40,9 @@ export function MemberAuthScreen({ intent, siteUrl }: MemberAuthScreenProps) {
   const begin = useMemberAuth((s) => s.begin);
   const fail = useMemberAuth((s) => s.fail);
   const succeed = useMemberAuth((s) => s.succeed);
+  const sessionStatus = useMemberSession((s) => s.status);
+  const hydrate = useMemberSession((s) => s.hydrate);
+  const signedIn = useMemberSession((s) => s.signedIn);
   const create = intent === 'sign-up';
   const emailOk = EMAIL_PATTERN.test(email.trim());
   const passwordOk = password.length >= MIN_PASSWORD_LENGTH;
@@ -67,8 +72,20 @@ export function MemberAuthScreen({ intent, siteUrl }: MemberAuthScreenProps) {
       return;
     }
     succeed();
+    // The cookie is set; pulling the session names the member and the
+    // session-status effect below lands them on their profile.
+    void signedIn(siteUrl);
     router.replace(routes.explore());
   };
+
+  // The session is checked once on mount: a member who reaches this screen
+  // already signed in goes straight to their profile.
+  useEffect(() => {
+    void hydrate(siteUrl);
+  }, [hydrate, siteUrl]);
+  useEffect(() => {
+    if (sessionStatus === 'signed-in') router.replace(routes.profile());
+  }, [sessionStatus, router]);
 
   return (
     <KeyboardAwareScroll contentContainerClassName="grow">
