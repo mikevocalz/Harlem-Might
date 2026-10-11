@@ -1,6 +1,5 @@
 export type ArtistPhotoProvider =
   | 'wikimedia_commons'
-  | 'wikipedia'
   | 'deezer'
   | 'curated_web';
 
@@ -136,11 +135,6 @@ const commonsSourceUrl = (title: string): string =>
     title.replace(/ /g, '_'),
   ).replace(/%3A/i, ':')}`;
 
-const wikipediaSourceUrl = (title: string): string =>
-  `https://en.wikipedia.org/wiki/${encodeURIComponent(
-    title.replace(/ /g, '_'),
-  ).replace(/%27/g, "'")}`;
-
 const scoreCommonsPage = (artistName: string, page: CommonsPage): number => {
   const title = page.title?.replace(/^File:/i, '') ?? '';
   if (!title || BAD_COMMONS_TOKENS.test(title)) return -1000;
@@ -264,6 +258,50 @@ const scoreWikipediaPage = (
   return score;
 };
 
+async function resolveCommonsFileByUrl(
+  name: string,
+  source: string,
+  fetcher: ArtistPhotoFetch,
+): Promise<ArtistPhotoResult | undefined> {
+  let url: URL;
+  try {
+    url = new URL(source);
+  } catch {
+    return undefined;
+  }
+  if (
+    url.hostname !== 'upload.wikimedia.org' ||
+    !url.pathname.includes('/wikipedia/commons/')
+  ) {
+    return undefined;
+  }
+
+  const basename = url.pathname.split('/').pop();
+  if (!basename) return undefined;
+  const filename = decodeURIComponent(basename).replace(/_/g, ' ');
+  const params = new URLSearchParams({
+    action: 'query',
+    format: 'json',
+    origin: '*',
+    titles: `File:${filename}`,
+    prop: 'imageinfo',
+    iiprop: 'url|size|mime|extmetadata',
+  });
+  const response = await fetcher(
+    `https://commons.wikimedia.org/w/api.php?${params.toString()}`,
+    { headers: { accept: 'application/json' } },
+  );
+  if (!response.ok) return undefined;
+  const root = asObject(await response.json());
+  const query = asObject(root?.query);
+  const pagesObject = asObject(query?.pages);
+  if (!pagesObject) return undefined;
+  const page = Object.values(pagesObject)
+    .map((value) => asObject(value) as CommonsPage | undefined)
+    .find((value): value is CommonsPage => Boolean(value?.imageinfo?.[0]?.url));
+  return page ? commonsPhoto(name, page) : undefined;
+}
+
 async function resolveWikipedia(
   name: string,
   fetcher: ArtistPhotoFetch,
@@ -301,16 +339,7 @@ async function resolveWikipedia(
     return undefined;
   }
 
-  return {
-    name,
-    url: best.original.source,
-    sourceUrl: wikipediaSourceUrl(best.title ?? name),
-    provider: 'wikipedia',
-    rightsStatus: 'provider-reference',
-    credit: 'Wikipedia / Wikimedia contributor',
-    width: best.original.width,
-    height: best.original.height,
-  };
+  return resolveCommonsFileByUrl(name, best.original.source, fetcher);
 }
 
 const deezerExactMatch = (
@@ -423,7 +452,6 @@ export const isArtistPhotoResult = (
       (object?.rightsStatus === 'rights-cleared' ||
         object?.rightsStatus === 'provider-reference') &&
       (provider === 'wikimedia_commons' ||
-        provider === 'wikipedia' ||
         provider === 'deezer' ||
         provider === 'curated_web'),
   );
@@ -436,8 +464,6 @@ export const artistPhotoProviderLabel = (
   switch (provider) {
     case 'wikimedia_commons':
       return 'Wikimedia Commons';
-    case 'wikipedia':
-      return 'Wikipedia';
     case 'deezer':
       return 'Deezer';
     case 'curated_web':
