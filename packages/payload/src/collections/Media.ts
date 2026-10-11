@@ -2,6 +2,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { CollectionConfig } from 'payload';
 import { validateOptionalUrl } from '../fields/provenance';
+import { curatorOnly } from '../access/editorial.ts';
+import { memberMediaCreate, stripMemberMediaMetadata, validateMemberMedia } from '../access/member-media.ts';
 
 // staticDir must be absolute: Payload's default resolves against process.cwd(),
 // which is apps/web when Next serves the API — not this package's media dir.
@@ -11,10 +13,13 @@ export const Media: CollectionConfig = {
   slug: 'media',
   access: {
     read: () => true,
-    // Payload's default create access only admits `users` (curators). Members
-    // upload their own profile photo through the media library, so any
-    // authenticated account may create — edits and deletes stay curator-only.
-    create: ({ req: { user } }) => Boolean(user),
+    create: memberMediaCreate,
+    update: curatorOnly,
+    delete: curatorOnly,
+  },
+  hooks: {
+    beforeOperation: [stripMemberMediaMetadata],
+    beforeValidate: [validateMemberMedia],
   },
   upload: {
     staticDir,

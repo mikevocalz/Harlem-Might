@@ -252,7 +252,7 @@ export const createContentReaders = (source: ContentSource): ContentReaders => {
           where: PUBLISHED,
           depth: 1,
           limit: MUSIC_PAGE_SIZE,
-          sort: 'name',
+          sort: 'name,id',
           page,
         });
         return ok({

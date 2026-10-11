@@ -20,6 +20,7 @@ export function MemberMenu({ siteUrl, menuSide }: { siteUrl: string; menuSide?: 
   const hydrate = useMemberSession((s) => s.hydrate);
   const signOut = useMemberSession((s) => s.signOut);
   const router = useRouter();
+  const signOutError = useMemberSession((s) => s.signOutError);
 
   const refresh = useMemberSession((s) => s.refresh);
 
@@ -47,11 +48,15 @@ export function MemberMenu({ siteUrl, menuSide }: { siteUrl: string; menuSide?: 
     };
   }, [siteUrl, refresh]);
 
+  if (signOutError) {
+    return <MightsButton onPress={() => void signOut()} variant="outline" size="sm">Retry sign out</MightsButton>;
+  }
+
   if (status === 'signed-in' && member) {
     const label = member.name?.trim() || 'Member';
     return (
       <Menu
-        title={member.name?.trim() ?? 'Your account'}
+        title={member.name?.trim() || 'Your account'}
         menuSide={menuSide}
         actions={[
           { id: 'profile', title: 'Your profile' },

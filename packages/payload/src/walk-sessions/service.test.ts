@@ -102,6 +102,84 @@ test('revocation between lookup and mutation fails closed; replay also needs cur
   await assert.rejects(executeWalkCommand(deps, start), hasCode('sign-in-required'));
 });
 
+test('logout and account changes during storage reads cannot disclose reads, replays or conflicts', async (t) => {
+  for (const member of [null, 2]) {
+    for (const path of ['read', 'replay', 'revision-conflict', 'command-limit', 'invalid-transition', 'command-id-conflict']) {
+      await t.test(`${path} after identity becomes ${member}`, async () => {
+        const { deps, rows, setMember } = fixture();
+        await executeWalkCommand(deps, start);
+        const record = rows.get('1:s1')!;
+        if (path === 'command-limit') {
+          record.receipts.push(...Array.from({ length: MAX_WALK_COMMANDS - 1 }, (_, index) => ({
+            commandId: `prior-${index}`, fingerprint: 'prior-accepted-command',
+          })));
+        }
+        const read = deps.repository.read;
+        deps.repository.read = async (...args) => {
+          const snapshot = await read(...args);
+          setMember(member);
+          return snapshot;
+        };
+        const input = path === 'replay' ? start
+          : path === 'command-id-conflict' ? { ...start, walkId: 'other' }
+          : path === 'invalid-transition' ? { ...command('pause'), type: 'confirm-stop', stopId: '2', confirmed: true }
+          : command('pause', path === 'revision-conflict' ? 1 : 0);
+        const response = path === 'read'
+          ? await handleReadWalkSession(deps, 's1')
+          : await handleWalkCommand(request(input), deps, ['https://harlem.example']);
+        assert.equal(response.status, 401);
+        assert.deepEqual(await response.json(), { schemaVersion: 1, code: 'sign-in-required' });
+        assert.equal(rows.get('1:s1')?.session.revision, 0);
+      });
+    }
+  }
+});
+
+test('revocation while writes complete cannot return a private snapshot', async (t) => {
+  for (const member of [null, 2]) {
+    for (const operation of ['insert', 'compareAndSwap'] as const) {
+      await t.test(`${operation} after identity becomes ${member}`, async () => {
+        const { deps, setMember } = fixture();
+        if (operation === 'compareAndSwap') await executeWalkCommand(deps, start);
+        const write = deps.repository[operation].bind(deps.repository);
+        deps.repository[operation] = async (record: StoredWalkSession, generation: number = 0) => {
+          const accepted = await write(record, generation);
+          setMember(member);
+          return accepted;
+        };
+        const response = await handleWalkCommand(request(operation === 'insert' ? start : command('pause')), deps, ['https://harlem.example']);
+        assert.equal(response.status, 401);
+        assert.deepEqual(await response.json(), { schemaVersion: 1, code: 'sign-in-required' });
+      });
+    }
+  }
+});
+
+test('the final contention read rechecks identity and validates data before returning conflict state', async (t) => {
+  for (const failure of ['revoked', 'changed', 'corrupt']) {
+    await t.test(failure, async () => {
+      const { deps, setMember } = fixture();
+      await executeWalkCommand(deps, start);
+      deps.repository.compareAndSwap = async () => false;
+      let reads = 0;
+      const read = deps.repository.read;
+      deps.repository.read = async (...args) => {
+        const record = await read(...args);
+        if (++reads === 4) {
+          if (failure === 'corrupt') record!.session = { ...record!.session, token: 'never-expose' } as never;
+          else setMember(failure === 'changed' ? 2 : null);
+        }
+        return record;
+      };
+      const response = await handleWalkCommand(request(command('pause')), deps, ['https://harlem.example']);
+      assert.equal(response.status, failure === 'corrupt' ? 503 : 401);
+      const body = await response.json();
+      assert.equal('session' in body, false);
+      assert.equal(JSON.stringify(body).includes('never-expose'), false);
+    });
+  }
+});
+
 test('start loads authoritative published route; arbitrary identities, route data and fields rejected', async () => {
   const { deps, rows, unpublish } = fixture();
   for (const input of [{...start, owner: 2}, {...start, stopIds: ['fake']}, {...start, latitude: 42}]) {

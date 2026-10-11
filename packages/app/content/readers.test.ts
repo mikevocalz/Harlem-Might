@@ -269,6 +269,7 @@ test('listMusicArtistsPage pages the directory in MUSIC_PAGE_SIZE steps', async 
   assert.equal(first.data.artists.length, MUSIC_PAGE_SIZE);
   assert.equal(first.data.hasNextPage, true);
   assert.equal(first.data.totalDocs, 50);
+  assert.equal(queries[0]?.sort, 'name,id', 'same-name artists need a stable unique tie-breaker');
   const last = await readers.listMusicArtistsPage(3);
   assert.equal(last.status, 'ok');
   if (last.status !== 'ok') return;
