@@ -41,6 +41,8 @@ export interface MemberAuthenticationAttempt {
 }
 
 interface MemberSessionState {
+  /** Explicit auth boundaries remain observable even when owner/status do not change. */
+  authBoundary: number;
   status: MemberSessionStatus;
   member: MemberProfile | null;
   savedPlaces: SavedPlaceEntry[];
@@ -148,7 +150,7 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
     }
   };
 
-  const load = async (siteUrl: string, newSession = false, confirmedScope?: MemberScope) => {
+  const load = async (siteUrl: string, newSession: 'hydrate' | 'authentication' | false = false, confirmedScope?: MemberScope) => {
     // A login may already have changed the cookie before its response body
     // settles. No read may certify an identity inside that window.
     if (authentication) return;
@@ -170,7 +172,7 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
     // background. Initial/auth-boundary and ordinary refreshes remain fail-closed.
     const backgroundScope = !boundary && confirmedScope && owns(confirmedScope)
       && get().status === 'signed-in' ? confirmedScope : null;
-    if (!backgroundScope) set({ status: 'loading', siteUrl, ...(boundary ? { member: null, savedPlaces: [], signOutError: null } : {}) });
+    if (!backgroundScope) set({ status: 'loading', siteUrl, ...(boundary ? { member: null, savedPlaces: [], signOutError: null, ...(newSession === 'authentication' ? { authBoundary: generation } : {}) } : {}) });
     try {
       if (!current()) return;
       const member = await getSession(siteUrl, controller.signal);
@@ -222,6 +224,7 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
   };
 
   return {
+    authBoundary: 0,
     status: 'idle',
     member: null,
     savedPlaces: [],
@@ -234,7 +237,7 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
 
     hydrate: async (siteUrl) => {
       if (get().status !== 'idle') return;
-      await load(siteUrl, true);
+      await load(siteUrl, 'hydrate');
     },
 
     beginAuthentication: (siteUrl) => {
@@ -245,7 +248,7 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
       const startedGeneration = generation;
       const isCurrent = () => authentication === controller && generation === startedGeneration
         && !controller.signal.aborted && get().siteUrl === siteUrl;
-      set({ status: 'loading', siteUrl, member: null, savedPlaces: [], signOutError: null });
+      set({ status: 'loading', siteUrl, member: null, savedPlaces: [], signOutError: null, authBoundary: generation });
       return {
         signal: controller.signal,
         isCurrent,
@@ -261,7 +264,7 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
       };
     },
 
-    signedIn: (siteUrl) => load(siteUrl, true),
+    signedIn: (siteUrl) => load(siteUrl, 'authentication'),
 
     refresh: async () => {
       await load(get().siteUrl);
@@ -332,7 +335,7 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
       logout = operation;
       // Invalidate and hide private data before the network can yield. A late
       // logout response must never overwrite a newer sign-in.
-      set({ status: 'signed-out', member: null, savedPlaces: [], signOutError: null });
+      set({ status: 'signed-out', member: null, savedPlaces: [], signOutError: null, authBoundary: generation });
       operation.promise = (async () => {
         try {
           if (logout !== operation || operation.controller.signal.aborted) return;
@@ -343,9 +346,15 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
             headers: { 'Content-Type': 'application/json' },
             body: '{}',
           });
-          if (logout === operation && !response.ok) {
+          if (logout !== operation || operation.controller.signal.aborted) return;
+          if (!response.ok) {
             set({ signOutError: `Sign-out could not be confirmed (${response.status}). Please retry before leaving this device.` });
+            return;
           }
+          // A separate transport may have verified the still-valid cookie while
+          // logout was pending. Revoke that work again once deletion is confirmed.
+          invalidate();
+          set({ authBoundary: generation });
         } catch {
           if (logout === operation && !operation.controller.signal.aborted) {
             set({ signOutError: 'Sign-out could not be confirmed. Check your connection and retry before leaving this device.' });
