@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  artistPhotoProviderLabel,
   normalizeArtistName,
   resolveArtistPhoto,
   resolveArtistPhotos,
@@ -32,7 +33,8 @@ describe('resolveArtistPhoto', () => {
             id: 1,
             name: "Cam'ron",
             link: 'https://www.deezer.com/artist/1',
-            picture_xl: 'https://e-cdns-images.dzcdn.net/images/artist/camron/1000x1000.jpg',
+            picture_xl:
+              'https://e-cdns-images.dzcdn.net/images/artist/camron/1000x1000.jpg',
           },
         ],
       });
@@ -44,25 +46,107 @@ describe('resolveArtistPhoto', () => {
     assert.match(result?.url ?? '', /dzcdn\.net/);
   });
 
-  it('skips Deezer for an ambiguous stage name and uses a Commons photo instead', async () => {
+  it('pins T-Rex and Bloodshed to curated correct-person photos', async () => {
+    const fetcher: ArtistPhotoFetch = async () => {
+      throw new Error('curated overrides must not perform a name search');
+    };
+
+    const trex = await resolveArtistPhoto('T-Rex', fetcher);
+    assert.equal(trex?.provider, 'curated_web');
+    assert.match(trex?.sourceUrl ?? '', /battlerapstats/);
+
+    const bloodshed = await resolveArtistPhoto('Bloodshed', fetcher);
+    assert.equal(bloodshed?.provider, 'curated_web');
+    assert.match(bloodshed?.sourceUrl ?? '', /xxlmag/);
+  });
+
+  it('uses an entity-aware Wikipedia musician result before raw Commons search', async () => {
     const calls: string[] = [];
     const fetcher: ArtistPhotoFetch = async (url) => {
       calls.push(url);
+      if (url.startsWith('https://api.deezer.com/')) {
+        return response({ data: [] });
+      }
+      if (url.startsWith('https://en.wikipedia.org/')) {
+        return response({
+          query: {
+            pages: {
+              '1': {
+                pageid: 1,
+                title: 'Bill Saxton',
+                original: {
+                  source:
+                    'https://upload.wikimedia.org/wikipedia/commons/1/11/Bill_Saxton.jpg',
+                  width: 800,
+                  height: 1200,
+                },
+                terms: {
+                  description: ['American jazz saxophonist'],
+                },
+              },
+            },
+          },
+        });
+      }
+      throw new Error('Commons should not be reached after a strong Wikipedia match');
+    };
+
+    const result = await resolveArtistPhoto('Bill Saxton', fetcher);
+    assert.equal(result?.provider, 'wikipedia');
+    assert.equal(calls.length, 2);
+    assert.match(result?.sourceUrl ?? '', /en\.wikipedia\.org\/wiki\/Bill_Saxton/);
+  });
+
+  it('rejects Commons files whose subject does not match the artist', async () => {
+    const fetcher: ArtistPhotoFetch = async (url) => {
+      if (url.startsWith('https://api.deezer.com/')) {
+        return response({ data: [] });
+      }
+      if (url.startsWith('https://en.wikipedia.org/')) {
+        return response({ query: { pages: {} } });
+      }
       return response({
         query: {
           pages: {
             '1': {
-              title: 'File:T-Rex rapper portrait.jpg',
+              title: 'File:Random astronomy image.jpg',
               imageinfo: [
                 {
-                  url: 'https://upload.wikimedia.org/wikipedia/commons/a/ab/T-Rex_rapper_portrait.jpg',
+                  url:
+                    'https://upload.wikimedia.org/wikipedia/commons/1/11/Random_astronomy.jpg',
                   width: 800,
                   height: 1200,
                   mime: 'image/jpeg',
                   extmetadata: {
-                    Artist: { value: 'Example Photographer' },
+                    Artist: { value: 'Bill Saxton' },
+                    Description: { value: 'An artist depiction of a galaxy cluster.' },
+                    LicenseShortName: { value: 'CC BY 4.0' },
+                    LicenseUrl: {
+                      value: 'https://creativecommons.org/licenses/by/4.0/',
+                    },
+                  },
+                },
+              ],
+            },
+            '2': {
+              title: 'File:Black Ivory In Harlem, N.Y..jpg',
+              imageinfo: [
+                {
+                  url:
+                    'https://upload.wikimedia.org/wikipedia/commons/2/22/Black_Ivory_In_Harlem.jpg',
+                  width: 900,
+                  height: 1200,
+                  mime: 'image/jpeg',
+                  extmetadata: {
+                    Artist: { value: 'Vannessajg' },
+                    Description: {
+                      value:
+                        'Leroy Burgess, Stuart Bascombe and Russell Patterson of Black Ivory in Harlem.',
+                    },
                     LicenseShortName: { value: 'CC BY-SA 4.0' },
-                    LicenseUrl: { value: 'https://creativecommons.org/licenses/by-sa/4.0/' },
+                    LicenseUrl: {
+                      value: 'https://creativecommons.org/licenses/by-sa/4.0/',
+                    },
                   },
                 },
               ],
@@ -72,53 +156,19 @@ describe('resolveArtistPhoto', () => {
       });
     };
 
-    const result = await resolveArtistPhoto('T-Rex', fetcher);
-    assert.equal(calls.length, 1);
-    assert.match(calls[0] ?? '', /^https:\/\/commons\.wikimedia\.org\/w\/api\.php/);
+    const result = await resolveArtistPhoto('Stuart Bascombe', fetcher);
     assert.equal(result?.provider, 'wikimedia_commons');
-    assert.equal(result?.credit, 'Example Photographer');
-    assert.equal(result?.license, 'CC BY-SA 4.0');
+    assert.match(result?.url ?? '', /Black_Ivory/);
+    assert.equal(result?.credit, 'Vannessajg');
   });
+});
 
-  it('rejects logos/signatures when choosing from Commons results', async () => {
-    const fetcher: ArtistPhotoFetch = async () =>
-      response({
-        query: {
-          pages: {
-            '1': {
-              title: 'File:Bloodshed logo.png',
-              imageinfo: [
-                {
-                  url: 'https://upload.wikimedia.org/wikipedia/commons/1/11/Bloodshed_logo.png',
-                  width: 900,
-                  height: 300,
-                  mime: 'image/png',
-                  extmetadata: {},
-                },
-              ],
-            },
-            '2': {
-              title: 'File:Bloodshed rapper portrait.jpg',
-              imageinfo: [
-                {
-                  url: 'https://upload.wikimedia.org/wikipedia/commons/2/22/Bloodshed_rapper_portrait.jpg',
-                  width: 900,
-                  height: 1200,
-                  mime: 'image/jpeg',
-                  extmetadata: {
-                    Artist: { value: 'Photographer' },
-                    LicenseShortName: { value: 'CC BY 2.0' },
-                    LicenseUrl: { value: 'https://creativecommons.org/licenses/by/2.0/' },
-                  },
-                },
-              ],
-            },
-          },
-        },
-      });
-
-    const result = await resolveArtistPhoto('Bloodshed', fetcher);
-    assert.match(result?.url ?? '', /portrait/);
+describe('artistPhotoProviderLabel', () => {
+  it('labels every supported provider', () => {
+    assert.equal(artistPhotoProviderLabel('wikimedia_commons'), 'Wikimedia Commons');
+    assert.equal(artistPhotoProviderLabel('wikipedia'), 'Wikipedia');
+    assert.equal(artistPhotoProviderLabel('deezer'), 'Deezer');
+    assert.equal(artistPhotoProviderLabel('curated_web'), 'Verified artist source');
   });
 });
 
@@ -127,15 +177,26 @@ it('resolveArtistPhotos preserves every requested artist key', async () => {
     const parsed = new URL(url);
     const name = parsed.searchParams.get('q') ?? 'Artist';
     return response({
-      data: [{
-        name,
-        link: 'https://www.deezer.com/artist/1',
-        picture_big: `https://e-cdns-images.dzcdn.net/images/artist/${encodeURIComponent(name)}/500x500.jpg`,
-      }],
+      data: [
+        {
+          name,
+          link: 'https://www.deezer.com/artist/1',
+          picture_big: `https://e-cdns-images.dzcdn.net/images/artist/${encodeURIComponent(
+            name,
+          )}/500x500.jpg`,
+        },
+      ],
     });
   };
 
-  const result = await resolveArtistPhotos(['Cam\'ron', 'Big L', 'Ma$e'], fetcher, 2);
-  assert.deepEqual(Object.keys(result).sort(), ['Big L', "Cam'ron", 'Ma$e'].sort());
+  const result = await resolveArtistPhotos(
+    ["Cam'ron", 'Big L', 'Ma$e'],
+    fetcher,
+    2,
+  );
+  assert.deepEqual(
+    Object.keys(result).sort(),
+    ['Big L', "Cam'ron", 'Ma$e'].sort(),
+  );
   assert.equal(result['Big L']?.provider, 'deezer');
 });
