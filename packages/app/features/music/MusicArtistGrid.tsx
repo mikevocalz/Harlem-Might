@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { artistPhotoProviderLabel, type ArtistPhotoResult } from './artist-photo.ts';
 import { fetchArtistPhotos } from './artist-photo-client.ts';
 import { musicConnectionLabel } from './music-format.ts';
+import { musicKeys } from './music.keys.ts';
 
 function ArtistPortrait({
   artist,
@@ -126,7 +127,7 @@ function ArtistCard({
 export function MusicArtistGrid({ artists }: { artists: readonly MusicArtistRecord[] }) {
   const unresolvedNames = artists.filter((artist) => !artist.headshot).map((artist) => artist.name);
   const query = useQuery({
-    queryKey: ['music-artist-photos', unresolvedNames],
+    queryKey: musicKeys.artistPhotos(unresolvedNames),
     queryFn: () => fetchArtistPhotos(unresolvedNames),
     enabled: unresolvedNames.length > 0,
     staleTime: 24 * 60 * 60 * 1000,
