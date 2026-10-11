@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { AppQueryProvider } from '@acme/app';
+import { AppQueryProvider } from '@acme/app/providers/query-provider';
 import { Document } from '../Document';
 import { SiteMotionShell } from '../../components/site/SiteMotionShell';
 import '../rn-globals';
