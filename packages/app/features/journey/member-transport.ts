@@ -49,16 +49,23 @@ export function createMemberJourneyTransport(baseUrl = '', request: typeof fetch
         method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(command), signal: lifetime.signal,
       });
       assertCurrent(version);
-      const body = await response.json();
+      // Auth failures must revoke the journey even when a proxy returns HTML or no body.
+      if (response.status === 401 || response.status === 403) throw new JourneyIdentityChanged();
+      const saveError = 'Could not save your walk. Reconnect and try again.';
+      if (!response.ok && response.status !== 409) throw new Error(saveError);
+      const body = await response.json().catch(() => {
+        // Cancellation still wins if the pending body fails to parse after logout.
+        assertCurrent(version);
+        throw new Error(response.ok ? 'Unsupported walk response.' : saveError);
+      });
       assertCurrent(version);
       if (response.status === 409 && body?.code === 'revision-conflict') {
         validateWalkSession(body.session);
         if (body.session.sessionId !== command.sessionId) throw new Error('The service returned a different walk session.');
         throw new JourneyConflict(body.session);
       }
-      if (response.status === 401 || response.status === 403) throw new JourneyIdentityChanged();
-      if (!response.ok) throw new Error('Could not save your walk. Reconnect and try again.');
-      if (body.schemaVersion !== 1) throw new Error('Unsupported walk response.');
+      if (!response.ok) throw new Error(saveError);
+      if (body?.schemaVersion !== 1) throw new Error('Unsupported walk response.');
       validateWalkSession(body.session);
       if (body.session.sessionId !== command.sessionId) throw new Error('The service returned a different walk session.');
       return body.session;

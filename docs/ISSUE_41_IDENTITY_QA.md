@@ -1,5 +1,20 @@
 # Issue #41: identity and watch revocation repair
 
+## Validation record scope
+
+This document preserves a historical review. The original local totals below
+do not identify an exact tested-head SHA or hosted run ID. They are historical
+context, not acceptance evidence for the current PR head.
+
+A later, separately verified snapshot is commit
+`3a7cef7b8ea65dc7792ee4b3780cfc64adb25a2a`, tree
+`219b81a0d13465fd4ffc81ec4e657011bdb8522e`.
+[CI run 38169026504](https://github.com/mikevocalz/Harlem-Might/actions/runs/38169026504)
+passed 942 tests and all 28 build/typecheck/lint tasks. Its actual checkout,
+`3bc02921357c00de26de0f4794d3d4f80f8699d3`, has that same tree. This records
+that snapshot only; later revisions require their own checks. Hosted source
+checks do not establish native compilation or real-device acceptance.
+
 ## Scope and integration
 
 This repair is based on the combined `feat/issue-41-integrated` snapshot
@@ -78,7 +93,7 @@ pnpm --filter web test
 pnpm turbo run build typecheck lint
 ```
 
-## Local validation and limits
+## Historical local validation and limits
 
 - 757 package tests passed: shared app 476, mobile 203, Payload 17, widgets 9,
   spatial 23, web 22, mobile scripts 7.

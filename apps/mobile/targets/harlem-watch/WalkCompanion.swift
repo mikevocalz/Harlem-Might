@@ -39,9 +39,17 @@ final class WatchWalkStore: NSObject, ObservableObject, WCSessionDelegate {
             DispatchQueue.main.async { if self?.generation == operation && self?.reconnectGeneration == request { self?.clear("Phone disconnected. Open both apps to reconnect.") } }
         })
     }
-    func clear(_ reason: String) {
+    private func notifyPhoneCleared(_ handoff: String) {
+        let session = WCSession.default
+        guard CompanionWire.text(handoff), session.activationState == .activated, session.isReachable else { return }
+        session.sendMessage(["kind": "clear", "handoffId": handoff], replyHandler: { _ in }, errorHandler: nil)
+    }
+    func clear(_ reason: String, notifyPhone: Bool = true) {
         generation += 1
-        if let snapshot { invalidHandoffs.insert(snapshot.handoffId) }
+        if let snapshot {
+            invalidHandoffs.insert(snapshot.handoffId)
+            if notifyPhone { notifyPhoneCleared(snapshot.handoffId) }
+        }
         snapshot = nil; pending = false; pendingCommand = nil
         timeout?.invalidate(); expiry?.invalidate(); status = reason
     }
@@ -52,11 +60,12 @@ final class WatchWalkStore: NSObject, ObservableObject, WCSessionDelegate {
             // A clear may overtake its snapshot. Tombstone that epoch even if
             // it was never rendered; a delayed snapshot must not resurrect it.
             if CompanionWire.text(cleared) { invalidHandoffs.insert(cleared) }
-            if snapshot == nil || cleared == snapshot?.handoffId { clear("Share your walk again from the phone.") }
+            if snapshot == nil || cleared == snapshot?.handoffId { clear("Share your walk again from the phone.", notifyPhone: false) }
             return
         }
         guard message["kind"] as? String == "snapshot", let json = message["json"] as? String,
-              let next = CompanionSnapshot.decode(json), !invalidHandoffs.contains(next.handoffId) else { return }
+              let next = CompanionSnapshot.decode(json) else { return }
+        if invalidHandoffs.contains(next.handoffId) { notifyPhoneCleared(next.handoffId); return }
         if let previous = snapshot {
             if previous.handoffId == next.handoffId && (previous.sessionId != next.sessionId || next.revision < previous.revision ||
                 (previous.revision == next.revision && (CompanionWire.date(previous.updatedAt) ?? .distantFuture) > (CompanionWire.date(next.updatedAt) ?? .distantPast))) { return }

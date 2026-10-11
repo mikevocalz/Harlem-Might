@@ -8,7 +8,8 @@ export function useJourneyPlatform(): void {
   useNavigationHost(source);
   useEffect(() => {
     const check = () => { if (document.visibilityState === 'visible') void journeyController().checkIdentity(); };
-    check(); window.addEventListener('focus', check); document.addEventListener('visibilitychange', check);
+    if (document.visibilityState === 'visible') void journeyController().checkIdentity('mount');
+    window.addEventListener('focus', check); document.addEventListener('visibilitychange', check);
     return () => { window.removeEventListener('focus', check); document.removeEventListener('visibilitychange', check); };
   }, []);
 }
