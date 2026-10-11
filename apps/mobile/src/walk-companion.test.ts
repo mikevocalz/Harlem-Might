@@ -289,6 +289,47 @@ test('source-derived CLEAR guards reject wrong peers and stale epochs after revo
   assert.equal(apple('', ''), false);
 });
 
+test('rejected requests revoke authorization only for the bound watch epoch before replying CLEAR', () => {
+  const kotlin = readFileSync(new URL('../modules/walk-companion/android/src/main/java/com/harlemmight/companion/WalkCompanionModule.kt', import.meta.url), 'utf8');
+  const swift = readFileSync(new URL('../modules/walk-companion/ios/WalkCompanionModule.swift', import.meta.url), 'utf8');
+  const android = kotlin.slice(kotlin.indexOf('val current = snapshotJSON'), kotlin.indexOf('if (event.path == CompanionWire.REQUEST) { send('));
+  const apple = swift.slice(swift.indexOf('guard UIApplication.shared.applicationState == .active, self.observing,'), swift.indexOf('if message["kind"] as? String == "request" {'));
+  assert.match(android, /if \(event\.path == CompanionWire\.REQUEST\) \{\s*if \(event\.sourceNodeId == targetNode && handoffId\.isNotEmpty\(\) &&\s*event\.data\.toString\(Charsets\.UTF_8\) == handoffId\) clearState\(\)/);
+  assert.ok(android.indexOf('clearState()') < android.indexOf('send(event.sourceNodeId, CompanionWire.CLEAR'));
+  assert.match(apple, /if message\["kind"\] as\? String == "request",\s*CompanionWire\.text\(rejectedHandoff\), rejectedHandoff == self\.handoffId \{ self\.clear\(\) \}/);
+  assert.doesNotMatch(apple, /self\.snapshotJSON = nil/);
+  assert.ok(apple.indexOf('self.clear()') < apple.indexOf('replyHandler(["kind": "clear"'));
+});
+
+test('source-derived rejected REQUEST predicates preserve other peers and newer opt-ins', () => {
+  const kotlin = readFileSync(new URL('../modules/walk-companion/android/src/main/java/com/harlemmight/companion/WalkCompanionModule.kt', import.meta.url), 'utf8');
+  const swift = readFileSync(new URL('../modules/walk-companion/ios/WalkCompanionModule.swift', import.meta.url), 'utf8');
+  const rejected = kotlin.slice(kotlin.indexOf('val current = snapshotJSON'), kotlin.indexOf('if (event.path == CompanionWire.REQUEST) { send('));
+  const guard = rejected.match(/if \((event\.sourceNodeId == targetNode && handoffId\.isNotEmpty\(\) &&\s*event\.data\.toString\(Charsets\.UTF_8\) == handoffId)\) clearState\(\)/)?.[1];
+  const appleGuard = swift.match(/if (message\["kind"\] as\? String == "request",\s*CompanionWire\.text\(rejectedHandoff\), rejectedHandoff == self\.handoffId) \{ self\.clear\(\) \}/)?.[1];
+  assert.ok(guard); assert.ok(appleGuard);
+  assert.match(rejected, /event\.sourceNodeId != targetNode \|\| !active\(\) \|\| current == null/);
+  assert.match(rejected, /if \(event\.path == CompanionWire\.REQUEST\)/);
+  const androidBound = new Function('sourceNode', 'pairedNode', 'incoming', 'current', `return ${guard
+    .replaceAll('event.sourceNodeId', 'sourceNode').replaceAll('targetNode', 'pairedNode')
+    .replaceAll('handoffId.isNotEmpty()', '(current.length > 0)')
+    .replaceAll('event.data.toString(Charsets.UTF_8)', 'incoming').replaceAll('handoffId', 'current')};`);
+  const appleBound = new Function('kind', 'incoming', 'current', `return ${appleGuard
+    .replace('message["kind"] as? String', 'kind').replace('CompanionWire.text(rejectedHandoff)', '(incoming.length > 0 && incoming.length <= 160)')
+    .replaceAll(/,\s*/g, ' && ').replaceAll('rejectedHandoff', 'incoming').replace('self.handoffId', 'current')};`);
+  for (const [active, fresh] of [[false, true], [true, false], [false, false]]) {
+    const refuses = !active || !fresh;
+    assert.equal(refuses && androidBound('paired', 'paired', 'epoch', 'epoch'), true);
+    assert.equal(refuses && appleBound('request', 'epoch', 'epoch'), true);
+    assert.equal(refuses && androidBound('other', 'paired', 'epoch', 'epoch'), false);
+    for (const current of ['', 'new-epoch']) {
+      assert.equal(refuses && androidBound('paired', 'paired', 'epoch', current), false);
+      assert.equal(refuses && appleBound('request', 'epoch', current), false);
+    }
+    assert.equal(refuses && appleBound('command', 'epoch', 'epoch'), false);
+  }
+});
+
 // Structural source invariants, not a Swift/Kotlin or paired-device runtime test.
 // The nil-to-first-snapshot adoption must invalidate the generation captured by
 // reconnect, just like replacement of a non-null older handoff does.

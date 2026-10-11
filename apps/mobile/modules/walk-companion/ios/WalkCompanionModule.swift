@@ -114,8 +114,10 @@ private final class PhoneWalkBridge: NSObject, WCSessionDelegate {
             }
             guard UIApplication.shared.applicationState == .active, self.observing,
                   let json = self.snapshotJSON, let snapshot = CompanionSnapshot.decode(json) else {
-                self.snapshotJSON = nil
-                replyHandler(["kind": "clear", "handoffId": message["handoffId"] as? String ?? ""]); return
+                let rejectedHandoff = message["handoffId"] as? String ?? ""
+                if message["kind"] as? String == "request",
+                   CompanionWire.text(rejectedHandoff), rejectedHandoff == self.handoffId { self.clear() }
+                replyHandler(["kind": "clear", "handoffId": rejectedHandoff]); return
             }
             if message["kind"] as? String == "request" {
                 replyHandler(["kind": "snapshot", "json": json]); return

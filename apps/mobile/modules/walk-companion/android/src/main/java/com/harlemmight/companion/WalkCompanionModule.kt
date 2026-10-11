@@ -127,7 +127,11 @@ class WalkCompanionModule : Module(), MessageClient.OnMessageReceivedListener, C
         }
         val current = snapshotJSON?.let { CompanionWire.snapshot(it) }
         if (event.sourceNodeId != targetNode || !active() || current == null) {
-            if (event.path == CompanionWire.REQUEST) send(event.sourceNodeId, CompanionWire.CLEAR, event.data.toString(Charsets.UTF_8))
+            if (event.path == CompanionWire.REQUEST) {
+                if (event.sourceNodeId == targetNode && handoffId.isNotEmpty() &&
+                    event.data.toString(Charsets.UTF_8) == handoffId) clearState()
+                send(event.sourceNodeId, CompanionWire.CLEAR, event.data.toString(Charsets.UTF_8))
+            }
             return@post
         }
         if (event.path == CompanionWire.REQUEST) { send(event.sourceNodeId, CompanionWire.SNAPSHOT, snapshotJSON!!); return@post }
