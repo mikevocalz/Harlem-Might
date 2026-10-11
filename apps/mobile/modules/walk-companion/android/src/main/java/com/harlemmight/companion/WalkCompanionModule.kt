@@ -3,6 +3,7 @@ package com.harlemmight.companion
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import com.facebook.react.bridge.ReactContext
 import com.facebook.react.common.LifecycleState
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
@@ -37,7 +38,7 @@ class WalkCompanionModule : Module(), MessageClient.OnMessageReceivedListener, C
         Events("onCommand")
         OnStartObserving { main.post {
             observing = true
-            foreground = context?.lifecycleState == LifecycleState.RESUMED
+            foreground = (context as? ReactContext)?.lifecycleState == LifecycleState.RESUMED
             context?.let {
                 listenerContext = it.applicationContext
                 Wearable.getMessageClient(it).addListener(this@WalkCompanionModule)
@@ -48,9 +49,29 @@ class WalkCompanionModule : Module(), MessageClient.OnMessageReceivedListener, C
         OnActivityEntersForeground { main.post { foreground = true } }
         OnActivityEntersBackground { main.post { foreground = false; clearState() } }
         OnDestroy { main.post { observing = false; foreground = false; clearState(); removeListeners() } }
-        AsyncFunction("createHandoffId") {
+        AsyncFunction("createHandoffId") { promise: Promise ->
             clearState()
-            UUID.randomUUID().toString().also { authorizedHandoff = it }
+            val ctx = context
+            if (ctx == null || !active()) {
+                promise.reject("HANDOFF_UNAVAILABLE", "Open both phone and watch apps before sharing.", null)
+            } else {
+                val operation = generation
+                Wearable.getCapabilityClient(ctx).getCapability(CompanionWire.WATCH, CapabilityClient.FILTER_REACHABLE)
+                    .addOnSuccessListener { result ->
+                        val node = result.nodes.singleOrNull()
+                        if (operation != generation || !active() || node == null) {
+                            if (operation == generation) clearState()
+                            promise.reject("HANDOFF_UNAVAILABLE", "Reconnect one watch and share a fresh walk.", null)
+                        } else {
+                            val id = UUID.randomUUID().toString()
+                            targetNode = node.id; authorizedHandoff = id
+                            promise.resolve(id)
+                        }
+                    }.addOnFailureListener {
+                        if (operation == generation) clearState()
+                        promise.reject("HANDOFF_UNAVAILABLE", "Wear Data Layer is unavailable.", it)
+                    }
+            }
         }.runOnQueue(Queues.MAIN)
         AsyncFunction("getStatus") { promise: Promise ->
             val ctx = context
@@ -72,7 +93,7 @@ class WalkCompanionModule : Module(), MessageClient.OnMessageReceivedListener, C
                     .addOnSuccessListener { result ->
                         val node = result.nodes.singleOrNull()
                         val previous = snapshotJSON?.let { CompanionWire.snapshot(it) }
-                        if (operation != generation || !active() || node == null ||
+                        if (operation != generation || !active() || node == null || node.id != targetNode ||
                             (previous != null && previous.getString("handoffId") == next.getString("handoffId") &&
                                 (previous.getString("sessionId") != next.getString("sessionId") || previous.getLong("revision") > next.getLong("revision") ||
                                     (previous.getLong("revision") == next.getLong("revision") && Instant.parse(previous.getString("updatedAt")) > Instant.parse(next.getString("updatedAt")))))) {
@@ -83,7 +104,8 @@ class WalkCompanionModule : Module(), MessageClient.OnMessageReceivedListener, C
                             targetNode = node.id; snapshotJSON = json
                             handoffId = next.getString("handoffId")
                             expiry?.let { main.removeCallbacks(it) }
-                            expiry = Runnable { if (operation == generation) clearState() }.also {
+                            // A refresh lookup must not disarm the installed snapshot's expiry.
+                            expiry = Runnable { if (snapshotJSON == json) clearState() }.also {
                                 main.postDelayed(it, (Instant.parse(next.getString("expiresAt")).toEpochMilli() - System.currentTimeMillis()).coerceAtLeast(1))
                             }
                             Wearable.getMessageClient(ctx).sendMessage(node.id, CompanionWire.SNAPSHOT, json.toByteArray(Charsets.UTF_8))
@@ -115,7 +137,7 @@ class WalkCompanionModule : Module(), MessageClient.OnMessageReceivedListener, C
         context?.let { Wearable.getMessageClient(it).sendMessage(node, path, value.toByteArray(Charsets.UTF_8)) }
     }
     override fun onCapabilityChanged(info: CapabilityInfo) { main.post {
-        if (targetNode != null && info.nodes.none { it.id == targetNode }) clearState()
+        if (info.nodes.size != 1 || (targetNode != null && info.nodes.none { it.id == targetNode })) clearState()
     } }
     override fun onMessageReceived(event: MessageEvent) { main.post {
         if (event.data.size > 8192) return@post
