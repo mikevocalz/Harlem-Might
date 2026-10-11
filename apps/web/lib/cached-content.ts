@@ -8,7 +8,7 @@ import {
   getPlaceByLegacySlug,
   listEventsForDate,
   listExploreCatalogue,
-  listMusicArtists,
+  listMusicArtistsPage,
   listStories,
   listWalks,
 } from '@acme/payload/server';
@@ -83,9 +83,9 @@ export async function cachedStory(slug: string) {
   return settle(`story ${slug}`, await getStory(slug));
 }
 
-export async function cachedMusicArtists() {
+export async function cachedMusicArtistsPage(page: number) {
   'use cache';
-  return settle('music artists', await listMusicArtists());
+  return settle(`music artists p${page}`, await listMusicArtistsPage(page));
 }
 
 export async function cachedMusicArtist(slug: string) {

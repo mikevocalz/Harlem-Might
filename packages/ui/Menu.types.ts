@@ -15,5 +15,7 @@ export interface MenuProps {
   onAction: (id: string) => void;
   /** Heading shown at the top of the menu. */
   title?: string;
+  /** Where the dropdown opens — 'up' when the trigger sits at a rail's bottom. */
+  menuSide?: 'down' | 'up';
   className?: string;
 }

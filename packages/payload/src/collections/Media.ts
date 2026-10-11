@@ -2,6 +2,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { CollectionConfig } from 'payload';
 import { validateOptionalUrl } from '../fields/provenance';
+import { curatorOnly } from '../access/editorial.ts';
+import { memberMediaCreate, stripMemberMediaMetadata, validateMemberMedia } from '../access/member-media.ts';
 
 // staticDir must be absolute: Payload's default resolves against process.cwd(),
 // which is apps/web when Next serves the API — not this package's media dir.
@@ -9,7 +11,16 @@ const staticDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 
 export const Media: CollectionConfig = {
   slug: 'media',
-  access: { read: () => true },
+  access: {
+    read: () => true,
+    create: memberMediaCreate,
+    update: curatorOnly,
+    delete: curatorOnly,
+  },
+  hooks: {
+    beforeOperation: [stripMemberMediaMetadata],
+    beforeValidate: [validateMemberMedia],
+  },
   upload: {
     staticDir,
     adminThumbnail: ({ doc }) => (typeof doc.url === 'string' ? doc.url : ''),

@@ -18,6 +18,12 @@ export function MightsPage({
   /** Licensed photo or map module for the masthead; omitted on dense records. */
   media?: React.ReactNode;
   mediaLayout?: 'stacked' | 'leading';
+  /**
+   * Fires near the content's end — wired to the ScrollView in the native fork.
+   * Web screens listen on `window.scroll` themselves; this page stays a server
+   * component, so the prop is accepted here and intentionally not wired.
+   */
+  onNearBottom?: () => void;
   children?: React.ReactNode;
 }) {
   const leading = mediaLayout === 'leading';

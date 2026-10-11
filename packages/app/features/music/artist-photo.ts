@@ -1,3 +1,4 @@
+import { isFreeArtistPhotoLicense, isCommonsArtistPhotoUrl } from './artist-photo-rights.ts';
 export type ArtistPhotoProvider =
   | 'wikimedia_commons'
   | 'curated_web';
@@ -156,6 +157,7 @@ const commonsPhoto = (
     !title ||
     BAD_COMMONS_TOKENS.test(title) ||
     !info?.url ||
+    !isCommonsArtistPhotoUrl(info.url) ||
     !/^image\/(jpeg|png|webp)$/i.test(info.mime ?? '')
   ) {
     return undefined;
@@ -167,8 +169,11 @@ const commonsPhoto = (
     stripHtml(meta.Artist?.value) ??
     stripHtml(meta.Credit?.value) ??
     'Wikimedia Commons contributor';
-  const license =
-    stripHtml(meta.LicenseShortName?.value) ?? 'Wikimedia Commons free media';
+  const license = stripHtml(meta.LicenseShortName?.value);
+  if (!isFreeArtistPhotoLicense(license)) return undefined;
+  if (/^cc[ -]by/i.test(license ?? '') && !stripHtml(meta.Artist?.value) && !stripHtml(meta.Credit?.value)) {
+    return undefined;
+  }
   const licenseUrl =
     absoluteUrl(
       stripHtml(meta.LicenseUrl?.value),

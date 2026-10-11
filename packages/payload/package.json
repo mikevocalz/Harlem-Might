@@ -8,7 +8,8 @@
   "exports": {
     ".": "./index.ts",
     "./server": "./server.ts",
-    "./config": "./src/payload.config.ts"
+    "./config": "./src/payload.config.ts",
+    "./artist-photo-fetch": "./src/artist-photo-fetch.ts"
   },
   "scripts": {
     "lint": "eslint",
@@ -24,6 +25,7 @@
     "seed:stories": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/seed-stories.ts",
     "seed:walks": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/seed-walks.ts",
     "publish:walks": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/publish-walks.ts",
+    "publish:music-artists": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/publish-music-artists.ts",
     "enrich:osm": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/enrich-places-osm.ts",
     "enrich:menus": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/enrich-places-menus.ts",
     "link:media": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/link-place-media.ts",
@@ -38,7 +40,8 @@
     "@delmaredigital/payload-better-auth": "catalog:",
     "better-auth": "catalog:",
     "@acme/app": "workspace:*",
-    "server-only": "0.0.1"
+    "server-only": "0.0.1",
+    "file-type": "catalog:"
   },
   "devDependencies": {
     "@acme/config": "workspace:*",

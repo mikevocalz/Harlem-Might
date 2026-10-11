@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { AppQueryProvider } from '@acme/app/providers/query-provider';
+import { AppQueryProvider } from '@acme/app/providers/query-provider.tsx';
+import { Toaster } from '@acme/ui';
 import { Document } from '../Document';
 import { SiteMotionShell } from '../../components/site/SiteMotionShell';
 import '../rn-globals';
@@ -20,6 +21,7 @@ export default function SiteLayout({ children }: Readonly<{ children: React.Reac
       <AppQueryProvider>
         <SiteMotionShell>{children}</SiteMotionShell>
       </AppQueryProvider>
+      <Toaster />
     </Document>
   );
 }

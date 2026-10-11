@@ -100,8 +100,7 @@ const nextConfig: NextConfig = {
       { source: '/schedule', destination: '/today', permanent },
       { source: '/spatial', destination: '/ar', permanent },
       { source: '/notifications', destination: '/', permanent },
-      { source: '/profile', destination: '/', permanent },
-      { source: '/settings', destination: '/', permanent },
+      { source: '/settings', destination: '/profile', permanent },
       { source: '/legal', destination: '/legal/privacy', permanent: false },
     ];
   },

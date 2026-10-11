@@ -7,6 +7,7 @@ import { buildConfig } from 'payload';
 import type { PayloadRequest } from 'payload';
 import { mcpPlugin } from '@payloadcms/plugin-mcp';
 import { bunnyStorage } from '@seshuk/payload-storage-bunny';
+import { withMemberAvatarStorage } from './plugins/member-avatar-storage';
 import { Users } from './collections/Users';
 import { Media } from './collections/Media';
 import { Pages } from './collections/Pages';
@@ -90,7 +91,7 @@ export default buildConfig({
     }),
     ...(process.env.BUNNY_STORAGE_ACCESS_KEY
       ? [
-          bunnyStorage({
+          withMemberAvatarStorage(bunnyStorage({
             collections: {
               media: {
                 prefix: (process.env.BUNNY_MEDIA_PREFIX ?? 'harlem/').replace(/\/$/, ''),
@@ -105,7 +106,7 @@ export default buildConfig({
               zoneName: process.env.BUNNY_STORAGE_ZONE_NAME ?? '',
               region: process.env.BUNNY_STORAGE_REGION,
             },
-          }),
+          })),
         ]
       : []),
     mcpPlugin({
