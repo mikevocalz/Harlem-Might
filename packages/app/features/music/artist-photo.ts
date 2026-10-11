@@ -37,13 +37,13 @@ type DeezerArtist = {
 
 type CommonsPage = {
   title?: string;
-  imageinfo?: Array<{
+  imageinfo?: {
     url?: string;
     width?: number;
     height?: number;
     mime?: string;
     extmetadata?: Record<string, { value?: string }>;
-  }>;
+  }[];
 };
 
 type WikipediaPage = {
