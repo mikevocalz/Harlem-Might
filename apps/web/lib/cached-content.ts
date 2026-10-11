@@ -1,12 +1,14 @@
 import 'server-only';
 import { cacheLife } from 'next/cache';
 import {
+  getMusicArtist,
   getPlace,
   getStory,
   getWalk,
   getPlaceByLegacySlug,
   listEventsForDate,
   listExploreCatalogue,
+  listMusicArtists,
   listStories,
   listWalks,
 } from '@acme/payload/server';
@@ -79,4 +81,14 @@ export async function cachedWalk(slug: string) {
 export async function cachedStory(slug: string) {
   'use cache';
   return settle(`story ${slug}`, await getStory(slug));
+}
+
+export async function cachedMusicArtists() {
+  'use cache';
+  return settle('music artists', await listMusicArtists());
+}
+
+export async function cachedMusicArtist(slug: string) {
+  'use cache';
+  return settle(`music artist ${slug}`, await getMusicArtist(slug));
 }

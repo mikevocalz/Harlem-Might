@@ -1,9 +1,10 @@
-import type { EventDoc, MediaDoc, PlaceDoc, StoryDoc, WalkDoc } from './docs.ts';
+import type { EventDoc, MediaDoc, MusicArtistDoc, PlaceDoc, StoryDoc, WalkDoc } from './docs.ts';
 import { mapEditorialImages } from './editorial-images.ts';
 import type {
   AccessibilityNote,
   ArchiveItem,
   EventRecord,
+  MusicArtistRecord,
   PlaceRecord,
   PlaceRef,
   SourceRef,
@@ -148,6 +149,46 @@ export const mapStory = (doc: StoryDoc): StoryRecord => ({
   archive: mapArchive(doc.archive),
   sources: mapSources(doc.sources),
   publishedAt: opt(doc.publishedAt),
+  updatedAt: doc.updatedAt,
+});
+
+/** A single upload field reads like an image list of one; the rights gate still applies. */
+const mapSingleImage = (value: number | MediaDoc | null | undefined) =>
+  typeof value === 'object' && value !== null ? mapEditorialImages([value])[0] : undefined;
+
+export const mapMusicArtist = (doc: MusicArtistDoc): MusicArtistRecord => ({
+  id: doc.id,
+  slug: doc.slug,
+  name: doc.name,
+  genre: doc.genre,
+  era: opt(doc.era),
+  connection: doc.connection,
+  shortBio: doc.shortBio,
+  biography: doc.biography,
+  headshot: mapSingleImage(doc.headshot),
+  albumArt: mapSingleImage(doc.albumArt),
+  featuredAlbumTitle: opt(doc.featuredAlbumTitle),
+  xrSceneEnabled: doc.xrSceneEnabled === true,
+  vinylRpm: doc.vinylRpm === '45' ? '45' : '33',
+  ...(doc.spatialTrack?.url
+    ? {
+        spatialTrack: {
+          url: doc.spatialTrack.url,
+          licenseSourceUrl: opt(doc.spatialTrack.licenseSourceUrl),
+          format: doc.spatialTrack.format ?? 'stereo',
+        },
+      }
+    : {}),
+  ...(doc.featuredSong?.youtubeUrl
+    ? {
+        featuredSong: {
+          title: opt(doc.featuredSong.title),
+          youtubeUrl: doc.featuredSong.youtubeUrl,
+          verifiedAt: opt(doc.featuredSong.verifiedAt),
+        },
+      }
+    : {}),
+  sources: (doc.sources ?? []).map((source) => ({ label: opt(source.description) ?? source.url, url: opt(source.url) })),
   updatedAt: doc.updatedAt,
 });
 

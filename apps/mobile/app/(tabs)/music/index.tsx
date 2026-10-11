@@ -1,10 +1,8 @@
-import { View, Text } from '@acme/ui/tw';
+import { useQuery } from '@tanstack/react-query';
+import { MusicIndexScreen } from '@acme/app/features/music/MusicIndexScreen.tsx';
+import { contentReaders } from '@/src/site/content-readers';
 
 export default function MusicRoute() {
-  return (
-    <View className="flex-1 gap-4 bg-surface p-6">
-      <Text className="text-3xl font-bold">Harlem Music</Text>
-      <Text>Artist biographies and featured performances will appear after editorial verification.</Text>
-    </View>
-  );
+  const { data } = useQuery({ queryKey: ['music-artists'], queryFn: () => contentReaders.listMusicArtists() });
+  return <MusicIndexScreen result={data} />;
 }
