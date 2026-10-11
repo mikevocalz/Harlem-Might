@@ -130,6 +130,7 @@ function SiteDock() {
   const label = member?.name?.trim() || 'Your profile';
   return (
     <MightsDock
+      account={<MemberMenu siteUrl="" menuSide="up" />}
       secondary={
         signedIn
           ? secondaryNav.filter((item) => item.href !== routes.signIn() && item.href !== routes.signUp())

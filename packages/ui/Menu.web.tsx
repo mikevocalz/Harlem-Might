@@ -12,7 +12,7 @@ import type { MenuProps } from './Menu.types';
  * Escape, and after an action is chosen (a menu that stays open after "Sign
  * out" reads as broken).
  */
-export function Menu({ children, actions, onAction, title, className }: MenuProps) {
+export function Menu({ children, actions, onAction, title, menuSide = 'down', className }: MenuProps) {
   const root = useRef<HTMLDetailsElement>(null);
   const close = () => root.current?.removeAttribute('open');
 
@@ -37,7 +37,11 @@ export function Menu({ children, actions, onAction, title, className }: MenuProp
   return (
     <details ref={root} className={`relative ${className ?? ''}`}>
       <summary className="cursor-pointer list-none">{children}</summary>
-      <View className="absolute right-0 top-full z-10 mt-1 min-w-48 gap-1 rounded-md border-2 border-border bg-surface-raised p-1 shadow-card">
+      <View
+        className={`absolute z-10 min-w-48 gap-1 rounded-md border-2 border-border bg-surface-raised p-1 shadow-card ${
+          menuSide === 'up' ? 'bottom-full left-0 mb-1' : 'right-0 top-full mt-1'
+        }`}
+      >
         {title ? (
           <Text className="px-2 py-1 text-xs font-semibold uppercase text-text-muted">{title}</Text>
         ) : null}

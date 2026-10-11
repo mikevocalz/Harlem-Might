@@ -26,6 +26,9 @@ export interface MightsDockProps {
   sheetHeader?: (close: () => void) => React.ReactNode;
   /** The sheet's links; the app strikes Sign in/Create account for a member. */
   secondary?: readonly { label: string; href: string }[];
+  /** Account control pinned to the rail's foot (avatar menu / Sign in). Only
+   *  renders in `me` rail mode — the phone bar has no room for it. */
+  account?: React.ReactNode;
 }
 
 // Bar: a gold rule across the item's top. Rail: a gold rule down its leading
@@ -38,7 +41,7 @@ const marker = 'absolute top-0 h-rail w-8 bg-primary me:bottom-2 me:left-0 me:to
 // panes standard instead of the phone layout. "More" opens the kit
 // BottomSheet (vaul on web, native sheets in the app): drag, backdrop and
 // Escape dismiss it.
-export function MightsDock({ sheetHeader, secondary = secondaryNav }: MightsDockProps) {
+export function MightsDock({ sheetHeader, secondary = secondaryNav, account }: MightsDockProps) {
   const pathname = usePathname() ?? '/';
   const current = activeSection(pathname);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -83,6 +86,11 @@ export function MightsDock({ sheetHeader, secondary = secondaryNav }: MightsDock
               More
             </Button>
           </ListItem>
+          {account ? (
+            <ListItem className="hidden me:mt-auto me:flex me:w-full me:flex-none me:items-center me:justify-center">
+              {account}
+            </ListItem>
+          ) : null}
         </List>
       </Nav>
 

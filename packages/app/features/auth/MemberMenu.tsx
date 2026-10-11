@@ -14,7 +14,7 @@ import { View , Text } from '@acme/ui/tw';
 import { MemberAvatar } from './MemberAvatar.tsx';
 import { memberFirstName, useMemberSession } from './member-session.ts';
 
-export function MemberMenu({ siteUrl }: { siteUrl: string }) {
+export function MemberMenu({ siteUrl, menuSide }: { siteUrl: string; menuSide?: 'down' | 'up' }) {
   const status = useMemberSession((s) => s.status);
   const member = useMemberSession((s) => s.member);
   const hydrate = useMemberSession((s) => s.hydrate);
@@ -52,6 +52,7 @@ export function MemberMenu({ siteUrl }: { siteUrl: string }) {
     return (
       <Menu
         title={member.name?.trim() ?? 'Your account'}
+        menuSide={menuSide}
         actions={[
           { id: 'profile', title: 'Your profile' },
           { id: 'sign-out', title: 'Sign out', destructive: true },
