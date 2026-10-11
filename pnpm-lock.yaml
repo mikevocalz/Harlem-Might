@@ -2048,7 +2048,7 @@ packages:
     resolution: {integrity: sha512-LBrd7MiJZ9McsOgxqWX7AaxrDjcFVjWH/tIKJd7pnR7McaslGYOP1QmmiBXdJH/H/yLCT+rcQ7FaPBUxRGUtrg==}
 
   '@delmaredigital/payload-better-auth@https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/86cd39928231944ac1b884048ddfc25f427c559d':
-    resolution: {gitHosted: true, integrity: sha512-Dp1vsPMvmShQ8j1fZxl0WXThzOebY1yJz3EWINvpVKq8UsZW+aqS/JQfkJooHP8v6IL3KgY+iUUB8BIBOxMP8Q==, tarball: https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/86cd39928231944ac1b884048ddfc25f427c559d}
+    resolution: {gitHosted: true, integrity: sha512-wNfClFti/SVXvTeA/zJ7IcgnrhxaskqLvsvJ+K8n0pDd0qoFeeT4P/BVNSC50c8WiPtdt08mFZ5ox37YVZAK4w==, tarball: https://codeload.github.com/mikevocalz/payload-better-auth/tar.gz/86cd39928231944ac1b884048ddfc25f427c559d}
     version: 0.13.1
     engines: {node: '>=24.15.0'}
     peerDependencies:
