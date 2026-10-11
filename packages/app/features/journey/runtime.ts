@@ -9,6 +9,7 @@ import type { WalkCommand } from '@acme/widgets';
 import { createJourneyController, commandId, type JourneyTransport } from './controller.ts';
 import { journeyStorage } from './storage';
 import { createMemberJourneyTransport } from './member-transport.ts';
+import { applyJourneyNavigationCommand } from './navigation-effects.ts';
 import { createJourneyCueTracker } from './cues.ts';
 import { synopsisFromRoute, verifiedDestination } from './model.ts';
 import { endNavigation, navigationController, requestDirections, startLocation, stopLocation } from '../navigation/view/runtime.ts';
@@ -35,16 +36,19 @@ export function journeyController() {
   controller = createJourneyController({
     readers, storage: journeyStorage,
     transport: configured ? configured.transport : createMemberJourneyTransport(),
-    onClear() { cancelRouteIntent(); endNavigation(); },
+    onClear() {
+      cancelRouteIntent();
+      const active = useNavigationStore.getState().session;
+      if ('destination' in active && controller?.getSnapshot().plan?.stops.some(stop => stop.slug === active.destination.placeId)) endNavigation();
+    },
     onTransition(previous, session, command) {
       cancelRouteIntent();
-      if (command.type === 'pause') { navigationController().pause(); stopLocation(); }
-      if (command.type === 'resume') {
-        navigationController().resume();
-        const active = useNavigationStore.getState().session;
-        if (AppState.currentState === 'active' && 'activeRoute' in active && active.origin.kind === 'device-location' && useNavigationUi.getState().location === 'granted') startLocation();
-      }
-      if (command.type === 'stop' || command.type === 'confirm-stop') endNavigation();
+      const active = useNavigationStore.getState().session;
+      const target = controller?.getSnapshot().plan?.stops[previous?.completedStopIds.length ?? 0]?.slug;
+      const navigation = navigationController();
+      applyJourneyNavigationCommand({ type: command.type, targetSlug: target, session: active,
+        foreground: AppState.currentState === 'active', location: useNavigationUi.getState().location,
+        pause: navigation.pause, resume: navigation.resume, end: endNavigation, startLocation, stopLocation });
       if (!controller?.getSnapshot().hapticsEnabled) return;
       if (!previous) haptics.walkStarted();
       else if (command.type === 'confirm-stop') {
@@ -54,7 +58,7 @@ export function journeyController() {
     },
   });
   // Account changes clear private UI on every platform, before any login request.
-  useMemberAuth.subscribe((state, previous) => { if (state.pending && !previous.pending) controller?.clear(); });
+  useMemberAuth.subscribe((state, previous) => { if (state.pending && !previous.pending) { endNavigation(); controller?.clear(); } });
   // Save only route synopsis, never the route geometry or raw sensor feed.
   let routeId: string | undefined;
   const cues = createJourneyCueTracker();
@@ -114,7 +118,11 @@ export function requestJourneyDirections(): void {
     const last = navigationFixStore.getState().lastFix;
     if (useNavigationUi.getState().location !== 'granted' || last?.kind !== 'accepted' || last.fix.timestampMs < requestedAt || last.fix.source !== 'device-gps' || last.fix.accuracy.horizontalM > DEFAULT_NAVIGATION_CONFIG.matching.maxSnapAccuracyM ||
         Date.now() - last.fix.timestampMs > DEFAULT_NAVIGATION_CONFIG.location.maxFixAgeMs || Date.now() < last.fix.timestampMs) return;
-    if (requestDirections({ destination, mode: 'walking', originChoice: { kind: 'device' } })) {
+    const trip = useNavigationStore.getState().session;
+    const requested = 'activeRoute' in trip && trip.phase !== 'arrived' && trip.phase !== 'paused'
+      ? navigationController().reroute()
+      : requestDirections({ destination, mode: 'walking', originChoice: { kind: 'device' } });
+    if (requested) {
       done = true; routeCleanup?.(); routeCleanup = undefined;
     }
   };
