@@ -1,7 +1,7 @@
 'use client';
 import { useEffect } from 'react';
 import { Modal } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from './use-safe-area-insets';
 import { SolitoImage } from 'solito/image';
 import { useInstanceStore, useStore } from './use-instance-store';
 import { View, Text, Pressable } from './tw';
