@@ -1,4 +1,4 @@
-import { getHarlemArchivalImage, type MusicArtistRecord } from '@acme/app/content';
+import type { MusicArtistRecord } from '@acme/app/content';
 import { Link, Section } from '@acme/ui/html';
 import {
   MightsButton,
@@ -21,7 +21,6 @@ import {
   youTubeVideoId,
 } from './music-format.ts';
 
-const archiveImage = getHarlemArchivalImage('nypl-harlem-storefronts-1939');
 
 function Fact({ label, value }: { label: string; value: string }) {
   return (
@@ -149,7 +148,6 @@ export function MusicArtistScreen({
       <MightsPage title="Harlem Music" crumbs={[{ label: 'Music', href: routes.music() }]}>
         <ContentNotice
           title="This artist isn’t published"
-          image={archiveImage}
           actions={<MightsButton href={routes.music()}>All artists</MightsButton>}
         >
           The profile may still be in editorial review, or it was taken down.
@@ -163,7 +161,6 @@ export function MusicArtistScreen({
       <MightsPage title="Harlem Music" crumbs={[{ label: 'Music', href: routes.music() }]}>
         <ContentNotice
           title="We couldn’t load this artist right now"
-          image={archiveImage}
           actions={
             <>
               <MightsButton href={routes.musician(slug)}>Try again</MightsButton>
