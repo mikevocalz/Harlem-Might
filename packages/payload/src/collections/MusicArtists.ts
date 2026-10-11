@@ -22,6 +22,15 @@ export const MusicArtists: CollectionConfig = {
     { name: 'shortBio', type: 'textarea', required: true },
     { name: 'biography', type: 'textarea', required: true },
     { name: 'headshot', type: 'upload', relationTo: 'media', admin: { description: 'Only upload imagery with documented rights and credit.' } },
+    { name: 'albumArt', type: 'upload', relationTo: 'media', admin: { description: 'Licensed artwork for the vinyl center label.' } },
+    { name: 'featuredAlbumTitle', type: 'text' },
+    { name: 'xrSceneEnabled', type: 'checkbox', defaultValue: false },
+    { name: 'vinylRpm', type: 'select', defaultValue: '33', options: [{ label: '33⅓ RPM', value: '33' }, { label: '45 RPM', value: '45' }] },
+    { name: 'spatialTrack', type: 'group', fields: [
+      { name: 'url', type: 'text', validate: validateOptionalUrl },
+      { name: 'licenseSourceUrl', type: 'text', validate: validateOptionalUrl },
+      { name: 'format', type: 'select', defaultValue: 'stereo', options: ['mono', 'stereo', 'ambisonic'].map((value) => ({ label: value, value })) },
+    ] },
     { name: 'featuredSong', type: 'group', fields: [
       { name: 'title', type: 'text' },
       { name: 'youtubeUrl', type: 'text', validate: (value) => {
