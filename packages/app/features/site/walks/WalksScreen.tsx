@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+import { WalkJourney } from '../../journey/WalkJourney.tsx';
 import { getHarlemArchivalImage, type WalkRecord } from "@acme/app/content";
 import { View } from "@acme/ui/tw";
 import {
@@ -76,14 +78,17 @@ export function WalksScreen({
 export function WalkScreen({
   slug,
   result,
+  journeyActions,
 }: {
   slug: string;
+  journeyActions?: ReactNode;
   result: ScreenResult<WalkRecord> | { status: "not-found" } | undefined;
 }) {
   if (!result)
     return (
       <MightsPage title="Walk">
         <MightsText>Loading the walk.</MightsText>
+        <WalkJourney slug={slug} platformActions={journeyActions} />
       </MightsPage>
     );
   if (result.status === "not-found") {
@@ -96,6 +101,7 @@ export function WalkScreen({
           It may have been moved or taken down. Every published walk is on the
           Walks page.
         </ContentNotice>
+        <WalkJourney slug={slug} platformActions={journeyActions} />
       </MightsPage>
     );
   }
@@ -119,6 +125,7 @@ export function WalkScreen({
           The walk may well be there; we couldn’t reach our records to check.
           Try again in a moment.
         </ContentNotice>
+        <WalkJourney slug={slug} platformActions={journeyActions} />
       </MightsPage>
     );
   }
@@ -171,6 +178,7 @@ export function WalkScreen({
           ))}
         </View>
       ) : null}
+      <WalkJourney slug={walk.slug} platformActions={journeyActions} />
       <WalkStops stops={walk.stops} />
       <SourcesList sources={walk.sources} />
     </MightsPage>

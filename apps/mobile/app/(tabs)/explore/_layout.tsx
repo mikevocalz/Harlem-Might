@@ -14,7 +14,6 @@ import {
   ExplorePlaceDetail,
   ExploreTypeContext,
   usePlaceCatalogue,
-  NO_LOCATION_SOURCE,
   NavigationHud,
   closeDirections,
   endNavigation,
@@ -26,7 +25,6 @@ import {
   useDirectionsPlaceId,
   useExplore,
   useIsGuiding,
-  useNavigationHost,
   useNavigationStore,
 } from '@acme/app';
 import { SafeArea } from '@acme/ui';
@@ -47,12 +45,6 @@ import { ViewInArButton } from '@/src/ar/ViewInArButton';
 import { metaWindows } from '@/src/spatial/metaWindows';
 import { useNavigationPresentation } from '@/src/navigation/useNavigationPresentation';
 import { usePlaceDetailPanel } from '@/src/spatial/usePlaceDetailPanel';
-
-// This build has no location module (expo-location is not a dependency yet),
-// so directions start from a chosen place and guidance says it can't follow
-// the person. See docs/NAVIGATION_PLATFORM_MATRIX.md.
-const noLocationSource = () => NO_LOCATION_SOURCE;
-
 
 /**
  * Explore: the map is the permanent centre (design handoff §0, §4).
@@ -86,7 +78,6 @@ export default function ExploreRouteLayout() {
 
   // One navigation session for every pane: Detail's directions, the map's
   // route line and the HUD all read useNavigationStore.
-  useNavigationHost(noLocationSource);
   const directionsPlaceId = useDirectionsPlaceId();
   const guiding = useIsGuiding();
   const destinationId = useNavigationStore((s) =>

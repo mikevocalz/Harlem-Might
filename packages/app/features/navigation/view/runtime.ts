@@ -1,3 +1,4 @@
+import { DEFAULT_NAVIGATION_CONFIG } from '../config.ts';
 import type { GeographicCoordinate } from '../model/geo.ts';
 import type { RouteDestination, TravelMode } from '../model/route.ts';
 import type { NavigationOrigin } from '../model/session.ts';
@@ -101,6 +102,7 @@ export function startLocation(): void {
   const ui = useNavigationUi.getState();
   runtime.stopWatch = runtime.source.watch({
     onFix: (fix) => controller.ingestFix(fix),
+    onHeading: (heading) => controller.ingestHeading(heading),
     onAvailability: (availability) => ui.setLocation(availability),
   });
   runtime.tick = setInterval(() => controller.refreshPositioning(), 1000);
@@ -125,9 +127,13 @@ export function isLocationRunning(): boolean {
  * still a real start; guidance will ignore such fixes). Stale, invalid and
  * outlier fixes never start a route.
  */
-export function devicePositionForPlanning(fixes: Pick<NavigationFixState, 'lastFix'>): GeographicCoordinate | undefined {
+export function devicePositionForPlanning(fixes: Pick<NavigationFixState, 'lastFix'>, nowMs = Date.now()): GeographicCoordinate | undefined {
   const last = fixes.lastFix;
   if (!last) return undefined;
+  // A previously accepted fix can become stale while the source is silent.
+  const ageMs = nowMs - last.fix.timestampMs;
+  const { maxFixAgeMs, maxFutureSkewMs } = DEFAULT_NAVIGATION_CONFIG.location;
+  if (!Number.isFinite(ageMs) || ageMs > maxFixAgeMs || ageMs < -maxFutureSkewMs) return undefined;
   if (last.kind === 'accepted') return last.filtered.coordinate;
   return last.reason === 'inaccurate' ? last.fix.coordinate : undefined;
 }

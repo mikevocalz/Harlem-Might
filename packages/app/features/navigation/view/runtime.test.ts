@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
-import type { LocationFix } from '../model/location.ts';
+import type { HeadingSample, LocationFix } from '../model/location.ts';
 import type { RouteRequest } from '../model/route.ts';
 import type { RouteProvider } from '../providers/routeProvider.ts';
 import { navigationFixStore, resetNavigationStores, useNavigationStore } from '../session/navigationStore.ts';
@@ -54,6 +54,7 @@ function fakeSource() {
   return {
     source,
     emit: (fix: LocationFix) => handlers?.onFix(fix),
+    emitHeading: (heading: HeadingSample) => handlers?.onHeading?.(heading),
     report: (a: Parameters<LocationWatchHandlers['onAvailability']>[0]) => handlers?.onAvailability(a),
     stopped: () => stopped,
   };
@@ -67,6 +68,16 @@ afterEach(() => {
 });
 
 describe('navigation runtime', () => {
+  it('feeds native heading samples through the shared controller', () => {
+    const fake = fakeSource();
+    configureNavigationRuntime({ locationSource: fake.source });
+    startLocation();
+    const timestampMs = Date.now();
+    fake.emitHeading({ headingDeg: 90, accuracyDeg: 5, timestampMs, source: 'compass' });
+    assert.equal(navigationFixStore.getState().heading?.headingDeg, 90);
+    assert.equal(navigationFixStore.getState().heading?.timestampMs, timestampMs);
+  });
+
   it('hands out one controller, writing the shared store', () => {
     const { provider } = recordingProvider();
     configureNavigationRuntime({ provider });
@@ -122,8 +133,24 @@ describe('navigation runtime', () => {
 
   it('plans from a coarse fix but never from a stale one', () => {
     const fix: LocationFix = { coordinate: ORIGIN, accuracy: { horizontalM: 400 }, timestampMs: 1, source: 'device-gps' };
-    assert.deepEqual(devicePositionForPlanning({ lastFix: { kind: 'rejected', fix, reason: 'inaccurate' } }), ORIGIN);
+    assert.deepEqual(devicePositionForPlanning({ lastFix: { kind: 'rejected', fix, reason: 'inaccurate' } }, 1), ORIGIN);
     assert.equal(devicePositionForPlanning({ lastFix: { kind: 'rejected', fix, reason: 'stale' } }), undefined);
+  });
+
+  it('rechecks age before planning after the GPS feed goes quiet', () => {
+    const now = 1_000_000;
+    const fix: LocationFix = { coordinate: ORIGIN, accuracy: { horizontalM: 6 }, timestampMs: now, source: 'device-gps' };
+    const lastFix = {
+      kind: 'accepted' as const, fix, didReset: false,
+      filtered: {
+        coordinate: ORIGIN, sigmaM: 4, velocityEastMps: 0, velocityNorthMps: 0,
+        speedMps: 0, timestampMs: now, confidence: 'high' as const,
+      },
+    };
+    assert.deepEqual(devicePositionForPlanning({ lastFix }, now), ORIGIN);
+    assert.equal(devicePositionForPlanning({ lastFix }, now + 10_001), undefined);
+    assert.equal(devicePositionForPlanning({ lastFix }, now - 60_000), undefined);
+    assert.equal(devicePositionForPlanning({ lastFix: { kind: 'rejected', fix, reason: 'inaccurate' } }, now + 10_001), undefined);
   });
 
   it('End stops the feed, resets the session and the trip choices', async () => {

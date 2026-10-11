@@ -126,6 +126,29 @@ describe('parseMapboxDirections', () => {
     assert.deepEqual(steps.map((s) => s.index), [0, 1, 2, 3, 4, 5]);
   });
 
+  it('rejects empty route geometry, missing guidance and impossible timing', () => {
+    type MutableRoute = {
+      geometry: { coordinates: number[][] }; duration: number;
+      legs: { distance: number; steps: { duration: number; maneuver: { bearing_after: number } }[] }[];
+    };
+    const fixture = loadFixture('apollo-theater--sylvias-restaurant').response as { routes: MutableRoute[] };
+    for (const mutate of [
+      (route: MutableRoute) => { route.geometry.coordinates = []; },
+      (route: MutableRoute) => { route.geometry.coordinates = [[-73.9, 40.8]]; },
+      (route: MutableRoute) => { route.legs = []; },
+      (route: MutableRoute) => { route.legs[0]!.steps = []; },
+      (route: MutableRoute) => { route.duration = -1; },
+      (route: MutableRoute) => { route.legs[0]!.distance = -1; },
+      (route: MutableRoute) => { route.legs[0]!.steps[0]!.duration = -1; },
+      (route: MutableRoute) => { route.legs[0]!.steps[0]!.maneuver.bearing_after = 361; },
+    ]) {
+      const body = structuredClone(fixture);
+      mutate(body.routes[0]!);
+      assert.throws(() => parseMapboxDirections(body, 'walking'),
+        (error: unknown) => error instanceof RouteProviderError && error.kind === 'unavailable');
+    }
+  });
+
   it('numbers steps across legs of a multi-leg route', () => {
     const f = loadFixture('studio-museum-harlem--via-sylvias--west-126th');
     const response = parseMapboxDirections(f.response, 'walking');
@@ -210,6 +233,21 @@ describe('createMapboxDirectionsProvider', () => {
       });
     });
   }
+
+  it('does not echo provider error messages or arbitrary codes containing tokens or location', async () => {
+    const { impl } = fakeFetch(() => json(422, {
+      code: `InvalidInput:${FAKE_TOKEN}`,
+      message: `Bad request: access_token=${FAKE_TOKEN}&coordinates=-73.944623,40.808673`,
+    }));
+    const provider = createMapboxDirectionsProvider({ accessToken: FAKE_TOKEN, fetchImpl: impl });
+    await assert.rejects(provider.getRoutes(requestFor(NAME)), (error: unknown) => {
+      assert.ok(error instanceof RouteProviderError);
+      assert.equal(error.kind, 'invalid-request');
+      assert.ok(!error.message.includes(FAKE_TOKEN));
+      assert.ok(!error.message.includes('40.808673'));
+      return true;
+    });
+  });
 
   it('maps a network failure and a cancellation', async () => {
     const offline = createMapboxDirectionsProvider({

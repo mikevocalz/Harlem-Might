@@ -139,7 +139,7 @@ export function PlaceVisit({
                       size="sm"
                       href={`https://www.google.com/maps/dir/?api=1&destination=${lngLat[1]},${lngLat[0]}`}
                     >
-                      Get directions
+                      Take Me There
                     </MightsButton>
                     <MightsButton href={routes.explore({ place: place.id })} variant="secondary" size="sm">
                       See it on the map

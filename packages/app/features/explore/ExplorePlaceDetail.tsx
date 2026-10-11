@@ -4,6 +4,7 @@ import { useEffect, useMemo, type ReactNode } from 'react';
 import { MightsButton, MightsHeading, MightsLocationStamp, MightsText } from '@acme/ui/mights';
 import { Pressable, ScrollView, Text, View } from '@acme/ui/tw';
 import { PlaceMasthead } from '@acme/app/features/site/place/PlaceHero.tsx';
+import { verifiedDestination } from '../journey/model.ts';
 import { directionsUrl } from './explore-copy';
 import { formatDistance, placeStreetLine, type ExplorePlace } from './explore.store';
 import { usePlaceCatalogue, catalogueNearbyPlaces } from './place-catalogue.store.ts';
@@ -171,9 +172,9 @@ export function ExplorePlaceDetail({
                 Show on map
               </MightsButton>
             ) : null}
-            {place.lngLat && onDirections ? (
+            {record && verifiedDestination(record) && onDirections ? (
               <MightsButton size={type.buttons.primary} onPress={onDirections}>
-                Directions
+                Take Me There
               </MightsButton>
             ) : place.lngLat ? (
               <MightsButton size={type.buttons.primary} href={directionsUrl(place.lngLat)} external>
