@@ -83,7 +83,7 @@ class WearWalkStore(private val context: Context) : MessageClient.OnMessageRecei
             val cleared = event.data.toString(Charsets.UTF_8)
             // Clear can precede the corresponding snapshot on the transport.
             if (cleared.isNotEmpty() && cleared.length <= 160) invalidHandoffs.add(cleared)
-            if (snapshot == null || cleared == snapshot?.optString("handoffId")) clear("Share your walk again from the phone.", notifyPhone = false)
+            if (cleared == snapshot?.optString("handoffId")) clear("Share your walk again from the phone.", notifyPhone = false)
             return@post
         }
         if (event.path != CompanionWire.SNAPSHOT) return@post

@@ -60,7 +60,7 @@ final class WatchWalkStore: NSObject, ObservableObject, WCSessionDelegate {
             // A clear may overtake its snapshot. Tombstone that epoch even if
             // it was never rendered; a delayed snapshot must not resurrect it.
             if CompanionWire.text(cleared) { invalidHandoffs.insert(cleared) }
-            if snapshot == nil || cleared == snapshot?.handoffId { clear("Share your walk again from the phone.", notifyPhone: false) }
+            if cleared == snapshot?.handoffId { clear("Share your walk again from the phone.", notifyPhone: false) }
             return
         }
         guard message["kind"] as? String == "snapshot", let json = message["json"] as? String,

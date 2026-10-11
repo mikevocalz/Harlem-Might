@@ -330,6 +330,33 @@ test('source-derived rejected REQUEST predicates preserve other peers and newer 
   }
 });
 
+for (const platform of ['Apple', 'Wear'] as const) {
+  test(`${platform} stale CLEAR tombstones its epoch without cancelling a nil-snapshot reconnect`, () => {
+    const path = platform === 'Apple' ? '../targets/harlem-watch/WalkCompanion.swift'
+      : '../../wearos/app/src/main/java/com/harlemmight/watch/WalkCompanion.kt';
+    const source = readFileSync(new URL(path, import.meta.url), 'utf8');
+    const line = source.split('\n').find(value => value.includes('clear("Share your walk again from the phone.", notifyPhone'));
+    assert.ok(line);
+    const predicate = platform === 'Apple' ? line.match(/if (.+) \{ clear\(/)?.[1]
+      : line.match(/if \((.+)\) clear\(/)?.[1];
+    assert.ok(predicate);
+    // Predicate-only translation, not execution of the native watch transport.
+    const shouldClear = new Function('cleared', 'snapshot', `return ${predicate
+      .replaceAll('nil', 'null').replaceAll('?.optString("handoffId")', '?.handoffId')};`);
+    assert.equal(shouldClear('old-epoch', null), false);
+    const invalidHandoffs = new Set(['old-epoch']);
+    let generation = 1;
+    const reconnectOperation = generation;
+    if (shouldClear('old-epoch', null)) generation++;
+    assert.equal(reconnectOperation === generation && !invalidHandoffs.has('new-epoch'), true);
+    assert.equal(invalidHandoffs.has('old-epoch'), true);
+    assert.equal(shouldClear('old-epoch', { handoffId: 'new-epoch' }), false);
+    assert.equal(shouldClear('new-epoch', { handoffId: 'new-epoch' }), true);
+    const tombstone = platform === 'Apple' ? 'invalidHandoffs.insert(cleared)' : 'invalidHandoffs.add(cleared)';
+    assert.ok(source.indexOf(tombstone) >= 0 && source.indexOf(tombstone) < source.indexOf(line));
+  });
+}
+
 // Structural source invariants, not a Swift/Kotlin or paired-device runtime test.
 // The nil-to-first-snapshot adoption must invalidate the generation captured by
 // reconnect, just like replacement of a non-null older handoff does.
