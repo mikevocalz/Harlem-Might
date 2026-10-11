@@ -122,19 +122,19 @@ describe('resolveArtistPhoto', () => {
           pages: {
             '1': {
               pageid: 1,
-              title: 'Charles Sorley',
+              title: 'John Smith',
               original: {
                 source:
-                  'https://upload.wikimedia.org/wikipedia/commons/a/aa/Charles_Hamilton_Sorley.jpg',
+                  'https://upload.wikimedia.org/wikipedia/commons/a/aa/John_Smith_explorer.jpg',
               },
-              terms: { description: ['British poet and soldier'] },
+              terms: { description: ['English explorer'] },
             },
           },
         },
       });
     };
 
-    const result = await resolveArtistPhoto('Charles Hamilton', fetcher);
+    const result = await resolveArtistPhoto('John Smith', fetcher);
     assert.equal(result, undefined);
   });
 
