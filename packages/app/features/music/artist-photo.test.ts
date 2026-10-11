@@ -60,7 +60,7 @@ describe('resolveArtistPhoto', () => {
     assert.match(bloodshed?.sourceUrl ?? '', /xxlmag/);
   });
 
-  it('uses an entity-aware Wikipedia musician result before raw Commons search', async () => {
+  it('turns an entity-aware Wikipedia lead image into a licensed Commons result', async () => {
     const calls: string[] = [];
     const fetcher: ArtistPhotoFetch = async (url) => {
       calls.push(url);
@@ -88,13 +88,42 @@ describe('resolveArtistPhoto', () => {
           },
         });
       }
-      throw new Error('Commons should not be reached after a strong Wikipedia match');
+      if (url.startsWith('https://commons.wikimedia.org/')) {
+        return response({
+          query: {
+            pages: {
+              '10': {
+                title: 'File:Bill Saxton.jpg',
+                imageinfo: [
+                  {
+                    url:
+                      'https://upload.wikimedia.org/wikipedia/commons/1/11/Bill_Saxton.jpg',
+                    width: 800,
+                    height: 1200,
+                    mime: 'image/jpeg',
+                    extmetadata: {
+                      Artist: { value: 'Example Photographer' },
+                      Description: { value: 'Jazz saxophonist Bill Saxton in Harlem.' },
+                      LicenseShortName: { value: 'CC BY-SA 4.0' },
+                      LicenseUrl: {
+                        value: 'https://creativecommons.org/licenses/by-sa/4.0/',
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        });
+      }
+      throw new Error(`unexpected request: ${url}`);
     };
 
     const result = await resolveArtistPhoto('Bill Saxton', fetcher);
-    assert.equal(result?.provider, 'wikipedia');
-    assert.equal(calls.length, 2);
-    assert.match(result?.sourceUrl ?? '', /en\.wikipedia\.org\/wiki\/Bill_Saxton/);
+    assert.equal(result?.provider, 'wikimedia_commons');
+    assert.equal(result?.rightsStatus, 'rights-cleared');
+    assert.equal(result?.license, 'CC BY-SA 4.0');
+    assert.equal(calls.length, 3);
   });
 
   it('rejects Commons files whose subject does not match the artist', async () => {
@@ -166,7 +195,6 @@ describe('resolveArtistPhoto', () => {
 describe('artistPhotoProviderLabel', () => {
   it('labels every supported provider', () => {
     assert.equal(artistPhotoProviderLabel('wikimedia_commons'), 'Wikimedia Commons');
-    assert.equal(artistPhotoProviderLabel('wikipedia'), 'Wikipedia');
     assert.equal(artistPhotoProviderLabel('deezer'), 'Deezer');
     assert.equal(artistPhotoProviderLabel('curated_web'), 'Verified artist source');
   });
