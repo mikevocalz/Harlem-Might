@@ -17,9 +17,16 @@ export function pickMemberPhoto(): Promise<MemberPhotoAsset | null> {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
+    // Safari ignores .click() on a detached input — it has to be in the DOM.
+    input.style.position = 'fixed';
+    input.style.left = '-9999px';
+    const done = (asset: MemberPhotoAsset | null) => {
+      input.remove();
+      resolve(asset);
+    };
     input.onchange = () => {
       const file = input.files?.[0];
-      resolve(
+      done(
         file
           ? {
               uri: URL.createObjectURL(file),
@@ -30,7 +37,8 @@ export function pickMemberPhoto(): Promise<MemberPhotoAsset | null> {
           : null,
       );
     };
-    input.oncancel = () => resolve(null);
+    input.oncancel = () => done(null);
+    document.body.append(input);
     input.click();
   });
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Toaster } from '@acme/ui';
 import { Document } from '../Document';
 import { SiteMotionShell } from '../../components/site/SiteMotionShell';
 import '../rn-globals';
@@ -17,6 +18,7 @@ export default function SiteLayout({ children }: Readonly<{ children: React.Reac
   return (
     <Document>
       <SiteMotionShell>{children}</SiteMotionShell>
+      <Toaster />
     </Document>
   );
 }

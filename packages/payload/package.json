@@ -23,6 +23,7 @@
     "seed:stories": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/seed-stories.ts",
     "seed:walks": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/seed-walks.ts",
     "publish:walks": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/publish-walks.ts",
+    "publish:music-artists": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/publish-music-artists.ts",
     "enrich:osm": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/enrich-places-osm.ts",
     "enrich:menus": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/enrich-places-menus.ts",
     "link:media": "PAYLOAD_CONFIG_PATH=src/payload.config.ts payload run src/link-place-media.ts",

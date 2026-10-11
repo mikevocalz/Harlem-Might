@@ -21,9 +21,31 @@ export function MemberMenu({ siteUrl }: { siteUrl: string }) {
   const signOut = useMemberSession((s) => s.signOut);
   const router = useRouter();
 
+  const refresh = useMemberSession((s) => s.refresh);
+
   useEffect(() => {
     void hydrate(siteUrl);
   }, [hydrate, siteUrl]);
+
+  // The cookie is the truth, not this tab: sign-in or sign-out on another tab
+  // (or a session that lands after the first read) is picked up when the
+  // window regains focus instead of a stale "Sign in" staying up.
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    const onVisible = () => {
+      if (document.visibilityState !== 'hidden') {
+        const s = useMemberSession.getState();
+        if (s.status === 'idle') void s.hydrate(siteUrl);
+        else if (s.status !== 'loading') void s.refresh();
+      }
+    };
+    window.addEventListener('focus', onVisible);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('focus', onVisible);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [siteUrl, refresh]);
 
   if (status === 'signed-in' && member) {
     const label = member.name?.trim() || 'Member';

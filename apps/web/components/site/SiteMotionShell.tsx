@@ -3,9 +3,12 @@
 import { Suspense, useEffect, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import { usePathname } from 'solito/navigation';
 import { Link } from '@acme/ui/html';
-import { View } from '@acme/ui/tw';
-import { MightsDock, MightsFooter, MightsNavbar, routes } from '@acme/ui/mights';
+import { Link as SolitoLink } from 'solito/link';
+import { Text, View } from '@acme/ui/tw';
+import { MightsDock, MightsFooter, MightsNavbar, routes, secondaryNav } from '@acme/ui/mights';
+import { MemberAvatar } from '@acme/app/features/auth/MemberAvatar.tsx';
 import { MemberMenu } from '@acme/app/features/auth/MemberMenu.tsx';
+import { useMemberSession } from '@acme/app/features/auth/member-session.ts';
 
 /**
  * Product-site shell and motion owner.
@@ -119,6 +122,40 @@ function SiteFooter() {
   return pathname.startsWith(routes.explore()) ? null : <MightsFooter />;
 }
 
+function SiteDock() {
+  const pathname = usePathname() ?? '/';
+  const status = useMemberSession((s) => s.status);
+  const member = useMemberSession((s) => s.member);
+  const signedIn = status === 'signed-in' && member !== null;
+  const label = member?.name?.trim() || 'Your profile';
+  return (
+    <MightsDock
+      secondary={
+        signedIn
+          ? secondaryNav.filter((item) => item.href !== routes.signIn() && item.href !== routes.signUp())
+          : secondaryNav
+      }
+      sheetHeader={
+        signedIn
+          ? (close) => (
+              <SolitoLink
+                href={routes.profile()}
+                aria-current={pathname === routes.profile() ? 'page' : undefined}
+                onClick={close}
+                className="mights-focus flex min-h-12 items-center gap-3 border-b border-rule-hairline px-1"
+              >
+                <MemberAvatar name={label} imageUri={member?.image} size="sm" />
+                <View className="flex-1">
+                  <Text className="text-base font-bold text-text">{label}</Text>
+                </View>
+              </SolitoLink>
+            )
+          : undefined
+      }
+    />
+  );
+}
+
 export function SiteMotionShell({ children }: { children: React.ReactNode }) {
   return (
     <>
@@ -138,7 +175,7 @@ export function SiteMotionShell({ children }: { children: React.ReactNode }) {
         <SiteFooter />
       </Suspense>
       <Suspense>
-        <MightsDock />
+        <SiteDock />
       </Suspense>
     </>
   );

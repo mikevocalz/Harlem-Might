@@ -7,7 +7,7 @@ import { BookOpen, CalendarClock, Ellipsis, Footprints, MapPinned, Music, type L
 import { Button, List, ListItem, Nav } from '../html';
 import { View } from '../tw';
 import { BottomSheet } from '../BottomSheet';
-import { activeSection, primaryNav, secondaryNav, type PrimaryNavLabel } from './routes';
+import { activeSection, primaryNav, secondaryNav, routes, type PrimaryNavLabel } from './routes';
 
 const ICONS = {
   Explore: MapPinned,
@@ -20,6 +20,14 @@ const ICONS = {
 const item =
   'mights-focus relative flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-1 text-caption font-medium me:w-full me:flex-none me:py-2.5';
 
+export interface MightsDockProps {
+  /** Row rendered above the secondary links — e.g. a member's profile row.
+   *  Called with the sheet's `close` so tapping it navigates and dismisses. */
+  sheetHeader?: (close: () => void) => React.ReactNode;
+  /** The sheet's links; the app strikes Sign in/Create account for a member. */
+  secondary?: readonly { label: string; href: string }[];
+}
+
 // Bar: a gold rule across the item's top. Rail: a gold rule down its leading
 // edge, the same marker the native AppTabBar draws in rail mode.
 const marker = 'absolute top-0 h-rail w-8 bg-primary me:bottom-2 me:left-0 me:top-2 me:h-auto me:w-rail';
@@ -30,13 +38,15 @@ const marker = 'absolute top-0 h-rail w-8 bg-primary me:bottom-2 me:left-0 me:to
 // panes standard instead of the phone layout. "More" opens the kit
 // BottomSheet (vaul on web, native sheets in the app): drag, backdrop and
 // Escape dismiss it.
-export function MightsDock() {
+export function MightsDock({ sheetHeader, secondary = secondaryNav }: MightsDockProps) {
   const pathname = usePathname() ?? '/';
   const current = activeSection(pathname);
   const [moreOpen, setMoreOpen] = useState(false);
   // No dock tab matches /about, /download or the legal pages, so More carries
   // the you-are-here state for the routes that live in its sheet.
-  const inSheet = secondaryNav.some((link) => pathname === link.href || pathname.startsWith(`${link.href}/`));
+  const inSheet =
+    secondary.some((link) => pathname === link.href || pathname.startsWith(`${link.href}/`)) ||
+    pathname.startsWith(routes.profile());
 
   return (
     <>
@@ -78,7 +88,8 @@ export function MightsDock() {
 
       <BottomSheet open={moreOpen} onClose={() => setMoreOpen(false)} title="More">
         <List className="block pb-[calc(env(safe-area-inset-bottom)+--spacing(3))]">
-          {secondaryNav.map((link) => {
+          {sheetHeader ? <ListItem className="block">{sheetHeader(() => setMoreOpen(false))}</ListItem> : null}
+          {secondary.map((link) => {
             const here = pathname === link.href || pathname.startsWith(`${link.href}/`);
             return (
               <ListItem key={link.label} className="block">
