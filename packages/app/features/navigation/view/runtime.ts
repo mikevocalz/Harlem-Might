@@ -102,6 +102,7 @@ export function startLocation(): void {
   const ui = useNavigationUi.getState();
   runtime.stopWatch = runtime.source.watch({
     onFix: (fix) => controller.ingestFix(fix),
+    onHeading: (heading) => controller.ingestHeading(heading),
     onAvailability: (availability) => ui.setLocation(availability),
   });
   runtime.tick = setInterval(() => controller.refreshPositioning(), 1000);
