@@ -7,7 +7,7 @@ import { MightsEditorialImage, MightsText } from '@acme/ui/mights';
 import { Text, View } from '@acme/ui/tw';
 import { useQuery } from '@tanstack/react-query';
 import { fetchArtistPhotos } from './artist-photo-client.ts';
-import { artistPhotoProviderLabel } from './artist-photo.ts';
+import { artistPhotoImageProps, artistPhotoProviderLabel } from './artist-photo.ts';
 import { musicKeys } from './music.keys.ts';
 
 export function MusicArtistPhoto({ artist }: { artist: MusicArtistRecord }) {
@@ -40,7 +40,7 @@ export function MusicArtistPhoto({ artist }: { artist: MusicArtistRecord }) {
           style={{ aspectRatio: Math.max(0.72, Math.min(aspect, 1.25)) }}
         >
           <Image
-            src={photo.url}
+            {...artistPhotoImageProps(photo)}
             alt={`${artist.name} artist photo`}
             fill
             priority

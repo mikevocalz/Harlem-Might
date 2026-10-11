@@ -5,6 +5,10 @@ import {
   type ArtistPhotoResult,
 } from '@acme/app/features/music/artist-photo.ts';
 import {
+  hasVerifiedArtistPhotoSource,
+  resolveVerifiedArtistPhotos,
+} from '@acme/app/features/music/verified-artist-photo.ts';
+import {
   listMusicArtists,
   persistRightsClearedMusicArtistHeadshot,
   type MusicArtistRecord,
@@ -87,11 +91,35 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ photos: {} }, { status: 400 });
   }
 
-  const photos = await resolveArtistPhotos(names, cachedFetch, 10);
+  const verifiedNames = names.filter((name) => hasVerifiedArtistPhotoSource(name));
+  const legacyNames = names.filter((name) => !hasVerifiedArtistPhotoSource(name));
+  const [verifiedPhotos, legacyPhotos] = await Promise.all([
+    resolveVerifiedArtistPhotos(verifiedNames, cachedFetch, 8),
+    resolveArtistPhotos(legacyNames, cachedFetch, 8),
+  ]);
+  const photos = { ...legacyPhotos, ...verifiedPhotos };
   await persistRightsClearedPhotos(catalogue.data, photos);
 
+  // Provider-reference images stay external and are never ingested into
+  // Payload. Serve them through a name-allowlisted same-origin proxy so web,
+  // native and headset clients do not need a growing remote-host allowlist.
+  const publicPhotos = Object.fromEntries(
+    Object.entries(photos).map(([name, photo]) => [
+      name,
+      photo?.provider === 'curated_web'
+        ? {
+            ...photo,
+            url: new URL(
+              `/api/music/artist-photo/image?name=${encodeURIComponent(name)}&v=5`,
+              request.nextUrl.origin,
+            ).href,
+          }
+        : photo,
+    ]),
+  );
+
   return NextResponse.json(
-    { photos },
+    { photos: publicPhotos },
     {
       headers: {
         'Cache-Control': `public, s-maxage=${PHOTO_CACHE_SECONDS}, stale-while-revalidate=86400`,
