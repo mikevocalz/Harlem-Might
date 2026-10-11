@@ -53,7 +53,6 @@ export const VERIFIED_MISSING_ARTIST_NAMES = [
 export const VERIFIED_WIKIPEDIA_TITLES: Readonly<Record<string, string>> =
   {
   "asap twelvyy": "ASAP Twelvyy",
-  "bessie smith": "Bessie Smith",
   "hazel scott": "Hazel Scott",
   "james weldon johnson": "James Weldon Johnson",
   "kurtis blow": "Kurtis Blow",
@@ -78,6 +77,7 @@ export const VERIFIED_WIKIPEDIA_TITLES: Readonly<Record<string, string>> =
 
 export const CURATED_COMMONS_FILES: Readonly<Record<string, string>> =
   {
+  "bessie smith": "File:BessieSmith.jpg",
   "charles hamilton": "File:Charles Hamilton (rapper).jpg",
   "frankie lymon and the teenagers": "File:Frankie Lymon and the Teenagers.jpg",
   "james p johnson": "File:(Portrait of James P. (James Price) Johnson and Marty Marsala, Riverboat on the Hudson, N.Y., ca. July 1947) (LOC) (5436424030).jpg",
@@ -88,72 +88,72 @@ export const CURATED_COMMONS_FILES: Readonly<Record<string, string>> =
 export const CURATED_PROFILE_PAGES: Readonly<Record<string, CuratedArtistProfile>> =
   {
   "asap ant": {
-    "url": "https://www.bet.com/hip-hop-awards/photos/yhpald/the-cypher-lineup-2013/p6kh7w",
-    "credit": "BET Hip Hop Awards · photo by Ryan Lyons"
+    "url": "https://www.last.fm/music/A%24AP%2BANT",
+    "credit": "Last.fm A$AP Ant artist profile"
   },
   "big l": {
-    "url": "https://www.allmusic.com/artist/big-l-mn0000055456",
-    "credit": "AllMusic · photo by Ricky Powell"
+    "url": "https://www.last.fm/music/Big%2BL",
+    "credit": "Last.fm Big L artist profile"
   },
   "black rob": {
-    "url": "https://www.allmusic.com/artist/black-rob-mn0000094813",
-    "credit": "AllMusic artist profile"
+    "url": "https://www.last.fm/music/Black%2BRob",
+    "credit": "Last.fm Black Rob artist profile"
   },
   "cameo": {
-    "url": "https://www.allmusic.com/artist/p3822",
-    "credit": "AllMusic · photo by Tracey Landworth"
+    "url": "https://www.cameonation.com/",
+    "credit": "Official CAMEO / Larry Blackmon site"
   },
   "charlie palmieri": {
     "url": "https://fania.com/artist/charlie-palmieri/",
     "credit": "Fania artist profile"
   },
   "chick webb": {
-    "url": "https://www.si.edu/object/chick-webb-and-his-orchestra%3Anpg_NPG.2013.57",
-    "credit": "Smithsonian National Portrait Gallery"
+    "url": "https://www.last.fm/music/Chick%2BWebb",
+    "credit": "Last.fm Chick Webb artist profile"
   },
   "dj hollywood": {
-    "url": "https://www.allmusic.com/artist/dj-hollywood-mn0000549401",
-    "credit": "AllMusic artist profile"
+    "url": "https://mrbellersneighborhood.com/2023/03/harlem-superstar-dj-hollywood",
+    "credit": "Mr. Beller's Neighborhood · photo by Dianne Washington"
   },
   "dani stevenson": {
     "url": "https://www.last.fm/music/Dani%2BStevenson",
     "credit": "Last.fm artist profile"
   },
   "freekey zekey": {
-    "url": "https://www.allmusic.com/artist/freekey-zekey-mn0000163117",
-    "credit": "AllMusic artist profile"
+    "url": "https://www.last.fm/music/Freekey%2BZekey",
+    "credit": "Last.fm Freekey Zekey artist profile"
   },
   "harlem quartet": {
     "url": "https://www.harlemquartet.com/",
     "credit": "Official Harlem Quartet site"
   },
   "herb mcgruff": {
-    "url": "https://www.reverbnation.com/herbmcgruff",
-    "credit": "ReverbNation artist profile"
+    "url": "https://www.last.fm/music/Herb%20McGruff",
+    "credit": "Last.fm Herb McGruff artist profile"
   },
   "j r writer": {
     "url": "https://www.last.fm/music/J.R.+Writer",
     "credit": "Last.fm artist profile"
   },
   "johnny kemp": {
-    "url": "https://www.allmusic.com/artist/johnny-kemp-mn0000241893",
-    "credit": "AllMusic artist profile"
+    "url": "https://www.last.fm/music/Johnny%2BKemp",
+    "credit": "Last.fm Johnny Kemp artist profile"
   },
   "kenny drew": {
-    "url": "https://www.allmusic.com/artist/kenny-drew-mn0000081841",
-    "credit": "AllMusic artist profile"
+    "url": "https://www.last.fm/music/Kenny%2BDrew",
+    "credit": "Last.fm Kenny Drew artist profile"
   },
   "kool moe dee": {
-    "url": "https://www.allmusic.com/artist/kool-moe-dee-mn0000113300",
-    "credit": "AllMusic artist profile"
+    "url": "https://www.last.fm/music/Kool%2BMoe%2BDee",
+    "credit": "Last.fm Kool Moe Dee artist profile"
   },
   "spoonie gee": {
-    "url": "https://mopop.emuseum.com/objects/98283/spoonie-gee-promotional-portrait",
-    "credit": "Museum of Pop Culture promotional portrait"
+    "url": "https://www.last.fm/music/Spoonie%2BGee",
+    "credit": "Last.fm Spoonie Gee artist profile"
   },
   "vado": {
-    "url": "https://www.bet.com/photo-gallery/9i69l1/dj-khaled-swizz-beats-meek-mill-ace-hood-french-montana-rick-ross-mavado-jadakiss-and-vado-visit-106-park/zuem9j",
-    "credit": "BET · photo by Bennett Raglin/BET/Getty Images for BET"
+    "url": "https://www.last.fm/music/Vado",
+    "credit": "Last.fm Vado artist profile"
   }
 };
 
