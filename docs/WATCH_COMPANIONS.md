@@ -1,5 +1,11 @@
 # Harlem Might · Watch Companion Engineering Plan
 
+Issue 41 now adds a **draft foreground-only paired transport** source slice.
+See [Paired walk transport](./PAIRED_WALK_TRANSPORT.md) for the current contract,
+security/lifecycle behavior, verification results and outstanding release gates.
+The foundation plan below predates that slice; independent authenticated HTTPS,
+live surfaces and real hardware validation remain outstanding.
+
 This branch **stacks on PR #38** (which stacks on PR #37). Wear OS and watchOS
 consume the public `@acme/widgets` schema; personal walk sessions and secure
 paired-device handoff require the next integration phase.
