@@ -2,7 +2,7 @@
 // (React Server Components, route handlers). The `server-only` marker turns
 // an import from a client bundle into a build error.
 import 'server-only';
-import { createContentReaders, type ContentDocs, type ContentQuery, type ContentSource } from '@acme/app/content';
+import { createContentReaders, type ContentDocs, type ContentPage, type ContentQuery, type ContentSource } from '@acme/app/content';
 import { getPayload, type Where } from 'payload';
 import config from './src/payload.config';
 import type { Event, MusicArtist, Place, Story, Walk } from './src/payload-types';
@@ -22,24 +22,30 @@ export const isContentDatabaseConfigured = (): boolean => Boolean(process.env.DA
 
 const TRANSIENT = /ENOTFOUND|EAI_AGAIN|ECONNRESET|ECONNREFUSED|ETIMEDOUT|timeout|terminated|Connection/i;
 
+// Retries for transient connection failures only: the Neon pooler stalls
+// after an idle suspend, and the local resolver has dropped its hostname
+// (getaddrinfo ENOTFOUND) for a second at a time. Up to ~2 s of backoff;
+// a query error or a third failure goes to the reader as `query-failed`.
+async function withRetry<TSlug extends keyof ContentDocs, T>(
+  query: ContentQuery<TSlug>,
+  run: (query: ContentQuery<TSlug>) => Promise<T>,
+): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await run(query);
+    } catch (error) {
+      const cause = String((error as Error).cause ?? error);
+      if (attempt === 2 || !TRANSIENT.test(cause)) throw error;
+      console.warn(`payload ${query.collection} read failed (${cause.slice(0, 80)}), retry ${attempt + 1}`);
+      await new Promise((resolve) => setTimeout(resolve, 400 * 3 ** attempt));
+    }
+  }
+}
+
 const payloadSource: ContentSource = {
   isConfigured: isContentDatabaseConfigured,
-  // Retries for transient connection failures only: the Neon pooler stalls
-  // after an idle suspend, and the local resolver has dropped its hostname
-  // (getaddrinfo ENOTFOUND) for a second at a time. Up to ~2 s of backoff;
-  // a query error or a third failure goes to the reader as `query-failed`.
-  async find(query) {
-    for (let attempt = 0; ; attempt++) {
-      try {
-        return await findOnce(query);
-      } catch (error) {
-        const cause = String((error as Error).cause ?? error);
-        if (attempt === 2 || !TRANSIENT.test(cause)) throw error;
-        console.warn(`payload ${query.collection} read failed (${cause.slice(0, 80)}), retry ${attempt + 1}`);
-        await new Promise((resolve) => setTimeout(resolve, 400 * 3 ** attempt));
-      }
-    }
-  },
+  find: (query) => withRetry(query, findOnce),
+  findPage: (query) => withRetry(query, findPageOnce),
 };
 
 async function findOnce<TSlug extends keyof ContentDocs>(
@@ -70,6 +76,24 @@ async function findOnce<TSlug extends keyof ContentDocs>(
   return docs as ContentDocs[TSlug][];
 }
 
+async function findPageOnce<TSlug extends keyof ContentDocs>(
+  query: ContentQuery<TSlug>,
+): Promise<ContentPage<ContentDocs[TSlug]>> {
+  const payload = await getPayload({ config });
+  const { docs, hasNextPage, totalDocs } = await payload.find({
+    collection: query.collection,
+    where: query.where as Where,
+    depth: query.depth,
+    limit: query.limit,
+    page: query.page ?? 1,
+    sort: query.sort,
+    ...(query.select ? { select: Object.fromEntries(query.select.map((field) => [field, true])) } : {}),
+    draft: false,
+    overrideAccess: false,
+  });
+  return { docs: docs as ContentDocs[TSlug][], hasNextPage, totalDocs };
+}
+
 export const {
   listWalks,
   getWalk,
@@ -81,6 +105,7 @@ export const {
   listStories,
   getStory,
   listMusicArtists,
+  listMusicArtistsPage,
   getMusicArtist,
   listEventsForDate,
 } = createContentReaders(payloadSource);
@@ -90,6 +115,7 @@ export type {
   ContentResult,
   DetailResult,
   EventRecord,
+  MusicArtistPage,
   MusicArtistRecord,
   PlaceRecord,
   PlaceRef,

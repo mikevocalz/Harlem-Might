@@ -1,4 +1,4 @@
-import type { MusicConnection } from '@acme/app/content';
+import { HARLEM_ARCHIVAL_IMAGES, type EditorialImage, type MusicConnection } from '@acme/app/content';
 
 /** Plain-English connection labels; the CMS stores enum keys. */
 export const musicConnectionLabel = (connection: MusicConnection): string => {
@@ -43,3 +43,14 @@ export const biographyParagraphs = (biography: string): string[] =>
     .split(/\n{2,}/)
     .map((paragraph) => paragraph.trim())
     .filter(Boolean);
+
+/**
+ * A stable archival frame for an artist without a rights-cleared headshot.
+ * Keyed on the slug so every card keeps the same image across renders, and the
+ * grid varies instead of repeating one photograph.
+ */
+export const artistArchiveFallback = (slug: string): EditorialImage | undefined => {
+  let hash = 0;
+  for (const char of slug) hash = (hash * 31 + char.charCodeAt(0)) | 0;
+  return HARLEM_ARCHIVAL_IMAGES[Math.abs(hash) % HARLEM_ARCHIVAL_IMAGES.length];
+};

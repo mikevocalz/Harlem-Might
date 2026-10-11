@@ -2,7 +2,7 @@
 // result union, record shapes, Harlem-day helpers and the reader factory.
 // No Payload import lives here (boundaries.mjs FORBID_BACKEND_DIRECT). The
 // ready-to-call readers are bound to Payload in @acme/payload/server.
-export { createContentReaders, LIST_LIMIT, PLACES_LIMIT } from './readers.ts';
+export { createContentReaders, LIST_LIMIT, MUSIC_PAGE_SIZE, PLACES_LIMIT } from './readers.ts';
 export { createRestContentSource, restQueryString } from './rest-source.ts';
 export { HARLEM_HISTORY_FACTS, harlemHistoryFactFor } from './history-facts.ts';
 export type { HarlemHistoryFact } from './history-facts.ts';
@@ -14,7 +14,15 @@ export {
   mapEditorialImages,
 } from './editorial-images.ts';
 export type { EditorialImage } from './editorial-images.ts';
-export type { ContentDocs, ContentQuery, ContentReaders, ContentSource, ContentWhere } from './readers.ts';
+export type {
+  ContentDocs,
+  ContentPage,
+  ContentQuery,
+  ContentReaders,
+  ContentSource,
+  ContentWhere,
+  MusicArtistPage,
+} from './readers.ts';
 export type { EventDoc, MediaDoc, MusicArtistDoc, PlaceDoc, SourceDoc, StoryDoc, WalkDoc } from './docs.ts';
 export { harlemDayBounds, harlemToday, isHarlemDate, HARLEM_TIME_ZONE } from './harlem-time.ts';
 export { isGeneratedPlaceSlug, placeNameSlug, uniquePlaceSlug } from './place-slug.ts';

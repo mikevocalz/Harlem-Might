@@ -14,19 +14,9 @@ import { ContentNotice } from '../site/content/ContentNotice.tsx';
 import { SourcesList } from '../site/content/SourcesList.tsx';
 import type { ScreenResult } from '../site/stories/StoriesScreen.tsx';
 import { YouTubeEmbed } from './YouTubeEmbed';
-import { biographyParagraphs, musicConnectionLabel, youTubeVideoId } from './music-format.ts';
+import { artistArchiveFallback, biographyParagraphs, musicConnectionLabel, youTubeVideoId } from './music-format.ts';
 
-const heroImage = getHarlemArchivalImage('nypl-seventh-avenue-west-125th-1934');
 const archiveImage = getHarlemArchivalImage('nypl-harlem-storefronts-1939');
-
-const hero = heroImage ? (
-  <MightsEditorialImage
-    image={heroImage}
-    screenId="music-hero"
-    ratio="wide"
-    sizes="(min-width: 768px) 60vw, 100vw"
-  />
-) : undefined;
 
 function Fact({ label, value }: { label: string; value: string }) {
   return (
@@ -185,6 +175,7 @@ export function MusicArtistScreen({
     );
   }
   const artist = result.data;
+  const fallback = artistArchiveFallback(artist.slug);
   return (
     <MightsPage
       title={artist.name}
@@ -203,9 +194,15 @@ export function MusicArtistScreen({
             priority
             sizes="(min-width: 768px) 60vw, 100vw"
           />
-        ) : (
-          hero
-        )
+        ) : fallback ? (
+          <MightsEditorialImage
+            image={fallback}
+            screenId={`music-${artist.slug}`}
+            ratio="wide"
+            priority
+            sizes="(min-width: 768px) 60vw, 100vw"
+          />
+        ) : undefined
       }
     >
       <ArtistBody artist={artist} />

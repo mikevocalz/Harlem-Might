@@ -32,11 +32,22 @@ export interface ContentQuery<TSlug extends keyof ContentDocs> {
   depth: number;
   limit: number;
   sort?: string;
+  /** 1-based page for {@linkcode ContentSource.findPage}; `find` ignores it. */
+  page?: number;
   /**
    * Field include-list (Payload `select`). Omit to return whole documents.
    * Slim reads exist so a listing never pays for columns it cannot render.
    */
   select?: readonly string[];
+}
+
+/** One page of a paginated read. */
+export interface ContentPage<TDoc> {
+  docs: TDoc[];
+  /** Whether Payload reports another page after this one. */
+  hasNextPage: boolean;
+  /** Documents matching the query across all pages. */
+  totalDocs: number;
 }
 
 /**
@@ -48,6 +59,10 @@ export interface ContentSource {
   isConfigured(): boolean;
   /** Runs a published-only query. Rejects when the database cannot answer. */
   find<TSlug extends keyof ContentDocs>(query: ContentQuery<TSlug>): Promise<ContentDocs[TSlug][]>;
+  /** Runs a published-only query one page at a time (`query.page`, 1-based). */
+  findPage<TSlug extends keyof ContentDocs>(
+    query: ContentQuery<TSlug>,
+  ): Promise<ContentPage<ContentDocs[TSlug]>>;
 }
 
 export interface ContentReaders {
@@ -82,11 +97,23 @@ export interface ContentReaders {
   getPlaceByLegacySlug(slug: string): Promise<DetailResult<PlaceRecord>>;
   /** Published Harlem artists, name-ordered. Draft candidates never leave the CMS. */
   listMusicArtists(): Promise<ContentResult<MusicArtistRecord[]>>;
+  /** One {@linkcode MUSIC_PAGE_SIZE} page of the directory, 1-based. */
+  listMusicArtistsPage(page?: number): Promise<ContentResult<MusicArtistPage>>;
   getMusicArtist(slug: string): Promise<DetailResult<MusicArtistRecord>>;
+}
+
+/** A page of the music directory. */
+export interface MusicArtistPage {
+  artists: MusicArtistRecord[];
+  hasNextPage: boolean;
+  totalDocs: number;
 }
 
 /** Hard cap per list read. No route shows more than this today. */
 export const LIST_LIMIT = 100;
+
+/** Artists per /music page — a full grid row-count on 2- and 3-column layouts. */
+export const MUSIC_PAGE_SIZE = 24;
 
 /**
  * Cap for the places catalogue read. Places is the browse corpus, not an
@@ -217,6 +244,26 @@ export const createContentReaders = (source: ContentSource): ContentReaders => {
     },
     listMusicArtists: () =>
       list({ collection: 'music-artists', where: PUBLISHED, depth: 1, limit: LIST_LIMIT, sort: 'name' }, mapMusicArtist),
+    listMusicArtistsPage: async (page = 1) => {
+      if (!source.isConfigured()) return notConfigured();
+      try {
+        const result = await source.findPage({
+          collection: 'music-artists',
+          where: PUBLISHED,
+          depth: 1,
+          limit: MUSIC_PAGE_SIZE,
+          sort: 'name',
+          page,
+        });
+        return ok({
+          artists: result.docs.map(mapMusicArtist),
+          hasNextPage: result.hasNextPage,
+          totalDocs: result.totalDocs,
+        });
+      } catch (error) {
+        return queryFailed(error);
+      }
+    },
     getMusicArtist: (slug) => bySlug('music-artists', slug, mapMusicArtist),
   };
 };
