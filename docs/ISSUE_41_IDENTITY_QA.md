@@ -25,6 +25,10 @@ not included.
    deployment origin, session generation, and latest list request must all match.
 5. An avatar upload's follow-on profile write stays bound to its initiating
    account and session generation, including sign-out/sign-in with the same ID.
+   The auth-action factory establishes that boundary before any cookie-changing
+   POST, preventing initial hydration and uploads from racing a delayed login
+   response body. Registration and its follow-on sign-in share the boundary;
+   overlapping attempts are refused and cancellation suppresses later POSTs.
 6. Watch clear/opt-out bypasses a pending native publication. Restart waits for
    the clear barrier; old queued work and send completion cannot publish into or
    unlock the new handoff.
@@ -41,12 +45,18 @@ anonymous journeys are preserved by member-mirror updates.
 ## Regression coverage
 
 The original seven desired-safe tests, covering the six reproduced defects,
-pass unchanged. Permanent regression coverage is in the normal package test
+pass unchanged. An additional production-submit/HTTP-boundary harness verifies
+that pending initial hydration cannot reveal A or apply A’s image during B login.
+This executes shared application logic with explicit network/navigation doubles;
+it is not a browser or device end-to-end claim. Permanent regression coverage is in the normal package test
 commands:
 
 - `packages/app/features/auth/member-session.test.ts`: 36 real-store tests,
   including delayed body parsing, ignored aborts, repeated account switches,
   same-account success, pending logout, and legitimate retry behavior.
+- `packages/app/features/auth/member-auth.test.ts`: 16 auth-entry lifecycle
+  tests, including pending hydration, response-body delays, overlapping attempts,
+  signup/sign-in cancellation, pending logout, and failure/retry.
 - `packages/app/features/journey/identity-lifecycle.test.ts`: 8 tests using the
   real controller, transport, reducer, and production identity subscription.
 - `apps/mobile/src/watch-handoff.test.ts`: 15 tests executing the actual
@@ -70,7 +80,7 @@ pnpm turbo run build typecheck lint
 
 ## Local validation and limits
 
-- 741 package tests passed: shared app 460, mobile 203, Payload 17, widgets 9,
+- 757 package tests passed: shared app 476, mobile 203, Payload 17, widgets 9,
   spatial 23, web 22, mobile scripts 7.
 - Two additional mobile test files could not load the private Viro dependency.
 - Shared app typecheck and changed-file lint passed.

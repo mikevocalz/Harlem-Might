@@ -32,6 +32,14 @@ export interface MemberProfileUpdate {
   image?: string | null;
 }
 
+/** Cookie-changing auth requests must own a boundary before they can start. */
+export interface MemberAuthenticationAttempt {
+  signal: AbortSignal;
+  isCurrent: () => boolean;
+  /** Release this attempt only; successful auth starts a fresh session read. */
+  finish: (succeeded: boolean) => boolean;
+}
+
 interface MemberSessionState {
   status: MemberSessionStatus;
   member: MemberProfile | null;
@@ -40,6 +48,8 @@ interface MemberSessionState {
   siteUrl: string;
   /** First read of the session cookie; safe to call on every mount. */
   hydrate: (siteUrl: string) => Promise<void>;
+  /** Clears the previous identity before a sign-in/sign-up POST; refuses overlap. */
+  beginAuthentication: (siteUrl: string) => MemberAuthenticationAttempt | null;
   /** Credentials were just accepted — fetch the member the cookie now names. */
   signedIn: (siteUrl: string) => Promise<void>;
   /** Re-reads the session; used after a profile edit. */
@@ -82,12 +92,15 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
   let generation = 0;
   let sessionRead: AbortController | undefined;
   let savedPlacesRead: AbortController | undefined;
+  let authentication: AbortController | undefined;
   let logout: { controller: AbortController; promise?: Promise<void> } | undefined;
   const mutations = new Set<AbortController>();
   const ownerOf = (member: MemberProfile | null) => member ? String(member.id) : null;
 
   const invalidate = () => {
     generation++;
+    authentication?.abort();
+    authentication = undefined;
     sessionRead?.abort();
     sessionRead = undefined;
     savedPlacesRead?.abort();
@@ -100,9 +113,9 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
 
   const scopeFor = (): MemberScope | null => {
     const { siteUrl, member } = get();
-    return member && get().status === 'signed-in' ? { generation, siteUrl, owner: String(member.id) } : null;
+    return !authentication && member && get().status === 'signed-in' ? { generation, siteUrl, owner: String(member.id) } : null;
   };
-  const owns = (scope: MemberScope) => scope.generation === generation
+  const owns = (scope: MemberScope) => !authentication && scope.generation === generation
     && scope.siteUrl === get().siteUrl && scope.owner === ownerOf(get().member);
   const active = (scope: MemberScope, controller: AbortController) => !controller.signal.aborted && owns(scope);
 
@@ -129,6 +142,9 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
   };
 
   const load = async (siteUrl: string, newSession = false) => {
+    // A login may already have changed the cookie before its response body
+    // settles. No read may certify an identity inside that window.
+    if (authentication) return;
     const boundary = newSession || get().siteUrl !== siteUrl;
     if (boundary) {
       invalidate();
@@ -199,6 +215,30 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
     hydrate: async (siteUrl) => {
       if (get().status !== 'idle') return;
       await load(siteUrl, true);
+    },
+
+    beginAuthentication: (siteUrl) => {
+      if (authentication || logout) return null;
+      invalidate();
+      const controller = new AbortController();
+      authentication = controller;
+      const startedGeneration = generation;
+      const isCurrent = () => authentication === controller && generation === startedGeneration
+        && !controller.signal.aborted && get().siteUrl === siteUrl;
+      set({ status: 'loading', siteUrl, member: null, savedPlaces: [] });
+      return {
+        signal: controller.signal,
+        isCurrent,
+        finish: (succeeded) => {
+          if (!isCurrent()) return false;
+          authentication = undefined;
+          // Keep credentials out of the store. Auth callers can clear their
+          // form immediately while this guarded session/list read completes.
+          if (succeeded) void load(siteUrl);
+          else set({ status: 'signed-out', member: null, savedPlaces: [] });
+          return true;
+        },
+      };
     },
 
     signedIn: (siteUrl) => load(siteUrl, true),
