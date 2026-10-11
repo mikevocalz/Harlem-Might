@@ -1,7 +1,7 @@
 import { postgresAdapter } from '@payloadcms/db-postgres';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { betterAuthCollections, createBetterAuthPlugin, payloadAdapter } from '@delmaredigital/payload-better-auth';
+import { createBetterAuthPlugin, payloadAdapter } from '@delmaredigital/payload-better-auth';
 import { betterAuth } from 'better-auth';
 import { buildConfig } from 'payload';
 import type { PayloadRequest } from 'payload';
@@ -21,6 +21,7 @@ import { Stories } from './collections/Stories';
 import { Events } from './collections/Events';
 import { MusicArtists } from './collections/MusicArtists';
 import { AUTH_BASE_PATH, AUTH_ORIGINS, PAYLOAD_API_ROUTE, betterAuthOptions } from './auth/options';
+import { memberAuthCollections } from './auth/member-collections';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const serverURL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
@@ -66,6 +67,7 @@ export default buildConfig({
   collections: [Users, Members, Media, Pages, Places, SavedPlaces, Walks, WalkSessions, Stories, Events, MusicArtists],
   endpoints: walkSessionEndpoints,
   db: postgresAdapter({
+    migrationDir: path.resolve(dirname, 'migrations'),
     pool: {
       connectionString: process.env.DATABASE_URL,
       max: 8,
@@ -79,12 +81,7 @@ export default buildConfig({
   csrf: allowedOrigins,
   secret: process.env.PAYLOAD_SECRET || '',
   plugins: [
-    betterAuthCollections({
-      betterAuthOptions,
-      skipCollections: ['user'],
-      firstUserAdmin: false,
-      acknowledgeRoleGuardDisabled: true,
-    }),
+    memberAuthCollections(),
     createBetterAuthPlugin({
       authBasePath: AUTH_BASE_PATH,
       // Better Auth is consumer identity only. Payload `users` remains the

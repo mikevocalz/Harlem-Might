@@ -5,7 +5,7 @@ import type { WalkCommand } from '@acme/widgets';
 import { MightsButton, MightsHeading, MightsText, routes } from '@acme/ui/mights';
 import { View } from '@acme/ui/tw';
 import { SourcesList } from '../site/content/SourcesList.tsx';
-import { navigationFixStore, useNavigationStore } from '../navigation/session/navigationStore.ts';
+import { navigationFixStore, selectDestination, useNavigationStore } from '../navigation/session/navigationStore.ts';
 import { useNavigationUi } from '../navigation/view/navigationUi.store.ts';
 import { startGuidance } from '../navigation/view/runtime.ts';
 import { formatArrivalClock, formatRouteDistance, formatRouteDuration } from '../navigation/view/format.ts';
@@ -32,7 +32,7 @@ export function WalkJourney({ slug, platformActions }: { slug: string; platformA
   const belongs = plan?.slug === slug;
   const stop = belongs ? currentJourneyStop() : undefined;
   const progress = stop && belongs && session?.status === 'active' ? liveProgress(navigation, fixes, now, online, stop.slug, location) : undefined;
-  const matchingRoute = stop && 'destination' in navigation.session && navigation.session.destination.placeId === stop.slug;
+  const matchingRoute = stop && selectDestination(navigation)?.placeId === stop.slug;
   const arrived = stop && session?.status === 'active' && verifiedArrival(navigation, fixes, now, stop.slug, location, online);
   const routeReady = matchingRoute && navigation.session.phase === 'routeReady';
   const routeError = matchingRoute && navigation.routeLoading.kind === 'failed' ? navigation.routeLoading : null;

@@ -399,3 +399,10 @@ export const artistPhotoProviderLabel = (
       return 'Verified artist source';
   }
 };
+
+/** The curated proxy already validates/caches bytes; use its absolute URL on every platform. */
+export const artistPhotoImageProps = (photo: ArtistPhotoResult) => ({
+  src: photo.url,
+  // Next otherwise treats even absolute same-origin URLs as remote optimizer inputs.
+  unoptimized: photo.provider === 'curated_web',
+});

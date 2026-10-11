@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { applyWalkCommand, validateWalkCommand, walkCommandFingerprint, WalkRevisionConflict } from './walk-commands.ts';
 import type { WalkCommand } from './walk-commands.ts';
-import { beginWalk, confirmStop, nextStopId, reconcileWalkSessions, stopWalk, validateWalkSession } from './walk-session.ts';
+import { beginWalk, confirmStop, nextStopId, pauseWalk, reconcileWalkSessions, resumeWalk, stopWalk, validateWalkSession } from './walk-session.ts';
 
 const now = '2026-10-11T00:00:00.000Z';
 const later = '2026-10-11T00:00:01.000Z';
@@ -33,6 +33,48 @@ test('runtime snapshots reject malformed, extra, inconsistent or future data eve
     {...session, startedAt: 'yesterday'}, {...session, status: 'invented'},
   ]) assert.throws(() => validateWalkSession(bad));
   assert.throws(() => applyWalkCommand({...session, revision: -1}, command('resume'), later));
+});
+
+test('snapshot revisions cover every confirmed stop and any pause or stop transition', () => {
+  const session = beginWalk(walk, 's1', now);
+  for (const bad of [
+    {...session, completedStopIds: ['1']},
+    {...session, completedStopIds: ['1', '2'], status: 'completed', revision: 1},
+    {...session, status: 'paused'},
+    {...session, status: 'stopped'},
+    {...session, completedStopIds: ['1'], status: 'paused', revision: 1},
+    {...session, completedStopIds: ['1'], status: 'stopped', revision: 1},
+  ]) assert.throws(() => validateWalkSession(bad), /revision/, JSON.stringify(bad));
+});
+
+test('reconciliation rejects an impossible higher-revision completed snapshot in either order', () => {
+  const session = beginWalk(walk, 's1', now);
+  const impossible = {...session, completedStopIds: ['1', '2'], status: 'completed' as const, revision: 1};
+  assert.throws(() => reconcileWalkSessions(session, impossible), /revision/);
+  assert.throws(() => reconcileWalkSessions(impossible, session), /revision/);
+});
+
+test('minimum revisions and repeated pause/resume histories remain valid', () => {
+  const session = beginWalk(walk, 's1', now);
+  const first = confirmStop(session, '1', later);
+  const completed = confirmStop(first, '2', later);
+  for (const valid of [session, first, completed, pauseWalk(session, later), stopWalk(session, later),
+    pauseWalk(first, later), stopWalk(first, later), stopWalk(pauseWalk(first, later), later)]) {
+    assert.doesNotThrow(() => validateWalkSession(valid));
+  }
+  let resumed = first;
+  for (let cycle = 0; cycle < 3; cycle++) {
+    const paused = pauseWalk(resumed, later);
+    assert.doesNotThrow(() => validateWalkSession(paused));
+    assert.equal(pauseWalk(paused, later), paused);
+    resumed = resumeWalk(paused, later);
+    assert.doesNotThrow(() => validateWalkSession(resumed));
+    assert.equal(resumeWalk(resumed, later), resumed);
+  }
+  const finished = confirmStop(resumed, '2', later);
+  assert.equal(finished.revision, 8);
+  assert.doesNotThrow(() => validateWalkSession(finished));
+  assert.equal(reconcileWalkSessions(session, finished), finished);
 });
 
 test('start/pause/resume/stop and explicit ordered confirmation preserve revision semantics', () => {

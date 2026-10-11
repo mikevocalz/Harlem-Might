@@ -108,7 +108,9 @@ it('a pending request cannot leave its GPS feed running for a newer manual-origi
 });
 
 it('a fresh current-stop route takes over the feed once and ignores synchronous or late notifications', () => {
-  const test = setup(); test.fix(); test.emit(); test.lateNotification(); test.cancel();
+  const test = setup(); test.fix(); test.emit(); test.lateNotification();
+  assert.equal(test.listeners(), 1, 'the provider has not produced a route yet');
+  test.navigation(trip('apollo', 'device-location', 'routeReady')); test.emit(); test.lateNotification(); test.cancel();
   assert.deepEqual(test.calls, ['start', 'request']); assert.equal(test.timeoutCleared(), true);
   assert.equal(test.listeners(), 0); assert.deepEqual(test.errors, []);
 });
@@ -128,4 +130,31 @@ it('denied or absent fresh GPS expires and releases a feed owned by the pending 
 
 it('cancelling does not release a preexisting feed that the pending request did not acquire', () => {
   const test = setup(true); test.cancel(); assert.deepEqual(test.calls, ['start']);
+});
+
+it('a failed initial route releases the pending feed and subscription without a second request', () => {
+  const test = setup(); test.fix(); test.emit(); test.emit();
+  assert.deepEqual(test.calls, ['start', 'request']);
+  test.navigation({ phase: 'error', trip: { destination: { placeId: 'apollo' }, origin: { kind: 'device-location' } } } as NavigationSession); test.emit();
+  assert.deepEqual(test.calls, ['start', 'request', 'stop']);
+  assert.equal(test.listeners(), 0);
+  test.lateNotification(); test.cancel();
+  assert.deepEqual(test.calls, ['start', 'request', 'stop']);
+});
+
+it('cancelling or closing before a route arrives releases the owned feed', () => {
+  for (const close of [false, true]) {
+    const test = setup(); test.fix(); test.emit();
+    if (close) { test.navigation({ phase: 'idle' }); test.emit(); } else test.cancel();
+    assert.deepEqual(test.calls, ['start', 'request', 'stop']);
+    assert.equal(test.listeners(), 0);
+  }
+});
+
+it('a newer device-origin Explore trip keeps the feed while the journey route is still planning', () => {
+  const test = setup(); test.fix(); test.emit();
+  test.navigation(trip('other-place', 'device-location', 'calculatingRoute')); test.emit();
+  assert.deepEqual(test.calls, ['start', 'request']);
+  assert.match(test.errors[0]!, /Another trip/);
+  assert.equal(test.listeners(), 0);
 });

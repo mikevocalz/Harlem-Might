@@ -41,8 +41,8 @@
     "better-auth": "catalog:",
     "@acme/app": "workspace:*",
     "server-only": "0.0.1",
-    "@acme/widgets": "workspace:*",
-    "file-type": "catalog:"
+    "file-type": "catalog:",
+    "@acme/widgets": "workspace:*"
   },
   "devDependencies": {
     "@acme/config": "workspace:*",

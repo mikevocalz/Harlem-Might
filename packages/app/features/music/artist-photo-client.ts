@@ -3,7 +3,7 @@ import {
   type ArtistPhotoResult,
 } from './artist-photo.ts';
 
-const PHOTO_RESOLVER_VERSION = '3';
+const PHOTO_RESOLVER_VERSION = '5';
 
 const photoServiceBase = (): string | undefined => {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
