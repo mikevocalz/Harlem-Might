@@ -93,7 +93,7 @@ export function NavigationHud({ onShowSteps, onRecenter, onShowPlace, onSave, is
     );
   }
 
-  const { maneuver, remaining, notices, statusText } = view;
+  const { maneuver, remaining, notices, statusText, liveProgress } = view;
   const paused = view.kind === 'paused';
 
   return (
@@ -116,7 +116,7 @@ export function NavigationHud({ onShowSteps, onRecenter, onShowPlace, onSave, is
                 {maneuver.instruction}
               </Text>
               <Text numberOfLines={1} className={type.caption + ' font-sans text-text-muted'}>
-                On {maneuver.street}
+                {liveProgress ? 'On' : 'Route street:'} {maneuver.street}
               </Text>
             </View>
           </View>
@@ -136,10 +136,11 @@ export function NavigationHud({ onShowSteps, onRecenter, onShowPlace, onSave, is
         className="absolute flex-row flex-wrap items-center justify-between gap-3 border-t-2 border-primary bg-surface-raised p-3"
         style={{ ...edge, bottom: pad.bottom + 12 }}
       >
-        <View accessible aria-label={`Left to go: ${remaining.accessibilityLabel}`} className="min-w-0 shrink gap-0.5">
+        <View accessible aria-label={remaining.accessibilityLabel} className="min-w-0 shrink gap-0.5">
+          {!liveProgress ? <Text className={type.caption + ' font-sans text-text-muted'}>Planned route</Text> : null}
           <Text className={type.title + ' font-sans-bold text-text'}>{remaining.durationText}</Text>
           <Text className={type.caption + ' font-sans text-text-muted'}>
-            {remaining.distanceText}, arrive {remaining.etaText}
+            {remaining.distanceText}{liveProgress ? `, arrive ${remaining.etaText}` : ', live arrival time unavailable'}
           </Text>
         </View>
         <View className={'flex-row flex-wrap ' + type.inlineGap}>

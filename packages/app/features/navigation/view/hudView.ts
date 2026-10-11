@@ -1,3 +1,4 @@
+import { DEFAULT_NAVIGATION_CONFIG } from '../config.ts';
 import { routeSteps } from '../model/route.ts';
 import { hasActiveTrip, type ActiveSession } from '../model/session.ts';
 import type { NavigationState } from '../session/navigationStore.ts';
@@ -42,6 +43,8 @@ export type HudView =
       readonly kind: 'guiding' | 'rerouting' | 'paused';
       readonly maneuver: HudManeuver;
       readonly remaining: RouteSummary;
+      /** False means a planned/cached synopsis, never a live ETA. */
+      readonly liveProgress: boolean;
       readonly notices: readonly HudNotice[];
       /** Announced politely when it changes: reroute started or finished, paused. */
       readonly statusText: string;
@@ -109,11 +112,12 @@ function notices(state: NavigationState, session: ActiveSession, input: HudInput
 function arrivalView(session: ActiveSession): ArrivalView | undefined {
   if (session.arrival.kind !== 'arrived') return undefined;
   const name = session.destination.name;
-  const entrance = session.destination.entrance?.description;
+  const entrance = session.destination.entrance?.source === 'cms-verified'
+    ? session.destination.entrance.description : undefined;
   if (session.arrival.confidence === 'confirmed') {
     return {
       title: `You’ve arrived at ${name}`,
-      body: entrance ? `The entrance: ${entrance}.` : 'The entrance should be in front of you.',
+      body: entrance ? `The entrance: ${entrance}.` : 'You are near the mapped location. The entrance has not been verified; check the signs and surroundings.',
       confidence: 'confirmed',
       ...(session.destination.placeId ? { placeId: session.destination.placeId } : {}),
       placeName: name,
@@ -139,8 +143,15 @@ export function hudView(state: NavigationState, input: HudInput): HudView {
 
   const { route, generation } = session.activeRoute;
   const steps = routeSteps(route);
-  const progress =
-    state.progress.kind === 'tracking' && state.progress.progress.routeId === route.id ? state.progress.progress : undefined;
+  const candidate = state.progress.kind === 'tracking' && state.progress.progress.routeId === route.id
+    ? state.progress.progress : undefined;
+  const age = candidate ? input.now - candidate.timestampMs : Number.POSITIVE_INFINITY;
+  const liveProgress = Boolean(candidate && Number.isFinite(age) && age >= -DEFAULT_NAVIGATION_CONFIG.location.maxFutureSkewMs &&
+    age <= DEFAULT_NAVIGATION_CONFIG.location.maxFixAgeMs && input.location === 'granted' &&
+    session.origin.kind !== 'manual' && session.phase !== 'paused' && session.phase !== 'rerouting' &&
+    session.deviation.kind === 'on-route' && state.routeLoading.kind !== 'loading' &&
+    state.positioning.kind === 'tracking' && state.positioning.confidence !== 'low' && !state.positioning.isMovingTooFast);
+  const progress = liveProgress ? candidate : undefined;
   const active = progress?.activeStep ?? steps[0]!;
   const next = progress ? progress.nextManeuver : steps[1]?.maneuver ?? steps[0]!.maneuver;
   const nextStep = next ? steps.find((step) => step.maneuver === next) : undefined;
@@ -151,7 +162,12 @@ export function hudView(state: NavigationState, input: HudInput): HudView {
 
   const remainingS = progress?.durationRemainingS ?? route.durationS;
   const remainingM = progress?.distanceRemainingM ?? route.distanceM;
-  const remaining = routeSummary(remainingS, remainingM, progress?.etaMs ?? input.now + remainingS * 1000, input);
+  const summary = routeSummary(remainingS, remainingM, progress?.etaMs ?? input.now + remainingS * 1000, input);
+  const remaining = liveProgress ? summary : {
+    ...summary,
+    etaText: '',
+    accessibilityLabel: `Planned route: ${summary.durationText}, ${summary.distanceText}. Live arrival time unavailable.`,
+  };
 
   const rerouting = session.phase === 'rerouting' || (state.routeLoading.kind === 'loading' && state.routeLoading.purpose === 'reroute');
   const kind = session.phase === 'paused' ? 'paused' : rerouting ? 'rerouting' : 'guiding';
@@ -166,6 +182,7 @@ export function hudView(state: NavigationState, input: HudInput): HudView {
 
   return {
     kind,
+    liveProgress,
     maneuver: {
       glyph,
       instruction,

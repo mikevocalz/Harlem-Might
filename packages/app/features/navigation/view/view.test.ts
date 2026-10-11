@@ -1,3 +1,4 @@
+import { hasActiveTrip } from '../model/session.ts';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { create } from 'zustand';
@@ -289,12 +290,44 @@ describe('HUD', () => {
       if (sample.fix.timestampMs > h.clock.now()) h.clock.advance(sample.fix.timestampMs - h.clock.now());
       h.controller.ingestFix(sample.fix);
     }
-    const view = hudView(h.store.getState(), HUD);
+    const view = hudView(h.store.getState(), { ...HUD, now: h.clock.now() });
     assert.equal(view.kind, 'guiding');
     if (view.kind !== 'guiding') return;
     assert.match(view.maneuver.distanceText, /^In \d+ m$/);
     assert.ok(view.maneuver.street.length > 0);
     assert.equal(view.notices.length, 0);
+  });
+
+  it('hides live ETA and turn distance when GPS is stale, denied, paused or off-route', async () => {
+    const h = harness(async () => routes());
+    await h.plan();
+    h.controller.start();
+    for (const sample of synthesizeTrace(fixtureRoute(NAME), { seed: 9, startMs: T0, noiseSigmaM: 2 }).slice(0, 8)) {
+      if (sample.fix.timestampMs > h.clock.now()) h.clock.advance(sample.fix.timestampMs - h.clock.now());
+      h.controller.ingestFix(sample.fix);
+    }
+    const live = hudView(h.store.getState(), { ...HUD, now: h.clock.now() });
+    assert.ok(live.kind === 'guiding' && live.liveProgress && live.remaining.etaText);
+    for (const input of [
+      { ...HUD, now: h.clock.now() + 10_001 },
+      { ...HUD, now: h.clock.now(), location: 'denied' as const },
+    ]) {
+      const unavailable = hudView(h.store.getState(), input);
+      assert.ok(unavailable.kind === 'guiding' && !unavailable.liveProgress);
+      if (unavailable.kind !== 'guiding') continue;
+      assert.equal(unavailable.remaining.etaText, '');
+      assert.equal(unavailable.maneuver.distanceText, '');
+      assert.match(unavailable.remaining.accessibilityLabel, /Planned route/);
+    }
+    h.controller.pause();
+    const paused = hudView(h.store.getState(), { ...HUD, now: h.clock.now() });
+    assert.ok(paused.kind === 'paused' && !paused.liveProgress && !paused.remaining.etaText);
+    h.controller.resume();
+    const session = h.store.getState().session;
+    assert.ok(hasActiveTrip(session));
+    h.store.setState({ session: { ...session, deviation: { kind: 'wrong-direction', consecutiveFixes: 4, sinceMs: h.clock.now() } } });
+    const wrongWay = hudView(h.store.getState(), { ...HUD, now: h.clock.now() });
+    assert.ok(wrongWay.kind === 'guiding' && !wrongWay.liveProgress && !wrongWay.remaining.etaText);
   });
 
   it('says guidance cannot follow you with no device location', async () => {
@@ -341,6 +374,7 @@ describe('HUD', () => {
     if (arrived.kind !== 'arrived') return;
     assert.match(arrived.arrival.title, /^You’ve arrived at /);
     assert.equal(arrived.arrival.placeId, DESTINATION.placeId);
+    assert.match(arrived.arrival.body, /entrance has not been verified/);
 
     const session = h.store.getState().session;
     assert.equal(session.phase, 'arrived');
