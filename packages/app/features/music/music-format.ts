@@ -4,7 +4,7 @@ import type { MusicConnection } from '@acme/app/content';
 export const musicConnectionLabel = (connection: MusicConnection): string => {
   switch (connection) {
     case 'born-raised':
-      return 'Born and raised in Harlem';
+      return 'Born or raised in Harlem';
     case 'resident':
       return 'Harlem resident';
     case 'scene':
@@ -35,6 +35,16 @@ export const youTubeVideoId = (url: string): string | undefined => {
 export const youTubeEmbedUrl = (url: string): string | undefined => {
   const id = youTubeVideoId(url);
   return id ? `https://www.youtube-nocookie.com/embed/${id}?rel=0` : undefined;
+};
+
+/**
+ * A YouTube-hosted high-resolution thumbnail for the artist's own featured
+ * performance. This is presentation fallback media, not a CMS headshot and
+ * must never be credited as a portrait.
+ */
+export const youTubeThumbnailUrl = (url: string): string | undefined => {
+  const id = youTubeVideoId(url);
+  return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : undefined;
 };
 
 /** The plain-text biography as paragraphs (blank-line separated in the CMS). */
