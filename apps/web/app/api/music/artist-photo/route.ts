@@ -1,13 +1,12 @@
+import { cachedArtistPhotoFetch } from '../../../../lib/artist-photo-fetch.ts';
 import { NextResponse, type NextRequest } from 'next/server';
 import {
   resolveArtistPhotos,
-  type ArtistPhotoFetch,
   type ArtistPhotoResult,
 } from '@acme/app/features/music/artist-photo.ts';
 import {
   hasVerifiedArtistPhotoSource,
   resolveVerifiedArtistPhotos,
-  type VerifiedArtistPhotoFetch,
 } from '@acme/app/features/music/verified-artist-photo.ts';
 import {
   listMusicArtists,
@@ -18,15 +17,7 @@ import {
 const PHOTO_CACHE_SECONDS = 60 * 60 * 24 * 7;
 const PERSIST_CONCURRENCY = 4;
 
-const cachedFetch: ArtistPhotoFetch & VerifiedArtistPhotoFetch = async (url, init) =>
-  fetch(url, {
-    ...init,
-    headers: {
-      ...init?.headers,
-      'user-agent': 'HarlemMight/1.0 (+https://harlemmight.com)',
-    },
-    next: { revalidate: PHOTO_CACHE_SECONDS },
-  });
+const cachedFetch = cachedArtistPhotoFetch;
 
 async function persistRightsClearedPhotos(
   catalogue: readonly MusicArtistRecord[],
@@ -119,7 +110,7 @@ export async function GET(request: NextRequest) {
         ? {
             ...photo,
             url: new URL(
-              `/api/music/artist-photo/image?name=${encodeURIComponent(name)}&v=4`,
+              `/api/music/artist-photo/image?name=${encodeURIComponent(name)}&v=5`,
               request.nextUrl.origin,
             ).href,
           }

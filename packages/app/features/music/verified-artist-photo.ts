@@ -1,3 +1,4 @@
+import { isFreeArtistPhotoLicense, isCommonsArtistPhotoUrl } from './artist-photo-rights.ts';
 import type { ArtistPhotoResult } from './artist-photo.ts';
 import {
   CURATED_COMMONS_FILES,
@@ -56,12 +57,8 @@ export const normalizeVerifiedArtistName = (value: string): string =>
 
 export const hasVerifiedArtistPhotoSource = (name: string): boolean => {
   const key = normalizeVerifiedArtistName(name);
-  return Boolean(
-    VERIFIED_WIKIPEDIA_TITLES[key] ??
-      CURATED_COMMONS_FILES[key] ??
-      CURATED_PROFILE_PAGES[key] ??
-      CURATED_DIRECT_PHOTOS[key],
-  );
+  return [VERIFIED_WIKIPEDIA_TITLES, CURATED_COMMONS_FILES, CURATED_PROFILE_PAGES, CURATED_DIRECT_PHOTOS]
+    .some((sources) => Object.hasOwn(sources, key));
 };
 
 const stripHtml = (value: string | undefined): string | undefined => {
@@ -106,6 +103,7 @@ const commonsPhoto = (
     !title ||
     BAD_COMMONS_TOKENS.test(title) ||
     !info?.url ||
+    !isCommonsArtistPhotoUrl(info.url) ||
     !/^image\/(jpeg|png|webp)$/i.test(info.mime ?? '')
   ) {
     return undefined;
@@ -117,8 +115,11 @@ const commonsPhoto = (
     stripHtml(meta.Artist?.value) ??
     stripHtml(meta.Credit?.value) ??
     'Wikimedia Commons contributor';
-  const license =
-    stripHtml(meta.LicenseShortName?.value) ?? 'Wikimedia Commons free media';
+  const license = stripHtml(meta.LicenseShortName?.value);
+  if (!isFreeArtistPhotoLicense(license)) return undefined;
+  if (/^cc[ -]by/i.test(license ?? '') && !stripHtml(meta.Artist?.value) && !stripHtml(meta.Credit?.value)) {
+    return undefined;
+  }
   const licenseUrl =
     absoluteUrl(stripHtml(meta.LicenseUrl?.value), 'https://commons.wikimedia.org') ??
     sourceUrl;
@@ -163,7 +164,9 @@ async function resolveCommonsFileByTitle(
 
   const page = Object.values(pagesObject)
     .map((value) => asObject(value) as CommonsPage | undefined)
-    .find((value): value is CommonsPage => Boolean(value?.imageinfo?.[0]?.url));
+    .find((value): value is CommonsPage => Boolean(value?.imageinfo?.[0]?.url &&
+        value.title?.replace(/_/g, ' ').normalize('NFC').toLowerCase() ===
+          title.replace(/_/g, ' ').normalize('NFC').toLowerCase()));
   return page ? commonsPhoto(name, page) : undefined;
 }
 
@@ -239,42 +242,33 @@ const decodeHtmlAttribute = (value: string): string =>
     .replace(/&#0*39;|&apos;/g, "'")
     .replace(/&#x2F;/gi, '/');
 
+/** Read quoted attributes only from a complete tag, never across nested markup. */
+const htmlAttribute = (tag: string, name: string): string | undefined => {
+  const match = tag.match(new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, 'i'));
+  return match ? decodeHtmlAttribute(match[1] ?? match[2] ?? '') : undefined;
+};
+
 const metaContent = (html: string, key: string): string | undefined => {
-  const escaped = key.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-  const patterns = [
-    new RegExp(
-      `<meta[^>]+(?:property|name)=["']${escaped}["'][^>]+content=["']([^"']+)["']`,
-      'i',
-    ),
-    new RegExp(
-      `<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${escaped}["']`,
-      'i',
-    ),
-  ];
-  for (const pattern of patterns) {
-    const match = html.match(pattern);
-    if (match?.[1]) return decodeHtmlAttribute(match[1]);
+  for (const tag of html.match(/<meta\b[^<>]*>/gi) ?? []) {
+    const name = htmlAttribute(tag, 'property') ?? htmlAttribute(tag, 'name');
+    if (name?.toLowerCase() === key) return htmlAttribute(tag, 'content');
   }
   return undefined;
 };
 
 const artistImgSrc = (html: string, name: string): string | undefined => {
   const wanted = normalizeVerifiedArtistName(name);
-  for (const tag of html.match(/<img\b[^>]*>/gi) ?? []) {
-    const alt =
-      tag.match(/\balt=["']([^"']+)["']/i)?.[1] ??
-      tag.match(/\btitle=["']([^"']+)["']/i)?.[1];
-    const srcset =
-      tag.match(/\bsrcset=["']([^"']+)["']/i)?.[1] ??
-      tag.match(/\bdata-srcset=["']([^"']+)["']/i)?.[1];
-    const src =
-      tag.match(/\bsrc=["']([^"']+)["']/i)?.[1] ??
-      tag.match(/\bdata-src=["']([^"']+)["']/i)?.[1] ??
+  for (const tag of html.match(/<img\b[^<>]*>/gi) ?? []) {
+    const alt = htmlAttribute(tag, 'alt') ?? htmlAttribute(tag, 'title');
+    const srcset = htmlAttribute(tag, 'srcset') ?? htmlAttribute(tag, 'data-srcset');
+    const src = htmlAttribute(tag, 'src') ?? htmlAttribute(tag, 'data-src') ??
       srcset?.split(',')[0]?.trim().split(/\s+/)[0];
     if (
       alt &&
       src &&
-      normalizeVerifiedArtistName(decodeHtmlAttribute(alt)).includes(wanted)
+      normalizeVerifiedArtistName(decodeHtmlAttribute(alt))
+        .replace(/^(?:photo|portrait|image|headshot|avatar) (?:of|for) /, '')
+        .replace(/ (?:photo|portrait|image)$/, '') === wanted
     ) {
       return decodeHtmlAttribute(src);
     }
@@ -295,13 +289,26 @@ async function resolveCuratedProfile(
   });
   if (!response.ok || !response.text) return undefined;
 
+  // A retired profile redirecting to a homepage must never change artist identity.
+  const base = response.url || profile.url;
+  if (new URL(base).href !== new URL(profile.url).href) return undefined;
   const html = await response.text();
-  const base = response.url ?? profile.url;
+  const pageTitle = metaContent(html, 'og:title') ?? metaContent(html, 'twitter:title') ??
+    html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1];
+  const normalizedTitle = normalizeVerifiedArtistName(decodeHtmlAttribute(pageTitle ?? ''));
+  const wanted = normalizeVerifiedArtistName(name);
+  const titleSubject = normalizeVerifiedArtistName(decodeHtmlAttribute(pageTitle ?? '').split(/\s+[-–—|]\s+/)[0] ?? '');
+  const namesArtist = normalizedTitle === wanted || titleSubject === wanted ||
+    Boolean(profile.reviewedPageTitles?.some((title) => normalizeVerifiedArtistName(title) === normalizedTitle)) ||
+    normalizedTitle.startsWith(`${wanted} music `) ||
+    normalizedTitle.startsWith(`${wanted} official `) ||
+    normalizedTitle.startsWith(`${wanted} last fm`) ||
+    normalizedTitle.startsWith(`${wanted} biography`);
   const candidate =
     artistImgSrc(html, name) ??
-    metaContent(html, 'og:image') ??
-    metaContent(html, 'twitter:image') ??
-    metaContent(html, 'twitter:image:src');
+    (namesArtist ? (metaContent(html, 'og:image') ??
+      metaContent(html, 'twitter:image') ??
+      metaContent(html, 'twitter:image:src')) : undefined);
   const imageUrl = absoluteUrl(candidate, base);
   if (!imageUrl) return undefined;
 
@@ -332,6 +339,7 @@ export async function resolveVerifiedArtistPhoto(
   const trimmed = name.trim();
   if (!trimmed || trimmed.length > 120) return undefined;
   const key = normalizeVerifiedArtistName(trimmed);
+  if (!hasVerifiedArtistPhotoSource(trimmed)) return undefined;
 
   const direct = CURATED_DIRECT_PHOTOS[key];
   if (direct) {

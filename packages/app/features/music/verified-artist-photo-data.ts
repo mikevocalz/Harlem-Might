@@ -1,4 +1,4 @@
-export type CuratedArtistProfile = { url: string; credit: string };
+export type CuratedArtistProfile = { url: string; credit: string; reviewedPageTitles?: readonly string[] };
 export type DirectArtistPhoto = { url: string; sourceUrl: string; credit: string };
 
 export const VERIFIED_MISSING_ARTIST_NAMES = [
@@ -101,7 +101,8 @@ export const CURATED_PROFILE_PAGES: Readonly<Record<string, CuratedArtistProfile
   },
   "cameo": {
     "url": "https://www.cameonation.com/",
-    "credit": "Official CAMEO / Larry Blackmon site"
+    "credit": "Official CAMEO / Larry Blackmon site",
+    "reviewedPageTitles": ["CAMEONATION | Larry Blackmon / CAMEO Official Site"]
   },
   "charlie palmieri": {
     "url": "https://fania.com/artist/charlie-palmieri/",
@@ -113,7 +114,8 @@ export const CURATED_PROFILE_PAGES: Readonly<Record<string, CuratedArtistProfile
   },
   "dj hollywood": {
     "url": "https://mrbellersneighborhood.com/2023/03/harlem-superstar-dj-hollywood",
-    "credit": "Mr. Beller's Neighborhood · photo by Dianne Washington"
+    "credit": "Mr. Beller's Neighborhood · photo by Dianne Washington",
+    "reviewedPageTitles": ["Harlem Superstar: DJ Hollywood", "Harlem Superstar: DJ Hollywood | Mr. Beller's Neighborhood"]
   },
   "dani stevenson": {
     "url": "https://www.last.fm/music/Dani%2BStevenson",

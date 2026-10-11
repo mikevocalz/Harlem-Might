@@ -9,6 +9,8 @@ import {
   type VerifiedArtistPhotoFetch,
 } from './verified-artist-photo.ts';
 
+import { CURATED_COMMONS_FILES, CURATED_DIRECT_PHOTOS, CURATED_PROFILE_PAGES, VERIFIED_WIKIPEDIA_TITLES } from './verified-artist-photo-data.ts';
+
 const jsonResponse = (body: unknown, url?: string) => ({
   ok: true,
   url,
@@ -33,6 +35,9 @@ describe('verified artist source coverage', () => {
     assert.equal(VERIFIED_MISSING_ARTIST_NAMES.length, 46);
     assert.equal(new Set(VERIFIED_MISSING_ARTIST_NAMES).size, 46);
     for (const name of VERIFIED_MISSING_ARTIST_NAMES) {
+      const key = normalizeVerifiedArtistName(name);
+      assert.equal([CURATED_COMMONS_FILES, CURATED_DIRECT_PHOTOS, CURATED_PROFILE_PAGES, VERIFIED_WIKIPEDIA_TITLES]
+        .filter((sources) => Object.hasOwn(sources, key)).length, 1, name);
       assert.equal(
         hasVerifiedArtistPhotoSource(name),
         true,
@@ -56,24 +61,24 @@ describe('verified artist source coverage', () => {
 });
 
 describe('resolveVerifiedArtistPhoto', () => {
-  it('uses an exact Wikipedia title and never generator search for Bessie Smith', async () => {
+  it('uses an exact Wikipedia title and never generator search for Hazel Scott', async () => {
     const calls: string[] = [];
     const fetcher: VerifiedArtistPhotoFetch = async (url) => {
       calls.push(url);
       if (url.startsWith('https://en.wikipedia.org/')) {
         const parsed = new URL(url);
-        assert.equal(parsed.searchParams.get('titles'), 'Bessie Smith');
+        assert.equal(parsed.searchParams.get('titles'), 'Hazel Scott');
         assert.equal(parsed.searchParams.get('generator'), null);
         return jsonResponse({
           query: {
             pages: {
               '1': {
-                title: 'Bessie Smith',
+                title: 'Hazel Scott',
                 original: {
                   source:
-                    'https://upload.wikimedia.org/wikipedia/commons/d/d0/Bessie_Smith_1936.jpg',
+                    'https://upload.wikimedia.org/wikipedia/commons/d/d0/Hazel_Scott_1936.jpg',
                 },
-                terms: { description: ['American blues singer'] },
+                terms: { description: ['American jazz pianist'] },
               },
             },
           },
@@ -84,11 +89,11 @@ describe('resolveVerifiedArtistPhoto', () => {
         query: {
           pages: {
             '2': {
-              title: 'File:Bessie Smith 1936.jpg',
+              title: 'File:Hazel Scott 1936.jpg',
               imageinfo: [
                 {
                   url:
-                    'https://upload.wikimedia.org/wikipedia/commons/d/d0/Bessie_Smith_1936.jpg',
+                    'https://upload.wikimedia.org/wikipedia/commons/d/d0/Hazel_Scott_1936.jpg',
                   width: 800,
                   height: 1200,
                   mime: 'image/jpeg',
@@ -104,7 +109,7 @@ describe('resolveVerifiedArtistPhoto', () => {
       });
     };
 
-    const result = await resolveVerifiedArtistPhoto('Bessie Smith', fetcher);
+    const result = await resolveVerifiedArtistPhoto('Hazel Scott', fetcher);
     assert.equal(result?.provider, 'wikimedia_commons');
     assert.equal(result?.rightsStatus, 'rights-cleared');
     assert.equal(calls.length, 2);
@@ -182,11 +187,11 @@ describe('resolveVerifiedArtistPhoto', () => {
   });
 
   it('extracts a vetted artist-profile image for Big L', async () => {
-    const page = 'https://www.allmusic.com/artist/big-l-mn0000055456';
+    const page = 'https://www.last.fm/music/Big%2BL';
     const fetcher: VerifiedArtistPhotoFetch = async (url) => {
       assert.equal(url, page);
       return htmlResponse(
-        '<html><head><meta property="og:image" content="https://rovimusic.example/big-l-ricky-powell.jpg"></head></html>',
+        '<html><head><meta property="og:title" content="Big L music, videos, stats, and photos | Last.fm"><meta property="og:image" content="https://rovimusic.example/big-l-ricky-powell.jpg"></head></html>',
         page,
       );
     };
@@ -199,10 +204,10 @@ describe('resolveVerifiedArtistPhoto', () => {
   });
 
   it('rejects generic profile logos rather than showing the wrong image', async () => {
-    const page = 'https://www.allmusic.com/artist/black-rob-mn0000094813';
+    const page = 'https://www.last.fm/music/Black%2BRob';
     const fetcher: VerifiedArtistPhotoFetch = async () =>
       htmlResponse(
-        '<meta property="og:image" content="https://static.example/allmusic-logo.png">',
+        '<meta property="og:title" content="Black Rob music, videos, stats, and photos | Last.fm"><meta property="og:image" content="https://static.example/allmusic-logo.png">',
         page,
       );
 
@@ -225,4 +230,75 @@ describe('resolveVerifiedArtistPhoto', () => {
     const result = await resolveVerifiedArtistPhotos(names, fetcher, 2);
     assert.deepEqual(Object.keys(result).sort(), [...names].sort());
   });
+});
+
+describe('verified photo identity boundaries', () => {
+  const profile = 'https://www.last.fm/music/Big%2BL';
+  const image = 'https://cdn.example/big-l.jpg';
+
+  it('rejects retired profile redirects and unrelated homepage metadata', async () => {
+    for (const finalUrl of ['https://www.last.fm/', 'https://www.last.fm/music/Someone+Else']) {
+      const photo = await resolveVerifiedArtistPhoto('Big L', async () =>
+        htmlResponse(`<meta property="og:title" content="Big L music, videos and photos"><meta property="og:image" content="${image}">`, finalUrl));
+      assert.equal(photo, undefined);
+    }
+    const photo = await resolveVerifiedArtistPhoto('Big L', async () =>
+      htmlResponse(`<meta property="og:title" content="Music for everyone"><meta property="og:image" content="${image}">`, profile));
+    assert.equal(photo, undefined);
+  });
+
+  it('requires an exact artist image label rather than a substring match', async () => {
+    for (const alt of ['Big Love', 'Big L and Jay-Z', 'Big L album cover', 'Not Big L']) {
+      const photo = await resolveVerifiedArtistPhoto('Big L', async () =>
+        htmlResponse(`<img alt="${alt}" src="${image}">`, profile));
+      assert.equal(photo, undefined, alt);
+    }
+    const photo = await resolveVerifiedArtistPhoto('Big L', async () =>
+      htmlResponse(`<img alt="Portrait of Big L" src="${image}">`, profile));
+    assert.equal(photo?.url, image);
+    assert.equal(photo?.rightsStatus, 'provider-reference');
+    assert.equal(photo?.license, undefined);
+  });
+
+  it('never treats inherited object properties as reviewed sources', async () => {
+    for (const name of ['constructor', 'toString', '__proto__']) {
+      assert.equal(hasVerifiedArtistPhotoSource(name), false);
+      assert.equal(await resolveVerifiedArtistPhoto(name, async () => { throw new Error('must not fetch'); }), undefined);
+    }
+  });
+
+  it('requires the exact pinned Commons file and explicit compatible licensing', async () => {
+    for (const [title, license] of [
+      ['File:Other Person.jpg', 'Public domain'],
+      ['File:BessieSmith.jpg', undefined],
+      ['File:BessieSmith.jpg', 'CC-BY-NC 4.0'],
+      ['File:BessieSmith.jpg', 'CC BY-ND 4.0'],
+      ['File:BessieSmith.jpg', 'CC BY 4.0'], // Missing required creator attribution.
+    ]) {
+      const photo = await resolveVerifiedArtistPhoto('Bessie Smith', async () => jsonResponse({ query: { pages: {
+        1: { title, imageinfo: [{ url: 'https://upload.wikimedia.org/wikipedia/commons/a/aa/BessieSmith.jpg', mime: 'image/jpeg', extmetadata: { LicenseShortName: { value: license } } }] },
+      } } }));
+      assert.equal(photo, undefined, `${title}: ${license}`);
+    }
+  });
+
+  it('isolates upstream failure without omitting requested batch keys', async () => {
+    const photos = await resolveVerifiedArtistPhotos(['Big L', 'Bloodshed'], async () => { throw new Error('timeout'); }, 2);
+    assert.equal(photos['Big L'], null);
+    assert.equal(photos.Bloodshed?.rightsStatus, 'provider-reference');
+    assert.equal(photos.Bloodshed?.license, undefined);
+  });
+});
+
+it('preserves reviewed institutional and official profile title formats', async () => {
+  for (const [name, page, title] of [
+    ['Cameo', 'https://www.cameonation.com/', 'CAMEONATION | Larry Blackmon / CAMEO Official Site'],
+    ['Charlie Palmieri', 'https://fania.com/artist/charlie-palmieri/', 'Charlie Palmieri - Fania Records'],
+    ['Harlem Quartet', 'https://www.harlemquartet.com/', 'Harlem Quartet'],
+    ['DJ Hollywood', 'https://mrbellersneighborhood.com/2023/03/harlem-superstar-dj-hollywood', "Harlem Superstar: DJ Hollywood | Mr. Beller's Neighborhood"],
+  ] as const) {
+    const result = await resolveVerifiedArtistPhoto(name, async () =>
+      htmlResponse(`<title>${title}</title><meta property="og:image" content="https://cdn.example/portrait.jpg">`, page));
+    assert.equal(result?.url, 'https://cdn.example/portrait.jpg', name);
+  }
 });
