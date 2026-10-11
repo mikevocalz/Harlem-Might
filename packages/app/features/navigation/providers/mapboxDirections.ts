@@ -125,11 +125,13 @@ export function createMapboxDirectionsProvider(options: MapboxDirectionsOptions)
       }
       const code = isRecord(body) && typeof body.code === 'string' ? body.code : undefined;
       if (!response.ok || code !== 'Ok') {
-        const message = isRecord(body) && typeof body.message === 'string' ? body.message : 'no message';
+        // Provider text can echo the request URL, token or precise coordinates.
+        // Keep only our bounded failure category and numeric HTTP status.
+        const kind = kindForStatus(response.status, code);
         throw new RouteProviderError(
-          kindForStatus(response.status, code),
+          kind,
           'mapbox',
-          `Mapbox Directions failed: HTTP ${response.status}, ${code ?? 'no code'}: ${message}`,
+          `Mapbox Directions failed: HTTP ${response.status} (${kind})`,
           response.status,
         );
       }
@@ -167,13 +169,13 @@ export function parseMapboxDirections(
 
 function parseRoute(raw: unknown, mode: Exclude<TravelMode, 'transit'>, id: string): Route {
   if (!isRecord(raw)) malformed('route');
-  const legs = Array.isArray(raw.legs) ? raw.legs : malformed('route.legs');
+  const legs = Array.isArray(raw.legs) && raw.legs.length > 0 ? raw.legs : malformed('route.legs');
   let stepIndex = 0;
   const parsedLegs: RouteLeg[] = legs.map((leg: unknown) => {
-    if (!isRecord(leg) || !Array.isArray(leg.steps)) malformed('leg.steps');
+    if (!isRecord(leg) || !Array.isArray(leg.steps) || leg.steps.length === 0) malformed('leg.steps');
     return {
-      distanceM: num(leg.distance, 'leg.distance'),
-      durationS: num(leg.duration, 'leg.duration'),
+      distanceM: nonnegative(leg.distance, 'leg.distance'),
+      durationS: nonnegative(leg.duration, 'leg.duration'),
       steps: (leg.steps as unknown[]).map((step) => parseStep(step, stepIndex++)),
     };
   });
@@ -182,8 +184,8 @@ function parseRoute(raw: unknown, mode: Exclude<TravelMode, 'transit'>, id: stri
     provider: 'mapbox',
     mode,
     geometry: parseGeometry(raw.geometry, 'route.geometry'),
-    distanceM: num(raw.distance, 'route.distance'),
-    durationS: num(raw.duration, 'route.duration'),
+    distanceM: nonnegative(raw.distance, 'route.distance'),
+    durationS: nonnegative(raw.duration, 'route.duration'),
     legs: parsedLegs,
   };
 }
@@ -195,15 +197,15 @@ function parseStep(raw: unknown, index: number): RouteStep {
   return {
     index,
     name: typeof raw.name === 'string' ? raw.name : '',
-    distanceM: num(raw.distance, 'step.distance'),
-    durationS: num(raw.duration, 'step.duration'),
+    distanceM: nonnegative(raw.distance, 'step.distance'),
+    durationS: nonnegative(raw.duration, 'step.duration'),
     geometry: parseGeometry(raw.geometry, 'step.geometry'),
     maneuver: {
       type: parseManeuverType(m.type),
       ...(modifier ? { modifier } : {}),
       location: lngLatToCoordinate(m.location, 'maneuver.location'),
-      bearingBeforeDeg: num(m.bearing_before, 'maneuver.bearing_before'),
-      bearingAfterDeg: num(m.bearing_after, 'maneuver.bearing_after'),
+      bearingBeforeDeg: bearing(m.bearing_before, 'maneuver.bearing_before'),
+      bearingAfterDeg: bearing(m.bearing_after, 'maneuver.bearing_after'),
       instruction: typeof m.instruction === 'string' ? m.instruction : '',
     },
   };
@@ -248,7 +250,7 @@ function parseModifier(value: unknown): ManeuverModifier | undefined {
 }
 
 function parseGeometry(raw: unknown, label: string): RouteGeometry {
-  if (!isRecord(raw) || raw.type !== 'LineString' || !Array.isArray(raw.coordinates)) {
+  if (!isRecord(raw) || raw.type !== 'LineString' || !Array.isArray(raw.coordinates) || raw.coordinates.length < 2) {
     malformed(`${label} (expected a GeoJSON LineString; request geometries=geojson)`);
   }
   return {
@@ -271,6 +273,18 @@ function lngLatToCoordinate(raw: unknown, label: string): GeographicCoordinate {
 function num(value: unknown, label: string): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) malformed(label);
   return value as number;
+}
+
+function nonnegative(value: unknown, label: string): number {
+  const result = num(value, label);
+  if (result < 0) malformed(label);
+  return result;
+}
+
+function bearing(value: unknown, label: string): number {
+  const result = nonnegative(value, label);
+  if (result > 360) malformed(label);
+  return result;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

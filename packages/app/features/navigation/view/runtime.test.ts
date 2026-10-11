@@ -122,8 +122,24 @@ describe('navigation runtime', () => {
 
   it('plans from a coarse fix but never from a stale one', () => {
     const fix: LocationFix = { coordinate: ORIGIN, accuracy: { horizontalM: 400 }, timestampMs: 1, source: 'device-gps' };
-    assert.deepEqual(devicePositionForPlanning({ lastFix: { kind: 'rejected', fix, reason: 'inaccurate' } }), ORIGIN);
+    assert.deepEqual(devicePositionForPlanning({ lastFix: { kind: 'rejected', fix, reason: 'inaccurate' } }, 1), ORIGIN);
     assert.equal(devicePositionForPlanning({ lastFix: { kind: 'rejected', fix, reason: 'stale' } }), undefined);
+  });
+
+  it('rechecks age before planning after the GPS feed goes quiet', () => {
+    const now = 1_000_000;
+    const fix: LocationFix = { coordinate: ORIGIN, accuracy: { horizontalM: 6 }, timestampMs: now, source: 'device-gps' };
+    const lastFix = {
+      kind: 'accepted' as const, fix, didReset: false,
+      filtered: {
+        coordinate: ORIGIN, sigmaM: 4, velocityEastMps: 0, velocityNorthMps: 0,
+        speedMps: 0, timestampMs: now, confidence: 'high' as const,
+      },
+    };
+    assert.deepEqual(devicePositionForPlanning({ lastFix }, now), ORIGIN);
+    assert.equal(devicePositionForPlanning({ lastFix }, now + 10_001), undefined);
+    assert.equal(devicePositionForPlanning({ lastFix }, now - 60_000), undefined);
+    assert.equal(devicePositionForPlanning({ lastFix: { kind: 'rejected', fix, reason: 'inaccurate' } }, now + 10_001), undefined);
   });
 
   it('End stops the feed, resets the session and the trip choices', async () => {
