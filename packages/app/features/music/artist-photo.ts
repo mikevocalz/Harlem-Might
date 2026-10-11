@@ -1,6 +1,5 @@
 export type ArtistPhotoProvider =
   | 'wikimedia_commons'
-  | 'deezer'
   | 'curated_web';
 
 export type ArtistPhotoResult = {
@@ -25,15 +24,6 @@ export type ArtistPhotoFetch = (
   url: string,
   init?: { headers?: Record<string, string> },
 ) => Promise<JsonResponse>;
-
-type DeezerArtist = {
-  id?: number;
-  name?: string;
-  link?: string;
-  picture_xl?: string;
-  picture_big?: string;
-  picture_medium?: string;
-};
 
 type CommonsPage = {
   title?: string;
@@ -60,9 +50,13 @@ type WikipediaPage = {
 };
 
 const MUSIC_HINTS =
-  /\b(rapper|singer|musician|composer|band|choir|quartet|pianist|saxophonist|trumpeter|drummer|vocalist|songwriter|record producer|disc jockey|dj|jazz|salsa|reggaeton|hip[- ]?hop|r&b|soul|funk|gospel|blues|violinist|entertainer|recording artist)\b/i;
+  /\b(rapper|singer|musician|composer|band|choir|quartet|pianist|saxophonist|trumpeter|drummer|vocalist|songwriter|record producer|disc jockey|dj|jazz|salsa|reggaeton|hip[- ]?hop|r&b|soul|funk|gospel|blues|violinist|entertainer|recording artist|musical group)\b/i;
+
 const BAD_COMMONS_TOKENS =
-  /\b(logo|signature|sig|album|cover|vinyl|record|poster|ticket|plaque|discography|award)\b/i;
+  /\b(logo|signature|sig|album|cover|vinyl|record|poster|ticket|plaque|discography|award|building|recreation center|statue|star)\b/i;
+
+const MUSIC_TITLE_DISAMBIGUATOR =
+  /\s*\((?:rapper|singer|musician|band|group|choir|quartet|composer|pianist|saxophonist|trumpeter|drummer|vocalist|songwriter|record producer|dj|entertainer)\)\s*$/i;
 
 export const normalizeArtistName = (value: string): string =>
   value
@@ -73,8 +67,6 @@ export const normalizeArtistName = (value: string): string =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
-
-const AMBIGUOUS_DEEZER_NAMES = new Set(['t rex', 'bloodshed']);
 
 const CURATED_WEB_PHOTOS: Readonly<Record<string, ArtistPhotoResult>> = {
   't rex': {
@@ -95,6 +87,25 @@ const CURATED_WEB_PHOTOS: Readonly<Record<string, ArtistPhotoResult>> = {
     rightsStatus: 'provider-reference',
     credit: 'XXL artist memorial',
   },
+};
+
+/**
+ * Exact Commons files that were manually verified against the intended artist.
+ * These exist specifically for cases where a fuzzy name search previously
+ * selected the wrong person or object.
+ */
+const CURATED_COMMONS_FILES: Readonly<Record<string, string>> = {
+  'charles hamilton': 'File:Charles Hamilton (rapper).jpg',
+  'frankie lymon and the teenagers':
+    'File:Frankie Lymon and the Teenagers.jpg',
+};
+
+/**
+ * Stage-name aliases where the encyclopedia article uses a different title.
+ * Identity still has to carry a music description before its image is used.
+ */
+const WIKIPEDIA_TITLE_ALIASES: Readonly<Record<string, string>> = {
+  diddy: 'Sean Combs',
 };
 
 const stripHtml = (value: string | undefined): string | undefined => {
@@ -135,46 +146,23 @@ const commonsSourceUrl = (title: string): string =>
     title.replace(/ /g, '_'),
   ).replace(/%3A/i, ':')}`;
 
-const scoreCommonsPage = (artistName: string, page: CommonsPage): number => {
-  const title = page.title?.replace(/^File:/i, '') ?? '';
-  if (!title || BAD_COMMONS_TOKENS.test(title)) return -1000;
-  const info = page.imageinfo?.[0];
-  if (!info?.url || !/^image\/(jpeg|png|webp)$/i.test(info.mime ?? '')) {
-    return -1000;
-  }
-
-  const artist = normalizeArtistName(artistName);
-  const file = normalizeArtistName(title);
-  const metadata = normalizeArtistName(
-    [
-      info.extmetadata?.Description?.value,
-      info.extmetadata?.ObjectName?.value,
-      info.extmetadata?.ImageDescription?.value,
-      info.extmetadata?.Categories?.value,
-    ]
-      .filter(Boolean)
-      .join(' '),
-  );
-  const subjectText = `${file} ${metadata}`;
-  const words = artist.split(' ').filter((word) => word.length > 1);
-  const matchedWords = words.filter((word) => subjectText.includes(word));
-  if (matchedWords.length === 0) return -1000;
-
-  let score = matchedWords.length * 12;
-  if (subjectText.includes(artist)) score += 40;
-  if (/\b(crop|cropped|portrait|headshot)\b/i.test(title)) score += 20;
-  if (info.width && info.height && info.height >= info.width) score += 8;
-  return score;
-};
-
 const commonsPhoto = (
   name: string,
   page: CommonsPage,
 ): ArtistPhotoResult | undefined => {
+  const title = page.title?.replace(/^File:/i, '') ?? '';
   const info = page.imageinfo?.[0];
-  if (!page.title || !info?.url) return undefined;
+  if (
+    !title ||
+    BAD_COMMONS_TOKENS.test(title) ||
+    !info?.url ||
+    !/^image\/(jpeg|png|webp)$/i.test(info.mime ?? '')
+  ) {
+    return undefined;
+  }
+
   const meta = info.extmetadata ?? {};
-  const sourceUrl = commonsSourceUrl(page.title);
+  const sourceUrl = commonsSourceUrl(page.title ?? `File:${title}`);
   const creator =
     stripHtml(meta.Artist?.value) ??
     stripHtml(meta.Credit?.value) ??
@@ -201,18 +189,16 @@ const commonsPhoto = (
   };
 };
 
-async function resolveCommons(
+async function resolveCommonsFileByTitle(
   name: string,
+  title: string,
   fetcher: ArtistPhotoFetch,
 ): Promise<ArtistPhotoResult | undefined> {
   const params = new URLSearchParams({
     action: 'query',
     format: 'json',
     origin: '*',
-    generator: 'search',
-    gsrnamespace: '6',
-    gsrsearch: name,
-    gsrlimit: '16',
+    titles: title.startsWith('File:') ? title : `File:${title}`,
     prop: 'imageinfo',
     iiprop: 'url|size|mime|extmetadata',
   });
@@ -221,42 +207,18 @@ async function resolveCommons(
     { headers: { accept: 'application/json' } },
   );
   if (!response.ok) return undefined;
+
   const root = asObject(await response.json());
   const query = asObject(root?.query);
   const pagesObject = asObject(query?.pages);
   if (!pagesObject) return undefined;
 
-  const pages = Object.values(pagesObject)
-    .map((page) => asObject(page) as CommonsPage | undefined)
-    .filter((page): page is CommonsPage => Boolean(page))
-    .sort(
-      (a, b) => scoreCommonsPage(name, b) - scoreCommonsPage(name, a),
-    );
+  const page = Object.values(pagesObject)
+    .map((value) => asObject(value) as CommonsPage | undefined)
+    .find((value): value is CommonsPage => Boolean(value?.imageinfo?.[0]?.url));
 
-  const best = pages[0];
-  return best && scoreCommonsPage(name, best) > 0
-    ? commonsPhoto(name, best)
-    : undefined;
+  return page ? commonsPhoto(name, page) : undefined;
 }
-
-const scoreWikipediaPage = (
-  artistName: string,
-  page: WikipediaPage,
-): number => {
-  if (!page.title || !page.original?.source) return -1000;
-  const wanted = normalizeArtistName(artistName);
-  const title = normalizeArtistName(page.title);
-  const description = page.terms?.description?.join(' ') ?? '';
-  let score = 0;
-
-  if (title === wanted) score += 70;
-  if (title.includes(wanted) || wanted.includes(title)) score += 25;
-  if (MUSIC_HINTS.test(description)) score += 35;
-  if (/disambiguation/i.test(description)) score -= 100;
-  if (/album|song|film|book|painting|fictional/i.test(description)) score -= 50;
-
-  return score;
-};
 
 async function resolveCommonsFileByUrl(
   name: string,
@@ -279,40 +241,45 @@ async function resolveCommonsFileByUrl(
   const basename = url.pathname.split('/').pop();
   if (!basename) return undefined;
   const filename = decodeURIComponent(basename).replace(/_/g, ' ');
-  const params = new URLSearchParams({
-    action: 'query',
-    format: 'json',
-    origin: '*',
-    titles: `File:${filename}`,
-    prop: 'imageinfo',
-    iiprop: 'url|size|mime|extmetadata',
-  });
-  const response = await fetcher(
-    `https://commons.wikimedia.org/w/api.php?${params.toString()}`,
-    { headers: { accept: 'application/json' } },
-  );
-  if (!response.ok) return undefined;
-  const root = asObject(await response.json());
-  const query = asObject(root?.query);
-  const pagesObject = asObject(query?.pages);
-  if (!pagesObject) return undefined;
-  const page = Object.values(pagesObject)
-    .map((value) => asObject(value) as CommonsPage | undefined)
-    .find((value): value is CommonsPage => Boolean(value?.imageinfo?.[0]?.url));
-  return page ? commonsPhoto(name, page) : undefined;
+  return resolveCommonsFileByTitle(name, `File:${filename}`, fetcher);
 }
+
+const wikipediaIdentityMatches = (
+  artistName: string,
+  page: WikipediaPage,
+): boolean => {
+  if (!page.title || !page.original?.source) return false;
+  const description = page.terms?.description?.join(' ') ?? '';
+  if (!MUSIC_HINTS.test(description) || /disambiguation/i.test(description)) {
+    return false;
+  }
+  if (/\b(album|song|film|book|painting|fictional)\b/i.test(description)) {
+    return false;
+  }
+
+  const wanted = normalizeArtistName(artistName);
+  const title = normalizeArtistName(
+    page.title.replace(MUSIC_TITLE_DISAMBIGUATOR, ''),
+  );
+  return title === wanted;
+};
 
 async function resolveWikipedia(
   name: string,
   fetcher: ArtistPhotoFetch,
 ): Promise<ArtistPhotoResult | undefined> {
+  const aliasTitle = WIKIPEDIA_TITLE_ALIASES[normalizeArtistName(name)];
   const params = new URLSearchParams({
     action: 'query',
     format: 'json',
     origin: '*',
-    generator: 'search',
-    gsrsearch: `${name} musician`,
-    gsrlimit: '8',
+    ...(aliasTitle
+      ? { titles: aliasTitle, redirects: '1' }
+      : {
+          generator: 'search',
+          gsrsearch: `"${name}" musician`,
+          gsrlimit: '8',
+        }),
     prop: 'pageimages|pageterms',
     piprop: 'original',
     wbptterms: 'description',
@@ -322,6 +289,7 @@ async function resolveWikipedia(
     { headers: { accept: 'application/json' } },
   );
   if (!response.ok) return undefined;
+
   const root = asObject(await response.json());
   const query = asObject(root?.query);
   const pagesObject = asObject(query?.pages);
@@ -329,64 +297,26 @@ async function resolveWikipedia(
 
   const pages = Object.values(pagesObject)
     .map((page) => asObject(page) as WikipediaPage | undefined)
-    .filter((page): page is WikipediaPage => Boolean(page))
-    .sort(
-      (a, b) => scoreWikipediaPage(name, b) - scoreWikipediaPage(name, a),
-    );
+    .filter((page): page is WikipediaPage => Boolean(page));
 
-  const best = pages[0];
-  if (!best || scoreWikipediaPage(name, best) < 60 || !best.original?.source) {
-    return undefined;
-  }
+  const best = pages.find((page) =>
+    aliasTitle
+      ? MUSIC_HINTS.test(page.terms?.description?.join(' ') ?? '') &&
+        Boolean(page.original?.source)
+      : wikipediaIdentityMatches(name, page),
+  );
+  if (!best?.original?.source) return undefined;
 
   return resolveCommonsFileByUrl(name, best.original.source, fetcher);
-}
-
-const deezerExactMatch = (
-  name: string,
-  artists: DeezerArtist[],
-): DeezerArtist | undefined => {
-  const wanted = normalizeArtistName(name);
-  return artists.find(
-    (artist) => normalizeArtistName(artist.name ?? '') === wanted,
-  );
 };
 
-async function resolveDeezer(
-  name: string,
-  fetcher: ArtistPhotoFetch,
-): Promise<ArtistPhotoResult | undefined> {
-  if (AMBIGUOUS_DEEZER_NAMES.has(normalizeArtistName(name))) return undefined;
-
-  const params = new URLSearchParams({ q: name, limit: '10' });
-  const response = await fetcher(
-    `https://api.deezer.com/search/artist?${params.toString()}`,
-    { headers: { accept: 'application/json' } },
-  );
-  if (!response.ok) return undefined;
-  const root = asObject(await response.json());
-  const data = Array.isArray(root?.data) ? root.data : [];
-  const artists = data
-    .map((artist) => asObject(artist) as DeezerArtist | undefined)
-    .filter((artist): artist is DeezerArtist => Boolean(artist));
-  const match = deezerExactMatch(name, artists);
-  const url = match?.picture_xl ?? match?.picture_big ?? match?.picture_medium;
-  if (!match || !url) return undefined;
-
-  return {
-    name,
-    url,
-    sourceUrl:
-      match.link ?? `https://www.deezer.com/search/${encodeURIComponent(name)}`,
-    provider: 'deezer',
-    rightsStatus: 'provider-reference',
-    credit: 'Deezer artist profile',
-  };
-}
-
 /**
- * Resolve a real artist photo. Performance thumbnails, album art and generic
- * Harlem imagery are intentionally excluded from this path.
+ * Resolve a real artist photo only when identity can be proved.
+ *
+ * No raw Commons name search and no same-name streaming-service fallback are
+ * allowed: both previously produced false positives for ambiguous artist
+ * names. If an entity-aware Wikipedia match or a manually verified source does
+ * not exist, callers receive no photo rather than a guess.
  */
 export async function resolveArtistPhoto(
   name: string,
@@ -396,16 +326,15 @@ export async function resolveArtistPhoto(
   if (!trimmed || trimmed.length > 120) return undefined;
 
   const key = normalizeArtistName(trimmed);
-  const curated = CURATED_WEB_PHOTOS[key];
-  if (curated) return { ...curated, name: trimmed };
+  const curatedWeb = CURATED_WEB_PHOTOS[key];
+  if (curatedWeb) return { ...curatedWeb, name: trimmed };
 
-  const wikipedia = await resolveWikipedia(trimmed, fetcher);
-  if (wikipedia) return wikipedia;
+  const curatedCommonsFile = CURATED_COMMONS_FILES[key];
+  if (curatedCommonsFile) {
+    return resolveCommonsFileByTitle(trimmed, curatedCommonsFile, fetcher);
+  }
 
-  const commons = await resolveCommons(trimmed, fetcher);
-  if (commons) return commons;
-
-  return resolveDeezer(trimmed, fetcher);
+  return resolveWikipedia(trimmed, fetcher);
 }
 
 /** Resolve many artists with a small worker pool instead of 100+ simultaneous calls. */
@@ -451,12 +380,9 @@ export const isArtistPhotoResult = (
       asString(object?.credit) &&
       (object?.rightsStatus === 'rights-cleared' ||
         object?.rightsStatus === 'provider-reference') &&
-      (provider === 'wikimedia_commons' ||
-        provider === 'deezer' ||
-        provider === 'curated_web'),
+      (provider === 'wikimedia_commons' || provider === 'curated_web'),
   );
 };
-
 
 export const artistPhotoProviderLabel = (
   provider: ArtistPhotoProvider,
@@ -464,8 +390,6 @@ export const artistPhotoProviderLabel = (
   switch (provider) {
     case 'wikimedia_commons':
       return 'Wikimedia Commons';
-    case 'deezer':
-      return 'Deezer';
     case 'curated_web':
       return 'Verified artist source';
   }

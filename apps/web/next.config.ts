@@ -23,9 +23,9 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/index.php',
       },
-      // Real artist photos: Wikimedia/Wikipedia, Deezer profiles, and two curated ambiguity overrides.
+      // Artist portraits: entity-verified Wikimedia/Wikipedia plus two
+      // manually curated editorial overrides for ambiguous battle-rap names.
       { protocol: 'https', hostname: 'upload.wikimedia.org', port: '', pathname: '/wikipedia/**' },
-      { protocol: 'https', hostname: 'e-cdns-images.dzcdn.net', port: '', pathname: '/images/artist/**' },
       { protocol: 'https', hostname: 'battlerapstats.wordpress.com', port: '', pathname: '/wp-content/uploads/**' },
       { protocol: 'https', hostname: 'townsquare.media', port: '', pathname: '/site/**' },
       // MightsMapImage renders Mapbox Static Images through the kit Image (next/image).
