@@ -52,6 +52,10 @@ export function MusicArtistPhoto({ artist }: { artist: MusicArtistRecord }) {
         <Figcaption className="flex flex-col gap-1 text-label text-text-muted">
           <Text className="font-sans text-text-muted">
             {photo.credit}.{' '}
+            {photo.rightsStatus === 'provider-reference'
+              ? 'External reference image; no local licence claim. '
+              : ''}
+
             <Link
               href={photo.sourceUrl}
               target="_blank"
