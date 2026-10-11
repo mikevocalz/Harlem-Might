@@ -44,7 +44,7 @@ type CommonsPage = {
 
 const MUSIC_HINTS = /\b(rapper|singer|musician|composer|band|choir|quartet|pianist|saxophonist|trumpeter|drummer|vocalist|songwriter|record producer|dj|disc jockey|jazz|salsa|reggaeton|hip[- ]?hop|r&b|soul|funk|gospel|blues)\b/i;
 const BAD_COMMONS_TOKENS = /\b(logo|signature|sig|album|cover|vinyl|record|poster|ticket|plaque|discography|award)\b/i;
-const AMBIGUOUS_DEEZER_NAMES = new Set(['t-rex', 'bloodshed']);
+const AMBIGUOUS_DEEZER_NAMES = new Set(['t rex', 'bloodshed']);
 
 export const normalizeArtistName = (value: string): string =>
   value
