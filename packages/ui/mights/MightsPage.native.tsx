@@ -13,12 +13,15 @@ export function MightsPage({
   media,
   mediaLayout = 'stacked',
   children,
+  onNearBottom,
 }: {
   title: string;
   lead?: ReactNode;
   crumbs?: unknown;
   media?: ReactNode;
   mediaLayout?: 'stacked' | 'leading';
+  /** Fires while scrolling within ~480px of the content's end — infinite-scroll hook. */
+  onNearBottom?: () => void;
   children?: ReactNode;
 }) {
   const store = useInstanceStore(() => ({ width: 0 }));
@@ -29,6 +32,15 @@ export function MightsPage({
       className="flex-1 bg-surface"
       contentInsetAdjustmentBehavior="automatic"
       contentContainerClassName="pb-24"
+      scrollEventThrottle={onNearBottom ? 200 : undefined}
+      onScroll={
+        onNearBottom
+          ? (event) => {
+              const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
+              if (contentOffset.y + layoutMeasurement.height >= contentSize.height - 480) onNearBottom();
+            }
+          : undefined
+      }
     >
       <Container
         width="editorial"

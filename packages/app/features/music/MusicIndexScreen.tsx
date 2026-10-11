@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useEffect } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { ExploreLoader } from '@acme/spatial/explore-loader';
 import {
@@ -20,7 +21,7 @@ import {
   MightsText,
   routes,
 } from '@acme/ui/mights';
-import { Text, View } from '@acme/ui/tw';
+import { Pressable, Text, View } from '@acme/ui/tw';
 import { ContentLoader } from '../site/content/ContentLoader.tsx';
 import { ContentNotice } from '../site/content/ContentNotice.tsx';
 import { musicKeys } from './music.keys.ts';
@@ -133,7 +134,11 @@ function ArtistGrid({ artists }: { artists: readonly MusicArtistRecord[] }) {
   );
 }
 
-/** The tail of the directory: the small ExploreLoader while a page is in flight. */
+/**
+ * The tail of the directory — the Rive loader IS the control. It spins at the
+ * foot of the grid, its outer ring filling with `shown / total` as pages
+ * accumulate; tapping it pulls the next page.
+ */
 function LoadMore({
   shown,
   total,
@@ -150,35 +155,47 @@ function LoadMore({
   onMore: () => void;
 }) {
   const reducedMotion = useReducedMotion();
+  if (!hasNextPage) {
+    return total > 0 ? (
+      <View className="mt-10 items-center">
+        <MightsText size="small" className="text-text-muted">
+          {total} artists — the whole directory
+        </MightsText>
+      </View>
+    ) : null;
+  }
   return (
     <View className="mt-10 flex flex-col items-center gap-4">
-      {isFetching ? (
-        <View role="status" className="items-center justify-center py-2">
-          <Text className="sr-only">Loading more artists</Text>
-          <ExploreLoader size={56} phase={reducedMotion ? 'reduced' : 'loading'} label="Loading more artists" />
-        </View>
-      ) : failed ? (
-        <MightsButton variant="secondary" onPress={onMore}>
-          Try again
-        </MightsButton>
-      ) : hasNextPage ? (
-        <MightsButton variant="secondary" onPress={onMore}>
-          More artists
-        </MightsButton>
-      ) : null}
-      {total > shown ? (
-        <MightsText size="small" className="text-text-muted">
-          {shown} of {total} artists
+      <Pressable
+        onPress={onMore}
+        disabled={isFetching}
+        role="button"
+        aria-label={`Load more artists — ${shown} of ${total} shown`}
+        className="flex flex-col items-center gap-2"
+      >
+        <ExploreLoader
+          size={72}
+          phase={reducedMotion ? 'reduced' : 'loading'}
+          progress={total > 0 ? shown / total : undefined}
+          label="Loading more artists"
+        />
+        <MightsText size="small" className="font-semibold uppercase tracking-[0.14em] text-primary">
+          {failed ? 'Try again' : 'More artists'}
         </MightsText>
-      ) : null}
+      </Pressable>
+      <MightsText size="small" className="text-text-muted">
+        {shown} of {total} artists
+      </MightsText>
     </View>
   );
 }
 
 function MusicIndexBody({
   query,
+  onMore,
 }: {
   query: ReturnType<typeof useMusicArtists>;
+  onMore: () => void;
 }) {
   const pages = query.data?.pages;
   const artists = pages?.flatMap((page) => page.artists) ?? [];
@@ -229,7 +246,7 @@ function MusicIndexBody({
         hasNextPage={query.hasNextPage}
         isFetching={query.isFetchingNextPage}
         failed={query.isFetchNextPageError}
-        onMore={() => void query.fetchNextPage()}
+        onMore={onMore}
       />
     </>
   );
@@ -270,14 +287,32 @@ export function MusicIndexScreen({
   fetchPage: MusicPageFetch;
 }) {
   const query = useMusicArtists(firstPage, fetchPage);
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
+  const loadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Web: stream the next page once the directory's foot nears the viewport —
+  // no press required. The native fork gets the same trigger through
+  // MightsPage's onNearBottom; there is no `window` there.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !hasNextPage) return;
+    const nearBottom = () => {
+      if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 700) loadMore();
+    };
+    window.addEventListener('scroll', nearBottom, { passive: true });
+    return () => window.removeEventListener('scroll', nearBottom);
+  }, [hasNextPage, loadMore]);
+
   return (
     <MightsPage
       title="Harlem Music"
       mediaLayout="leading"
       lead="The artists who made Harlem a stage and a sound. Every profile names its sources and rights."
       media={hero}
+      onNearBottom={loadMore}
     >
-      <MusicIndexBody query={query} />
+      <MusicIndexBody query={query} onMore={loadMore} />
     </MightsPage>
   );
 }
