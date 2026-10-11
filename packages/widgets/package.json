@@ -10,7 +10,8 @@
     "./contracts": "./src/contracts.ts",
     "./snapshot": "./src/snapshot.ts",
     "./walk-session": "./src/walk-session.ts",
-    "./deep-links": "./src/deep-links.ts"
+    "./deep-links": "./src/deep-links.ts",
+    "./walk-commands": "./src/walk-commands.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

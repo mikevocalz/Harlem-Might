@@ -75,6 +75,7 @@ export interface Config {
     places: Place;
     'saved-places': SavedPlace;
     walks: Walk;
+    'walk-sessions': WalkSession;
     stories: Story;
     events: Event;
     'music-artists': MusicArtist;
@@ -96,6 +97,7 @@ export interface Config {
     places: PlacesSelect<false> | PlacesSelect<true>;
     'saved-places': SavedPlacesSelect<false> | SavedPlacesSelect<true>;
     walks: WalksSelect<false> | WalksSelect<true>;
+    'walk-sessions': WalkSessionsSelect<false> | WalkSessionsSelect<true>;
     stories: StoriesSelect<false> | StoriesSelect<true>;
     events: EventsSelect<false> | EventsSelect<true>;
     'music-artists': MusicArtistsSelect<false> | MusicArtistsSelect<true>;
@@ -618,6 +620,34 @@ export interface Walk {
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "walk-sessions".
+ */
+export interface WalkSession {
+  id: number;
+  ownerKey: string;
+  member?: (number | null) | Member;
+  snapshot:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  generation: number;
+  receipts:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1352,6 +1382,17 @@ export interface WalksSelect<T extends boolean = true> {
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "walk-sessions_select".
+ */
+export interface WalkSessionsSelect<T extends boolean = true> {
+  ownerKey?: T;
+  member?: T;
+  snapshot?: T;
+  generation?: T;
+  receipts?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

@@ -183,6 +183,7 @@ catalog:
   "@payloadcms/ui": 4.0.0-canary.39
   graphql: 16.14.2
   pg: 8.23.1
+  "@electric-sql/pglite": 0.5.4
   # Better Auth runs inside Payload via @delmaredigital/payload-better-auth —
   # its tables are Payload collections in the `payload` schema, so no separate
   # better_auth schema or hand-generated DDL exists.
