@@ -36,7 +36,7 @@ const hero = heroImage ? (
     screenId="stories-hero"
     ratio="wide"
     priority
-    sizes="(min-width: 768px) 40vw, 100vw"
+    sizes="(min-width: 768px) 60vw, 100vw"
   />
 ) : undefined;
 
@@ -49,6 +49,7 @@ export function StoriesScreen({
   return (
     <MightsPage
       title="Stories"
+      mediaLayout="leading"
       lead="The history behind a block, kept on the block where it happened. Every story names its sources."
       media={hero}
     >
@@ -192,7 +193,7 @@ export function StoryScreen({
             screenId={`story-${story.slug}`}
             ratio="standard"
             priority
-            sizes="(min-width: 768px) 40vw, 100vw"
+            sizes="(min-width: 768px) 60vw, 100vw"
           />
         ) : (
           <StoryMedia story={story} />

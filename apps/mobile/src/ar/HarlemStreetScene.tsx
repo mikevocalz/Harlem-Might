@@ -22,7 +22,7 @@ import {
   MapboxViroRoute,
   unprojectFromEnu,
 } from '@mapbox/react-native-mapbox-ar-reactvision';
-import { MAPPED_PLACES, getHarlemPlacePreview, useExplore } from '@acme/app';
+import { usePlaceCatalogue, catalogueNearbyPlaces, getCataloguePlace, useExplore } from '@acme/app';
 import { palette } from '@acme/theme';
 import { DIORAMA_ALTITUDE_M, tabletopOrigin } from './arTabletop';
 import { useArSession } from './arSession.store';
@@ -184,16 +184,20 @@ export function HarlemStreetScene() {
     to: null,
   });
 
-  const originPlace = getHarlemPlacePreview(requestedPlaceId ?? selectedPlaceId);
+  const originPlace = getCataloguePlace(requestedPlaceId ?? selectedPlaceId);
+  const catalogue = usePlaceCatalogue((s) => s.places);
+  // Keep the immersive scene local to the selected place, with bounded geometry.
+  const scenePlaces = useMemo(() => originPlace ? [originPlace,
+    ...catalogueNearbyPlaces(originPlace, catalogue, 23).map((entry) => entry.place)] : [], [originPlace, catalogue]);
   const origin = useMemo(
     () => (originPlace?.lngLat ? tabletopOrigin(originPlace) : null),
     [originPlace],
   );
-  const pillars = useMemo(() => (origin ? streetPillars(origin, MAPPED_PLACES) : []), [origin]);
+  const pillars = useMemo(() => (origin ? streetPillars(origin, scenePlaces) : []), [origin, scenePlaces]);
   const bounds = useMemo(() => streetBounds(pillars, BOUNDS_MARGIN_M), [pillars]);
   const grid = useMemo(() => groundGrid(bounds, GRID_SPACING_M, GRID_LIFT_M), [bounds]);
   const root = worldRootTransform(pose.user, pose.headingDeg);
-  const selected = getHarlemPlacePreview(selectedPlaceId);
+  const selected = getCataloguePlace(selectedPlaceId);
   const selectedPillar = pillars.find((p) => p.id === selectedPlaceId);
 
   const route =

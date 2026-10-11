@@ -8,13 +8,12 @@ import { windowSizeClassForWidth } from '../navigation/split-view/constants.ts';
  * `<SpatialWindow>` inside would never unregister.
  *
  * - `tiled`: in the row beside the map, `width` dp. The map narrows for it.
- * - `overlay`: drawn over the map's edge, `width` dp; the map pads its markers.
- *   Phones and tablets only: on Horizon nothing covers the map (S17).
+ * - `overlay`: drawn over the map's trailing edge, `width` dp. The underlying
+ *   viewport stays unchanged. Also the fallback if a Quest panel cannot open.
  * - `screen`: fills the window in place of the map (single column).
  * - `collapsed`: zero width, hidden from touch and screen readers.
  * - `promoted`: zero width; the content shows in its own Horizon window.
- *   No surface is promoted today (DECISIONS S17, ADR 0004). The mode stays
- *   so an explicit "Open in new window" can return without a layout rewrite.
+ *   Quest Place Detail uses this mode while its separate panel is open.
  */
 export type ExplorePaneMode =
   | { kind: 'tiled'; width: number }
@@ -32,11 +31,10 @@ export type CompactPane = 'map' | 'discover' | 'detail';
 /**
  * How Explore arranges its panes in the current window.
  *
- * - `single`: one pane at a time (phones below 600dp, Horizon below 840dp).
+ * - `single`: one pane at a time (phones below 600dp).
  * - `toggle`: the map is always visible; Discover opens from the map's
- *   "Places" button (a drawer over the map on tablets, a column that replaces
- *   Detail on Horizon).
- * - `columns`: Discover is a permanent column beside the map.
+ *   "Places" button (a drawer over the map on tablets).
+ * - `columns`: Discover is a permanent column beside the map; always used on Quest.
  */
 export type ExploreArrangement = 'single' | 'toggle' | 'columns';
 
@@ -103,12 +101,7 @@ export const EXPLORE_PANE_DP = {
   mapMinXr: tokenDp('pane-map-min-xr'),
 } as const;
 
-/**
- * Horizon window-width breakpoints in dp (DECISIONS S17), from the theme's
- * window classes: below `toggle` a single column; from `columns` Discover is
- * a permanent column, as long as the map keeps {@linkcode EXPLORE_PANE_DP}
- * `mapMinXr`.
- */
+/** Legacy width tokens retained for callers; Quest always uses columns. */
 export const HORIZON_BREAKPOINT_DP = {
   toggle: windowClass.expanded,
   columns: windowClass.large,
@@ -124,111 +117,46 @@ const isSpatial = (placement: MetaWindowPlacement) => placement === 'spatial';
  * - Discover is the item list and stays in the main window on every build
  *   (S12). It stays mounted at every width, so scroll state survives a resize.
  * - A pane shown in its own Horizon window would be `promoted` and the map
- *   would take its width. Nothing is promoted today (S17).
+ *   takes no inline width. Quest promotes the selected inspector (S20).
  */
 export function resolveExploreLayout(input: ExploreLayoutInput): ExploreLayout {
   return input.isHorizon ? resolveHorizonLayout(input) : resolveFlatLayout(input);
 }
 
-/**
- * Horizon (S17): one 1440x900dp window, Discover 360 | map | Detail 400.
- * Detail pushes the map narrower and never covers it.
- *
- * - ≥1200dp: Discover is a column. With a place selected it stays one only
- *   while the map keeps 600dp (window ≥1360dp); below that Discover folds
- *   behind "Places" so the map never drops under its minimum.
- * - 840–1199dp: Discover sits behind "Places". Opening it replaces Detail for
- *   the moment (the selection is kept), so there is at most one side column
- *   and the map keeps at least 440dp.
- * - <840dp: one pane at a time, as on a phone.
- */
-function resolveHorizonLayout(input: ExploreLayoutInput): ExploreLayout {
-  const { windowWidth, hasSelection } = input;
-  if (windowWidth < HORIZON_BREAKPOINT_DP.toggle) return resolveSingleColumn(input);
-
-  const detailPromoted = hasSelection && isSpatial(input.detailPlacement);
-  const detailTakesRow = hasSelection && !detailPromoted;
-  const mapWithThreeColumns =
-    windowWidth - EXPLORE_PANE_DP.discoverXr - (detailTakesRow ? EXPLORE_PANE_DP.detailXr : 0);
-  const arrangement: ExploreArrangement =
-    windowWidth >= HORIZON_BREAKPOINT_DP.columns && mapWithThreeColumns >= EXPLORE_PANE_DP.mapMinXr
-      ? 'columns'
-      : 'toggle';
-
-  const discoverFromToggle = arrangement === 'toggle' && input.discoverDrawerOpen;
-  const discover: InlinePaneMode =
-    arrangement === 'columns' || discoverFromToggle
-      ? { kind: 'tiled', width: EXPLORE_PANE_DP.discoverXr }
-      : { kind: 'collapsed' };
-
-  let detail: ExplorePaneMode | null = null;
-  if (detailPromoted) detail = { kind: 'promoted' };
-  else if (hasSelection) {
-    detail = discoverFromToggle ? { kind: 'collapsed' } : { kind: 'tiled', width: EXPLORE_PANE_DP.detailXr };
-  }
-
+/** The list and map share the available workspace 40/60. A selected place
+ * opens a trailing overlay; neither inline nor promoted inspectors consume width. */
+function resolveColumns(input: ExploreLayoutInput): ExploreLayout {
+  const width = Math.max(0, input.windowWidth);
+  const promoted = input.hasSelection && isSpatial(input.detailPlacement);
+  const inspectorWidth = input.hasSelection && !promoted
+    ? width * 0.3 : 0;
+  const detail: ExplorePaneMode | null = !input.hasSelection ? null
+    : promoted ? { kind: 'promoted' }
+    : { kind: 'overlay', width: inspectorWidth };
   return {
-    arrangement,
-    discover,
+    arrangement: 'columns',
+    discover: { kind: 'tiled', width: width * 0.4 },
     detail,
     showMap: true,
     mapInsets: { left: 0, right: 0 },
-    showPlacesToggle: discover.kind === 'collapsed',
-    discoverDismiss: discoverFromToggle ? 'close' : null,
-    discoverFromToggle,
+    showPlacesToggle: false,
+    discoverDismiss: null,
+    discoverFromToggle: false,
     detailDismiss: 'close',
     showOnMapInDetail: false,
     assistant: 'panel',
   };
 }
 
-/** Phones, tablets and the web-like flat build: Material width classes. */
+/** Quest retains both panes at every size without changing its window contract. */
+function resolveHorizonLayout(input: ExploreLayoutInput): ExploreLayout {
+  return resolveColumns(input);
+}
+
+/** Compact content uses the full pane; wider content keeps list, map and inspector. */
 function resolveFlatLayout(input: ExploreLayoutInput): ExploreLayout {
-  const sizeClass = windowSizeClassForWidth(input.windowWidth);
-  if (sizeClass === 'compact') return resolveSingleColumn(input);
-
-  let detail: ExplorePaneMode | null = null;
-  if (input.hasSelection) {
-    if (isSpatial(input.detailPlacement)) detail = { kind: 'promoted' };
-    else if (sizeClass === 'medium' || sizeClass === 'expanded') {
-      detail = { kind: 'overlay', width: EXPLORE_PANE_DP.detail };
-    } else if (sizeClass === 'large') {
-      detail = { kind: 'tiled', width: EXPLORE_PANE_DP.detail };
-    } else {
-      detail = { kind: 'tiled', width: EXPLORE_PANE_DP.detailXr };
-    }
-  }
-
-  let discover: InlinePaneMode;
-  if (sizeClass === 'medium') {
-    discover = input.discoverDrawerOpen
-      ? { kind: 'overlay', width: EXPLORE_PANE_DP.discover }
-      : { kind: 'collapsed' };
-  } else if (sizeClass === 'expanded') {
-    discover = { kind: 'tiled', width: EXPLORE_PANE_DP.discoverNarrow };
-  } else {
-    discover = { kind: 'tiled', width: EXPLORE_PANE_DP.discover };
-  }
-
-  const arrangement: ExploreArrangement = sizeClass === 'medium' ? 'toggle' : 'columns';
-  const discoverFromToggle = discover.kind === 'overlay';
-
-  return {
-    arrangement,
-    discover,
-    detail,
-    showMap: true,
-    mapInsets: {
-      left: discover.kind === 'overlay' ? discover.width : 0,
-      right: detail?.kind === 'overlay' ? detail.width : 0,
-    },
-    showPlacesToggle: arrangement === 'toggle' && !discoverFromToggle,
-    discoverDismiss: discoverFromToggle ? 'show-map' : null,
-    discoverFromToggle,
-    detailDismiss: 'close',
-    showOnMapInDetail: false,
-    assistant: 'panel',
-  };
+  return windowSizeClassForWidth(input.windowWidth) === 'compact'
+    ? resolveSingleColumn(input) : resolveColumns(input);
 }
 
 /** One pane at a time: the map, Discover, or Detail with Back. */

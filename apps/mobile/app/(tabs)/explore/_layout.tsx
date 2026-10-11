@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { BackHandler, useWindowDimensions } from 'react-native';
+import { createStore } from 'zustand/vanilla';
+import { useStore } from 'zustand';
 import { Slot } from 'expo-router';
 import { useRouter } from 'solito/navigation';
 import { routes } from '@acme/ui/mights';
@@ -11,12 +13,12 @@ import {
   ExploreMasterPane,
   ExplorePlaceDetail,
   ExploreTypeContext,
-  HARLEM_PLACE_PREVIEWS,
+  usePlaceCatalogue,
   NO_LOCATION_SOURCE,
   NavigationHud,
   closeDirections,
   endNavigation,
-  getHarlemPlacePreview,
+  getCataloguePlace,
   markerFocusId,
   moveFocusTo,
   openDirections,
@@ -43,6 +45,7 @@ import { ExploreWorkspaceContext, ExploreWorkspaceWindow } from '@/src/spatial/E
 import { isHorizonBuild } from '@/src/spatial/horizonBuild';
 import { ViewInArButton } from '@/src/ar/ViewInArButton';
 import { metaWindows } from '@/src/spatial/metaWindows';
+import { useNavigationPresentation } from '@/src/navigation/useNavigationPresentation';
 import { usePlaceDetailPanel } from '@/src/spatial/usePlaceDetailPanel';
 
 // This build has no location module (expo-location is not a dependency yet),
@@ -58,10 +61,9 @@ const noLocationSource = () => NO_LOCATION_SOURCE;
  * or single-column screen, and always stays in this window (DECISIONS S12).
  * Place Detail exists only while a place is selected (S5). On a quest build it
  * opens as its own Horizon OS panel to the right of this window (S20,
- * `usePlaceDetailPanel`); if the panel cannot open, Discover 360 | map |
- * Detail 400 share this 1440x900dp window and Detail pushes the map narrower
- * instead of covering it (S17). Elsewhere it is a trailing column, overlay or
- * screen. Breakpoints come from the window's width,
+ * `usePlaceDetailPanel`); if the panel cannot open, the 40/60 list/map
+ * workspace stays fixed and the inspector overlays its trailing edge.
+ * Elsewhere it is an overlay or compact full-width screen. Breakpoints come from the window's width,
  * which the user can resize (src/spatial/exploreLayout.ts).
  *
  * Selection is one store write (`openPlace`). The `[placeId]` route only
@@ -70,8 +72,13 @@ const noLocationSource = () => NO_LOCATION_SOURCE;
  */
 export default function ExploreRouteLayout() {
   const router = useRouter();
-  const { width: windowWidth } = useWindowDimensions();
+  const { hardwareColumnWidth } = useNavigationPresentation();
+  const { width: deviceWidth } = useWindowDimensions();
+  const bounds = useMemo(() => createStore(() => ({ width: 0 })), []);
+  const measuredWidth = useStore(bounds, (state) => state.width);
+  const windowWidth = measuredWidth || deviceWidth;
 
+  const catalogue = usePlaceCatalogue((s) => s.places);
   const selectedPlaceId = useExplore((state) => state.selectedPlaceId);
   const openPlace = useExplore((state) => state.openPlace);
   const closePlace = useExplore((state) => state.closePlace);
@@ -191,7 +198,7 @@ export default function ExploreRouteLayout() {
     open(placeId, 'map', null);
   };
   const showDirectionsFor = selectedPlaceId != null && directionsPlaceId === selectedPlaceId;
-  const directionsPlace = showDirectionsFor ? getHarlemPlacePreview(selectedPlaceId) : null;
+  const directionsPlace = showDirectionsFor ? getCataloguePlace(selectedPlaceId) : null;
   // Before guidance the panel's Back abandons planning and Place Detail comes
   // back (the panel does that itself). During guidance a phone's "Map"
   // uncovers the map; beside the map the steps stay put, so no button.
@@ -202,8 +209,8 @@ export default function ExploreRouteLayout() {
   return (
     <ExploreTypeContext.Provider value={isHorizonBuild ? 'xr' : 'flat'}>
       <ExploreWorkspaceContext.Provider value={workspace}>
-        <SafeArea edges={['left', 'right']} className="flex-1 bg-surface">
-          <View className="flex-1 flex-row">
+        <SafeArea edges={hardwareColumnWidth ? ['left'] : ['left', 'right']} className="flex-1 bg-surface">
+          <View className="flex-1 flex-row" onLayout={(event) => bounds.setState({ width: event.nativeEvent.layout.width })}>
             <ExplorePane mode={layout.discover} side="leading" restingWidth={EXPLORE_PANE_DP.discover}>
               {/* Main-window content on every build: never a SpatialWindow (S12). */}
               <ExploreMasterPane
@@ -249,7 +256,7 @@ export default function ExploreRouteLayout() {
                   {directionsPlace ? (
                     <DirectionsPanel
                       place={directionsPlace}
-                      originPlaces={HARLEM_PLACE_PREVIEWS}
+                      originPlaces={catalogue}
                       padding={windowPadding}
                       frame={layout.detailDismiss === 'back' ? 'rail-top' : 'rail-leading'}
                       onDismiss={directionsDismiss}

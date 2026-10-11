@@ -8,7 +8,7 @@ import {
   MightsText,
   routes,
 } from '@acme/ui/mights';
-import { Image } from '@acme/ui';
+import { Image, Masonry } from '@acme/ui';
 import { Text, View } from '@acme/ui/tw';
 import { assignStoryPhotos, storyDates, storyPhotos } from './story-format.ts';
 
@@ -151,12 +151,10 @@ function StoryModule({
 const invertAt = (i: number) => i % 5 === 2;
 
 function StoryList({ stories, headingLevel }: { stories: readonly StoryRecord[]; headingLevel: 2 | 3 }) {
-  // Masonry: CSS columns let portrait and landscape photos keep their own
-  // shape, so no image is cropped or letterboxed. Native has no columns and
-  // stacks the same cards in one list.
+  // Both platforms retain each photo's shape in responsive masonry columns.
   const photos = assignStoryPhotos(stories);
   return (
-    <List className="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 md:block md:columns-2 md:gap-4 lg:columns-3">
+    <Masonry>
       {stories.map((story, i) => (
         <ListItem key={story.id} className="flex flex-col md:mb-4 md:break-inside-avoid">
           {/* Every fourth card, offset, is inverted so the grid doesn't read as one repeated tile. */}
@@ -165,7 +163,7 @@ function StoryList({ stories, headingLevel }: { stories: readonly StoryRecord[];
           </MightsNotchCard>
         </ListItem>
       ))}
-    </List>
+    </Masonry>
   );
 }
 

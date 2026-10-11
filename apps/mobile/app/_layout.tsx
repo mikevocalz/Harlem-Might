@@ -1,3 +1,5 @@
+import '../src/site/content-readers';
+import { placeCatalogueStore } from '@acme/app/features/explore/place-catalogue.store.ts';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { haptics } from '@acme/ui/haptics';
@@ -55,6 +57,7 @@ const NAV_THEME = {
 
 export default function RootLayout() {
   useEffect(() => {
+    void placeCatalogueStore.getState().refresh();
     haptics.setForeground(AppState.currentState === 'active');
     const listener = AppState.addEventListener('change', state => {
       haptics.setForeground(state === 'active');
@@ -72,7 +75,10 @@ export default function RootLayout() {
     };
     void refresh();
     const subscription = AppState.addEventListener('change', state => {
-      if (state === 'active') void refresh();
+      if (state === 'active') {
+        void refresh();
+        void placeCatalogueStore.getState().refresh();
+      }
     });
     return () => { active = false; subscription.remove(); listener.remove(); };
   }, []);

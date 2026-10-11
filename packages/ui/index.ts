@@ -3,6 +3,7 @@
 
 // layout
 export { Container, type ContainerProps } from './layout/Container';
+export { Masonry } from './layout/Masonry';
 
 // core
 export { Text, type TextProps } from './Text';

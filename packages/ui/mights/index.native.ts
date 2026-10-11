@@ -28,3 +28,5 @@ export {
   type BentoCustomLead,
   type MightsPlaceBentoProps,
 } from './MightsPlaceBento';
+
+export { MightsWordmark } from './MightsWordmark';

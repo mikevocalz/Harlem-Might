@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import { useRouter } from 'solito/navigation';
 import { ViroXRSceneNavigator, isMetaHorizonXR, isPico, isVisionOS } from '@reactvision/react-viro';
 import { selectArTracking, selectSession, useNavigationStore } from '@acme/app/features/navigation/session/navigationStore.ts';
-import { getHarlemPlacePreview, useExplore } from '@acme/app';
+import { getCataloguePlace, useExplore } from '@acme/app';
 import { MightsButton, MightsHeading, MightsText, routes } from '@acme/ui/mights';
 import { View } from '@acme/ui/tw';
 import { useReducedMotion } from '@acme/ui';
@@ -101,7 +101,7 @@ export default function ExploreArRoute() {
       renderQuestPanel={(enter: () => void) => (
         <ArPanel
           mode={sceneMode}
-          placeName={getHarlemPlacePreview(selectedPlaceId ?? placeId)?.name}
+          placeName={getCataloguePlace(selectedPlaceId ?? placeId)?.name}
           onEnter={enter}
           onBack={exit}
         />

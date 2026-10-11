@@ -6,7 +6,7 @@ import type { ViewProps } from 'react-native';
  * here so `packages/app` never imports the library.
  *
  * The library is a sibling checkout linked into `apps/mobile` only. CI has no
- * copy of it, and the quest build must not mount it, so the mobile app hands
+ * copy of it, so the mobile app hands
  * the real module over at startup (`registerNativeMap`) and this package
  * reads it back. The shapes mirror the library's specs (PR #41 API); the
  * mobile app's typecheck compares the two where it registers the module.

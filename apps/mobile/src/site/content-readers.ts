@@ -1,3 +1,4 @@
+import { placeCatalogueStore } from '@acme/app/features/explore/place-catalogue.store.ts';
 import { fetch } from 'react-native-nitro-fetch';
 import { createContentReaders, createRestContentSource } from '@acme/app/content';
 import { siteOrigin } from './site-url';
@@ -12,7 +13,9 @@ const origin = siteOrigin();
 
 export const contentReaders = createContentReaders(
   createRestContentSource({
-    apiUrl: origin ? `${origin}/payload-api` : undefined,
+    apiUrl: process.env.EXPO_PUBLIC_PAYLOAD_API_BASE?.trim() || (origin ? `${origin}/payload-api` : undefined),
     fetch: (url, init) => fetch(url, init),
   }),
 );
+
+placeCatalogueStore.getState().connect(contentReaders);

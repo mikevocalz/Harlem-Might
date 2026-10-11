@@ -1,11 +1,15 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { MightsButton, MightsHeading, MightsLocationStamp, MightsText } from '@acme/ui/mights';
 import { Pressable, ScrollView, Text, View } from '@acme/ui/tw';
 import { PlaceMasthead } from '@acme/app/features/site/place/PlaceHero.tsx';
 import { directionsUrl } from './explore-copy';
-import { formatDistance, getHarlemPlacePreview, nearbyPlaces, placeStreetLine, type HarlemPlacePreview } from './explore.store';
+import { formatDistance, placeStreetLine, type ExplorePlace } from './explore.store';
+import { usePlaceCatalogue, catalogueNearbyPlaces } from './place-catalogue.store.ts';
+import { explorePlaceFromRecord } from './catalogue.ts';
+import { PlaceHours } from '../site/place/PlaceHours';
+import { safeHttpUrl } from '../site/content/safe-url.ts';
 import { useExploreType } from './explore-type';
 import { DETAIL_HEADING_FOCUS_ID, focusTargetRef, moveFocusTo } from './focus-registry';
 
@@ -22,7 +26,7 @@ export interface ExplorePlaceDetailProps {
   /** Shows the map. Pass only where Detail covers it (compact). */
   onShowOnMap?: () => void;
   /** A Nearby row was chosen. */
-  onSelectNearby: (place: HarlemPlacePreview) => void;
+  onSelectNearby: (place: ExplorePlace) => void;
   /**
    * Opens in-app directions for the place (the shared navigation session).
    * When omitted, "Get directions" links out to Google Maps instead.
@@ -43,9 +47,6 @@ export interface ExplorePlaceDetailProps {
    */
   actions?: ReactNode;
 }
-
-/** OSM's fetch date for the seed coordinates (explore.store.ts). */
-const LOCATION_CHECKED = '3 Oct 2026';
 
 /**
  * Place Detail, drawn like the site's inspector
@@ -74,7 +75,13 @@ export function ExplorePlaceDetail({
   actions,
 }: ExplorePlaceDetailProps) {
   const type = useExploreType();
-  const place = getHarlemPlacePreview(placeId);
+  const catalogue = usePlaceCatalogue((s) => s.places);
+  const detail = usePlaceCatalogue((s) => s.details[placeId]);
+  const loadPlace = usePlaceCatalogue((s) => s.loadPlace);
+  const record = detail?.status === 'ok' ? detail.data : undefined;
+  const place = useMemo(() => record ? explorePlaceFromRecord(record)
+    : catalogue.find((p) => p.id === placeId), [record, catalogue, placeId]);
+  useEffect(() => { void loadPlace(placeId); }, [placeId, loadPlace]);
   const pad = padding === 'window' ? 'px-window' : 'px-4';
   // The rail sits on the edge that meets the map: leading beside it, top over it.
   const frame = dismissKind === 'back' ? 'pt-rail' : 'pl-rail';
@@ -103,12 +110,13 @@ export function ExplorePlaceDetail({
       <View className={'flex-1 bg-primary ' + frame}>
         <View className={'flex-1 bg-surface-raised py-5 ' + type.stackGap + ' ' + pad}>
           <View className="flex-row items-start justify-between gap-4">
-            {title('We couldn’t find that place.')}
+            {title(detail?.status === 'not-found' ? 'We couldn’t find that place.' : detail?.status === 'unavailable' ? 'We couldn’t load this place.' : 'Loading place…')}
             <MightsButton size={type.buttons.primary} variant="ghost" onPress={onClose} aria-label={`${dismissLabel} details`}>
               {dismissLabel}
             </MightsButton>
           </View>
-          <MightsText>It may have been renamed or removed.</MightsText>
+          {detail?.status === 'not-found' ? <MightsText>It may have been renamed or removed.</MightsText> : null}
+          {detail?.status === 'unavailable' ? <MightsButton onPress={() => void loadPlace(placeId)}>Try again</MightsButton> : null}
           <MightsButton size={type.buttons.control} variant="secondary" onPress={onClose}>
             Back to Explore
           </MightsButton>
@@ -117,7 +125,7 @@ export function ExplorePlaceDetail({
     );
   }
 
-  const near = nearbyPlaces(place.id, 3);
+  const near = catalogueNearbyPlaces(place, catalogue, 3);
 
   return (
     <View className={'flex-1 bg-primary ' + frame} aria-label={`Details: ${place.name}`}>
@@ -144,10 +152,10 @@ export function ExplorePlaceDetail({
           {/* The masthead is always the shared carousel: the place's photos
               when the catalogue has them, else the satellite frame plus
               archival Harlem pictures, same as the site place page. */}
-          <PlaceMasthead place={place} images={[]} />
+          <PlaceMasthead place={place} images={record?.images ?? []} />
           <MightsLocationStamp name={place.category} street={placeStreetLine(place)} size={type.buttons.stamp} />
           <MightsText tone="default" className={type.body}>
-            {place.shortDescription}
+            {place.shortDescription ?? 'No description has been published for this place yet.'}
           </MightsText>
           {place.lngLat ? null : (
             <MightsText size="small" className={type.caption}>
@@ -180,6 +188,17 @@ export function ExplorePlaceDetail({
             {actions}
           </View>
 
+          {detail?.status === 'unavailable' ? (
+            <View className="gap-2">
+              <MightsText>We couldn’t load the latest place details.</MightsText>
+              <MightsButton onPress={() => void loadPlace(placeId)}>Try again</MightsButton>
+            </View>
+          ) : null}
+          {record?.openingHours ? <PlaceHours hours={record.openingHours} now={new Date()} /> : null}
+          {record?.menus?.map((menu, i) => {
+            const url = safeHttpUrl(menu.url);
+            return url ? <MightsButton key={i} href={url} external variant="outline">{menu.label}</MightsButton> : null;
+          })}
           {near.length > 0 ? (
             <View className={'gap-1 border-t border-rule-hairline ' + type.sectionTop}>
               <MightsHeading level={3} size="card" className={type.title}>
@@ -205,16 +224,16 @@ export function ExplorePlaceDetail({
               Where this comes from
             </MightsHeading>
             <MightsText size="small" className={type.caption}>
-              {place.lngLat && place.osm
-                ? `Location from OpenStreetMap (${place.osm}), checked ${LOCATION_CHECKED}.`
-                : 'Location not verified yet.'}
+              {place.lngLat && record?.locationSourceUrl
+                ? `Location source: ${record.locationSourceUrl}${record.locationSourceReadAt ? ` · Read ${record.locationSourceReadAt.slice(0, 10)}` : ''}`
+                : place.lngLat ? 'Location from the place catalogue.' : 'Location not verified yet.'}
             </MightsText>
             <MightsText size="small" className={type.caption}>
-              Description written by Harlem Might.
+              Description from the Harlem Might place catalogue.
             </MightsText>
             <MightsText size="small" className={type.caption}>
-              Masthead shows the satellite frame and Harlem in the archive, not photographs of this place — we only
-              show photos the venue or an archive has cleared for use.
+              {record?.images.length ? 'Image sources and credits are shown with each photograph.'
+                : 'Masthead shows the satellite frame and Harlem in the archive, not photographs of this place.'}
             </MightsText>
           </View>
         </ScrollView>

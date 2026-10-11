@@ -3,12 +3,12 @@
 import { Text, View } from '@acme/ui/tw';
 import { FocusPressable } from './FocusPressable';
 import { placeRowLine } from './explore-copy';
-import type { HarlemPlacePreview } from './explore.store';
+import type { ExplorePlace } from './explore.store';
 import { useExploreType } from './explore-type';
 import { focusTargetRef, rowFocusId } from './focus-registry';
 
 export interface PlaceRowProps {
-  place: HarlemPlacePreview;
+  place: ExplorePlace;
   selected: boolean;
   onPress: () => void;
   /** Horizontal padding: `window` (24dp) inside a Horizon window, `pane` (20dp) elsewhere. */

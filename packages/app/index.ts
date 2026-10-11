@@ -34,3 +34,5 @@ export {
   type AssistantActivity,
 } from './features/explore/mights-assistant.store';
 export * from './features/navigation/ui';
+
+export { placeCatalogueStore, usePlaceCatalogue, getCataloguePlace, catalogueNearbyPlaces } from './features/explore/place-catalogue.store.ts';

@@ -246,7 +246,7 @@ export interface ExploreState {
   /** Search text as typed. On web it leads the URL `q` by one debounce. */
   query: string;
   /** Mobile only. Web reads `?category=`. */
-  category: HarlemCategoryFilter;
+  category: string;
   /** Mobile only. Web reads `?place=`. */
   selectedPlaceId: string | null;
   /** Fixture place ids saved this session (not persisted). */
@@ -276,7 +276,7 @@ export interface ExploreState {
    */
   selectionPushed: boolean;
   setQuery: (query: string) => void;
-  setCategory: (category: HarlemCategoryFilter) => void;
+  setCategory: (category: string) => void;
   selectPlace: (placeId: string | null) => void;
   /**
    * Selects a place and records the control that opened it (a row or a map
@@ -431,7 +431,7 @@ export const MAPPED_PLACES = HARLEM_PLACE_PREVIEWS.filter((p) => p.lngLat);
 export const UNMAPPED_PLACES = HARLEM_PLACE_PREVIEWS.filter((p) => !p.lngLat);
 
 /** The street when the record has one, else the neighbourhood. */
-export function placeStreetLine(place: HarlemPlacePreview): string {
+export function placeStreetLine(place: ExplorePlace): string {
   return place.street ?? place.area;
 }
 

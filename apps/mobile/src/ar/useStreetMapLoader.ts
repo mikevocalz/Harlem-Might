@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { MapboxVectorClient } from '@mikevocalz/nitro-mapbox-ar/mapbox';
 import type { BuildingMesh } from '@mapbox/react-native-mapbox-ar-reactvision/src/buildings.ts';
-import { getHarlemPlacePreview } from '@acme/app';
+import { getCataloguePlace, usePlaceCatalogue } from '@acme/app';
 import { useArSession } from './arSession.store';
 import { tabletopOrigin } from './arTabletop';
 import { mapboxToken } from './mapboxToken';
@@ -19,8 +19,9 @@ const meshCache = new Map<string, BuildingMesh>();
  * fetches them by URL.
  */
 export function useStreetMapLoader(active: boolean, placeId: string | undefined) {
+  usePlaceCatalogue((s) => s.places);
   const user = useArSession((s) => s.street.user);
-  const place = getHarlemPlacePreview(placeId);
+  const place = getCataloguePlace(placeId);
   const origin = useMemo(() => (place?.lngLat ? tabletopOrigin(place) : null), [place]);
   const tiles = useMemo(() => (origin ? streetMapTiles(origin, user) : null), [origin, user]);
   const cell = tiles?.cell;
