@@ -43,10 +43,16 @@ those implementations. **Issue 41 remains open; this is not a native release.**
   11 pending-route regressions, and found no remaining concrete source blocker.
 - Shared app (including content), Payload and Widgets TypeScript passed.
   Changed shared/mobile TypeScript/TSX scoped ESLint and git diff checks passed.
+- PR 59 head `764b7c3` GitHub CI run `38117610515` completed successfully,
+  including frozen install, all declared suites, full build/typecheck/lint and
+  deployable artifact checks. This evidence covers the session slice only.
 - Full mobile host suite: 180 passed, 3 files could not load linked packages
   (`earcut` from the Mapbox checkout and `@viro-external/meta-layout`). Mobile
   TypeScript also cannot validate against the unavailable actual private Viro
   and Viro External checkouts. Do not treat these as full passes.
+- The combined full-workspace Turbo run was attempted: 20 tasks succeeded;
+  mobile reported those linked-dependency errors and web build exited 137.
+  The integrated native/phone stack has no all-workspace green build claim.
 - No Xcode/Gradle compile, native signing, simulator screenshots, device GPS,
   VoiceOver/TalkBack, battery or physical paired-device tests were performed.
   GitHub CI status is attached to each published head, not inherited from main
