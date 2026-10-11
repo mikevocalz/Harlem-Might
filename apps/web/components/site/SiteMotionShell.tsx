@@ -5,6 +5,7 @@ import { usePathname } from 'solito/navigation';
 import { Link } from '@acme/ui/html';
 import { View } from '@acme/ui/tw';
 import { MightsDock, MightsFooter, MightsNavbar, routes } from '@acme/ui/mights';
+import { MemberMenu } from '@acme/app/features/auth/MemberMenu.tsx';
 
 /**
  * Product-site shell and motion owner.
@@ -110,7 +111,7 @@ function SiteMotion() {
 
 function SiteNavbar() {
   const pathname = usePathname() ?? '/';
-  return <MightsNavbar overlay={pathname === routes.home()} />;
+  return <MightsNavbar overlay={pathname === routes.home()} account={<MemberMenu siteUrl="" />} />;
 }
 
 function SiteFooter() {

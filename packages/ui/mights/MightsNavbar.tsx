@@ -16,9 +16,15 @@ export interface MightsNavbarProps {
   overlay?: boolean;
   /** Ink over the overlay — decided per hero, never auto-detected. */
   tone?: 'iron' | 'paper';
+  /**
+   * Session-aware account control bound by the app (avatar + menu when a
+   * member is signed in, the Sign in button when not). Without it the bar
+   * falls back to the plain Sign in button.
+   */
+  account?: React.ReactNode;
 }
 
-export function MightsNavbar({ overlay = false, tone = 'iron' }: MightsNavbarProps) {
+export function MightsNavbar({ overlay = false, tone = 'iron', account }: MightsNavbarProps) {
   const pathname = usePathname() ?? '/';
   const scrolled = useShell((s) => s.scrolled);
   const current = activeSection(pathname);
@@ -72,19 +78,23 @@ export function MightsNavbar({ overlay = false, tone = 'iron' }: MightsNavbarPro
             })}
           </List>
         </Nav>
-        {/* One button. Member auth is optional but has to be discoverable;
-            the sign-in page links to account creation, so "Join" would be a
-            second door to the same place. The app and AR links stay in the
-            dock's More sheet and footer. */}
+        {/* One control. Member auth is optional but has to be discoverable;
+            the app binds the session-aware account control — an avatar and
+            menu for a member, the Sign in button for a visitor. The sign-in
+            page links to account creation, so "Join" would be a second door
+            to the same place. The app and AR links stay in the dock's More
+            sheet and footer. */}
         <View className="ml-auto hidden flex-row items-center md:flex lg:ml-0">
-          <MightsButton
-            href={routes.signIn()}
-            variant="outline"
-            size="sm"
-            aria-current={pathname === routes.signIn() ? 'page' : undefined}
-          >
-            Sign in
-          </MightsButton>
+          {account ?? (
+            <MightsButton
+              href={routes.signIn()}
+              variant="outline"
+              size="sm"
+              aria-current={pathname === routes.signIn() ? 'page' : undefined}
+            >
+              Sign in
+            </MightsButton>
+          )}
         </View>
       </View>
     </Header>
