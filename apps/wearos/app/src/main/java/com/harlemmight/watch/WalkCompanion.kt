@@ -27,6 +27,7 @@ class WearWalkStore(private val context: Context) : MessageClient.OnMessageRecei
     private var foreground = false
     private var phone: String? = null
     private var generation = 0
+    private var reconnectGeneration = 0
     private var pendingCommand: JSONObject? = null
     private var pendingCount = 0
     private val invalidHandoffs = mutableSetOf<String>()
@@ -55,15 +56,16 @@ class WearWalkStore(private val context: Context) : MessageClient.OnMessageRecei
     fun reconnect() {
         if (!foreground) return
         val operation = generation
+        val request = ++reconnectGeneration
         Wearable.getCapabilityClient(context).getCapability(CompanionWire.PHONE, CapabilityClient.FILTER_REACHABLE)
             .addOnSuccessListener { info ->
-                if (!foreground || operation != generation) return@addOnSuccessListener
+                if (!foreground || operation != generation || request != reconnectGeneration) return@addOnSuccessListener
                 val node = info.nodes.singleOrNull()
                 if (node == null) { phone = null; clear("Connect one phone and open Harlem Might."); return@addOnSuccessListener }
                 phone = node.id; reachable = true
                 Wearable.getMessageClient(context).sendMessage(node.id, CompanionWire.REQUEST, (snapshot?.optString("handoffId") ?: "").toByteArray(Charsets.UTF_8))
-                    .addOnFailureListener { if (operation == generation) clear("Phone disconnected. Nothing was queued.") }
-            }.addOnFailureListener { if (operation == generation) clear("Wear Data Layer is unavailable. Public highlights still work.") }
+                    .addOnFailureListener { if (operation == generation && request == reconnectGeneration) clear("Phone disconnected. Nothing was queued.") }
+            }.addOnFailureListener { if (operation == generation && request == reconnectGeneration) clear("Wear Data Layer is unavailable. Public highlights still work.") }
     }
     override fun onCapabilityChanged(info: CapabilityInfo) { main.post {
         if (phone != null && info.nodes.none { it.id == phone }) { phone = null; clear("Phone disconnected. Share again after reconnecting.") }
@@ -85,10 +87,15 @@ class WearWalkStore(private val context: Context) : MessageClient.OnMessageRecei
             if (previous.getString("handoffId") == next.getString("handoffId") &&
                 (previous.getString("sessionId") != next.getString("sessionId") || next.getLong("revision") < previous.getLong("revision") ||
                     (previous.getLong("revision") == next.getLong("revision") && Instant.parse(previous.getString("updatedAt")) > Instant.parse(next.getString("updatedAt"))))) return@post
-            if (previous.getString("handoffId") != next.getString("handoffId")) {
-                invalidHandoffs.add(previous.getString("handoffId")); generation++
-                pending = false; pendingCommand = null; timeout?.let { main.removeCallbacks(it) }
-            }
+        }
+        // Any accepted phone snapshot supersedes older reconnect replies/errors,
+        // even within one handoff. Keep command timeout/ack generations intact.
+        reconnectGeneration++
+        if (previous?.optString("handoffId") != next.getString("handoffId")) {
+            // First adoption also supersedes any older reconnect callback.
+            generation++
+            previous?.let { invalidHandoffs.add(it.getString("handoffId")) }
+            pending = false; pendingCommand = null; timeout?.let { main.removeCallbacks(it) }
         }
         val c = pendingCommand
         val matches = c != null && c.getString("handoffId") == next.getString("handoffId") &&

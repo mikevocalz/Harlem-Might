@@ -10,6 +10,7 @@ import type { WalkCommand } from '@acme/widgets';
 import { createJourneyController, commandId, type JourneyTransport } from './controller.ts';
 import { journeyStorage } from './storage';
 import { createMemberJourneyTransport } from './member-transport.ts';
+import { observeJourneyMemberIdentity } from './member-identity.ts';
 import { applyJourneyNavigationCommand } from './navigation-effects.ts';
 import { createJourneyCueTracker } from './cues.ts';
 import { startJourneyRouteIntent, type JourneyRouteIdentity } from './route-intent.ts';
@@ -61,11 +62,9 @@ export function journeyController() {
   useMemberAuth.subscribe((state, previous) => { if (state.pending && !previous.pending) { endNavigation(); controller?.clear(); } });
   // The session mirror is the other identity signal the form flag misses:
   // sign-out, a different member appearing, or a refresh that names another
-  // owner re-verifies against the server and clears on a real owner change.
+  // owner immediately revokes pending member work as well as visible state.
   // Local anonymous journeys are the device's own data and are left alone.
-  useMemberSession.subscribe((state, previous) => {
-    if ((state.member?.id ?? null) !== (previous.member?.id ?? null)) void controller?.checkIdentity();
-  });
+  observeJourneyMemberIdentity(controller, useMemberSession);
   // Save only route synopsis, never the route geometry or raw sensor feed.
   let routeId: string | undefined;
   const cues = createJourneyCueTracker();

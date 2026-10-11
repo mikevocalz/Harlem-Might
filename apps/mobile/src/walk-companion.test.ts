@@ -69,3 +69,55 @@ test('native lifecycle revocation cannot be undone by an old JS publisher', () =
   assert.match(kotlin, /next\.optString\("handoffId"\) != authorizedHandoff/);
   assert.match(kotlin, /authorizedHandoff = null/);
 });
+
+// Structural source invariants, not a Swift/Kotlin or paired-device runtime test.
+// The nil-to-first-snapshot adoption must invalidate the generation captured by
+// reconnect, just like replacement of a non-null older handoff does.
+test('Apple Watch first snapshot invalidates older reconnect callbacks', () => {
+  const source = readFileSync(new URL('../targets/harlem-watch/WalkCompanion.swift', import.meta.url), 'utf8');
+  const receive = source.slice(source.indexOf('private func receive('), source.indexOf('func send(')).replace(/\/\/[^\n]*/g, '');
+  assert.match(receive, /\n        if snapshot\?\.handoffId != next\.handoffId \{\s*generation \+= 1/);
+  assert.match(receive, /if let previous = snapshot \{ invalidHandoffs\.insert\(previous\.handoffId\) \}/);
+  assert.ok(receive.indexOf('generation += 1') < receive.indexOf('snapshot = next'));
+  const reconnect = source.slice(source.indexOf('func reconnect('), source.indexOf('func clear('));
+  assert.match(reconnect, /let operation = generation/);
+  assert.match(reconnect, /errorHandler:[\s\S]*self\?\.generation == operation[\s\S]*self\?\.clear/);
+});
+
+test('Wear OS first snapshot invalidates older reconnect failures', () => {
+  const source = readFileSync(new URL('../../wearos/app/src/main/java/com/harlemmight/watch/WalkCompanion.kt', import.meta.url), 'utf8');
+  const receive = source.slice(source.indexOf('override fun onMessageReceived('), source.indexOf('fun send(')).replace(/\/\/[^\n]*/g, '');
+  assert.match(receive, /\n        if \(previous\?\.optString\("handoffId"\) != next\.getString\("handoffId"\)\) \{\s*generation\+\+/);
+  assert.match(receive, /previous\?\.let \{ invalidHandoffs\.add\(it\.getString\("handoffId"\)\) \}/);
+  assert.ok(receive.indexOf('generation++') < receive.indexOf('snapshot = next'));
+  const reconnect = source.slice(source.indexOf('fun reconnect('), source.indexOf('override fun onCapabilityChanged('));
+  assert.match(reconnect, /val operation = generation/);
+  assert.equal((reconnect.match(/addOnFailureListener \{ if \(operation == generation && request == reconnectGeneration\) clear/g) ?? []).length, 2);
+});
+
+test('all accepted Apple Watch snapshots supersede reconnect callbacks without invalidating pending commands', () => {
+  const source = readFileSync(new URL('../targets/harlem-watch/WalkCompanion.swift', import.meta.url), 'utf8').replace(/\/\/[^\n]*/g, '');
+  const reconnect = source.slice(source.indexOf('func reconnect('), source.indexOf('func clear('));
+  assert.match(reconnect, /reconnectGeneration \+= 1\s*let request = reconnectGeneration/);
+  assert.equal((reconnect.match(/self\?\.generation == operation && self\?\.reconnectGeneration == request/g) ?? []).length, 2);
+  const receive = source.slice(source.indexOf('private func receive('), source.indexOf('func send('));
+  // Top-level increment follows the previous-snapshot rejection block and is
+  // outside the new-handoff condition, so same-handoff evidence counts as well.
+  assert.match(receive, /\)\)\) \{ return \}\s*\}\s*reconnectGeneration \+= 1\s*if snapshot\?\.handoffId != next\.handoffId/);
+  const commands = source.slice(source.indexOf('func send('));
+  assert.doesNotMatch(commands, /reconnectGeneration/);
+  assert.match(commands, /self\?\.generation == operation.*pendingCommand\?\.commandId == command\.commandId/);
+});
+
+test('all accepted Wear OS snapshots supersede reconnect callbacks without invalidating pending commands', () => {
+  const source = readFileSync(new URL('../../wearos/app/src/main/java/com/harlemmight/watch/WalkCompanion.kt', import.meta.url), 'utf8').replace(/\/\/[^\n]*/g, '');
+  const reconnect = source.slice(source.indexOf('fun reconnect('), source.indexOf('override fun onCapabilityChanged('));
+  assert.match(reconnect, /val request = \+\+reconnectGeneration/);
+  assert.match(reconnect, /operation != generation \|\| request != reconnectGeneration/);
+  assert.equal((reconnect.match(/operation == generation && request == reconnectGeneration/g) ?? []).length, 2);
+  const receive = source.slice(source.indexOf('override fun onMessageReceived('), source.indexOf('fun send('));
+  assert.match(receive, /return@post\s*\}\s*reconnectGeneration\+\+\s*if \(previous\?\.optString\("handoffId"\)/);
+  const commands = source.slice(source.indexOf('fun send('));
+  assert.doesNotMatch(commands, /reconnectGeneration/);
+  assert.match(commands, /operation == generation && pendingCommand\?\.optString\("commandId"\) == c\.getString\("commandId"\)/);
+});
