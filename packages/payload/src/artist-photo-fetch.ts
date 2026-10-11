@@ -49,8 +49,10 @@ export function createPhotoLookup(resolve: typeof lookup = lookup): LookupFuncti
   };
 }
 
+export const MAX_COMMONS_PHOTO_BYTES = 20 * 1024 * 1024;
+
 type PhotoFetchOptions = {
-  kind?: 'metadata' | 'image';
+  kind?: 'metadata' | 'image' | 'commons-image';
   headers?: Record<string, string>;
 };
 
@@ -75,8 +77,10 @@ export function createPublicPhotoFetcher(
       hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local')
     ) throw new PhotoFetchError('blocked');
 
-    const image = options.kind === 'image';
-    const maxBytes = image ? 15 * 1024 * 1024 : 2 * 1024 * 1024;
+    const image = options.kind === 'image' || options.kind === 'commons-image';
+    // Preserve the CMS ingestion ceiling without increasing the public proxy cap.
+    const maxBytes = options.kind === 'commons-image' ? MAX_COMMONS_PHOTO_BYTES
+      : image ? 15 * 1024 * 1024 : 2 * 1024 * 1024;
     return new Promise<{
       ok: true;
       url: string;

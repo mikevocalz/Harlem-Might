@@ -2,7 +2,7 @@
 // (React Server Components, route handlers). The `server-only` marker turns
 // an import from a client bundle into a build error.
 import 'server-only';
-import { fetchPublicPhotoResource } from './src/artist-photo-fetch.ts';
+import { fetchPublicPhotoResource, MAX_COMMONS_PHOTO_BYTES } from './src/artist-photo-fetch.ts';
 import { isFreeArtistPhotoLicense, isCommonsArtistPhotoUrl } from '@acme/app/features/music/artist-photo-rights.ts';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -142,14 +142,14 @@ export async function persistRightsClearedMusicArtistHeadshot(
 
   let mediaId: Media['id'] | undefined = existing.docs[0]?.id;
   if (!mediaId) {
-    const response = await fetchPublicPhotoResource(photo.url, { kind: 'image' });
+    const response = await fetchPublicPhotoResource(photo.url, { kind: 'commons-image' });
     if (!response.ok) return false;
 
     const mime = response.contentType;
     const extension = imageExtension(mime);
     if (!extension) return false;
     const bytes = Buffer.from(response.bytes);
-    if (bytes.length === 0 || bytes.length > 20 * 1024 * 1024) return false;
+    if (bytes.length === 0 || bytes.length > MAX_COMMONS_PHOTO_BYTES) return false;
 
     const dir = await mkdtemp(path.join(tmpdir(), 'harlem-music-headshot-'));
     const filePath = path.join(dir, `artist-${String(artistId)}.${extension}`);

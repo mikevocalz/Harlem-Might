@@ -145,3 +145,13 @@ describe('photo resource limits', () => {
     assert.equal(fixture.upstream.destroyed, true);
   });
 });
+
+
+it('preserves the 20 MiB Commons ingestion ceiling without raising the proxy limit', async () => {
+  const fixture = upstreamFixture({ chunks: [Buffer.alloc(20 * 1024 * 1024)] });
+  const photo = await createPublicPhotoFetcher(fixture.transport, dns())('https://upload.wikimedia.org/wikipedia/commons/a/aa/portrait.jpg', { kind: 'commons-image' });
+  assert.equal(photo.bytes.length, 20 * 1024 * 1024);
+  const oversized = upstreamFixture({ chunks: [Buffer.alloc(20 * 1024 * 1024), Buffer.alloc(1)] });
+  await assert.rejects(createPublicPhotoFetcher(oversized.transport, dns())('https://upload.wikimedia.org/wikipedia/commons/a/aa/portrait.jpg', { kind: 'commons-image' }), reason('too-large'));
+  assert.equal(oversized.upstream.destroyed, true);
+});
