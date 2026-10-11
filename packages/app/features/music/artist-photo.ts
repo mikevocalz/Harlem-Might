@@ -148,12 +148,23 @@ const scoreCommonsPage = (artistName: string, page: CommonsPage): number => {
 
   const artist = normalizeArtistName(artistName);
   const file = normalizeArtistName(title);
-  const words = artist.split(' ').filter((word) => word.length > 1);
-  let score = words.reduce(
-    (sum, word) => sum + (file.includes(word) ? 12 : 0),
-    0,
+  const metadata = normalizeArtistName(
+    [
+      info.extmetadata?.Description?.value,
+      info.extmetadata?.ObjectName?.value,
+      info.extmetadata?.ImageDescription?.value,
+      info.extmetadata?.Categories?.value,
+    ]
+      .filter(Boolean)
+      .join(' '),
   );
-  if (file.includes(artist)) score += 40;
+  const subjectText = `${file} ${metadata}`;
+  const words = artist.split(' ').filter((word) => word.length > 1);
+  const matchedWords = words.filter((word) => subjectText.includes(word));
+  if (matchedWords.length === 0) return -1000;
+
+  let score = matchedWords.length * 12;
+  if (subjectText.includes(artist)) score += 40;
   if (/\b(crop|cropped|portrait|headshot)\b/i.test(title)) score += 20;
   if (info.width && info.height && info.height >= info.width) score += 8;
   return score;
@@ -408,4 +419,20 @@ export const isArtistPhotoResult = (
         provider === 'deezer' ||
         provider === 'curated_web'),
   );
+};
+
+
+export const artistPhotoProviderLabel = (
+  provider: ArtistPhotoProvider,
+): string => {
+  switch (provider) {
+    case 'wikimedia_commons':
+      return 'Wikimedia Commons';
+    case 'wikipedia':
+      return 'Wikipedia';
+    case 'deezer':
+      return 'Deezer';
+    case 'curated_web':
+      return 'Verified artist source';
+  }
 };
