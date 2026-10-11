@@ -66,10 +66,11 @@ function ArtistPortrait({
           className="h-full w-full"
         />
         <Text
-          numberOfLines={1}
-          className="absolute bottom-0 right-0 max-w-full bg-mights-night/80 px-2 py-0.5 font-sans text-caption text-text-muted"
+          numberOfLines={2}
+          className="absolute bottom-0 right-0 max-w-full bg-mights-night/85 px-2 py-1 font-sans text-caption text-text-muted"
         >
-          Artist photo · {artistPhotoProviderLabel(photo.provider)}
+          {photo.credit} · {artistPhotoProviderLabel(photo.provider)}
+          {photo.license ? ` · ${photo.license}` : ' · external reference'}
         </Text>
       </View>
     );
