@@ -1,5 +1,20 @@
 # Take Me There: issue 41 acceptance audit
 
+## Validation record scope
+
+This document preserves a historical review. The original local totals below
+do not identify an exact tested-head SHA or hosted run ID. They are historical
+context, not acceptance evidence for the current PR head.
+
+A later, separately verified snapshot is commit
+`3a7cef7b8ea65dc7792ee4b3780cfc64adb25a2a`, tree
+`219b81a0d13465fd4ffc81ec4e657011bdb8522e`.
+[CI run 38169026504](https://github.com/mikevocalz/Harlem-Might/actions/runs/38169026504)
+passed 942 tests and all 28 build/typecheck/lint tasks. Its actual checkout,
+`3bc02921357c00de26de0f4794d3d4f80f8699d3`, has that same tree. This records
+that snapshot only; later revisions require their own checks. Hosted source
+checks do not establish native compilation or real-device acceptance.
+
 Audit date: 2026-10-11. Base: main `3a997853` (includes PRs 37–40 and 57).
 The old issue/checklists describe a connected journey, not the absence of every
 foundation. Main already had public widget/watch projections, Mapbox navigation
@@ -28,7 +43,7 @@ those implementations. **Issue 41 remains open; this is not a native release.**
 | 7. Haptics | Existing phone semantic vocabulary now receives verified route/user-action events; deduplicated opt-out/foreground gates and visual text. Native watch success cue follows acknowledged action only. | Full six-event native watch cues/audio equivalents and real muted/reduced-motion/notification QA. No background haptic loop. |
 | 8. Story / AR | Foreground published sourced text-only excerpts, dates/citations, real Viro capability check and shared controller/route; non-AR reading remains available. | No newly licensed audio assets; rights/editorial review and actual camera/tracking/hardware fallback QA. |
 
-## Verified evidence
+## Historical verified evidence
 
 - Final integrated frozen SDK 58 install passed with pnpm 12.8.1 and
   `--ignore-scripts`; this does not compile native code or validate postinstall.

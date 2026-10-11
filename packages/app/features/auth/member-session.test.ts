@@ -632,3 +632,17 @@ for (const transition of ['new-owner', 'new-same-owner', 'logout'] as const) {
     } else assertOwner(transition === 'new-owner' ? B : A);
   });
 }
+
+it('publishes explicit logout start and confirmation boundaries while coalescing pending retries', async () => {
+  const pending = deferred<Response>();
+  intercept = ({ url }) => url.endsWith('/auth/sign-out') ? pending.promise : undefined;
+  const before = members.getState().authBoundary;
+  const first = members.getState().signOut();
+  const started = members.getState().authBoundary;
+  assert.ok(started > before);
+  assert.equal(members.getState().signOut(), first);
+  assert.equal(members.getState().authBoundary, started);
+  pending.resolve(response({}));
+  await first;
+  assert.ok(members.getState().authBoundary > started);
+});
