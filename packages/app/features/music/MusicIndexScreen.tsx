@@ -1,30 +1,10 @@
-import {
-  getHarlemArchivalImage,
-  type MusicArtistRecord,
-} from '@acme/app/content';
-import {
-  MightsButton,
-  MightsEditorialImage,
-  MightsPage,
-  routes,
-} from '@acme/ui/mights';
+import type { MusicArtistRecord } from '@acme/app/content';
+import { MightsButton, MightsPage, routes } from '@acme/ui/mights';
 import { ContentLoader } from '../site/content/ContentLoader.tsx';
 import { ContentNotice } from '../site/content/ContentNotice.tsx';
 import type { ScreenResult } from '../site/stories/StoriesScreen.tsx';
 import { MusicArtistGrid } from './MusicArtistGrid.tsx';
 
-const heroImage = getHarlemArchivalImage('nypl-seventh-avenue-west-125th-1934');
-const archiveImage = getHarlemArchivalImage('nypl-harlem-storefronts-1939');
-
-const hero = heroImage ? (
-  <MightsEditorialImage
-    image={heroImage}
-    screenId="music-hero"
-    ratio="wide"
-    priority
-    sizes="(min-width: 768px) 60vw, 100vw"
-  />
-) : undefined;
 
 function MusicIndexBody({ result }: { result: ScreenResult<readonly MusicArtistRecord[]> | undefined }) {
   if (!result) return <ContentLoader label="Checking for published artists" />;
@@ -32,7 +12,6 @@ function MusicIndexBody({ result }: { result: ScreenResult<readonly MusicArtistR
     return (
       <ContentNotice
         title="We couldn’t check the music directory right now"
-        image={archiveImage}
         actions={
           <>
             <MightsButton href={routes.music()}>Try again</MightsButton>
@@ -51,7 +30,6 @@ function MusicIndexBody({ result }: { result: ScreenResult<readonly MusicArtistR
     return (
       <ContentNotice
         title="No artist profiles are published yet"
-        image={archiveImage}
         actions={
           <MightsButton href={routes.explore()} variant="secondary">
             Open the map
@@ -71,9 +49,7 @@ export function MusicIndexScreen({ result }: { result: ScreenResult<readonly Mus
   return (
     <MightsPage
       title="Harlem Music"
-      mediaLayout="leading"
       lead="The artists who made Harlem a stage and a sound. Every profile names its sources and rights."
-      media={hero}
     >
       <MusicIndexBody result={result} />
     </MightsPage>
