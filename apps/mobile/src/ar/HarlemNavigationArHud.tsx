@@ -1,3 +1,4 @@
+import { useSafeAreaInsets, type EdgeInsets } from 'react-native-safe-area-context';
 import { useEffect, useMemo } from 'react';
 import { useStore } from 'zustand';
 import { MightsButton } from '@acme/ui/mights';
@@ -37,6 +38,8 @@ const AMBER = palette.mights['sodium-amber'];
 const CARD = 'rgba(11, 9, 6, 0.88)';
 
 export interface HarlemNavigationArHudProps {
+  /** Only safe areas and overlay space not already consumed by the containing shell. */
+  readonly contentInsets?: Readonly<EdgeInsets>;
   /** Leaves AR and returns to the map. The navigation session keeps running. */
   readonly onBackToMap: () => void;
   /** After arrival: open the destination's place page. */
@@ -101,7 +104,9 @@ function CheckRow({ ready, text }: { ready: boolean; text: string }) {
  * navigation session; the only commands it sends are the controller's
  * pause/resume/exit/cancel.
  */
-export function HarlemNavigationArHud({ onBackToMap, onExplorePlace }: HarlemNavigationArHudProps) {
+export function HarlemNavigationArHud({ onBackToMap, onExplorePlace, contentInsets }: HarlemNavigationArHudProps) {
+  const rootInsets = useSafeAreaInsets();
+  const insets = contentInsets ?? rootInsets;
   const controller = getNavigationController();
   const session = useNavigationStore(selectSession);
   const positioning = useNavigationStore(selectPositioning);
@@ -168,7 +173,7 @@ export function HarlemNavigationArHud({ onBackToMap, onExplorePlace }: HarlemNav
   const turnDeg = maneuverTurnDeg(progress?.nextManeuver);
 
   return (
-    <View pointerEvents="box-none" className="absolute inset-0 justify-between px-4 pb-8 pt-14">
+    <View pointerEvents="box-none" className="absolute inset-0 justify-between" style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16, paddingLeft: insets.left + 16, paddingRight: insets.right + 16 }}>
       {/* Top: what to do next. */}
       <View pointerEvents="box-none" className="gap-3">
         {presentation.kind === 'calibrating' ? (

@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import { BackHandler, useWindowDimensions } from 'react-native';
+import { AppState, BackHandler, useWindowDimensions } from 'react-native';
 import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
 import { Slot } from 'expo-router';
+import { useIsFocused } from 'expo-router/react-navigation';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'solito/navigation';
 import { routes } from '@acme/ui/mights';
 import {
@@ -43,6 +45,11 @@ import { ExploreWorkspaceContext, ExploreWorkspaceWindow } from '@/src/spatial/E
 import { isHorizonBuild } from '@/src/spatial/horizonBuild';
 import { ViewInArButton } from '@/src/ar/ViewInArButton';
 import { ArNavigationButton } from '@/src/ar/ArNavigationButton';
+import { ExploreNavigationAr } from '@/src/ar/ExploreNavigationAr';
+import { createNavigationArHost, navigationArHostPresentation } from '@/src/ar/navigationArHost';
+import { isArNavigationScreen } from '@/src/ar/navAr';
+import { getNavigationController } from '@/src/ar/navigationRuntime';
+import { prepareArMapReturn } from '@/src/ar/navigationArVisit';
 import { metaWindows } from '@/src/spatial/metaWindows';
 import { useNavigationPresentation } from '@/src/navigation/useNavigationPresentation';
 import { usePlaceDetailPanel } from '@/src/spatial/usePlaceDetailPanel';
@@ -65,7 +72,20 @@ import { usePlaceDetailPanel } from '@/src/spatial/usePlaceDetailPanel';
  */
 export default function ExploreRouteLayout() {
   const router = useRouter();
-  const { hardwareColumnWidth } = useNavigationPresentation();
+  const focused = useIsFocused();
+  const foregroundStore = useMemo(() => createStore(() => ({ active: AppState.currentState === 'active' })), []);
+  const foreground = useStore(foregroundStore, (state) => state.active);
+  const arHost = useMemo(() => {
+    const { session, arTracking } = useNavigationStore.getState();
+    return createNavigationArHost(getNavigationController(), isArNavigationScreen(session, arTracking));
+  }, []);
+  const arVisit = useStore(arHost, (state) => state.visit);
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => foregroundStore.setState({ active: state === 'active' }));
+    return () => subscription.remove();
+  }, [foregroundStore]);
+  const { hardwareColumnWidth, rail } = useNavigationPresentation();
+  const safeAreaInsets = useSafeAreaInsets();
   const { width: deviceWidth } = useWindowDimensions();
   const bounds = useMemo(() => createStore(() => ({ width: 0 })), []);
   const measuredWidth = useStore(bounds, (state) => state.width);
@@ -112,6 +132,17 @@ export default function ExploreRouteLayout() {
     discoverDrawerOpen,
   });
   const single = layout.arrangement === 'single';
+  const arPresentation = navigationArHostPresentation({
+    focused, foreground, showMap: layout.showMap, visitOpen: arVisit !== undefined,
+    bottomInset: rail ? safeAreaInsets.bottom : 0,
+    detailOverlayWidth: layout.detail?.kind === 'overlay' ? layout.detail.width : 0,
+    discoverOverlayWidth: layout.discover.kind === 'overlay' ? layout.discover.width : 0,
+  });
+  // Tabs and compact panes keep Explore mounted. Leaving its visible map
+  // releases AR; a transient app background only suspends its camera.
+  useEffect(() => {
+    if (!focused || !layout.showMap) arHost.getState().close();
+  }, [arHost, focused, layout.showMap]);
 
   const open = (placeId: string, origin: 'map' | 'discover', focusId: string | null) => {
     openPlace(placeId, focusId);
@@ -142,16 +173,24 @@ export default function ExploreRouteLayout() {
 
   // Android Back: Detail, then a Discover screen or drawer.
   const directionsOpen = directionsPlaceId != null && directionsPlaceId === selectedPlaceId && !guiding;
-  const latest = useRef<{ layout: ExploreLayout; dismissDetail: () => void; directionsOpen: boolean }>({
+  const latest = useRef<{ layout: ExploreLayout; dismissDetail: () => void; directionsOpen: boolean; focused: boolean }>({
     layout,
     dismissDetail,
     directionsOpen,
+    focused,
   });
   useEffect(() => {
-    latest.current = { layout, dismissDetail, directionsOpen };
+    latest.current = { layout, dismissDetail, directionsOpen, focused };
   });
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (!latest.current.focused) return false;
+      // AR owns Back before Detail/Discover while retaining the same shell.
+      if (arHost.getState().visit) {
+        prepareArMapReturn();
+        arHost.getState().close();
+        return true;
+      }
       // Directions sit on top of Place Detail: Back returns to the place.
       if (latest.current.directionsOpen) {
         closeDirections();
@@ -176,7 +215,7 @@ export default function ExploreRouteLayout() {
       }
     });
     return () => subscription.remove();
-  }, []);
+  }, [arHost]);
 
   const showPlaces = () => (single ? setCompactPane('discover') : setDiscoverDrawerOpen(true));
   // Guidance: phones bring the map forward and reach the step list through
@@ -219,6 +258,10 @@ export default function ExploreRouteLayout() {
               aria-hidden={!layout.showMap}
               importantForAccessibility={layout.showMap ? 'auto' : 'no-hide-descendants'}
             >
+              <View className="flex-1" style={{ opacity: arPresentation.hostVisible ? 0 : 1 }}
+                pointerEvents={arPresentation.hostVisible ? 'none' : 'auto'}
+                aria-hidden={arPresentation.hostVisible}
+                importantForAccessibility={arPresentation.hostVisible ? 'no-hide-descendants' : 'auto'}>
               <ExploreMapPane
                 onSelectPlace={(place) => open(place.id, 'map', markerFocusId(place.id))}
                 onShowPlaces={layout.showPlacesToggle ? showPlaces : undefined}
@@ -232,13 +275,18 @@ export default function ExploreRouteLayout() {
                 {/* The assistant is struck until it has a backend: today it would only
                     repeat Discover's search (spatial DECISIONS S16, 2026-10-08). */}
                 <NavigationHud
-                  arAction={<ArNavigationButton onStarted={() => setCompactPane('map')} />}
+                  arAction={<ArNavigationButton onStarted={() => setCompactPane('map')} onOpen={() => arHost.getState().open()} />}
                   onShowSteps={single ? showSteps : undefined}
                   onShowPlace={showPlaceAfterTrip}
                   onSave={(placeId) => useExplore.getState().toggleSavedPreview(placeId)}
                   isSaved={destinationId != null && savedPreviewIds.includes(destinationId)}
                 />
               </ExploreMapPane>
+              </View>
+              {arPresentation.hostVisible && arVisit ? (
+                <ExploreNavigationAr visit={arVisit} cameraAllowed={arPresentation.cameraAllowed}
+                  contentInsets={arPresentation.contentInsets} onClose={() => arHost.getState().close()} />
+              ) : null}
             </View>
 
             {/* A promoted Detail is the separate panel (PlaceDetailPanel), so the
@@ -248,7 +296,7 @@ export default function ExploreRouteLayout() {
                 <ExploreWorkspaceWindow surfaceId={EXPLORE_SURFACE.placeDetail}>
                   {directionsPlace ? (
                     <DirectionsPanel
-                      arAction={<ArNavigationButton onStarted={() => setCompactPane('map')} />}
+                      arAction={<ArNavigationButton onStarted={() => setCompactPane('map')} onOpen={() => arHost.getState().open()} />}
                       place={directionsPlace}
                       originPlaces={catalogue}
                       padding={windowPadding}
