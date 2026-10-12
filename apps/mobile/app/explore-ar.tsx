@@ -126,6 +126,7 @@ const PANEL_COPY: Record<ArSceneMode, { title: (place: string) => string; body: 
   },
 };
 
+/** Existing headset entry panel for the requested tabletop or street experience. */
 function ArPanel({
   mode,
   placeName,

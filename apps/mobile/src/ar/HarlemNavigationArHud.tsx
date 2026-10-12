@@ -40,6 +40,7 @@ const AMBER = palette.mights['sodium-amber'];
 /** Warm black at 88%, so camera content stays faintly visible behind cards. */
 const CARD = 'rgba(11, 9, 6, 0.88)';
 
+/** Per-HUD feedback state for the asynchronous, non-prompting pace check. */
 function createPaceCheckState() {
   return createStore(() => ({ checking: false, message: undefined as string | undefined }));
 }
@@ -53,6 +54,7 @@ export interface HarlemNavigationArHudProps {
   readonly onExplorePlace: (placeId: string | undefined) => void;
 }
 
+/** Opaque-enough backing keeps guidance readable over a changing camera image. */
 function Card({ children, announce = false }: { children: React.ReactNode; announce?: boolean }) {
   return (
     <View className="gap-3 rounded-2xl px-4 py-3" style={{ backgroundColor: CARD }} accessibilityLiveRegion={announce ? 'polite' : 'none'}>
@@ -61,6 +63,7 @@ function Card({ children, announce = false }: { children: React.ReactNode; annou
   );
 }
 
+/** Shared high-contrast guidance text using the existing semantic palette. */
 function Line({ children, tone = 'paper', size = 16 }: { children: React.ReactNode; tone?: 'paper' | 'gold' | 'muted' | 'amber'; size?: number }) {
   const color = tone === 'gold' ? GOLD : tone === 'amber' ? AMBER : tone === 'muted' ? LIMESTONE : PAPER;
   return <Text style={{ color, fontSize: size, lineHeight: Math.round(size * 1.3), flexShrink: 1 }}>{children}</Text>;
@@ -118,6 +121,7 @@ const HEADING_COPY: Record<CalibrationChecklist['heading'], string> = {
   ready: 'Direction set',
 };
 
+/** Presents one calibration requirement with a visible readiness indicator. */
 function CheckRow({ ready, text }: { ready: boolean; text: string }) {
   return (
     <View className="flex-row items-center gap-3">
