@@ -1,5 +1,5 @@
 import { getPayload } from 'payload';
-import { HARLEM_PLACE_PREVIEWS } from '@acme/app/features/explore/explore.store.ts';
+import { HARLEM_PLACE_PREVIEWS } from '@acme/app/features/explore/place-previews.ts';
 import { isHttpUrl } from './fields/provenance.ts';
 import { bboxOf, fetchNtaBoundaries } from './nta.ts';
 import { readOsmFeatures } from './osm.ts';

@@ -1,4 +1,4 @@
-import type { ExplorePlace } from './explore.store';
+import type { ExplorePlace } from './place-model';
 
 /** Space in dp the map keeps clear of, so overlays never cover a place. */
 export interface MapInsets {

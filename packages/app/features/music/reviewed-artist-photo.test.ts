@@ -70,19 +70,13 @@ it('preserves the full reviewed group framing and busts both client cache layers
   assert.ok(musicKeys.artistPhotos(['Cameo']).includes(ARTIST_PHOTO_VERSION));
 });
 
-it('keeps both public GET routes read-only and restricted to reviewed, published artists', () => {
+// Request/response contracts are exercised in apps/web/lib/artist-photo-routes.test.ts.
+it('keeps both public GET routes free of writes and live photo discovery', () => {
   const route = readFileSync(new URL('../../../../apps/web/app/api/music/artist-photo/route.ts', import.meta.url), 'utf8');
   const imageRoute = readFileSync(new URL('../../../../apps/web/app/api/music/artist-photo/image/route.ts', import.meta.url), 'utf8');
   for (const source of [route, imageRoute]) {
     assert.doesNotMatch(source, /persistRightsCleared|payload\.(?:create|update|delete)|resolveVerifiedArtistPhoto|resolveArtistPhotos/);
-    assert.match(source, /listMusicArtists/);
-    assert.match(source, /resolveReviewedArtistPhoto/);
   }
-  assert.match(route, /allowedNames\.has\(name\)/);
-  assert.match(imageRoute, /artistPhotoCatalogueStatus\(catalogue, name\)/);
-  const catalogueGuard = readFileSync(new URL('../../../../apps/web/lib/artist-photo-catalogue.ts', import.meta.url), 'utf8');
-  assert.match(catalogueGuard, /catalogue\.data\.some\(\(artist\) => artist\.name === name\)/);
-  assert.match(catalogueGuard, /catalogue\.status !== 'ok'\) return 503/);
 });
 
 

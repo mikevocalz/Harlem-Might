@@ -94,10 +94,11 @@ export function createJourneyController(options: {
     } catch { update({ storageAvailable: false }); }
   };
   const loadStop = async () => {
+    // Clearing the final stop must also invalidate pending content reads.
+    const version = ++contentEpoch;
     const session = state.session;
     const stop = state.plan?.stops[session?.completedStopIds.length ?? 0];
     if (!stop || !session) { update({ place: null, stories: [], contentStatus: 'idle' }); return; }
-    const version = ++contentEpoch;
     update({ place: null, stories: [], contentStatus: 'loading' });
     const [place, stories] = await Promise.all([options.readers.getPlace(stop.slug), options.readers.listStories()]);
     if (version !== contentEpoch || state.session?.sessionId !== session.sessionId) return;

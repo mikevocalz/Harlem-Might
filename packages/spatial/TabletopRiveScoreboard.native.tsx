@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import type { LightCycleMatchState } from './lightcycle/tabletopCore';
+import { readLightCycleMatchState } from './lightcycle/replicatedMatchState';
 import {
   LIGHTCYCLE_SCOREBOARD_ARTBOARD,
   LIGHTCYCLE_SCOREBOARD_MACHINE,
@@ -18,20 +18,6 @@ import { useTabletopRiveScoreboardAssetStore } from './tabletopRiveScoreboardAss
 const SCOREBOARD_URL =
   process.env.EXPO_PUBLIC_LIGHTCYCLE_SCOREBOARD_RIV_URL ?? '';
 
-function isMatchState(value: unknown): value is LightCycleMatchState {
-  if (!value || typeof value !== 'object') return false;
-  const state = value as Partial<LightCycleMatchState>;
-  return (
-    typeof state.tick === 'number' &&
-    typeof state.round === 'number' &&
-    typeof state.phase === 'string' &&
-    Boolean(state.config) &&
-    Boolean(state.riders) &&
-    Boolean(state.scores) &&
-    Array.isArray(state.trails)
-  );
-}
-
 export function TabletopRiveScoreboard({
   replicatedState,
   presence,
@@ -44,9 +30,6 @@ export function TabletopRiveScoreboard({
   const bytes = useTabletopRiveScoreboardAssetStore(
     (asset) => asset.bytes,
   );
-  const loadError = useTabletopRiveScoreboardAssetStore(
-    (asset) => asset.error,
-  );
   const loadScoreboard = useTabletopRiveScoreboardAssetStore(
     (asset) => asset.load,
   );
@@ -57,7 +40,7 @@ export function TabletopRiveScoreboard({
 
   const bindings = useMemo(() => {
     const model = createLightCycleScoreboardModel({
-      state: isMatchState(replicatedState) ? replicatedState : null,
+      state: readLightCycleMatchState(replicatedState),
       presence,
       joinCode,
     });
@@ -88,7 +71,6 @@ export function TabletopRiveScoreboard({
         width={0.92}
         height={0.31}
       />
-      {loadError ? null : null}
     </>
   );
 }

@@ -3,7 +3,7 @@
 import { Text, View } from '@acme/ui/tw';
 import { FocusPressable } from './FocusPressable';
 import { placeRowLine } from './explore-copy';
-import type { ExplorePlace } from './explore.store';
+import type { ExplorePlace } from './place-model';
 import { useExploreType } from './explore-type';
 import { focusTargetRef, rowFocusId } from './focus-registry';
 

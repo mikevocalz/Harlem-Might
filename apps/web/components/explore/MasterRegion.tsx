@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import { filterPlaces, useExplore, type ExplorePlace } from '@acme/app/features/explore/explore.store.ts';
+import { filterPlaces, type ExplorePlace } from '@acme/app/features/explore/place-model.ts';
+import { useExplore } from '@acme/app/features/explore/explore.store.ts';
 import { exploreCategories } from '@acme/app/features/explore/catalogue.ts';
 import { noResultsCopy, placeRowLine, resultsSummary } from '@acme/app/features/explore/explore-copy.ts';
 import { Pressable, ScrollView, Text, TextInput, View } from '@acme/ui/tw';

@@ -4,7 +4,7 @@ import type { ContentReaders } from '../../content/readers.ts';
 import type { PlaceRecord } from '../../content/records.ts';
 import type { DetailResult } from '../../content/result.ts';
 import { explorePlaceFromRecord } from './catalogue.ts';
-import { haversine, type ExplorePlace } from './explore.store.ts';
+import { haversine, type ExplorePlace } from './place-model.ts';
 
 type Readers = Pick<ContentReaders, 'listExploreCatalogue' | 'getPlace'>;
 type LoadState = { status: 'idle' | 'loading' | 'ready' } | { status: 'unavailable'; message: string };

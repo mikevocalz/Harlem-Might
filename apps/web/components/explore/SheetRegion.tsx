@@ -4,9 +4,9 @@ import { useEffect, useMemo, useRef } from 'react';
 import {
   DEFAULT_SHEET_DETENT,
   useExplore,
-  type ExplorePlace,
   type SheetDetent,
 } from '@acme/app/features/explore/explore.store.ts';
+import type { ExplorePlace } from '@acme/app/features/explore/place-model.ts';
 import { DirectionsPanel } from '@acme/app/features/navigation/ui/DirectionsPanel.tsx';
 import { useDirectionsPlaceId, useIsGuiding } from '@acme/app/features/navigation/ui/hooks.ts';
 import { useNavigationUi } from '@acme/app/features/navigation/view/navigationUi.store.ts';

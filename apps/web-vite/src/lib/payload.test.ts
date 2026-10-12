@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { getPage } from './payload.ts';
+import { getPage, listPlaces, type CmsPage, type CmsPlace } from './payload.ts';
 
-const page = { id: 'page-1', title: 'Harlem history', slug: 'harlem-history', published: true };
+const page = { id: 17, title: 'Harlem history', slug: 'harlem-history', published: true, updatedAt: '2026-10-12T00:00:00Z', createdAt: '2026-10-12T00:00:00Z' } satisfies CmsPage;
 
 test('an answered empty page query is the only missing-page result', async (t) => {
   t.mock.method(globalThis, 'fetch', async () => Response.json({ docs: [] }));
@@ -36,4 +36,14 @@ test('malformed CMS responses are not reported as missing content', async (t) =>
   t.mock.method(globalThis, 'fetch', async () => responses.shift()!);
   await assert.rejects(getPage('harlem-history'), SyntaxError);
   await assert.rejects(getPage('harlem-history'), TypeError);
+});
+
+test('CMS projections preserve numeric document and unpopulated relationship IDs', async (t) => {
+  const place = { id: 23, name: 'Apollo', slug: 'apollo', kind: 'culture', lifecycle: 'open', logo: 17, updatedAt: page.updatedAt, createdAt: page.createdAt } satisfies CmsPlace;
+  t.mock.method(globalThis, 'fetch', async () => Response.json({ docs: [place] }));
+  const result = await listPlaces();
+  assert.deepEqual(result.status, { ok: true });
+  const id: number | undefined = result.places[0]?.id;
+  assert.equal(id, 23);
+  assert.equal(result.places[0]?.logo, 17);
 });

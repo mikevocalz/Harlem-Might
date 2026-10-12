@@ -23,7 +23,7 @@ import {
   type GeoWorldPosition,
   type ReactVisionGeospatialNavigator,
 } from '@mapbox/react-native-mapbox-ar-reactvision';
-import { formatDistance } from '@acme/app/features/explore/explore.store.ts';
+import { formatDistance } from '@acme/app/features/explore/place-model.ts';
 import { arrivalTarget } from '@acme/app/features/navigation/model/route.ts';
 import { hasActiveTrip } from '@acme/app/features/navigation/model/session.ts';
 import {

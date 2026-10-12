@@ -1,6 +1,11 @@
 // @acme/payload — THE ONLY client-side access to Payload content (§3).
 // The CMS itself mounts inside apps/web ((payload) route group) once the
-// database exists; generated types replace these when `payload generate:types` runs.
+// database exists. Client projections reuse its generated document contracts.
+
+// Register the generated Payload augmentation without loading the server at runtime.
+import type {} from 'payload';
+
+export type { Media, Page, Place } from './src/payload-types.ts';
 
 export interface PayloadClientConfig {
   /** Payload REST base, e.g. https://example.com/payload-api */

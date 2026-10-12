@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { HARLEM_PLACE_PREVIEWS } from '@acme/app/features/explore/explore.store.ts';
+import { HARLEM_PLACE_PREVIEWS } from '@acme/app/features/explore/place-previews.ts';
 import { listExploreCatalogue } from '@acme/payload/server';
 import { routes } from '@acme/ui/mights';
 

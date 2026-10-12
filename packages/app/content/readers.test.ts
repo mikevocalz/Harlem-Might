@@ -8,7 +8,17 @@ import type {
   StoryDoc as Story,
   WalkDoc as Walk,
 } from './docs.ts';
-import { createContentReaders, MUSIC_PAGE_SIZE, type ContentDocs, type ContentQuery, type ContentSource } from './readers.ts';
+import { addHarlemDays } from './harlem-time.ts';
+import {
+  createContentReaders,
+  EVENT_RANGE_DAYS,
+  EVENTS_PAGE_SIZE,
+  MUSIC_PAGE_SIZE,
+  type ContentDocs,
+  type ContentQuery,
+  type ContentSource,
+  type ContentWhere,
+} from './readers.ts';
 
 // Fixtures are synthetic test data for the mapping, not content. They never
 // reach the CMS or a page.
@@ -118,6 +128,48 @@ const fakeSource = (options: FakeOptions = {}) => {
   return { source, queries };
 };
 
+type VersionedEvent = Event & { _status: 'published' | 'draft' };
+
+// Evaluate the reader's published/overlap query in memory so the boundary,
+// draft and pagination assertions exercise the actual query it builds.
+const matchesEventWhere = (doc: VersionedEvent, where: ContentWhere): boolean =>
+  Object.entries(where).every(([field, clause]) => {
+    if (field === 'and') return (clause as ContentWhere[]).every((item) => matchesEventWhere(doc, item));
+    const value = doc[field as keyof VersionedEvent];
+    return Object.entries(clause as Record<string, unknown>).every(([operator, boundary]) => {
+      if (operator === 'equals') return value === boundary;
+      assert.equal(typeof value, 'string');
+      assert.equal(typeof boundary, 'string');
+      if (operator === 'less_than') return String(value) < String(boundary);
+      if (operator === 'greater_than') return String(value) > String(boundary);
+      assert.fail(`Unsupported event query operator: ${operator}`);
+    });
+  });
+
+const eventQuerySource = (docs: VersionedEvent[]) => {
+  const { source, queries } = fakeSource();
+  source.findPage = async (query) => {
+    assert.equal(query.collection, 'events');
+    queries.push(query);
+    const matches = docs.filter((doc) => matchesEventWhere(doc, query.where));
+    const fields = query.sort?.split(',') ?? [];
+    matches.sort((a, b) => {
+      for (const field of fields) {
+        const comparison = field === 'id' ? a.id - b.id : a.startsAt.localeCompare(b.startsAt);
+        if (comparison !== 0) return comparison;
+      }
+      return 0;
+    });
+    const start = ((query.page ?? 1) - 1) * query.limit;
+    return {
+      docs: matches.slice(start, start + query.limit) as ContentDocs[typeof query.collection][],
+      hasNextPage: start + query.limit < matches.length,
+      totalDocs: matches.length,
+    };
+  };
+  return { source, queries };
+};
+
 test('no database configured is "unavailable", not an empty list', async () => {
   const { source, queries } = fakeSource({ configured: false });
   const readers = createContentReaders(source);
@@ -205,7 +257,7 @@ test('events for a date use the New York day window, overlap semantics, earliest
   const { source, queries } = fakeSource();
   await createContentReaders(source).listEventsForDate('2026-10-07');
   const [query] = queries;
-  assert.equal(query?.sort, 'startsAt');
+  assert.equal(query?.sort, 'startsAt,id');
   assert.deepEqual(query?.where, {
     and: [
       { _status: { equals: 'published' } },
@@ -213,6 +265,139 @@ test('events for a date use the New York day window, overlap semantics, earliest
       { endsAt: { greater_than: '2026-10-07T04:00:00.000Z' } },
     ],
   });
+});
+
+test('event ranges include both NY dates and share the daily half-open overlap predicate', async () => {
+  const { source, queries } = fakeSource();
+  const readers = createContentReaders(source);
+  await readers.listEventsForDate('2026-10-07');
+  await readers.listEventsForDateRange('2026-10-07', '2026-10-07');
+  assert.deepEqual(queries[1]?.where, queries[0]?.where);
+  await readers.listEventsForDateRange('2026-10-07', '2026-10-09', 2);
+  assert.deepEqual(queries[2], {
+    collection: 'events',
+    where: {
+      and: [
+        { _status: { equals: 'published' } },
+        { startsAt: { less_than: '2026-10-10T04:00:00.000Z' } },
+        { endsAt: { greater_than: '2026-10-07T04:00:00.000Z' } },
+      ],
+    },
+    depth: 1,
+    limit: EVENTS_PAGE_SIZE,
+    sort: 'startsAt,id',
+    page: 2,
+  });
+});
+
+test('event range endpoints use New York midnight on both sides of DST transitions', async () => {
+  const { source, queries } = fakeSource();
+  const readers = createContentReaders(source);
+  await readers.listEventsForDateRange('2026-03-07', '2026-03-09');
+  await readers.listEventsForDateRange('2026-10-31', '2026-11-02');
+  assert.deepEqual(queries.map((query) => query.where), [
+    { and: [
+      { _status: { equals: 'published' } },
+      { startsAt: { less_than: '2026-03-10T04:00:00.000Z' } },
+      { endsAt: { greater_than: '2026-03-07T05:00:00.000Z' } },
+    ] },
+    { and: [
+      { _status: { equals: 'published' } },
+      { startsAt: { less_than: '2026-11-03T05:00:00.000Z' } },
+      { endsAt: { greater_than: '2026-10-31T04:00:00.000Z' } },
+    ] },
+  ]);
+});
+
+test('event ranges preserve ongoing/cancelled/postponed events and exclude drafts and outside midnight boundaries', async () => {
+  const fixture = (id: number, patch: Partial<VersionedEvent> = {}): VersionedEvent => ({
+    ...event, id, slug: `event-${id}`, _status: 'published', lifecycle: 'scheduled', ...patch,
+  });
+  const { source } = eventQuerySource([
+    fixture(1, { startsAt: '2026-10-06T23:00:00.000Z', endsAt: '2026-10-07T05:00:00.000Z' }),
+    fixture(2, { endsAt: '2026-10-07T04:00:00.000Z', startsAt: '2026-10-06T23:00:00.000Z' }),
+    fixture(3, { startsAt: '2026-10-10T04:00:00.000Z', endsAt: '2026-10-10T06:00:00.000Z' }),
+    fixture(4, { _status: 'draft' }),
+    fixture(7, { startsAt: '2026-10-09T23:00:00.000Z', endsAt: '2026-10-10T03:59:59.999Z' }),
+    fixture(6, { lifecycle: 'postponed', ticketUrl: 'https://example.org/tickets' }),
+    fixture(5, { lifecycle: 'cancelled', ticketUrl: 'https://example.org/tickets' }),
+    fixture(8, { startsAt: '2026-10-07T04:00:00.000Z', endsAt: '2026-10-07T05:00:00.000Z' }),
+  ]);
+  const result = await createContentReaders(source).listEventsForDateRange('2026-10-07', '2026-10-09');
+  assert.equal(result.status, 'ok');
+  if (result.status !== 'ok') return;
+  assert.deepEqual(result.data.events.map((record) => [record.id, record.status]), [
+    [1, 'scheduled'], [8, 'scheduled'], [5, 'cancelled'], [6, 'postponed'], [7, 'scheduled'],
+  ]);
+  assert.equal(result.data.totalDocs, 5);
+  assert.equal(result.data.hasNextPage, false);
+});
+
+test('event ranges preserve totals and deterministic ordering across pages including beyond the final page', async () => {
+  const docs: VersionedEvent[] = Array.from({ length: 50 }, (_, i) => ({
+    ...event, id: 50 - i, slug: `event-${50 - i}`, _status: 'published',
+  }));
+  const { source, queries } = eventQuerySource(docs);
+  const readers = createContentReaders(source);
+  const records: number[] = [];
+  for (const page of [1, 2, 3, 4]) {
+    const result = await readers.listEventsForDateRange('2026-10-07', '2026-10-09', page);
+    assert.equal(result.status, 'ok');
+    if (result.status !== 'ok') return;
+    assert.equal(result.data.totalDocs, 50);
+    assert.equal(result.data.hasNextPage, page < 3);
+    assert.equal(result.data.events.length, page < 3 ? EVENTS_PAGE_SIZE : page === 3 ? 2 : 0);
+    records.push(...result.data.events.map((record) => record.id));
+  }
+  assert.deepEqual(records, Array.from({ length: 50 }, (_, i) => i + 1));
+  assert.deepEqual(queries.map((query) => [query.page, query.limit, query.sort]), [
+    [1, 24, 'startsAt,id'], [2, 24, 'startsAt,id'], [3, 24, 'startsAt,id'], [4, 24, 'startsAt,id'],
+  ]);
+});
+
+test('event range reads distinguish an empty page, missing configuration and a failed query', async () => {
+  const empty = fakeSource();
+  assert.deepEqual(await createContentReaders(empty.source).listEventsForDateRange('2026-10-07', '2026-10-09'), {
+    status: 'ok', data: { events: [], hasNextPage: false, totalDocs: 0 },
+  });
+  assert.equal(empty.queries[0]?.page, 1);
+  const missing = fakeSource({ configured: false });
+  assert.deepEqual(await createContentReaders(missing.source).listEventsForDateRange('2026-10-07', '2026-10-09'), {
+    status: 'unavailable', reason: 'not-configured',
+  });
+  assert.equal(missing.queries.length, 0);
+  const error = new Error('socket hangup');
+  const failed = await createContentReaders(fakeSource({ fail: error }).source).listEventsForDateRange('2026-10-07', '2026-10-09');
+  assert.deepEqual(failed, { status: 'unavailable', reason: 'query-failed', error });
+});
+
+test('event range validation rejects bad dates, reversed/overlong windows and invalid pages before querying', async () => {
+  for (const configured of [true, false]) {
+    const { source, queries } = fakeSource({ configured });
+    const readers = createContentReaders(source);
+    for (const [start, end] of [
+      ['today', '2026-10-12'], ['2026-02-29', '2026-10-12'],
+      ['2026-10-12', '2026-13-01'], ['2026-10-12', '2026-10-11'],
+      ['2026-01-01', addHarlemDays('2026-01-01', EVENT_RANGE_DAYS)],
+      ['2026-09-01', addHarlemDays('2026-09-01', EVENT_RANGE_DAYS)],
+    ] as const) {
+      await assert.rejects(readers.listEventsForDateRange(start, end), RangeError);
+    }
+    for (const page of [0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+      await assert.rejects(readers.listEventsForDateRange('2026-10-12', '2026-10-12', page), RangeError);
+    }
+    assert.equal(queries.length, 0);
+  }
+});
+
+test('a 90-calendar-day event range is valid through either DST transition', async () => {
+  const { source, queries } = fakeSource();
+  const readers = createContentReaders(source);
+  for (const start of ['2026-01-01', '2026-09-01']) {
+    const end = addHarlemDays(start, EVENT_RANGE_DAYS - 1);
+    assert.equal((await readers.listEventsForDateRange(start, end)).status, 'ok');
+  }
+  assert.equal(queries.length, 2);
 });
 
 test('walk mapping keeps stop order and count, and drops an unsourced accessibility note', async () => {

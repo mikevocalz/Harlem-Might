@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { MAPPED_PLACES } from '@acme/app/features/explore/explore.store.ts';
+import { MAPPED_PLACES } from '@acme/app/features/explore/place-previews.ts';
 import { tabletopOrigin } from './arTabletop.ts';
 import {
   SNAP_TURN_DEG,

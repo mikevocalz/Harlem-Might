@@ -229,12 +229,14 @@ export const {
   listMusicArtistsPage,
   getMusicArtist,
   listEventsForDate,
+  listEventsForDateRange,
 } = createContentReaders(payloadSource);
 
-export { harlemToday, isHarlemDate } from '@acme/app/content';
+export { addHarlemDays, EVENT_RANGE_DAYS, EVENTS_PAGE_SIZE, harlemToday, isHarlemDate } from '@acme/app/content';
 export type {
   ContentResult,
   DetailResult,
+  EventPage,
   EventRecord,
   MusicArtistPage,
   MusicArtistRecord,

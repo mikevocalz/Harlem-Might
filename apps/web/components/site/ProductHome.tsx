@@ -19,9 +19,9 @@ import {
 import { getHarlemArchivalImage } from '@acme/app/content';
 import {
   HARLEM_PLACE_PREVIEWS,
-  haversine,
   type HarlemPlacePreview,
-} from "@acme/app/features/explore/explore.store.ts";
+} from "@acme/app/features/explore/place-previews.ts";
+import { haversine } from "@acme/app/features/explore/place-model.ts";
 import { HomeMotion } from "./home/HomeMotion";
 
 // Server component. The only client code on `/` is <HomeMotion />, which

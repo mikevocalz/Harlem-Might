@@ -62,6 +62,29 @@ test('invalid widget data is rejected before opening native storage', async () =
   assert.equal(state.opens, 0);
 });
 
+test('stored cards require every text field and a string source URL when present', async () => {
+  const state: Harness = { opens: 0, unavailable: false };
+  const feed = await loadFeed('card-shape', state);
+  for (const kind of ['story', 'event', 'place', 'walk'] as const) {
+    const card = { kind, title: 'Harlem', subtitle: 'Public details', eyebrow: 'Published', path: '/today' };
+    for (const field of ['title', 'subtitle', 'eyebrow', 'path']) {
+      for (const value of [undefined, null, 17, {}, []]) {
+        const malformed = { ...snapshot, [kind]: { ...card, [field]: value } };
+        state.saved = JSON.stringify(malformed);
+        assert.equal(feed.loadPublicSnapshot(), null, `${kind}.${field}`);
+        assert.throws(() => feed.storePublicSnapshot(malformed), /Invalid widget snapshot/);
+      }
+    }
+    for (const sourceUrl of [null, 17, {}, []]) {
+      state.saved = JSON.stringify({ ...snapshot, [kind]: { ...card, sourceUrl } });
+      assert.equal(feed.loadPublicSnapshot(), null);
+    }
+    const valid = { ...snapshot, [kind]: { ...card, sourceUrl: 'https://example.test/source' } };
+    feed.storePublicSnapshot(valid);
+    assert.deepEqual(feed.loadPublicSnapshot(), valid);
+  }
+});
+
 test('widget refresh contains storage construction failures and retries on the next refresh', async (t) => {
   const previous = process.env.EXPO_PUBLIC_WIDGET_FEED_URL;
   process.env.EXPO_PUBLIC_WIDGET_FEED_URL = 'https://example.test/widgets';
@@ -76,4 +99,23 @@ test('widget refresh contains storage construction failures and retries on the n
   state.unavailable = false;
   assert.deepEqual(await feed.refreshPublicSnapshot(), snapshot);
   assert.deepEqual(feed.loadPublicSnapshot(), snapshot);
+});
+
+test('malformed fetched card text cannot replace a valid cached snapshot', async (t) => {
+  const previous = process.env.EXPO_PUBLIC_WIDGET_FEED_URL;
+  process.env.EXPO_PUBLIC_WIDGET_FEED_URL = 'https://example.test/widgets';
+  t.after(() => {
+    if (previous === undefined) delete process.env.EXPO_PUBLIC_WIDGET_FEED_URL;
+    else process.env.EXPO_PUBLIC_WIDGET_FEED_URL = previous;
+  });
+  const valid = { ...snapshot, story: { kind: 'story' as const, title: 'History', subtitle: 'Public story', eyebrow: 'Story', path: '/stories/history' } };
+  let payload: unknown = { ...valid, story: { ...valid.story, subtitle: {} } };
+  t.mock.method(globalThis, 'fetch', async () => Response.json(payload));
+  const state: Harness = { opens: 0, unavailable: false, saved: JSON.stringify(snapshot) };
+  const feed = await loadFeed('fetched-card', state);
+  assert.deepEqual(await feed.refreshPublicSnapshot(), snapshot);
+  assert.deepEqual(JSON.parse(state.saved!), snapshot);
+  payload = valid;
+  assert.deepEqual(await feed.refreshPublicSnapshot(), valid);
+  assert.deepEqual(feed.loadPublicSnapshot(), valid);
 });

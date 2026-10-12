@@ -4,6 +4,8 @@ import { afterEach, it } from 'node:test';
 import { JsxEmit, ModuleKind, transpileModule } from 'typescript';
 import * as core from './lightcycle/tabletopCore.ts';
 import * as protocol from './lightcycle/sessionProtocol.ts';
+import * as replicatedMatchState from './lightcycle/replicatedMatchState.ts';
+import * as scoreboardModel from './lightcycle/scoreboardModel.ts';
 import { tabletopPresenceUpdate } from './tabletopPresence.ts';
 import { tabletopRace } from './tabletopRaceStore.ts';
 import { tabletopSession, useTabletopSessionStore } from './tabletopSessionStore.ts';
@@ -49,6 +51,8 @@ function nativeFixture() {
   }
   const entities = new Map<string, { id: string; fields: Record<string, unknown> }>();
   const writes: { id: string; fields: Record<string, unknown> }[] = [];
+  const effects: unknown[] = [];
+  const scoreboardAsset = { bytes: undefined, error: null, load: async () => {} };
   const replication = {
     state: 'synced', localPeerId: 'host-peer',
     byId: (id: string) => entities.get(id),
@@ -96,6 +100,13 @@ function nativeFixture() {
     './viro': viro,
     './lightcycle/tabletopCore': core,
     './lightcycle/sessionProtocol': protocol,
+    './lightcycle/replicatedMatchState': replicatedMatchState,
+    './lightcycle/scoreboardModel': scoreboardModel,
+    './SpatialRivePanel.native': { SpatialRivePanel: 'SpatialRivePanel' },
+    './tabletopRiveScoreboardAssetStore': {
+      useTabletopRiveScoreboardAssetStore: (selector: (asset: typeof scoreboardAsset) => unknown) =>
+        selector(scoreboardAsset),
+    },
     './lightcycle/assetContract': { LIGHTCYCLE_METERS_PER_FIXED_UNIT: 0.001 },
     './tabletopPresence': { tabletopPresenceUpdate },
     './tabletopRaceStore': {
@@ -111,7 +122,7 @@ function nativeFixture() {
         { getState: tabletopSession.getState, subscribe: useTabletopSessionStore.subscribe },
       ),
     },
-    './rive-fx/store': { gridFx: { emit: () => {} } },
+    './rive-fx/store': { gridFx: { emit: (event: unknown) => effects.push(event) } },
     './mcp/McpPresence.native': { McpPresence: 'McpPresence' },
     './mcp/McpVoiceSound.native': { McpVoiceSoundNative: 'McpVoiceSoundNative' },
     './arSurface': { acceptsGameSurface: () => true },
@@ -136,7 +147,8 @@ function nativeFixture() {
   }
   const runtime = load('./TabletopRaceRuntime.native');
   modules['./TabletopRaceRuntime.native'] = runtime;
-  return { mount, room, writes, colocated, replication,
+  return { mount, room, writes, effects, colocated, replication,
+    Scoreboard: load('./TabletopRiveScoreboard.native').TabletopRiveScoreboard,
     Scene: load('./TabletopColocationScene.native').TabletopColocationScene,
     Runtime: runtime.TabletopRaceRuntime };
 }
@@ -251,4 +263,47 @@ it('native presence effect publishes disconnected flags exactly once after optim
   assert.ok(writes.every((write) => write.fields.localized === false));
   room.unmount();
   scene.unmount();
+});
+
+
+it('native guest runtime and scoreboard reject malformed snapshots and recover on valid state', () => {
+  const fixture = nativeFixture();
+  const room = tabletopRace.enterRoom('guest-room');
+  const renderer = fixture.mount(fixture.Runtime);
+  const scoreboard = fixture.mount(fixture.Scoreboard);
+  const props = {
+    roomId: 'guest-room', replication: fixture.replication, localPlayerId: 'p2',
+    placementReady: true, playerNames: { p1: 'HOST', p2: 'GUEST' }, bothReady: true,
+  };
+  const valid = core.createLightCycleMatch({ names: props.playerNames });
+  const malformed = [
+    { tick: 0, round: 1, phase: 'running', config: {}, riders: {}, scores: {}, trails: [] },
+    { ...valid, derezEvents: undefined },
+    { ...valid, riders: { ...valid.riders, p2: { ...valid.riders.p2, position: [] } } },
+    { ...valid, trails: [null] },
+    { ...valid, derezEvents: [{ playerId: 'p1' }] },
+  ];
+  for (const state of malformed) {
+    fixture.replication.set(protocol.LIGHTCYCLE_REPLICATION_IDS.snapshot, { state });
+    const tree = renderer.render(props);
+    assert.equal(find(tree, 'ViroText').props.text, 'HOST STARTING SYNCHRONIZED COUNTDOWN…');
+    find(tree, 'ViroGameLoop').props.onFixedUpdate();
+    assert.equal(room.hostState, null, 'the guest must never simulate invalid host data');
+    const panel = find(scoreboard.render({ replicatedState: state, presence: {} }), 'SpatialRivePanel');
+    assert.equal(panel.props.bindings['player1/name'], 'PLAYER 1');
+    assert.deepEqual(panel.props.bindings['match/phase'], { kind: 'enum', value: 'localizing' });
+  }
+  assert.deepEqual(fixture.effects, []);
+
+  const state = JSON.parse(JSON.stringify(valid));
+  fixture.replication.set(protocol.LIGHTCYCLE_REPLICATION_IDS.snapshot, { state });
+  const tree = renderer.render(props);
+  assert.strictEqual(find(tree, 'McpPresence').props.state, state);
+  assert.strictEqual(find(tree, 'McpVoiceSoundNative').props.state, state);
+  const panel = find(scoreboard.render({ replicatedState: state, presence: {} }), 'SpatialRivePanel');
+  assert.equal(panel.props.bindings['player1/name'], 'HOST');
+  assert.deepEqual(panel.props.bindings['match/phase'], { kind: 'enum', value: 'countdown' });
+  renderer.unmount();
+  scoreboard.unmount();
+  tabletopRace.leaveRoom(room);
 });

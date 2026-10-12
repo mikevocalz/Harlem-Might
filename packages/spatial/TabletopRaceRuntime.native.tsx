@@ -21,6 +21,7 @@ import {
   LIGHTCYCLE_METERS_PER_FIXED_UNIT,
 } from './lightcycle/assetContract';
 import { LIGHTCYCLE_REPLICATION_IDS } from './lightcycle/sessionProtocol';
+import { readLightCycleMatchState } from './lightcycle/replicatedMatchState';
 import { tabletopRace, useTabletopRaceStore } from './tabletopRaceStore';
 import { gridFx } from './rive-fx/store';
 import { McpPresence } from './mcp/McpPresence.native';
@@ -103,22 +104,6 @@ function isInputEvent(value: unknown): value is LightCycleInputEvent {
 
 function readInputEvents(value: unknown) {
   return Array.isArray(value) ? value.filter(isInputEvent) : [];
-}
-
-function readMatchState(value: unknown): LightCycleMatchState | null {
-  if (!value || typeof value !== 'object') return null;
-  const state = value as Partial<LightCycleMatchState>;
-  if (
-    typeof state.tick !== 'number' ||
-    typeof state.round !== 'number' ||
-    !state.riders ||
-    !state.trails ||
-    !state.scores ||
-    !state.config
-  ) {
-    return null;
-  }
-  return value as LightCycleMatchState;
 }
 
 function roomSeed(roomId: string) {
@@ -335,7 +320,7 @@ export function TabletopRaceRuntime({
     snapshotId,
   ]);
 
-  const guestState = readMatchState(snapshotEntity?.fields.state);
+  const guestState = readLightCycleMatchState(snapshotEntity?.fields.state);
   const displayState = isHost ? hostRenderState : guestState;
 
   const sendCommand = useCallback(

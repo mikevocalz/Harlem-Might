@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { HARLEM_PLACE_PREVIEWS, getHarlemPlacePreview } from '@acme/app/features/explore/explore.store.ts';
+import { HARLEM_PLACE_PREVIEWS, getHarlemPlacePreview } from '@acme/app/features/explore/place-previews.ts';
 import { NEARBY_MAX, formatDistance, nearbyLayout, nearbyPlaces } from './nearby.ts';
 
 // Points about 111 m apart per 0.001° of latitude.

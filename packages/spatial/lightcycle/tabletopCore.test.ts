@@ -112,6 +112,48 @@ describe('deterministic tabletop light-cycle core', () => {
     assert.equal(state.derezEvents[0]?.byPlayerId, 'p1');
   });
 
+  it('resolves equal-time perpendicular crossings as a draw', () => {
+    let state = running();
+    state.config.baseStepUnits = 1000;
+    setRider(state, 'p1', -500, 0, 1);
+    setRider(state, 'p2', 0, -500, 2);
+    state = advanceLightCycleMatch(state);
+    assert.equal(state.roundWinner, 'draw');
+    assert.deepEqual(state.derezEvents.map(({ cause, point }) => ({ cause, point })), [
+      { cause: 'crossing', point: { x: 0, z: 0 } },
+      { cause: 'crossing', point: { x: 0, z: 0 } },
+    ]);
+  });
+
+  it('also gives the second rider precedence when it reaches the crossing first', () => {
+    let state = running();
+    state.config.baseStepUnits = 1000;
+    state.config.boostStepUnits = 1600;
+    setRider(state, 'p1', -800, 0, 1);
+    setRider(state, 'p2', 0, -800, 2);
+    state = advanceLightCycleMatch(state, { p2: { boost: true } });
+    assert.equal(state.riders.p1.alive, false);
+    assert.equal(state.riders.p2.alive, true);
+    assert.equal(state.derezEvents[0]?.cause, 'opponent-trail');
+    assert.equal(state.derezEvents[0]?.byPlayerId, 'p2');
+  });
+
+  it('does not collide riders at an intersection beyond an earlier trail crash', () => {
+    let state = running();
+    state.config.baseStepUnits = 1000;
+    setRider(state, 'p1', -800, 0, 1);
+    setRider(state, 'p2', 0, -800, 2);
+    state.trails.push({ id: 1, owner: 'p2', from: { x: -700, z: -1000 },
+      to: { x: -700, z: 1000 }, createdTick: 0 });
+    state.nextTrailId = 2;
+    state = advanceLightCycleMatch(state);
+    assert.equal(state.riders.p1.alive, false);
+    assert.deepEqual(state.riders.p1.position, { x: -700, z: 0 });
+    assert.equal(state.riders.p2.alive, true);
+    assert.deepEqual(state.riders.p2.position, { x: 0, z: 200 });
+    assert.equal(state.derezEvents.length, 1);
+  });
+
   it('produces identical hashes from the same seed and ordered inputs', () => {
     const replay = [
       { p1: { turn: -1 as const } },

@@ -1,6 +1,6 @@
 'use client';
 
-import { type ExplorePlace } from '@acme/app/features/explore/explore.store.ts';
+import type { ExplorePlace } from '@acme/app/features/explore/place-model.ts';
 import { Main, View } from '@acme/ui/tw';
 import { MightsButton, MightsHeading } from '@acme/ui/mights';
 import { useNavigationHost } from '@acme/app/features/navigation/ui/useNavigationHost.ts';

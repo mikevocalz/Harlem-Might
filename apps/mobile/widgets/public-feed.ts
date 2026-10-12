@@ -20,7 +20,9 @@ function isSnapshot(value: unknown): value is WidgetSnapshot {
     const card = v[kind];
     return card === null || !!card &&
       typeof card === 'object' && card.kind === kind &&
-      typeof card.title === 'string' && typeof card.path === 'string';
+      typeof card.title === 'string' && typeof card.path === 'string' &&
+      typeof card.subtitle === 'string' && typeof card.eyebrow === 'string' &&
+      (card.sourceUrl === undefined || typeof card.sourceUrl === 'string');
   });
 }
 

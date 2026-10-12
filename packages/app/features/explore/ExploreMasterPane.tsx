@@ -8,9 +8,9 @@ import { FlatList, ScrollView, Text, TextInput, View } from '@acme/ui/tw';
 import { noResultsCopy, resultsSummary } from './explore-copy';
 import {
   filterPlaces,
-  useExplore,
   type ExplorePlace,
-} from './explore.store';
+} from './place-model';
+import { useExplore } from './explore.store';
 import { useExploreType } from './explore-type';
 import { getHarlemArchivalImage } from '../../content';
 import { PlaceRow } from './PlaceRow';

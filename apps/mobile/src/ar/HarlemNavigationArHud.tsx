@@ -5,7 +5,7 @@ import { createStore } from 'zustand/vanilla';
 import { useSafeAreaInsets, type EdgeInsets } from 'react-native-safe-area-context';
 import { Pressable, ScrollView, Text, View } from '@acme/ui/tw';
 import { palette } from '@acme/theme';
-import { formatDistance } from '@acme/app/features/explore/explore.store.ts';
+import { formatDistance } from '@acme/app/features/explore/place-model.ts';
 import { hasActiveTrip } from '@acme/app/features/navigation/model/session.ts';
 import { resumeGuidance } from '@acme/app/features/navigation/view/runtime.ts';
 import { useNavigationUi } from '@acme/app/features/navigation/view/navigationUi.store.ts';

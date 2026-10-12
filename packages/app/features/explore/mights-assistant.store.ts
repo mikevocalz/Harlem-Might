@@ -3,7 +3,7 @@ import {
   filterPlaces,
   formatDistance,
   type ExplorePlace,
-} from './explore.store.ts';
+} from './place-model.ts';
 import { catalogueNearbyPlaces, type PlaceCatalogueState } from './place-catalogue.store.ts';
 
 /**

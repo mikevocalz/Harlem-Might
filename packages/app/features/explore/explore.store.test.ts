@@ -2,9 +2,7 @@ import assert from 'node:assert/strict';
 import { beforeEach, describe, it } from 'node:test';
 import {
   DEFAULT_SHEET_DETENT,
-  formatDistance,
   locationPermissionFromBrowser,
-  nearbyPlaces,
   toggleId,
   useExplore,
 } from './explore.store.ts';
@@ -89,24 +87,5 @@ describe('openPlace / closePlace', () => {
     assert.equal(useExplore.getState().selectedPlaceId, null);
     assert.equal(useExplore.getState().sheet.open, false);
     assert.equal(useExplore.getState().sheet.returnFocusId, 'row:apollo-theater');
-  });
-});
-
-describe('nearbyPlaces / formatDistance', () => {
-  it('lists the closest mapped places with distances, nearest first', () => {
-    const near = nearbyPlaces('sylvias-restaurant', 3);
-    assert.equal(near.length, 3);
-    const [first, second, third] = near.map((n) => n.meters);
-    assert.equal(near[0]?.place.id, 'red-rooster-harlem');
-    assert.ok(first! < second! && second! <= third!);
-  });
-
-  it('gives no distances from a place without coordinates', () => {
-    assert.deepEqual(nearbyPlaces('strivers-row'), []);
-  });
-
-  it('formats metres under 1 km and kilometres above', () => {
-    assert.equal(formatDistance(83, 'en-GB'), '80 m');
-    assert.equal(formatDistance(1234, 'en-GB'), '1.2 km');
   });
 });

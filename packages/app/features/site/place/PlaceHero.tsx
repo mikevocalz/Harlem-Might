@@ -1,4 +1,4 @@
-import type { ExplorePlace } from '@acme/app/features/explore/explore.store.ts';
+import type { ExplorePlace } from '@acme/app/features/explore/place-model.ts';
 import { HARLEM_ARCHIVAL_IMAGES, type EditorialImage, type PlaceRecord } from '@acme/app/content';
 import { Badge } from '@acme/ui';
 import { Link, Section } from '@acme/ui/html';

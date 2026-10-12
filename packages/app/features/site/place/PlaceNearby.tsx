@@ -1,4 +1,4 @@
-import type { ExplorePlace } from '@acme/app/features/explore/explore.store.ts';
+import type { ExplorePlace } from '@acme/app/features/explore/place-model.ts';
 import { View } from '@acme/ui/tw';
 import { MightsBand, MightsHeading, MightsNotchCard, MightsPlaceBento, MightsText, routes } from '@acme/ui/mights';
 import { formatDistance, nearbyLayout, type NearbyPlace } from './nearby.ts';

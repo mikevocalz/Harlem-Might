@@ -492,6 +492,47 @@ function prospectiveIntersection(
   return { aDistance: moveLength(a0, p), bDistance: moveLength(b0, p), point: p, collinearOpposite: true };
 }
 
+type ProspectiveRiderMove = {
+  from: LightCyclePoint;
+  to: LightCyclePoint;
+  distance: number;
+  reachableDistance: number;
+};
+
+/** Resolve only rider-to-rider collisions that both moves can reach this tick. */
+function resolvePairCollision(
+  a: ProspectiveRiderMove,
+  b: ProspectiveRiderMove,
+): Partial<Record<LightCyclePlayerId, PendingCrash>> {
+  const cross = prospectiveIntersection(a.from, a.to, b.from, b.to);
+  if (!cross || cross.aDistance > a.reachableDistance || cross.bDistance > b.reachableDistance) {
+    return {};
+  }
+
+  const headSwap = samePoint(a.to, b.from) && samePoint(b.to, a.from);
+  if (cross.collinearOpposite || headSwap || samePoint(a.to, b.to)) {
+    const cause: LightCycleCrashCause = headSwap ? 'head-swap' : 'head-on';
+    return {
+      p1: { distance: cross.aDistance, cause, byPlayerId: 'p2' },
+      p2: { distance: cross.bDistance, cause, byPlayerId: 'p1' },
+    };
+  }
+
+  // Compare arrival fractions by integer cross multiplication, preserving determinism.
+  const aArrival = cross.aDistance * b.distance;
+  const bArrival = cross.bDistance * a.distance;
+  if (aArrival === bArrival) {
+    return {
+      p1: { distance: cross.aDistance, cause: 'crossing', byPlayerId: 'p2' },
+      p2: { distance: cross.bDistance, cause: 'crossing', byPlayerId: 'p1' },
+    };
+  }
+  if (aArrival < bArrival) {
+    return { p2: { distance: cross.bDistance, cause: 'opponent-trail', byPlayerId: 'p1' } };
+  }
+  return { p1: { distance: cross.aDistance, cause: 'opponent-trail', byPlayerId: 'p2' } };
+}
+
 function seededEventSeed(seed: number, tick: number, id: LightCyclePlayerId) {
   let value = (seed ^ Math.imul(tick + 1, 0x45d9f3b) ^ (id === 'p1' ? 0x13579bdf : 0x2468ace0)) >>> 0;
   value ^= value >>> 16;
@@ -595,41 +636,16 @@ export function advanceLightCycleMatch(
     if (collision) crashes.set(id, collision);
   }
 
-  const aId: LightCyclePlayerId = 'p1';
-  const bId: LightCyclePlayerId = 'p2';
-  const a = state.riders[aId];
-  const b = state.riders[bId];
-  if (a.alive && b.alive) {
-    const a0 = starts[aId];
-    const a1 = nexts[aId];
-    const b0 = starts[bId];
-    const b1 = nexts[bId];
-    if (a0 && a1 && b0 && b1) {
-      const cross = prospectiveIntersection(a0, a1, b0, b1);
-      if (cross) {
-        const aLimit = crashes.get(aId)?.distance ?? moveDistances[aId];
-        const bLimit = crashes.get(bId)?.distance ?? moveDistances[bId];
-        const reachable = cross.aDistance <= aLimit && cross.bDistance <= bLimit;
-        if (reachable) {
-          const headSwap = samePoint(a1, b0) && samePoint(b1, a0);
-          if (cross.collinearOpposite || headSwap || samePoint(a1, b1)) {
-            const cause: LightCycleCrashCause = headSwap ? 'head-swap' : 'head-on';
-            crashes.set(aId, { distance: cross.aDistance, cause, byPlayerId: bId });
-            crashes.set(bId, { distance: cross.bDistance, cause, byPlayerId: aId });
-          } else {
-            const left = cross.aDistance * moveDistances[bId];
-            const right = cross.bDistance * moveDistances[aId];
-            if (left === right) {
-              crashes.set(aId, { distance: cross.aDistance, cause: 'crossing', byPlayerId: bId });
-              crashes.set(bId, { distance: cross.bDistance, cause: 'crossing', byPlayerId: aId });
-            } else if (left < right) {
-              crashes.set(bId, { distance: cross.bDistance, cause: 'opponent-trail', byPlayerId: aId });
-            } else {
-              crashes.set(aId, { distance: cross.aDistance, cause: 'opponent-trail', byPlayerId: bId });
-            }
-          }
-        }
-      }
+  if (state.riders.p1.alive && state.riders.p2.alive) {
+    const pairCrashes = resolvePairCollision(
+      { from: starts.p1, to: nexts.p1, distance: moveDistances.p1,
+        reachableDistance: crashes.get('p1')?.distance ?? moveDistances.p1 },
+      { from: starts.p2, to: nexts.p2, distance: moveDistances.p2,
+        reachableDistance: crashes.get('p2')?.distance ?? moveDistances.p2 },
+    );
+    for (const id of PLAYER_IDS) {
+      const collision = pairCrashes[id];
+      if (collision) crashes.set(id, collision);
     }
   }
 

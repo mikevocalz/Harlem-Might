@@ -139,9 +139,10 @@ export function createLocationPipeline(config: NavigationConfig['location'], mod
           longitude === previous.coordinate.longitude;
         return reject(fix, same ? 'duplicate' : 'out-of-order', false);
       }
+      // A rejected future sample must not advance the ordering watermark.
+      if (fix.timestampMs > nowMs + config.maxFutureSkewMs) return reject(fix, 'future', false);
       lastSeen = fix;
 
-      if (fix.timestampMs > nowMs + config.maxFutureSkewMs) return reject(fix, 'future', false);
       if (nowMs - fix.timestampMs > config.maxFixAgeMs) return reject(fix, 'stale', false);
       if (fix.accuracy.horizontalM > config.maxAccuracyM) return reject(fix, 'inaccurate', false);
 

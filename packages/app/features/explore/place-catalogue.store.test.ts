@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import type { PlaceRecord } from '../../content/records.ts';
 import type { ContentResult } from '../../content/result.ts';
 import { createPlaceCatalogueStore, catalogueNearbyPlaces } from './place-catalogue.store.ts';
-import { filterPlaces } from './explore.store.ts';
+import { filterPlaces } from './place-model.ts';
 import { placesGeoJson } from './explore-map-layers.ts';
 
 const place = (slug: string, longitude = -73.94): PlaceRecord => ({

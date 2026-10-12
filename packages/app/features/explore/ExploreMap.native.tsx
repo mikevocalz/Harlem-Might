@@ -89,7 +89,7 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
   const ready = useNativeMap((s) => s.status === 'ready');
 
   const styleRef = useRef<NativeMapStyle | null>(null);
-  const mapRef = useRef<NativeMapViewRef | null>(null);
+  const attachmentRef = useRef<{ map: NativeMapViewRef; disposed: boolean } | null>(null);
   const sizeRef = useRef({ width: 0, height: 0 });
   const latest = useRef({ onSelectPlace, insets, selectedPlaceId, reduceMotion, mapPoints, byId, placeBounds });
   useEffect(() => {
@@ -98,11 +98,11 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
 
   const link = useRef<{
     map: NativeMapViewRef | null;
-    connect: ((map: NativeMapViewRef) => void) | null;
+    connect: ((map: NativeMapViewRef | null) => void) | null;
   }>({ map: null, connect: null });
   const receiveMap = useCallback((map: NativeMapViewRef | null) => {
     link.current.map = map;
-    if (map) link.current.connect?.(map);
+    link.current.connect?.(map);
   }, []);
   // Nitro callback only wraps the function in { f }; native invokes it after commit.
   // eslint-disable-next-line react-hooks/refs -- verified callback wrapper does not execute receiveMap
@@ -123,6 +123,10 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
     let detach: (() => void) | null = null;
 
     const attach = (map: NativeMapViewRef) => {
+      // A native view can be replaced without replaying this effect. Pending
+      // work belongs to this attachment, even if the same view later returns.
+      const attachment = { map, disposed: false };
+      attachmentRef.current = attachment;
       let routeKey = '';
       let routeCoordinates: readonly GeographicCoordinate[] = [];
 
@@ -193,28 +197,39 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
       let pendingStyle: NativeMapStyle | null = null;
       let framed = false;
       const setUpStyle = async (style: NativeMapStyle) => {
+        if (attachment.disposed) return;
         pendingStyle = style;
         styleRef.current = null;
+        const isCurrent = () => !attachment.disposed && pendingStyle === style;
         // The basemap look is cosmetic: a library build without `theme`
         // support still gets the layers, just in Standard's default colours.
         await style.setStandardConfig(EXPLORE_MAP_STANDARD_CONFIG).catch(() => {});
+        if (!isCurrent()) return;
         try {
           await style.addGeoJsonSource({ id: PLACES_SOURCE, data: placesGeoJson(latest.current.mapPoints) });
+          if (!isCurrent()) return;
           await style.addGeoJsonSource({
             id: SELECTED_SOURCE,
             data: selectedGeoJson(latest.current.mapPoints.find((p) => p.id === latest.current.selectedPlaceId) ?? null),
           });
           for (const id of [ROUTE_ALTERNATIVES_SOURCE, ROUTE_AHEAD_SOURCE, ROUTE_WALKED_SOURCE]) {
+            if (!isCurrent()) return;
             await style.addGeoJsonSource({ id, data: lineGeoJson([]) });
           }
-          for (const layer of PLACE_LAYERS) await style.addLayer(layer);
-          for (const layer of ROUTE_LAYERS) await style.addLayer(layer, DOTS_LAYER);
+          for (const layer of PLACE_LAYERS) {
+            if (!isCurrent()) return;
+            await style.addLayer(layer);
+          }
+          for (const layer of ROUTE_LAYERS) {
+            if (!isCurrent()) return;
+            await style.addLayer(layer, DOTS_LAYER);
+          }
         } catch (error) {
-          if (cancelled || pendingStyle !== style) return; // superseded by a newer style
+          if (!isCurrent()) return;
           useNativeMap.getState().setStatus('failed', error instanceof Error ? error.message : String(error));
           return;
         }
-        if (cancelled || pendingStyle !== style) return;
+        if (!isCurrent()) return;
         styleRef.current = style;
         routeKey = '';
         useNativeMap.getState().setStatus('ready');
@@ -229,20 +244,22 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
       // Listener methods take plain functions; only view props need callback().
       const subscriptions = [
         map.addOnStyleLoadedListener((style) => {
+          if (attachment.disposed) return;
           styleSeen = true;
           void setUpStyle(style);
         }),
         map.addOnMapLoadingErrorListener((error) => {
           // Only a map that never got a style falls back (no token, style
           // unreachable). A missing tile, sprite or glyph later is not fatal.
-          if (!styleSeen && !cancelled) useNativeMap.getState().setStatus('failed', error.message);
+          if (!styleSeen && !attachment.disposed) useNativeMap.getState().setStatus('failed', error.message);
         }),
         map.addOnMapTapListener((event) => {
-          if (sizeRef.current.width === 0 || sizeRef.current.height === 0) return;
+          if (attachment.disposed || sizeRef.current.width === 0 || sizeRef.current.height === 0) return;
           quiet(
             map
               .queryRenderedFeatures({ area: tapBox(event.point, sizeRef.current), layerIds: TAPPABLE_LAYERS })
               .then((features) => {
+                if (attachment.disposed) return;
                 const id = features.map((f) => placeIdFromFeature(f.toGeoJson())).find(Boolean);
                 const place = id ? latest.current.byId.get(id) : undefined;
                 if (place) latest.current.onSelectPlace(place);
@@ -251,6 +268,7 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
         }),
       ];
       const unsubSession = useNavigationStore.subscribe((state, prev) => {
+        if (attachment.disposed) return;
         const style = styleRef.current;
         if (style && state.session !== prev.session) {
           drawRoute(style);
@@ -258,10 +276,13 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
         }
       });
       const unsubFix = navigationFixStore.subscribe(() => {
+        if (attachment.disposed) return;
         if (styleRef.current) drawFix(styleRef.current);
       });
 
       return () => {
+        attachment.disposed = true;
+        pendingStyle = null;
         subscriptions.forEach((s) => s.remove());
         unsubSession();
         unsubFix();
@@ -270,13 +291,19 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
 
     let attached: NativeMapViewRef | null = null;
     // A remounted view hands over a new ref; move the listeners to it.
-    const connect = (map: NativeMapViewRef) => {
+    const connect = (map: NativeMapViewRef | null) => {
       if (cancelled || attached === map) return;
       detach?.();
+      detach = null;
       attached = map;
-      mapRef.current = map;
+      attachmentRef.current = null;
       styleRef.current = null;
-      detach = attach(map);
+      if (map) {
+        useNativeMap.getState().setStatus('loading');
+        detach = attach(map);
+      } else if (useNativeMap.getState().status !== 'failed') {
+        useNativeMap.getState().setStatus('off');
+      }
     };
     const connection = link.current;
     connection.connect = connect;
@@ -290,7 +317,7 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
       if (useNativeMap.getState().status !== 'failed') useNativeMap.getState().setStatus('off');
       detach?.();
       styleRef.current = null;
-      mapRef.current = null;
+      attachmentRef.current = null;
     };
   }, [native]);
 
@@ -298,14 +325,17 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
   const insetsKey = `${insets.top}:${insets.right}:${insets.bottom}:${insets.left}`;
   useEffect(() => {
     const style = styleRef.current;
-    const map = mapRef.current;
+    const attachment = attachmentRef.current;
+    const map = attachment?.map;
     if (!ready || !style || !map) return;
     const place = mapPoints.find((p) => p.id === selectedPlaceId) ?? null;
     quiet(style.setGeoJsonSourceData(SELECTED_SOURCE, selectedGeoJson(place)));
     if (!place) return;
+    let cancelled = false;
     quiet(
-      map.getCameraState().then((camera) =>
-        map.flyTo(
+      map.getCameraState().then((camera) => {
+        if (cancelled || attachment.disposed || styleRef.current !== style) return;
+        return map.flyTo(
           {
             center: { latitude: place.lngLat[1], longitude: place.lngLat[0] },
             zoom: Math.max(camera.zoom, SELECT_MIN_ZOOM),
@@ -314,9 +344,10 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
             padding: framePadding(latest.current.insets, sizeRef.current, 0),
           },
           { durationMs: latest.current.reduceMotion ? 0 : 900 },
-        ),
-      ),
+        );
+      }),
     );
+    return () => { cancelled = true; };
     // insetsKey: a drawer or Detail opening moves the visible part; re-centre in it.
   }, [ready, selectedPlaceId, insetsKey, mapPoints]);
 
@@ -324,7 +355,7 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
   // without remounting the native view or losing its listeners/camera.
   useEffect(() => {
     const style = styleRef.current;
-    const map = mapRef.current;
+    const map = attachmentRef.current?.map;
     if (!ready || !style || !map) return;
     quiet(style.setGeoJsonSourceData(PLACES_SOURCE, placesGeoJson(mapPoints)));
     if (placeBounds && !latest.current.selectedPlaceId) {

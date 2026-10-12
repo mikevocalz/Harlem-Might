@@ -15,7 +15,7 @@ import { checkedAt, checkedLabel, eventWhen, isStale, orderForToday, statusLabel
 
 const link = 'mights-focus text-primary underline underline-offset-4 hover:no-underline';
 
-function EventBody({ event, featured, now }: { event: EventRecord; featured: boolean; now: Date }) {
+function EventBody({ event, featured, now, showDate }: { event: EventRecord; featured: boolean; now: Date; showDate: boolean }) {
   const status = statusLabel(event.status);
   const venue = venueName(event);
   const place = linkPlace(event.place);
@@ -40,7 +40,7 @@ function EventBody({ event, featured, now }: { event: EventRecord; featured: boo
       <View className="flex flex-1 flex-col gap-3 p-5">
         <MightsText size="small" tone="default" className="font-semibold">
           {status ? `${status}. ` : ''}
-          <Time dateTime={event.startsAt}>{eventWhen(event)}</Time>
+          <Time dateTime={event.startsAt}>{eventWhen(event, showDate)}</Time>
         </MightsText>
         <MightsHeading level={2} size={featured ? 'title' : 'card'} className={status ? 'line-through decoration-1' : ''}>
           {event.title}
@@ -85,15 +85,16 @@ function EventBody({ event, featured, now }: { event: EventRecord; featured: boo
   );
 }
 
-export function TodayEvents({ events, now }: { events: readonly EventRecord[]; now: Date }) {
-  const ordered = orderForToday(events);
+export function TodayEvents({ events, now, showDate = false }: { events: readonly EventRecord[]; now: Date; showDate?: boolean }) {
+  // Upcoming retains the reader’s startsAt/id order across paginated results.
+  const ordered = showDate ? events : orderForToday(events);
   // One event is a single card; a bento needs something to be dominant over.
   if (ordered.length < 2) {
     const only = ordered[0];
     if (!only) return null;
     return (
       <MightsNotchCard className="max-w-content-screen">
-        <EventBody event={only} featured now={now} />
+        <EventBody event={only} featured now={now} showDate={showDate} />
       </MightsNotchCard>
     );
   }
@@ -104,7 +105,7 @@ export function TodayEvents({ events, now }: { events: readonly EventRecord[]; n
       modules={ordered.map((event, i) => ({
         kind: 'custom' as const,
         id: String(event.id),
-        content: <EventBody event={event} featured={i === 0} now={now} />,
+        content: <EventBody event={event} featured={i === 0} now={now} showDate={showDate} />,
       }))}
     />
   );

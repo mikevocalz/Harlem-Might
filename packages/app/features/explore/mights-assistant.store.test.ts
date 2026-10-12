@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, it } from 'node:test';
-import type { ExplorePlace } from './explore.store.ts';
+import type { ExplorePlace } from './place-model.ts';
 import { createPlaceCatalogueStore } from './place-catalogue.store.ts';
 import {
   ASSISTANT_RIVE_ACTIVITY,

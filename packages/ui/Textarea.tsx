@@ -2,21 +2,18 @@
 import { tv } from './tv';
 import { PasteWrapper, type PasteEventPayload } from './paste-wrapper';
 import { View, Text as TWText } from './tw';
-import { Textarea as PrimitiveTextarea, Label } from './primitives';
-import { Text } from './Text';
+import { Textarea as PrimitiveTextarea } from './primitives';
+import { FormField } from './FormField';
 
 const field = tv({
   slots: {
-    root: 'gap-1.5',
-    label: 'text-sm font-medium text-text',
     input:
       'min-h-24 rounded-lg border-2 border-border bg-surface-raised px-3.5 py-2.5 text-base text-text ' +
       'placeholder:text-text-muted/70 transition-all duration-fast ' +
       'focus:shadow-card focus:outline-none motion-reduce:transition-none',
-    message: 'text-sm',
   },
   variants: {
-    error: { true: { input: 'border-danger focus:border-danger', message: 'text-danger' } },
+    error: { true: { input: 'border-danger focus:border-danger' } },
     disabled: { true: { input: 'opacity-50' } },
   },
 });
@@ -45,8 +42,7 @@ export function Textarea({
     />
   );
   return (
-    <View className={s.root({ className: containerClassName })}>
-      <Label className={s.label()}>{label}</Label>
+    <FormField label={label} hint={hint} error={error} className={containerClassName}>
       {onPaste ? (
         <PasteWrapper onPaste={onPaste}>
           <View className="relative">
@@ -60,11 +56,6 @@ export function Textarea({
           </View>
         </PasteWrapper>
       ) : input}
-      {error ? (
-        <Text className={s.message()}>{error}</Text>
-      ) : hint ? (
-        <Text tone="muted" variant="caption">{hint}</Text>
-      ) : null}
-    </View>
+    </FormField>
   );
 }

@@ -1,4 +1,4 @@
-import { haversine } from '@acme/app/features/explore/explore.store.ts';
+import { haversine } from '@acme/app/features/explore/place-model.ts';
 
 // Lower-page context (bento B5) for /places/[slug]. Pure so the 4/3/2/1/0
 // candidate cases are testable without rendering.

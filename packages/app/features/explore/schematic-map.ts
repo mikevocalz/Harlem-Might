@@ -1,4 +1,4 @@
-import type { ExplorePlace } from './explore.store';
+import type { ExplorePlace } from './place-model';
 
 /** A marker position as percentages of the marker area, origin top-left. */
 export interface SchematicPoint {

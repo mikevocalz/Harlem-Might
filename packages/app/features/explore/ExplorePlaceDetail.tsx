@@ -6,7 +6,7 @@ import { Pressable, ScrollView, Text, View } from '@acme/ui/tw';
 import { PlaceMasthead } from '@acme/app/features/site/place/PlaceHero.tsx';
 import { verifiedDestination } from '../journey/model.ts';
 import { directionsUrl } from './explore-copy';
-import { formatDistance, placeStreetLine, type ExplorePlace } from './explore.store';
+import { formatDistance, placeStreetLine, type ExplorePlace } from './place-model';
 import { usePlaceCatalogue, catalogueNearbyPlaces } from './place-catalogue.store.ts';
 import { explorePlaceFromRecord } from './catalogue.ts';
 import { PlaceHours } from '../site/place/PlaceHours';

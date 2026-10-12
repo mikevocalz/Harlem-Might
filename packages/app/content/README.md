@@ -1,6 +1,6 @@
 # packages/app/content
 
-Read contract for Walks, Stories and Events. No records exist in any of these collections yet, and nothing here seeds them.
+Read contract for published Walks, Stories and Events. Nothing in this package seeds or changes production records.
 
 ## Where to import from
 
@@ -20,8 +20,9 @@ The readers are bound to Payload in `packages/payload/server.ts` because `packag
 | `listStories()` | `ContentResult<StoryRecord[]>`, newest `publishedAt` first |
 | `getStory(slug)` | `DetailResult<StoryRecord>` |
 | `listEventsForDate(dateInNY)` | `ContentResult<EventRecord[]>`, earliest start first |
+| `listEventsForDateRange(startDateInNY, endDateInNY, page = 1)` | `ContentResult<EventPage>`, 24 records per page, start/id order |
 
-Every query filters on `_status = published` and runs with `overrideAccess: false`, so the anonymous read rule applies as well. Drafts never come back. Lists cap at 100 (`LIST_LIMIT`).
+Every query filters on `_status = published` and runs with `overrideAccess: false`, so the anonymous read rule applies as well. Drafts never come back. Non-paginated editorial lists cap at 100 (`LIST_LIMIT`); the paginated event reader returns `events`, `hasNextPage`, and `totalDocs`.
 
 ## Failure semantics
 
@@ -43,6 +44,8 @@ A malformed slug returns `not-found` without a query.
 ## Events and Harlem time
 
 `listEventsForDate('2026-10-07')` returns published events that overlap that New York calendar day: `startsAt` before the next local midnight and `endsAt` after this one. The window is computed in `America/New_York`, so 23- and 25-hour DST days work and "today" after 8 pm EDT is not tomorrow. Get today's date with `harlemToday()`. The function throws `RangeError` on an invalid date; validate route params with `isHarlemDate()` and 404 first.
+
+`listEventsForDateRange` accepts an inclusive range of at most 90 calendar days. Use `addHarlemDays(date, 89)` for the Upcoming window; elapsed hours are not calendar days across DST. Invalid, reversed or oversized ranges and non-positive/unsafe pages reject with `RangeError`.
 
 Cancelled and postponed events are returned with their `status` so the page can label them. Each record carries `sourceUrl`, `fetchedAt` and `lastVerifiedAt`; show the source and "Checked {date}" next to every event.
 
