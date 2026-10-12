@@ -210,6 +210,21 @@ export function startGuidance(): boolean {
 }
 
 /**
+ * Resumes guidance from a foreground control. A paused trip can lose its
+ * watch while the app is backgrounded; restarting only the session would
+ * leave both map and AR waiting forever for fresh GPS/heading evidence.
+ * Existing permission is required: Resume never prompts for location.
+ */
+export function resumeGuidance(): boolean {
+  const session = useNavigationStore.getState().session;
+  if (!navigationController().resume()) return false;
+  const location = useNavigationUi.getState().location;
+  if (session.phase === 'paused' && session.origin.kind === 'device-location'
+    && (location === 'granted' || location === 'approximate')) startLocation();
+  return true;
+}
+
+/**
  * Ends the trip everywhere: cancels requests, resets the session to idle,
  * stops the location feed and clears trip choices. The map line, the HUD
  * and any AR view all read the same store, so they clear in the same commit.

@@ -13,7 +13,7 @@ import { Text, View } from '@acme/ui/tw';
 import { useExploreType } from '../../explore/explore-type';
 import type { HudNotice } from '../view/hudView';
 import { useNavigationUi } from '../view/navigationUi.store';
-import { endNavigation, navigationController } from '../view/runtime';
+import { endNavigation, navigationController, resumeGuidance } from '../view/runtime';
 import { useHudView } from './hooks';
 import { ManeuverIcon } from './ManeuverIcon';
 
@@ -161,7 +161,7 @@ export function NavigationHud({ arAction, onShowSteps, onRecenter, onShowPlace, 
           <MightsButton
             size={type.buttons.control}
             variant="outline"
-            onPress={() => (paused ? navigationController().resume() : navigationController().pause())}
+            onPress={() => (paused ? resumeGuidance() : navigationController().pause())}
             aria-label={paused ? 'Resume guidance' : 'Pause guidance'}
           >
             {paused ? 'Resume' : 'Pause'}
