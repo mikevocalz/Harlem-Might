@@ -2,7 +2,7 @@ import { getPayload } from 'payload';
 import { uniquePlaceSlug } from '@acme/app/content';
 import { HARLEM_PLACE_PREVIEWS, type HarlemPlaceCategory } from '@acme/app/features/explore/explore.store.ts';
 import { bboxOf, containingNta, fetchNtaBoundaries } from './nta.ts';
-import { readOsmFeatures, representativePoint, type OsmFeature } from './osm.ts';
+import { readOsmFeatures, representativePoint } from './osm.ts';
 import config from './payload.config';
 import type { Place } from './payload-types';
 

@@ -4,9 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { createBetterAuthPlugin, payloadAdapter } from '@delmaredigital/payload-better-auth';
 import { betterAuth } from 'better-auth';
 import { buildConfig } from 'payload';
-import type { PayloadRequest } from 'payload';
-import { mcpPlugin } from '@payloadcms/plugin-mcp';
 import { bunnyStorage } from '@seshuk/payload-storage-bunny';
+import { editorialMcpPlugin } from './plugins/editorial-mcp';
 import { withMemberAvatarStorage } from './plugins/member-avatar-storage';
 import { Users } from './collections/Users';
 import { Media } from './collections/Media';
@@ -27,31 +26,6 @@ const dirname = path.dirname(fileURLToPath(import.meta.url));
 const serverURL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 const webViteURL = process.env.WEB_VITE_URL || 'http://localhost:5173';
 const allowedOrigins = [...new Set([serverURL, webViteURL, ...AUTH_ORIGINS])];
-
-/**
- * Per-tool MCP access, MoyoLearn's fail-closed posture. Harlem has no admin
- * subdomain — admin lives on the site host — so the guard is the caller being
- * a signed-in Payload `users` (curator) member rather than a host check. Even
- * that only matters when `PAYLOAD_MCP_ENABLED=true`; without it the endpoint
- * is never registered.
- */
-const curatorMcpAccess = ({ req }: { req: PayloadRequest }): boolean =>
-  req.user?.collection === 'users';
-
-const curatorMcpTools = {
-  count: { access: curatorMcpAccess },
-  countVersions: { access: curatorMcpAccess },
-  create: { access: curatorMcpAccess },
-  delete: { access: curatorMcpAccess },
-  duplicate: { access: curatorMcpAccess },
-  find: { access: curatorMcpAccess },
-  findDistinct: { access: curatorMcpAccess },
-  findVersionByID: { access: curatorMcpAccess },
-  findVersions: { access: curatorMcpAccess },
-  getCollectionSchema: { access: curatorMcpAccess },
-  restoreVersion: { access: curatorMcpAccess },
-  update: { access: curatorMcpAccess },
-};
 
 export default buildConfig({
   admin: {
@@ -113,29 +87,7 @@ export default buildConfig({
           })),
         ]
       : []),
-    mcpPlugin({
-      // `users`, `members`, `saved-places`, `walk-sessions` and the better-auth collections are
-      // deliberately absent: identity and member-owned rows stay off the
-      // machine-readable surface.
-      collections: {
-        media: {
-          tools: {
-            ...curatorMcpTools,
-            getUploadInstructions: { access: curatorMcpAccess },
-          },
-        },
-        pages: { tools: curatorMcpTools },
-        places: { tools: curatorMcpTools },
-        walks: { tools: curatorMcpTools },
-        stories: { tools: curatorMcpTools },
-        events: { tools: curatorMcpTools },
-        'music-artists': { tools: curatorMcpTools },
-      },
-      // Off unless switched on — the plugin's default access is
-      // `Boolean(req.user)`, which would hand the whole tool surface to any
-      // authenticated account.
-      disabled: process.env.PAYLOAD_MCP_ENABLED !== 'true',
-    }),
+    editorialMcpPlugin({ enabled: process.env.PAYLOAD_MCP_ENABLED === 'true' }),
   ],
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),

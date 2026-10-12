@@ -363,6 +363,9 @@ export interface Page {
 export interface Place {
   id: number;
   name: string;
+  /**
+   * Lowercase words joined by hyphens. Used in the URL.
+   */
   slug: string;
   /**
    * Old generated public paths. These stay resolvable and redirect to the current name-led slug.
@@ -801,6 +804,9 @@ export interface Event {
 export interface MusicArtist {
   id: number;
   name: string;
+  /**
+   * Lowercase words joined by hyphens. Used in the URL.
+   */
   slug: string;
   genre: string;
   era?: string | null;

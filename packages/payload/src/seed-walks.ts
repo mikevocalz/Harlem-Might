@@ -78,7 +78,7 @@ for (const walk of WALKS) {
   if (existing.has(walk.slug)) continue;
   const stops = walk.stops.map((slug) => placesBySlug.get(slug));
   if (stops.some((s) => !s)) {
-    console.warn(`Skipping ${walk.slug}: missing stops ${walk.stops.filter((s, i) => !stops[i]).join(', ')}.`);
+    console.warn(`Skipping ${walk.slug}: missing stops ${walk.stops.filter((_, i) => !stops[i]).join(', ')}.`);
     continue;
   }
   const located = stops as Stop[];

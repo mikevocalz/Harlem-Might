@@ -1,4 +1,3 @@
-import React from 'react';
 import { useRouter } from 'solito/navigation';
 import { ViroXRSceneNavigator } from '@reactvision/react-viro';
 import { ViroExternalTestScene } from '../components/ViroExternalTestScene';

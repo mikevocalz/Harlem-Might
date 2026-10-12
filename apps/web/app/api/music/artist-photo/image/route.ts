@@ -5,6 +5,8 @@ import {
 import { listMusicArtists } from '@acme/payload/server';
 import { fetchPublicPhotoResource, PhotoFetchError } from '@acme/payload/artist-photo-fetch';
 
+import { artistPhotoCatalogueStatus } from '@/lib/artist-photo-catalogue';
+
 const PHOTO_CACHE_SECONDS = 60 * 60 * 24 * 7;
 
 /** Only catalogue-selected references may reach the bounded, DNS-validated proxy. */
@@ -16,11 +18,9 @@ export async function GET(request: NextRequest) {
   }
 
   const catalogue = await listMusicArtists();
-  if (
-    catalogue.status !== 'ok' ||
-    !catalogue.data.some((artist) => artist.name === name)
-  ) {
-    return new NextResponse('Not found', { status: 404 });
+  const catalogueStatus = artistPhotoCatalogueStatus(catalogue, name);
+  if (catalogueStatus) {
+    return new NextResponse(catalogueStatus === 503 ? 'Image unavailable' : 'Not found', { status: catalogueStatus });
   }
 
   try {

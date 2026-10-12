@@ -1,5 +1,4 @@
 'use no memo';
-import React from 'react';
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 import type { WidgetKind } from '@acme/widgets';
 import { HarlemWidget } from './HarlemWidget';

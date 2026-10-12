@@ -485,11 +485,6 @@ function SharedTabletopRoom({
     replication,
   ]);
 
-  const remoteName =
-    typeof remoteEntity?.fields.name === 'string'
-      ? remoteEntity.fields.name
-      : 'WAITING…';
-  const remoteReady = Boolean(remoteEntity?.fields.ready);
   const localCanReady =
     localFrameLocalized &&
     colocated.state === 'joined' &&

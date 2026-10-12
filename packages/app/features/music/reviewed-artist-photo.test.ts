@@ -79,7 +79,10 @@ it('keeps both public GET routes read-only and restricted to reviewed, published
     assert.match(source, /resolveReviewedArtistPhoto/);
   }
   assert.match(route, /allowedNames\.has\(name\)/);
-  assert.match(imageRoute, /catalogue\.data\.some/);
+  assert.match(imageRoute, /artistPhotoCatalogueStatus\(catalogue, name\)/);
+  const catalogueGuard = readFileSync(new URL('../../../../apps/web/lib/artist-photo-catalogue.ts', import.meta.url), 'utf8');
+  assert.match(catalogueGuard, /catalogue\.data\.some\(\(artist\) => artist\.name === name\)/);
+  assert.match(catalogueGuard, /catalogue\.status !== 'ok'\) return 503/);
 });
 
 

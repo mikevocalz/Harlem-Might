@@ -35,8 +35,10 @@ export const Members: CollectionConfig = {
       isMember(user) ? { id: { equals: user.id } } : false,
   },
   fields: [
-    { name: 'email', type: 'email', required: true, unique: true },
-    { name: 'emailVerified', type: 'checkbox', defaultValue: false },
+    // Only Better Auth's trusted adapter may mutate verified identity. REST
+    // profile updates must not bypass its email-change/verification flow.
+    { name: 'email', type: 'email', required: true, unique: true, access: { create: () => false, update: () => false } },
+    { name: 'emailVerified', type: 'checkbox', defaultValue: false, access: { create: () => false, update: () => false } },
     { name: 'name', type: 'text', required: true, maxLength: 80 },
     { name: 'image', type: 'text' },
     {

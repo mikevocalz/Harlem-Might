@@ -1,5 +1,5 @@
 import { tv, type VariantProps } from './tv';
-import { View, Pressable } from './tw';
+import { Pressable } from './tw';
 import { SlideUp } from './motion';
 
 // §9 tab-bar accessory — a slot that docks above the tab bar (mini player,

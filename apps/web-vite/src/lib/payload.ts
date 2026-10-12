@@ -13,7 +13,7 @@
 import { createPayloadClient } from '@acme/payload';
 
 export const PAYLOAD_API_BASE =
-  import.meta.env.VITE_PAYLOAD_API_BASE ?? 'http://localhost:3000/payload-api';
+  import.meta.env?.VITE_PAYLOAD_API_BASE ?? 'http://localhost:3000/payload-api';
 
 export const payload = createPayloadClient({ baseUrl: PAYLOAD_API_BASE });
 
@@ -50,17 +50,13 @@ export async function listPages(): Promise<{ pages: CmsPage[]; status: CmsStatus
   }
 }
 
-/** Fetch one published page by slug; null when missing or when the CMS is down. */
+/** Only a successful empty query is missing; failures reach the router error boundary. */
 export async function getPage(slug: string): Promise<CmsPage | null> {
-  try {
-    const res = await payload.find<CmsPage>(
-      'pages',
-      `where[slug][equals]=${encodeURIComponent(slug)}&where[published][equals]=true&limit=1`,
-    );
-    return res.docs[0] ?? null;
-  } catch {
-    return null;
-  }
+  const res = await payload.find<CmsPage>(
+    'pages',
+    `where[slug][equals]=${encodeURIComponent(slug)}&where[published][equals]=true&limit=1`,
+  );
+  return res.docs[0] ?? null;
 }
 
 
@@ -79,12 +75,12 @@ export interface CmsPlace {
   primaryCategory?: string | null;
   primaryArea?: string | null;
   logo?: string | CmsMedia | null;
-  menus?: Array<{
+  menus?: {
     id?: string | null;
     label?: string | null;
     format?: 'image_gallery' | 'pdf' | 'web' | null;
     active?: boolean | null;
-  }> | null;
+  }[] | null;
   dataQuality?: {
     state?: string | null;
     lastReviewedAt?: string | null;

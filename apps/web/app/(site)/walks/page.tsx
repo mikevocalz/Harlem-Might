@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getHarlemArchivalImage } from "@acme/app/content";
 import { cachedWalks } from "@/lib/cached-content";
-import { MightsButton, MightsPage, MightsText, routes } from "@acme/ui/mights";
+import { MightsButton, MightsPage, routes } from "@acme/ui/mights";
 import { ContentNotice } from "@acme/app/features/site/content/ContentNotice.tsx";
 import { WalksIndex } from "@acme/app/features/site/walks/WalksIndex.tsx";
 import { ContentLoader } from "@acme/app/features/site/content/ContentLoader.tsx";
