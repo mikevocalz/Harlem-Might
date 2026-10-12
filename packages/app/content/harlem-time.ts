@@ -55,6 +55,29 @@ export const harlemToday = (now: Date = new Date()): string => {
 };
 
 /**
+ * Add whole calendar days to a New York date, without assuming days last 24
+ * hours. UTC is used only for Gregorian date arithmetic, not as Harlem time.
+ *
+ * @throws {RangeError} for an invalid date, a non-integer offset, or a result
+ * outside the supported `YYYY-MM-DD` date format.
+ */
+export const addHarlemDays = (date: string, days: number): string => {
+  if (!isHarlemDate(date) || !Number.isSafeInteger(days)) {
+    throw new RangeError('Expected a real YYYY-MM-DD date and a safe integer day offset.');
+  }
+  const calendar = new Date(`${date}T00:00:00.000Z`);
+  calendar.setUTCDate(calendar.getUTCDate() + days);
+  if (!Number.isFinite(calendar.getTime())) {
+    throw new RangeError('Calendar day offset is outside the supported date range.');
+  }
+  const result = calendar.toISOString().slice(0, 10);
+  if (!isHarlemDate(result)) {
+    throw new RangeError('Calendar day offset is outside the supported YYYY-MM-DD date range.');
+  }
+  return result;
+};
+
+/**
  * The half-open UTC window `[start, end)` covering one New York calendar day.
  * Handles 23- and 25-hour DST days.
  *

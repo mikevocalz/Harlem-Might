@@ -1,85 +1,36 @@
-import type { Metadata } from "next";
-import { Suspense } from "react";
-import { io } from "next/cache";
-import { getHarlemArchivalImage } from "@acme/app/content";
-import { harlemToday } from "@acme/payload/server";
-import { cachedEventsForDate } from "@/lib/cached-content";
-import { MightsButton, MightsPage, routes } from "@acme/ui/mights";
-import { TodayEvents } from "@acme/app/features/site/today/TodayEvents.tsx";
-import { HistoryFact } from "@acme/app/features/site/today/HistoryFact.tsx";
-import { todayHeading } from "@acme/app/features/site/today/event-format.ts";
-import { ContentNotice } from "@acme/app/features/site/content/ContentNotice.tsx";
-import { ContentLoader } from "@acme/app/features/site/content/ContentLoader.tsx";
-
-const archiveImage = getHarlemArchivalImage("nypl-lenox-market-1939");
+import type { Metadata } from 'next';
+import { Suspense } from 'react';
+import { io } from 'next/cache';
+import { harlemToday } from '@acme/app/content';
+import { TodayScreen } from '@acme/app/features/site/today/TodayScreen.tsx';
+import { eventDateRange, eventSearch } from '@acme/app/features/site/today/event-query.ts';
+import { cachedEventsForDateRange } from '@/lib/cached-content';
+import { TodayDateRefresh } from '@/components/site/TodayDateRefresh';
+import { TodayRetry } from '@/components/site/TodayRetry';
+import { ContentLoader } from '@acme/app/features/site/content/ContentLoader.tsx';
 
 export const metadata: Metadata = {
-  title: "Today",
-  description:
-    "Events in Harlem today, each with its source and when it was last checked.",
+  title: 'Today & Upcoming',
+  description: 'Today and upcoming events in Harlem, each with its source and when it was last checked.',
 };
 
-async function TodayContent() {
-  // Request-time date in Harlem's time zone; never baked in at build, never the server's UTC day.
-  // `io()` (not `connection()`) keeps the timestamp out of the static shell while still letting
-  // the cached read below be prefetched and reused across navigations.
+type SearchParams = Promise<{ view?: string | string[]; page?: string | string[] }>;
+
+async function TodayContent({ searchParams }: { searchParams: SearchParams }) {
+  // Request-time Harlem date, never the server UTC day or a build-time date.
   await io();
   const now = new Date();
   const date = harlemToday(now);
-  // The date is the cache key, so each Harlem day is read once.
-  const result = await cachedEventsForDate(date);
-
-  let body: React.ReactNode;
-  if (result.status === "unavailable") {
-    body = (
-      <ContentNotice
-        title="We couldn’t check for events right now"
-        image={archiveImage}
-        actions={
-          <>
-            <MightsButton href={routes.today()}>Try again</MightsButton>
-            <MightsButton href={routes.explore()} variant="secondary">
-              Open the map
-            </MightsButton>
-          </>
-        }
-      >
-        Our records didn’t answer, so we can’t say what’s on today. Try again in
-        a moment, or check the venue’s own site.
-      </ContentNotice>
-    );
-  } else if (result.data.length === 0) {
-    body = (
-      <ContentNotice
-        title="No events listed for today"
-        image={archiveImage}
-        actions={
-          <MightsButton href={routes.explore()}>Open the map</MightsButton>
-        }
-      >
-        Venue listings appear here once we’ve checked them. Start from a place
-        on the map instead.
-      </ContentNotice>
-    );
-  } else {
-    body = <TodayEvents events={result.data} now={now} />;
-  }
-
-  return (
-    <MightsPage
-      title={`Today in Harlem, ${todayHeading(now)}`}
-      lead="Events with a date and a source, and when we last checked each one."
-    >
-      <HistoryFact date={date} />
-      {body}
-    </MightsPage>
-  );
+  const search = eventSearch(await searchParams);
+  const { start, end } = eventDateRange(date, search.view);
+  const result = await cachedEventsForDateRange(start, end, search.page);
+  return <><TodayDateRefresh date={date} /><TodayScreen date={date} now={now} {...search} result={result} retryAction={<TodayRetry {...search} />} /></>;
 }
 
-export default function TodayPage() {
+export default function TodayPage({ searchParams }: { searchParams: SearchParams }) {
   return (
-    <Suspense fallback={<ContentLoader label="Checking for events today" />}>
-      <TodayContent />
+    <Suspense fallback={<ContentLoader label="Checking for events" />}>
+      <TodayContent searchParams={searchParams} />
     </Suspense>
   );
 }

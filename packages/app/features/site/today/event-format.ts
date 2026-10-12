@@ -16,14 +16,15 @@ function dayKey(iso: string | Date, timeZone: string): string {
  * When an event runs. Same-day events show times only ("7:30 – 10:00 PM");
  * multi-day runs show the dates too ("Oct 5, 7:30 PM – Oct 12, 10:00 PM").
  */
-export function eventWhen(event: Pick<EventRecord, 'startsAt' | 'endsAt' | 'timeZone'>): string {
+export function eventWhen(event: Pick<EventRecord, 'startsAt' | 'endsAt' | 'timeZone'>, showDate = false): string {
   const timeZone = event.timeZone || HARLEM;
   const start = new Date(event.startsAt);
   const end = new Date(event.endsAt);
   const sameDay = dayKey(start, timeZone) === dayKey(end, timeZone);
   const format = new Intl.DateTimeFormat('en-US', {
     timeZone,
-    ...(sameDay ? {} : { month: 'short', day: 'numeric' }),
+    ...(sameDay && !showDate ? {} : { month: 'short', day: 'numeric' }),
+    ...(showDate ? { year: 'numeric' } : {}),
     hour: 'numeric',
     minute: '2-digit',
   });
@@ -109,4 +110,10 @@ export function orderForToday<T extends Pick<EventRecord, 'status'>>(events: rea
 /** The venue line: the catalogue name when the venue is a place, else the listing's name. */
 export function venueName(event: Pick<EventRecord, 'place' | 'venueName'>): string | null {
   return event.place?.name ?? event.venueName ?? null;
+}
+
+/** Dates are calendar labels, so format at UTC rather than shifting NY midnight. */
+export function eventRangeLabel(startDate: string, endDate: string): string {
+  const format = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' });
+  return format.formatRange(new Date(`${startDate}T12:00:00Z`), new Date(`${endDate}T12:00:00Z`));
 }

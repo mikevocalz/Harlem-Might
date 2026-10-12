@@ -1,5 +1,6 @@
 import 'server-only';
-import { cacheLife } from 'next/cache';
+import { cacheLife, cacheTag } from 'next/cache';
+import { eventRangeCacheTag } from './event-cache-key.ts';
 import {
   getMusicArtist,
   getPlace,
@@ -7,6 +8,7 @@ import {
   getWalk,
   getPlaceByLegacySlug,
   listEventsForDate,
+  listEventsForDateRange,
   listExploreCatalogue,
   listMusicArtistsPage,
   listStories,
@@ -54,6 +56,15 @@ export async function cachedStories() {
 export async function cachedEventsForDate(date: string) {
   'use cache';
   return settle(`events ${date}`, await listEventsForDate(date));
+}
+
+export async function cachedEventsForDateRange(start: string, end: string, page: number) {
+  'use cache';
+  const result = await listEventsForDateRange(start, end, page);
+  // A delayed concurrent retry may still have observed the old failure. Only
+  // failures carry this tag, so expiring it cannot evict a recovered success.
+  if (result.status === 'unavailable') cacheTag(eventRangeCacheTag(start, end, page));
+  return settle(`events ${start}–${end} p${page}`, result);
 }
 
 export async function cachedPlace(slug: string) {

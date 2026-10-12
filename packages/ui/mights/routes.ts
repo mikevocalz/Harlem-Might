@@ -22,10 +22,11 @@ export const routes = {
   music: () => '/music',
   musician: (slug: string) => `/music/${slug}`,
   story: (slug: string) => `/stories/${slug}`,
-  // /today/[date] is deferred until listings exist (audit §11), so the builder
-  // takes no date. Events have no page of their own: a row links to the
-  // venue's site and to the venue's place page.
-  today: () => '/today',
+  // View and page live in the URL; event rows still link to the original source.
+  today: (q?: { view?: 'today' | 'upcoming'; page?: number }) => withQuery('/today', {
+    view: q?.view === 'upcoming' ? 'upcoming' : undefined,
+    page: q?.page && q.page > 1 ? String(q.page) : undefined,
+  }),
   signIn: () => '/sign-in',
   signUp: () => '/sign-up',
   profile: () => '/profile',
