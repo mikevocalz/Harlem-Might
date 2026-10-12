@@ -5,12 +5,12 @@ import { canUseArNavigation, chooseArExperience } from './arNavigationEntry.ts';
 const phone = { isHorizonBuild: false, isMetaHorizonXR: false, isPico: false, isVisionOS: false, platform: 'android' };
 
 describe('canUseArNavigation', () => {
-  it('allows iOS and Android phones', () => {
+  it('allows iOS and Android walking-renderer builds', () => {
     assert.equal(canUseArNavigation(phone), true);
     assert.equal(canUseArNavigation({ ...phone, platform: 'ios' }), true);
   });
 
-  it('never runs on headsets or the quest/pico builds, which have no GPS', () => {
+  it('keeps headset-specific builds in their existing renderer path', () => {
     assert.equal(canUseArNavigation({ ...phone, isHorizonBuild: true }), false, 'quest flavor on a phone');
     assert.equal(canUseArNavigation({ ...phone, isMetaHorizonXR: true }), false);
     assert.equal(canUseArNavigation({ ...phone, isPico: true }), false);

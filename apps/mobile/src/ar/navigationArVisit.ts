@@ -51,6 +51,12 @@ export function prepareArMapReturn() {
   layout.setDiscoverDrawerOpen(false);
 }
 
+/** Transfers a legacy AR route into Explore without ending its shared AR trip or watch. */
+export function handoffArToExplore(navigate: () => void) {
+  prepareArMapReturn();
+  navigate();
+}
+
 /** Arrival explicitly opens Detail; generic route dismissal must preserve this intent. */
 export function prepareArPlaceReturn(placeId: string | undefined) {
   if (!placeId) {

@@ -2,10 +2,9 @@ import type { NavigationController } from '@acme/app/features/navigation/session
 import type { NavigationSession } from '@acme/app/features/navigation/model/session.ts';
 
 /**
- * Whether this build and device may run phone AR navigation. Headsets have
- * no GPS and run the quest/pico flavors; their AR route keeps the tabletop
- * and street-scale scenes, and none of the ARCore geospatial code below is
- * reached there.
+ * Builds that use the iOS/Android walking renderer. Headset-specific builds
+ * retain their existing tabletop/street experience. Native AR support and
+ * permission are checked separately at explicit entry.
  */
 export function canUseArNavigation(input: {
   readonly isHorizonBuild: boolean;
@@ -25,6 +24,7 @@ export function canUseArNavigation(input: {
  */
 export type ArExperience = 'tabletop' | 'street' | 'navigation';
 
+/** Selects navigation for an eligible AR session, otherwise retaining the requested world. */
 export function chooseArExperience(input: {
   readonly requestedScene: 'tabletop' | 'street';
   readonly navigationAvailable: boolean;
@@ -37,7 +37,7 @@ export function chooseArExperience(input: {
 
 /**
  * Moves an active walk into AR and returns whether the AR route should open.
- * Call it from the map's "View in AR" action, then push `/explore-ar`. The
+ * Call it from the map's walking-AR action, then reveal its in-pane host. The
  * session, route and progress carry over unchanged.
  */
 export function enterArNavigation(controller: NavigationController): boolean {
@@ -51,7 +51,7 @@ export function arEntryRoute(session: NavigationSession) {
   return session.phase === 'routeReady' ? session.routes[session.selectedRouteIndex] : session.activeRoute.route;
 }
 
-/** Native preflight results; none of the failure states changes the map trip. */
+/** Failed preflight preserves the map trip; failure after starting guidance may leave map guidance active. */
 export type ArEntryResult = 'opened' | 'busy' | 'cancelled' | 'unsupported' | 'camera-denied' | 'unavailable';
 
 /**
@@ -71,6 +71,7 @@ export function createArNavigationEntry(deps: {
 }) {
   let pending = false;
   return {
+    /** Revalidates native preflight, enters the current trip, then commits return intent before opening AR. */
     async open(onOpen: () => void, isCurrent: () => boolean, onStarted?: () => void): Promise<ArEntryResult> {
       if (pending) return 'busy';
       const route = arEntryRoute(deps.getSession());
@@ -79,6 +80,7 @@ export function createArNavigationEntry(deps: {
       pending = true;
       deps.setPending(true);
       let entered = false;
+      let startedGuidance = false;
       try {
         const supported = await deps.supported();
         if (!current()) return 'cancelled';
@@ -86,8 +88,11 @@ export function createArNavigationEntry(deps: {
         const camera = await deps.requestCamera();
         if (!current()) return 'cancelled';
         if (!camera) return 'camera-denied';
-        if (deps.getSession().phase === 'routeReady' && !deps.startGuidance()) return 'cancelled';
-        if (!deps.enterAR()) return 'cancelled';
+        if (deps.getSession().phase === 'routeReady') {
+          startedGuidance = deps.startGuidance();
+          if (!startedGuidance) return 'cancelled';
+        }
+        if (!deps.enterAR()) return startedGuidance ? 'unavailable' : 'cancelled';
         entered = true;
         onStarted?.();
         onOpen();

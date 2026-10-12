@@ -1,6 +1,6 @@
 # Finish AR HUD recovery and arrival
 
-Implemented on top of #69 and #70, using the shared trip, existing /explore-ar route and one Viro renderer.
+Implemented on top of #69 and #70, using the shared trip, existing Explore shell and one Viro walking renderer.
 
 - Keep one experience per AR route visit. End, unavailable camera or arrival never accidentally open a tabletop renderer. Ownership guards protect a newer visit from old asynchronous cleanup; Strict Mode effect replay is safe.
 - Back/hardware Back preserves the walk and restores compact map intent. Arrival ends the watch and opens destination Detail with map as the return pane.
@@ -13,7 +13,7 @@ Implemented on top of #69 and #70, using the shared trip, existing /explore-ar r
 
 ## Hardware scope
 
-The current bridge exposes device-family booleans, not live hinge geometry. The new walking-AR entry is Android-only in current builds, gated to positively resolved ordinary Android phones. iOS remains on the existing map until its mounted native capability bridge is implemented and validated; see 01-entry.md for the Apple API path. Tablets, foldables, unknown Android capability, measured Apple hardware columns and headsets retain existing map/rail/pane behavior. Existing Android detection gaps remain explicit. No invented hinge measurements or duplicate rail/router are added.
+Walking AR uses the existing Viro iOS/Android support check and stays inside Explore's map region, retaining existing tabs/right rail and pane identities. The map remains mounted but hidden from input/accessibility. HUD residual insets reserve the existing Detail overlay without double-consuming shell safe areas. Tab departure or hiding the compact map closes AR; backgrounding releases only the camera and resets its old-world placement before restart. No hardware classifier, invented hinge geometry, duplicate rail/router or new Apple bridge is introduced. Existing shell detection limits and physical fold/rotation acceptance remain documented in 01-entry.md.
 
 ## Checks
 

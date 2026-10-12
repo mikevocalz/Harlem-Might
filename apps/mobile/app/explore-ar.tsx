@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import { BackHandler, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import { useRouter } from 'solito/navigation';
 import { ViroXRSceneNavigator, isMetaHorizonXR, isPico, isVisionOS } from '@reactvision/react-viro';
 import { selectArTracking, selectSession, useNavigationStore } from '@acme/app/features/navigation/session/navigationStore.ts';
@@ -16,15 +16,13 @@ import { sceneModeFor, useArSession, type ArSceneMode } from '../src/ar/arSessio
 import { mapboxToken } from '../src/ar/mapboxToken';
 import { useStreetMapLoader } from '../src/ar/useStreetMapLoader';
 import { useTabletopRoute } from '../src/ar/useTabletopRoute';
-import { HarlemNavigationAr } from '../src/ar/HarlemNavigationAr';
 import { canUseArNavigation, chooseArExperience } from '../src/ar/arNavigationEntry';
 import { isArNavigationScreen } from '../src/ar/navAr';
 import { getNavigationController } from '../src/ar/navigationRuntime';
-import { createArVisit, finishArNavigation, prepareArMapReturn, prepareArPlaceReturn } from '../src/ar/navigationArVisit';
-import { usePhoneArLayout } from '../src/ar/usePhoneArLayout';
+import { createArVisit, handoffArToExplore } from '../src/ar/navigationArVisit';
 import { isHorizonBuild } from '../src/spatial/horizonBuild';
 
-/** Phone AR navigation is a property of the build and device, fixed for the app's lifetime. */
+/** Builds using the handheld walking renderer; native support is checked at explicit entry. */
 const AR_NAVIGATION_SUPPORTED = canUseArNavigation({
   isHorizonBuild,
   isMetaHorizonXR,
@@ -47,7 +45,6 @@ const STREET_SCENE = { scene: HarlemStreetScene };
  */
 export default function ExploreArRoute() {
   const router = useRouter();
-  const phoneLayoutSupported = usePhoneArLayout();
   const placeId = useArSession((s) => s.requested?.placeId);
   const sceneMode = useArSession((s) => sceneModeFor(s.requested));
   const selectedPlaceId = useExplore((s) => s.selectedPlaceId);
@@ -75,26 +72,13 @@ export default function ExploreArRoute() {
     visit.leave();
     router.replace(routes.explore());
   }, [router, visit]);
-  const backToMap = useCallback(() => {
-    prepareArMapReturn();
-    exit();
-  }, [exit]);
-  useEffect(() => {
-    if (visit.experience !== 'navigation') return;
-    const back = BackHandler.addEventListener('hardwareBackPress', () => {
-      backToMap();
-      return true;
-    });
-    return () => back.remove();
-  }, [backToMap, visit]);
-  // Router callback identity can change without leaving this screen.
-  useEffect(() => visit.attach(), [visit]);
+  // Legacy walking-AR URLs hand off to the existing Explore shell. Do not
+  // attach a navigation visit here: its cleanup must not exit the pane owner.
+  useEffect(() => visit.experience === 'navigation' ? undefined : visit.attach(), [visit]);
   const isNavigatingInAr = experience === 'navigation';
   useEffect(() => {
-    // A direct/stale URL must obey the same ordinary-phone bound as entry.
-    // Return to the existing map shell without creating another AR renderer.
-    if (isNavigatingInAr && !phoneLayoutSupported) backToMap();
-  }, [backToMap, isNavigatingInAr, phoneLayoutSupported]);
+    if (isNavigatingInAr) handoffArToExplore(() => router.replace(routes.explore()));
+  }, [isNavigatingInAr, router]);
   // Only the phone navigation layer reads the shared trip. Existing table
   // and street worlds, their place routes, and their controls stay untouched.
   useTabletopRoute(isNavigatingInAr ? undefined : (placeId ?? selectedPlaceId ?? undefined));
@@ -104,19 +88,7 @@ export default function ExploreArRoute() {
   // NavigationSession (useStreetNavigation).
   useStreetMapLoader(street, placeId ?? selectedPlaceId ?? undefined);
 
-  if (isNavigatingInAr) {
-    return (
-      <HarlemNavigationAr
-        cameraAllowed={phoneLayoutSupported}
-        onBackToMap={backToMap}
-        onExplorePlace={(destinationPlaceId) => {
-          finishArNavigation();
-          prepareArPlaceReturn(destinationPlaceId);
-          exit();
-        }}
-      />
-    );
-  }
+  if (isNavigatingInAr) return null;
 
   return (
     <ViroXRSceneNavigator

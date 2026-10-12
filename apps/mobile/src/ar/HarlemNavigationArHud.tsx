@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { AppState } from 'react-native';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, type EdgeInsets } from 'react-native-safe-area-context';
 import { Pressable, ScrollView, Text, View } from '@acme/ui/tw';
 import { palette } from '@acme/theme';
 import { formatDistance } from '@acme/app/features/explore/explore.store.ts';
@@ -45,6 +45,8 @@ function createPaceCheckState() {
 }
 
 export interface HarlemNavigationArHudProps {
+  /** Insets still inside this host; replaces root safe areas already consumed by the shell. */
+  readonly contentInsets?: Readonly<EdgeInsets>;
   /** Leaves AR and returns to the map. The navigation session keeps running. */
   readonly onBackToMap: () => void;
   /** After arrival: end navigation and open the destination's place page. */
@@ -127,7 +129,7 @@ function CheckRow({ ready, text }: { ready: boolean; text: string }) {
 }
 
 /** The camera HUD reads and controls the same trip as the map. */
-export function HarlemNavigationArHud({ onBackToMap, onExplorePlace }: HarlemNavigationArHudProps) {
+export function HarlemNavigationArHud({ onBackToMap, onExplorePlace, contentInsets }: HarlemNavigationArHudProps) {
   const controller = getNavigationController();
   const mounted = useRef(false);
   useEffect(() => {
@@ -139,7 +141,8 @@ export function HarlemNavigationArHud({ onBackToMap, onExplorePlace }: HarlemNav
   // A ref owns the per-HUD external store; useStore subscribes to its snapshot.
   // eslint-disable-next-line react-hooks/refs
   const paceCheck = useStore(paceCheckRef.current);
-  const insets = useSafeAreaInsets();
+  const safeAreaInsets = useSafeAreaInsets();
+  const insets = contentInsets ?? safeAreaInsets;
   const location = useNavigationUi((state) => state.location);
   const session = useNavigationStore(selectSession);
   const positioning = useNavigationStore(selectPositioning);

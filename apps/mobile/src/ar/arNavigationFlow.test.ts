@@ -10,6 +10,7 @@ import type { NavigationOrigin } from '@acme/app/features/navigation/model/sessi
 import { useExploreLayoutStore } from '../spatial/exploreLayout.store.ts';
 import { resolveExploreLayout } from '../spatial/exploreLayout.ts';
 import type { TravelMode } from '@acme/app/features/navigation/model/route.ts';
+import type { LocationAvailability } from '@acme/app/features/navigation/view/locationSource.ts';
 
 const NAME = 'apollo-theater--sylvias-restaurant';
 const origin = lngLatToCoordinate(loadFixture(NAME).origin.lngLat);
@@ -18,22 +19,32 @@ afterEach(() => { useExploreLayoutStore.getState().setCompactPane('map'); resetN
 // Real shared runtime; only external routing and device boundaries are substituted.
 async function harness(options: { mode?: TravelMode; origin?: NavigationOrigin } = {}) {
   const counts = { requests: 0, watches: 0, stops: 0, opens: 0 };
+  let location: LocationAvailability = 'granted';
+  useNavigationUi.getState().setLocation(location);
   configureNavigationRuntime({
     provider: { id: 'mapbox', supportedModes: ['walking', 'cycling', 'driving'], async getRoutes() {
       counts.requests += 1; return { kind: 'routes', provider: 'mapbox', routes: [fixtureRoute(NAME)] };
     } },
-    locationSource: { kind: 'browser', check: async () => 'granted', watch() { counts.watches += 1; return () => { counts.stops += 1; }; } },
+    locationSource: { kind: 'browser', check: async () => location, watch() { counts.watches += 1; return () => { counts.stops += 1; }; } },
   });
   const controller = navigationController();
   const plan = () => controller.planRoute({ origin: options.origin ?? { kind: 'device-location' }, originCoordinate: origin, destination: fixtureDestination(NAME), mode: options.mode ?? 'walking' });
   await plan();
-  const native = { supported: async () => true, camera: async () => true, mounted: true, phoneLayout: true, foreground: true };
+  const native = { supported: async () => true, camera: async () => true, enterAR: () => controller.enterAR(), mounted: true, focused: true, foreground: true };
   const pending: boolean[] = [];
   const entry = createArNavigationEntry({
     getSession: () => useNavigationStore.getState().session, supported: () => native.supported(), requestCamera: () => native.camera(),
-    startGuidance, enterAR: () => controller.enterAR(), exitAR: () => controller.exitAR(), setPending: (value) => pending.push(value),
+    startGuidance, enterAR: () => native.enterAR(), exitAR: () => controller.exitAR(), setPending: (value) => pending.push(value),
   });
-  return { controller, entry, native, counts, pending, plan, open: () => entry.open(() => { counts.opens += 1; }, () => native.mounted && native.phoneLayout && native.foreground) };
+  return {
+    controller, entry, native, counts, pending, plan,
+    setLocation(next: LocationAvailability) {
+      location = next;
+      useNavigationUi.getState().setLocation(next);
+    },
+    open: () => entry.open(() => { counts.opens += 1; }, () =>
+      native.mounted && native.focused && native.foreground && (location === 'granted' || location === 'approximate')),
+  };
 }
 
 describe('Take Me There → phone AR', () => {
@@ -80,6 +91,30 @@ describe('Take Me There → phone AR', () => {
     assert.deepEqual(h.counts, { requests: 1, watches: 1, stops: 0, opens: 1 });
     endNavigation(); assert.equal(isLocationRunning(), false); assert.equal(h.counts.stops, 1);
   });
+  it('reports unavailable when guidance starts but AR entry is refused, keeping the map walk active', async () => {
+    const h = await harness(); const selected = arEntryRoute(useNavigationStore.getState().session);
+    h.native.enterAR = () => false;
+    assert.equal(await h.open(), 'unavailable');
+    const session = useNavigationStore.getState().session;
+    assert.equal(session.phase, 'navigating');
+    assert.ok('activeRoute' in session); assert.equal(session.activeRoute.route, selected);
+    assert.equal(isLocationRunning(), true);
+    assert.deepEqual(h.counts, { requests: 1, watches: 1, stops: 0, opens: 0 });
+    assert.deepEqual(h.pending, [true, false]);
+    h.native.enterAR = () => h.controller.enterAR();
+    assert.equal(await h.open(), 'opened', 'a retry enters the existing map walk');
+    assert.deepEqual(h.counts, { requests: 1, watches: 1, stops: 0, opens: 1 });
+  });
+  it('keeps cancelled semantics when an already-active map walk refuses AR entry', async () => {
+    const h = await harness(); assert.equal(startGuidance(), true);
+    const before = useNavigationStore.getState().session;
+    h.native.enterAR = () => false;
+    assert.equal(await h.open(), 'cancelled');
+    assert.equal(useNavigationStore.getState().session, before);
+    assert.equal(isLocationRunning(), true);
+    assert.deepEqual(h.counts, { requests: 1, watches: 1, stops: 0, opens: 0 });
+    assert.deepEqual(h.pending, [true, false]);
+  });
   it('leaves the map unchanged on unsupported hardware, camera denial and native failure', async () => {
     const h = await harness(); const before = useNavigationStore.getState().session;
     h.native.supported = async () => false; assert.equal(await h.open(), 'unsupported');
@@ -92,11 +127,16 @@ describe('Take Me There → phone AR', () => {
     const first = h.open(); assert.equal(await h.open(), 'busy'); permission.resolve(true);
     assert.equal(await first, 'opened'); assert.equal(h.counts.opens, 1);
   });
-  for (const cause of ['cancel', 'unmount', 'new route', 'non-phone layout', 'background'] as const) {
+  for (const cause of ['cancel', 'unmount', 'new route', 'tab blur', 'background', 'location permission loss'] as const) {
     it(`ignores a late permission result after ${cause}`, async () => {
       const h = await harness(); const permission = deferred<boolean>(); h.native.camera = () => permission.promise;
       const first = h.open(); await Promise.resolve();
-      if (cause === 'cancel') endNavigation(); else if (cause === 'unmount') h.native.mounted = false; else if (cause === 'non-phone layout') h.native.phoneLayout = false; else if (cause === 'background') h.native.foreground = false; else await h.plan();
+      if (cause === 'cancel') endNavigation();
+      else if (cause === 'unmount') h.native.mounted = false;
+      else if (cause === 'tab blur') h.native.focused = false;
+      else if (cause === 'background') h.native.foreground = false;
+      else if (cause === 'location permission loss') h.setLocation('denied');
+      else await h.plan();
       permission.resolve(true); assert.equal(await first, 'cancelled'); assert.equal(h.counts.opens, 0); assert.equal(h.counts.watches, 0);
     });
   }
