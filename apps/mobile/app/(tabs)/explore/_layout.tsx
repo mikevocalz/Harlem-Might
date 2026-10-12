@@ -42,6 +42,7 @@ import { ExplorePane } from '@/src/spatial/ExplorePane';
 import { ExploreWorkspaceContext, ExploreWorkspaceWindow } from '@/src/spatial/ExploreWorkspaceWindow';
 import { isHorizonBuild } from '@/src/spatial/horizonBuild';
 import { ViewInArButton } from '@/src/ar/ViewInArButton';
+import { ArNavigationButton } from '@/src/ar/ArNavigationButton';
 import { metaWindows } from '@/src/spatial/metaWindows';
 import { useNavigationPresentation } from '@/src/navigation/useNavigationPresentation';
 import { usePlaceDetailPanel } from '@/src/spatial/usePlaceDetailPanel';
@@ -231,6 +232,7 @@ export default function ExploreRouteLayout() {
                 {/* The assistant is struck until it has a backend: today it would only
                     repeat Discover's search (spatial DECISIONS S16, 2026-10-08). */}
                 <NavigationHud
+                  arAction={<ArNavigationButton />}
                   onShowSteps={single ? showSteps : undefined}
                   onShowPlace={showPlaceAfterTrip}
                   onSave={(placeId) => useExplore.getState().toggleSavedPreview(placeId)}
@@ -246,6 +248,7 @@ export default function ExploreRouteLayout() {
                 <ExploreWorkspaceWindow surfaceId={EXPLORE_SURFACE.placeDetail}>
                   {directionsPlace ? (
                     <DirectionsPanel
+                      arAction={<ArNavigationButton />}
                       place={directionsPlace}
                       originPlaces={catalogue}
                       padding={windowPadding}

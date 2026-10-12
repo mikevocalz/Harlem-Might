@@ -7,6 +7,7 @@
 //   action: https://mobbin.com/screens/d67ae2a3-9b80-4a75-83ff-d9de9dd252e2
 
 import { MotionView, transitionFor, useReducedMotion } from '@acme/ui';
+import type { ReactNode } from 'react';
 import { MightsButton } from '@acme/ui/mights';
 import { Text, View } from '@acme/ui/tw';
 import { useExploreType } from '../../explore/explore-type';
@@ -17,6 +18,8 @@ import { useHudView } from './hooks';
 import { ManeuverIcon } from './ManeuverIcon';
 
 export interface NavigationHudProps {
+  /** Native host's optional entry into AR for the current walk. */
+  arAction?: ReactNode;
   /** Opens the full step list. Pass where the list is not already beside the map (phones). */
   onShowSteps?: () => void;
   /** Puts the camera back on the position. Pass only for a map with a camera to move. */
@@ -42,7 +45,7 @@ const ENTER = { type: 'timing', duration: 200 } as const;
  * Reads the shared session and progress only. The per-fix store (position,
  * heading) is drawn by the map's puck, so a GPS fix never re-renders the HUD.
  */
-export function NavigationHud({ onShowSteps, onRecenter, onShowPlace, onSave, isSaved, insets }: NavigationHudProps) {
+export function NavigationHud({ arAction, onShowSteps, onRecenter, onShowPlace, onSave, isSaved, insets }: NavigationHudProps) {
   const type = useExploreType();
   const view = useHudView();
   const followUser = useNavigationUi((s) => s.followUser);
@@ -144,6 +147,7 @@ export function NavigationHud({ onShowSteps, onRecenter, onShowPlace, onSave, is
           </Text>
         </View>
         <View className={'flex-row flex-wrap ' + type.inlineGap}>
+          {arAction}
           {onRecenter && !followUser ? (
             <MightsButton size={type.buttons.control} variant="outline" onPress={onRecenter} aria-label="Recenter the map on your position">
               Recenter
