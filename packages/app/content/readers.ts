@@ -78,6 +78,15 @@ export interface ContentReaders {
    * params with `isHarlemDate()` first and 404 on failure.
    */
   listEventsForDate(dateInNY: string): Promise<ContentResult<EventRecord[]>>;
+  /**
+   * One page of published events overlapping the inclusive New York date
+   * range, ordered by start time and id. Ongoing, cancelled and postponed
+   * events are retained so visitors can see their current status.
+   *
+   * @throws {RangeError} for invalid/reversed dates, more than
+   * {@linkcode EVENT_RANGE_DAYS} calendar days, or a non-positive/unsafe page.
+   */
+  listEventsForDateRange(startDateInNY: string, endDateInNY: string, page?: number): Promise<ContentResult<EventPage>>;
   /** Every catalogue place, name-ordered. Places are not versioned: import state is carried on the record itself. */
   listPlaces(): Promise<ContentResult<PlaceRecord[]>>;
   /**
@@ -109,11 +118,24 @@ export interface MusicArtistPage {
   totalDocs: number;
 }
 
+/** A page of events matching an inclusive New York calendar window. */
+export interface EventPage {
+  events: EventRecord[];
+  hasNextPage: boolean;
+  totalDocs: number;
+}
+
 /** Hard cap per list read. No route shows more than this today. */
 export const LIST_LIMIT = 100;
 
 /** Artists per /music page — a full grid row-count on 2- and 3-column layouts. */
 export const MUSIC_PAGE_SIZE = 24;
+
+/** Events per page on Today and Upcoming. */
+export const EVENTS_PAGE_SIZE = 24;
+
+/** Maximum inclusive calendar-day span for an event range read. */
+export const EVENT_RANGE_DAYS = 90;
 
 /**
  * Cap for the places catalogue read. Places is the browse corpus, not an
@@ -165,6 +187,15 @@ const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 // column — so its reads pass an empty base clause to `bySlug` instead.
 const PUBLISHED: ContentWhere = { _status: { equals: 'published' } };
 
+/** Strict overlap with [start, end): midnight boundaries never leak a day. */
+const eventOverlapWhere = (start: Date, end: Date): ContentWhere => ({
+  and: [
+    PUBLISHED,
+    { startsAt: { less_than: end.toISOString() } },
+    { endsAt: { greater_than: start.toISOString() } },
+  ],
+});
+
 export const createContentReaders = (source: ContentSource): ContentReaders => {
   const list = async <TSlug extends keyof ContentDocs, TRecord>(
     query: ContentQuery<TSlug>,
@@ -205,19 +236,45 @@ export const createContentReaders = (source: ContentSource): ContentReaders => {
       return list(
         {
           collection: 'events',
-          where: {
-            and: [
-              PUBLISHED,
-              { startsAt: { less_than: end.toISOString() } },
-              { endsAt: { greater_than: start.toISOString() } },
-            ],
-          },
+          where: eventOverlapWhere(start, end),
           depth: 1,
           limit: LIST_LIMIT,
-          sort: 'startsAt',
+          sort: 'startsAt,id',
         },
         mapEvent,
       );
+    },
+    listEventsForDateRange: async (startDateInNY, endDateInNY, page = 1) => {
+      // Validate before checking configuration or catching query errors:
+      // bad caller input must not masquerade as missing CMS content.
+      const { start } = harlemDayBounds(startDateInNY);
+      const { end } = harlemDayBounds(endDateInNY);
+      // Count calendar dates in UTC, not elapsed New York hours across DST.
+      const daySpan = (Date.parse(endDateInNY) - Date.parse(startDateInNY)) / 86_400_000;
+      if (daySpan < 0 || daySpan >= EVENT_RANGE_DAYS) {
+        throw new RangeError(`Expected an ordered range of at most ${EVENT_RANGE_DAYS} New York calendar days.`);
+      }
+      if (!Number.isSafeInteger(page) || page < 1) {
+        throw new RangeError('Expected a positive safe integer event page.');
+      }
+      if (!source.isConfigured()) return notConfigured();
+      try {
+        const result = await source.findPage({
+          collection: 'events',
+          where: eventOverlapWhere(start, end),
+          depth: 1,
+          limit: EVENTS_PAGE_SIZE,
+          sort: 'startsAt,id',
+          page,
+        });
+        return ok({
+          events: result.docs.map(mapEvent),
+          hasNextPage: result.hasNextPage,
+          totalDocs: result.totalDocs,
+        });
+      } catch (error) {
+        return queryFailed(error);
+      }
     },
     listPlaces: () =>
       list({ collection: 'places', where: {}, depth: 0, limit: PLACES_LIMIT, sort: 'name' }, mapPlaceRecord),

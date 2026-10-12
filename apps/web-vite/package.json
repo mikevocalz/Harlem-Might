@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@acme/app": "workspace:*",
     "@acme/payload": "workspace:*",
     "@acme/theme": "workspace:*",
     "@acme/ui": "workspace:*",

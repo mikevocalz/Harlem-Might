@@ -82,3 +82,17 @@ describe('venueName', () => {
     assert.equal(venueName({}), null);
   });
 });
+
+describe('upcoming event dates', () => {
+  it('includes the date and year even for same-day events, using the New York day', () => {
+    const when = plain(eventWhen({ startsAt: '2026-12-20T00:00:00Z', endsAt: '2026-12-20T02:00:00Z', timeZone: tz }, true));
+    assert.match(when, /Dec 19, 2026/);
+    assert.match(when, /7:00/);
+    assert.doesNotMatch(when, /Dec 20/);
+  });
+  it('labels multi-year ranges without hiding either year', () => {
+    const when = plain(eventWhen({ startsAt: '2026-12-31T23:00:00Z', endsAt: '2027-01-01T07:00:00Z', timeZone: tz }, true));
+    assert.match(when, /2026/);
+    assert.match(when, /2027/);
+  });
+});

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createRestContentSource, restQueryString } from './rest-source.ts';
+import { createContentReaders } from './readers.ts';
 
 test('restQueryString encodes nested where, select and draft the way qs reads them', () => {
   const qs = decodeURIComponent(
@@ -64,4 +65,49 @@ test('no apiUrl means not configured', () => {
 test('serializes the stable music pagination tie-breaker for the REST path', () => {
   const query = restQueryString({ collection: 'music-artists', where: {}, depth: 1, page: 2, limit: 24, sort: 'name,id' });
   assert.equal(new URLSearchParams(query).get('sort'), 'name,id');
+});
+
+test('event range REST reads send the published overlap filter, stable sort and page anonymously', async () => {
+  const requests: { url: string; headers: Record<string, string> }[] = [];
+  const source = createRestContentSource({
+    apiUrl: 'https://example.test/payload-api/',
+    fetch: async (url, init) => {
+      requests.push({ url, headers: init.headers });
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ docs: [], hasNextPage: true, totalDocs: 72 }),
+      };
+    },
+  });
+  const result = await createContentReaders(source).listEventsForDateRange('2026-10-31', '2026-11-02', 2);
+  assert.deepEqual(result, { status: 'ok', data: { events: [], hasNextPage: true, totalDocs: 72 } });
+  assert.equal(requests.length, 1);
+  const request = requests[0]!;
+  assert.deepEqual(request.headers, { accept: 'application/json' });
+  const url = new URL(request.url);
+  assert.equal(url.pathname, '/payload-api/events');
+  assert.deepEqual(Object.fromEntries(url.searchParams), {
+    'where[and][0][_status][equals]': 'published',
+    'where[and][1][startsAt][less_than]': '2026-11-03T05:00:00.000Z',
+    'where[and][2][endsAt][greater_than]': '2026-10-31T04:00:00.000Z',
+    depth: '1',
+    limit: '24',
+    page: '2',
+    sort: 'startsAt,id',
+    draft: 'false',
+  });
+});
+
+test('event range REST failures remain unavailable rather than an empty event list', async () => {
+  for (const response of [
+    { ok: false, status: 503, json: async () => ({ docs: [] }) },
+    { ok: true, status: 200, json: async () => ({ error: 'Missing documents' }) },
+  ]) {
+    const source = createRestContentSource({ apiUrl: 'https://example.test/payload-api', fetch: async () => response });
+    const result = await createContentReaders(source).listEventsForDateRange('2026-10-12', '2026-10-12');
+    assert.equal(result.status, 'unavailable');
+    if (result.status === 'unavailable') assert.equal(result.reason, 'query-failed');
+    assert.ok(!('data' in result));
+  }
 });

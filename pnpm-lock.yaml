@@ -1043,6 +1043,9 @@ importers:
 
   apps/web-vite:
     dependencies:
+      '@acme/app':
+        specifier: workspace:*
+        version: link:../../packages/app
       '@acme/payload':
         specifier: workspace:*
         version: link:../../packages/payload

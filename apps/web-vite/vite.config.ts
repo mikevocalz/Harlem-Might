@@ -134,7 +134,11 @@ export default defineConfig({
     tanstackStart({
       // Every public route prerenders; the Payload reads are resilient, so a
       // build with the CMS down still emits real HTML with the offline state.
-      prerender: { enabled: true, crawlLinks: true, failOnError: true },
+      prerender: {
+        enabled: true, crawlLinks: true, failOnError: true,
+        // A live calendar must resolve the Harlem date at request time.
+        filter: ({ path }) => path.split('?')[0] !== '/today',
+      },
       pages: [{ path: '/' }, { path: '/pages' }],
     }),
     /*

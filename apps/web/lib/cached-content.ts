@@ -7,6 +7,7 @@ import {
   getWalk,
   getPlaceByLegacySlug,
   listEventsForDate,
+  listEventsForDateRange,
   listExploreCatalogue,
   listMusicArtistsPage,
   listStories,
@@ -54,6 +55,11 @@ export async function cachedStories() {
 export async function cachedEventsForDate(date: string) {
   'use cache';
   return settle(`events ${date}`, await listEventsForDate(date));
+}
+
+export async function cachedEventsForDateRange(start: string, end: string, page: number) {
+  'use cache';
+  return settle(`events ${start}–${end} p${page}`, await listEventsForDateRange(start, end, page));
 }
 
 export async function cachedPlace(slug: string) {
