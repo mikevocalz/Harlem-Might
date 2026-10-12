@@ -72,9 +72,13 @@ export interface WalkMapView {
  * between them. Null when no stop has a point.
  */
 export function walkMapView(stops: readonly WalkStop[]): WalkMapView | null {
-  const points = stops
-    .map((stop) => stop.place?.lngLat)
-    .filter((p): p is readonly [number, number] => p !== undefined);
+  // Keep the original stop index: a later located stop must not inherit the
+  // start marker when the actual first stop has no catalogue point.
+  const pins: MapPin[] = stops.flatMap((stop, index) => {
+    const lngLat = stop.place?.lngLat;
+    return lngLat ? [{ lngLat, tone: index === 0 ? 'live' : 'cobalt' }] : [];
+  });
+  const points = pins.map((pin) => pin.lngLat);
   if (points.length === 0) return null;
   const lngs = points.map((p) => p[0]);
   const lats = points.map((p) => p[1]);
@@ -85,7 +89,7 @@ export function walkMapView(stops: readonly WalkStop[]): WalkMapView | null {
   return {
     center: [(minLng + maxLng) / 2, (minLat + maxLat) / 2],
     zoom,
-    pins: points.map((lngLat, i) => ({ lngLat, tone: i === 0 ? 'live' : 'cobalt' })),
+    pins,
     located: points.length,
   };
 }

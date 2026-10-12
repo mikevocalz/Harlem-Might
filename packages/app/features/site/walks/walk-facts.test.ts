@@ -112,6 +112,17 @@ describe('walkMapView', () => {
     assert.equal(view.pins[0]?.tone, 'live');
     assert.equal(view.pins[1]?.tone, 'cobalt');
   });
+  it('does not label a later mapped stop as the start when the first point is missing', () => {
+    const view = walkMapView([stop(1), mappedStop(2, 'b'), mappedStop(3, 'a')]);
+    assert.ok(view);
+    assert.equal(view.located, 2);
+    assert.deepEqual(view.pins.map((pin) => pin.tone), ['cobalt', 'cobalt']);
+    assert.deepEqual(view.pins.map((pin) => pin.lngLat), [points.b, points.a]);
+  });
+  it('keeps the start marker when only a later stop is missing', () => {
+    const view = walkMapView([mappedStop(1, 'a'), stop(2), mappedStop(3, 'b')]);
+    assert.deepEqual(view?.pins.map((pin) => pin.tone), ['live', 'cobalt']);
+  });
   it('zooms in for a single stop', () => {
     assert.equal(walkMapView([mappedStop(1, 'a')])?.zoom, 16);
   });

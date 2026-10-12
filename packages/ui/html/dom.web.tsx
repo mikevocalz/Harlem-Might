@@ -1,7 +1,7 @@
 'use client';
 /**
  * PLATFORM FORK — justification (§7): these tags have no react-native-web
- * mapping (figcaption, address, details, summary, fieldset, legend, select)
+ * mapping (figcaption, address, details, summary, fieldset, legend, select, time)
  * or the RNW rendering is not the real element (pressable → div). The web
  * build emits the real DOM elements directly — native controls on web.
  *
@@ -49,6 +49,7 @@ const dom = <T extends P>(Tag: string) => {
 
 export const FigcaptionBase = dom('figcaption');
 export const AddressBase = dom('address');
+export const TimeBase = dom<P & { dateTime?: string }>('time');
 export const DetailsBase = dom<P & { open?: boolean }>('details');
 export const SummaryBase = dom('summary');
 export const OrderedListBase = dom('ol');

@@ -51,6 +51,9 @@ function SignInPanel() {
   const setPassword = useMemberSession((state) => state.setPassword);
   const setName = useMemberSession((state) => state.setName);
   const submit = useMemberSession((state) => state.submit);
+  const signOut = useMemberSession((state) => state.signOut);
+  const signOutError = useMemberSession((state) => state.signOutError);
+  const signOutPending = useMemberSession((state) => state.signOutPending);
 
   return (
     <Main className="flex-1 bg-surface">
@@ -64,6 +67,13 @@ function SignInPanel() {
             places, saved walks and preferences to follow you between devices.
           </Text>
         </View>
+
+        {signOutPending || signOutError ? (
+          <View role="status" className="max-w-xl gap-3">
+            <Text className="text-sm text-danger">{signOutPending ? 'Confirming sign-out…' : signOutError}</Text>
+            <Button title="Retry sign-out" variant="outline" disabled={signOutPending} onPress={() => void signOut()} />
+          </View>
+        ) : null}
 
         <Card className="w-full max-w-xl gap-5 border-border bg-surface-raised p-5 sm:p-7">
           <View className="flex-row gap-2">
@@ -114,6 +124,7 @@ function SignInPanel() {
           <Button
             title={mode === 'register' ? 'Create account' : 'Sign in'}
             onPress={() => void submit()}
+            disabled={signOutPending}
             fullWidth
           />
 
@@ -132,6 +143,7 @@ function SignedInProfile() {
   const savedPlaces = useMemberSession((state) => state.savedPlaces);
   const signOut = useMemberSession((state) => state.signOut);
   const removeSavedPlace = useMemberSession((state) => state.removeSavedPlace);
+  const error = useMemberSession((state) => state.error);
 
   if (!member) return null;
 
@@ -168,6 +180,8 @@ function SignedInProfile() {
               Places you save from the map will collect here.
             </Text>
           </View>
+
+          {error ? <View role="alert"><Text className="text-sm text-danger">{error}</Text></View> : null}
 
           {savedPlaces.length ? (
             <View className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">

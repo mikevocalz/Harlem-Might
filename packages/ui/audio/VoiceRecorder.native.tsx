@@ -3,50 +3,32 @@ import { useMemo, useEffect, useRef } from "react";
 import { PermissionsAndroid, Platform } from "react-native";
 import { createStore, useStore } from "zustand";
 import { AudioContext, AudioRecorder } from "react-native-audio-api";
-import { View } from "../tw";
+import { View, Pressable } from "../tw";
 import { Text } from "../Text";
-import { Pressable } from "../tw";
 import { Mic, Square, Trash2 } from "../icons";
 import { haptics } from "../haptics";
 import { AudioPlayer } from "./AudioPlayer";
 import { Waveform } from "./Waveform.tsx";
-import { frameLevel, pushLevel } from "./waveform.ts";
-import type {
-  VoiceRecorderProps,
-  VoiceRecording,
-} from "./VoiceRecorder.types.ts";
+import {
+  createNativeRecorderController,
+  initialNativeRecorderState,
+  type NativeRecorderState,
+} from "./native-recorder-controller.ts";
+import type { VoiceRecorderProps } from "./VoiceRecorder.types.ts";
 
-/** How often the meter samples. 16 is ~60fps, which is smoother than the eye
- *  needs for bars this wide and costs a JS frame each time; 50ms reads as
- *  continuous and leaves the thread alone. */
-const SAMPLE_MS = 50;
-const FFT_SIZE = 1024;
-
-function createRecorderStore() {
-  return createStore<{
-    recording: boolean;
-    seconds: number;
-    levels: number[];
-    error: string | null;
-    /** The finished take, held for review before it is handed over. */
-    take: VoiceRecording | null;
-    set: (
-      next: Partial<{
-        recording: boolean;
-        seconds: number;
-        levels: number[];
-        error: string | null;
-        take: VoiceRecording | null;
-      }>,
-    ) => void;
-  }>((set) => ({
-    recording: false,
-    seconds: 0,
-    levels: [],
-    error: null,
-    take: null,
-    set: (next) => set(next),
-  }));
+/** Android requires the runtime grant before acquiring a microphone session. */
+async function ensurePermission() {
+  if (Platform.OS !== "android") return true;
+  const granted = await PermissionsAndroid.request(
+    PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+    {
+      title: "Microphone access",
+      message: "Recording a voice note needs the microphone.",
+      buttonPositive: "Allow",
+      buttonNegative: "Not now",
+    },
+  );
+  return granted === PermissionsAndroid.RESULTS.GRANTED;
 }
 
 /**
@@ -72,161 +54,65 @@ export function VoiceRecorder({
   maxSeconds,
   className,
 }: VoiceRecorderProps) {
-  const store = useMemo(() => createRecorderStore(), []);
-  const recording = useStore(store, (state) => state.recording);
+  const store = useMemo(
+    () => createStore<NativeRecorderState>(() => initialNativeRecorderState()),
+    [],
+  );
+  const phase = useStore(store, (state) => state.phase);
+  const recording = phase === "recording";
+  const busy = phase === "starting" || phase === "stopping";
   const seconds = useStore(store, (state) => state.seconds);
   const levels = useStore(store, (state) => state.levels);
   const error = useStore(store, (state) => state.error);
   const take = useStore(store, (state) => state.take);
+  const controller = useRef<ReturnType<typeof createNativeRecorderController> | null>(null);
+  const limit = useRef(maxSeconds);
 
-  const recorder = useRef<AudioRecorder | null>(null);
-  const context = useRef<AudioContext | null>(null);
-  const analyser = useRef<ReturnType<AudioContext["createAnalyser"]> | null>(
-    null,
-  );
-  const meter = useRef<ReturnType<typeof setInterval> | null>(null);
-  const clock = useRef<ReturnType<typeof setInterval> | null>(null);
-  const captured = useRef<number[]>([]);
+  useEffect(() => {
+    limit.current = maxSeconds;
+  }, [maxSeconds]);
 
-  const teardown = () => {
-    if (meter.current !== null) clearInterval(meter.current);
-    if (clock.current !== null) clearInterval(clock.current);
-    meter.current = null;
-    clock.current = null;
-  };
-
-  // A recorder holds the microphone, so an unmount mid-take must release it.
-  useEffect(
-    () => () => {
-      teardown();
-      void recorder.current?.stop();
-      void context.current?.close();
-    },
-    [],
-  );
-
-  /**
-   * Android needs a RUNTIME grant for the microphone; the manifest entry alone
-   * is not enough on 13+. `AudioRecorder.start()` does not ask, it just fails —
-   * so without this the first tap always errors, which reads as a broken
-   * button rather than a permission the user can grant.
-   */
-  const ensurePermission = async () => {
-    if (Platform.OS !== "android") return true;
-    const granted = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-      {
-        title: "Microphone access",
-        message: "Recording a voice note needs the microphone.",
-        buttonPositive: "Allow",
-        buttonNegative: "Not now",
+  useEffect(() => {
+    const current = createNativeRecorderController({
+      ensurePermission,
+      createRecorder: () => new AudioRecorder(),
+      createContext: () => new AudioContext(),
+      createAnalyser: (context) => context.createAnalyser(),
+      // Mic -> analyser only. Connecting to the destination creates feedback.
+      connect: (recorder, context, analyser) => {
+        recorder.connect(context, analyser);
       },
-    );
-    return granted === PermissionsAndroid.RESULTS.GRANTED;
-  };
-
-  const start = async () => {
-    haptics.selection();
-    captured.current = [];
-
-    if (!(await ensurePermission())) {
-      store?.getState().set({
-        error: "Microphone access is needed to record a voice note.",
-      });
-      return;
-    }
-
-    const instance = new AudioRecorder();
-    instance.enableFileOutput();
-
-    const started = await instance.start();
-    if (started.status === "error") {
-      store?.getState().set({
-        error: "Could not start recording. Check the microphone permission.",
-      });
-      return;
-    }
-
-    // Mic -> recorder adapter (owned internally by AudioRecorder) -> analyser,
-    // and stop there. Connecting the analyser to the destination would play the
-    // microphone back through the speakers.
-    const audioContext = new AudioContext();
-    const node = audioContext.createAnalyser();
-    node.fftSize = FFT_SIZE;
-    instance.connect(audioContext, node);
-
-    recorder.current = instance;
-    context.current = audioContext;
-    analyser.current = node;
-    store
-      ?.getState()
-      .set({ recording: true, seconds: 0, levels: [], error: null });
-
-    const buffer = new Uint8Array(node.frequencyBinCount);
-    meter.current = setInterval(() => {
-      const current = analyser.current;
-      const state = store?.getState();
-      if (current === null || state === undefined) return;
-
-      current.getByteTimeDomainData(buffer);
-      const level = frameLevel(buffer);
-      captured.current.push(level);
-      state.set({ levels: pushLevel(state.levels, level) });
-    }, SAMPLE_MS);
-
-    clock.current = setInterval(() => {
-      const state = store?.getState();
-      if (state === undefined) return;
-      const next = state.seconds + 1;
-      state.set({ seconds: next });
-      if (maxSeconds !== undefined && next >= maxSeconds) void stop();
-    }, 1000);
-  };
-
-  const stop = async () => {
-    haptics.selection();
-    teardown();
-
-    const result = await recorder.current?.stop();
-    recorder.current?.disconnect();
-    void context.current?.close();
-    recorder.current = null;
-    context.current = null;
-    analyser.current = null;
-
-    const path = result?.status === "success" ? result.paths[0] : undefined;
-    store?.getState().set({ recording: false });
-
-    if (path === undefined) {
-      store?.getState().set({ error: "Nothing was recorded." });
-      return;
-    }
-
-    // The take is REVIEWED, not sent. A voice note is the one attachment you
-    // cannot check before committing — you either hear it back or you find out
-    // later that the mic was covered. This is also why the review player uses
-    // the captured levels: the shape you watched while recording is the shape
-    // you scrub through.
-    store?.getState().set({
-      take: {
-        uri: path,
-        duration: result?.status === "success" ? result.duration : seconds,
-        levels: captured.current,
-      },
+      maxSeconds: () => limit.current,
+      onChange: (state) => store.setState(state),
     });
-  };
+    controller.current = current;
+    store.setState(initialNativeRecorderState());
+    return () => {
+      controller.current = null;
+      void current.dispose();
+    };
+  }, [store]);
 
+  const start = () => {
+    haptics.selection();
+    void controller.current?.start();
+  };
+  const stop = () => {
+    haptics.selection();
+    void controller.current?.stop();
+  };
   const cancel = () => {
-    teardown();
-    void recorder.current?.stop();
-    recorder.current?.disconnect();
-    void context.current?.close();
-    recorder.current = null;
-    context.current = null;
+    void controller.current?.cancel();
     onCancel();
   };
 
   const clock_ = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+  const status = recording ? "Recording"
+    : phase === "starting" ? "Starting"
+    : phase === "stopping" ? "Finishing" : "Ready";
+  const hint = recording ? "Tap the square to finish"
+    : phase === "starting" ? "Preparing the microphone"
+    : phase === "stopping" ? "Finishing your recording" : "Tap the mic to start";
 
   if (take !== null) {
     return (
@@ -238,13 +124,15 @@ export function VoiceRecorder({
           label="Your recording"
         />
 
+        {error ? (
+          <Text className="text-center text-sm text-danger">{error}</Text>
+        ) : null}
+
         <View className="flex-row gap-3">
           <Pressable
             role="button"
             aria-label="Record again"
-            onPress={() => {
-              store?.getState().set({ take: null, levels: [], seconds: 0 });
-            }}
+            onPress={() => controller.current?.reset()}
             className="h-11 flex-1 items-center justify-center rounded-md border-2 border-border bg-surface-raised px-3 transition-colors duration-fast hover:bg-surface-sunken active:bg-surface-sunken motion-reduce:transition-none"
           >
             <Text
@@ -283,13 +171,13 @@ export function VoiceRecorder({
             {clock_}
           </Text>
           <Text className="text-xs text-text-muted md:text-sm">
-            {recording ? "Recording" : "Ready"}
+            {status}
           </Text>
         </View>
       </View>
 
       <View className="flex-row items-center justify-center gap-4">
-        {recording ? (
+        {recording || busy ? (
           <Pressable
             role="button"
             aria-label="Discard recording"
@@ -304,8 +192,11 @@ export function VoiceRecorder({
             out from under the finger mid-take. */}
         <Pressable
           role="button"
-          aria-label={recording ? "Stop and keep recording" : "Start recording"}
-          onPress={() => void (recording ? stop() : start())}
+          aria-label={busy ? hint : recording ? "Stop and keep recording" : "Start recording"}
+          disabled={busy}
+          aria-busy={busy}
+          accessibilityState={{ disabled: busy }}
+          onPress={recording ? stop : start}
           className={`h-16 w-16 items-center justify-center rounded-md border-2 border-border shadow-card transition-colors duration-fast motion-reduce:transition-none ${
             recording ? "bg-danger" : "bg-primary"
           }`}
@@ -319,7 +210,7 @@ export function VoiceRecorder({
       </View>
 
       <Text className="text-center text-sm text-text-muted md:text-base">
-        {recording ? "Tap the square to finish" : "Tap the mic to start"}
+        {hint}
       </Text>
 
       {error ? (
