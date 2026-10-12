@@ -232,7 +232,7 @@ export default function ExploreRouteLayout() {
                 {/* The assistant is struck until it has a backend: today it would only
                     repeat Discover's search (spatial DECISIONS S16, 2026-10-08). */}
                 <NavigationHud
-                  arAction={<ArNavigationButton />}
+                  arAction={<ArNavigationButton onStarted={() => setCompactPane('map')} />}
                   onShowSteps={single ? showSteps : undefined}
                   onShowPlace={showPlaceAfterTrip}
                   onSave={(placeId) => useExplore.getState().toggleSavedPreview(placeId)}
@@ -248,7 +248,7 @@ export default function ExploreRouteLayout() {
                 <ExploreWorkspaceWindow surfaceId={EXPLORE_SURFACE.placeDetail}>
                   {directionsPlace ? (
                     <DirectionsPanel
-                      arAction={<ArNavigationButton />}
+                      arAction={<ArNavigationButton onStarted={() => setCompactPane('map')} />}
                       place={directionsPlace}
                       originPlaces={catalogue}
                       padding={windowPadding}

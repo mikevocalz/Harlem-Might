@@ -13,7 +13,7 @@ Implemented on top of #69 and #70, using the shared trip, existing /explore-ar r
 
 ## Hardware scope
 
-The current bridge exposes device-family booleans, not live hinge geometry. Phone navigation is gated to positively resolved ordinary phones. Tablets, foldables, unknown Android capability, measured Apple hardware columns and headsets retain existing map/rail/pane behavior. Existing Android detection gaps remain explicit. No invented hinge measurements or duplicate rail/router are added.
+The current bridge exposes device-family booleans, not live hinge geometry. The new walking-AR entry is Android-only in current builds, gated to positively resolved ordinary Android phones. iOS remains on the existing map until its mounted native capability bridge is implemented and validated; see 01-entry.md for the Apple API path. Tablets, foldables, unknown Android capability, measured Apple hardware columns and headsets retain existing map/rail/pane behavior. Existing Android detection gaps remain explicit. No invented hinge measurements or duplicate rail/router are added.
 
 ## Checks
 

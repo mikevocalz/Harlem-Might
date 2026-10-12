@@ -4,10 +4,13 @@ import { useNavigationStore } from '@acme/app/features/navigation/session/naviga
 import { useNavigationUi } from '@acme/app/features/navigation/view/navigationUi.store.ts';
 import { locationSource, startLocation } from '@acme/app/features/navigation/view/runtime.ts';
 
-/** Pace recovery may observe an already-authorized device-origin paused trip. */
-export function canCheckWalkingPace(input: { session: NavigationSession; location: LocationAvailability }): boolean {
-  return input.session.phase === 'paused' && input.session.origin.kind === 'device-location' &&
-    (input.location === 'granted' || input.location === 'approximate');
+/** A paused device-origin trip may recheck permission, including after Settings changes. */
+export function canCheckWalkingPace(input: { session: NavigationSession }): boolean {
+  return input.session.phase === 'paused' && input.session.origin.kind === 'device-location';
+}
+
+function hasLocationGrant(location: LocationAvailability): boolean {
+  return location === 'granted' || location === 'approximate';
 }
 
 /**
@@ -17,15 +20,19 @@ export function canCheckWalkingPace(input: { session: NavigationSession; locatio
  */
 export async function checkWalkingPace(isForeground: () => boolean): Promise<boolean> {
   const session = useNavigationStore.getState().session;
-  if (!isForeground() || !canCheckWalkingPace({ session, location: useNavigationUi.getState().location })) return false;
+  if (!isForeground() || !canCheckWalkingPace({ session })) return false;
   const source = locationSource();
+  const permissionSnapshot = useNavigationUi.getState();
   try {
     const availability = await source.check();
     if (!isForeground() || useNavigationStore.getState().session !== session || locationSource() !== source) return false;
-    // A newer denial event wins over a slower permission-read result.
-    if (!canCheckWalkingPace({ session, location: useNavigationUi.getState().location })) return false;
+    // An unchanged cached denial may have been repaired in Settings. A newer
+    // non-grant snapshot still wins over this read, including repeated denials
+    // with the same value. Unrelated non-grant updates conservatively retry.
+    const currentPermission = useNavigationUi.getState();
+    if (currentPermission !== permissionSnapshot && !hasLocationGrant(currentPermission.location)) return false;
     useNavigationUi.getState().setLocation(availability);
-    if (!canCheckWalkingPace({ session, location: availability })) return false;
+    if (!hasLocationGrant(availability)) return false;
     startLocation();
     return true;
   } catch {

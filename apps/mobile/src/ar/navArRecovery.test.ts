@@ -31,6 +31,19 @@ describe('phone AR fallback direction', () => {
     assert.ok(navigationArrow({ ...arrow, heading: { ...heading, timestampMs: nowMs - 1_500 } }));
     assert.equal(navigationArrow({ ...arrow, heading: { ...heading, timestampMs: nowMs - 1_501 } }), undefined);
   });
+  it('expires with the observation clock even when the same heading and match are retained', () => {
+    assert.ok(navigationArrow(arrow));
+    assert.equal(navigationArrow({ ...arrow, nowMs: nowMs + 1501 }), undefined);
+    assert.equal(navigationArrow({ ...arrow, heading: { ...heading, timestampMs: nowMs + 5001 }, nowMs: nowMs + 5001 }), undefined,
+      'fresh heading does not revive an expired route match');
+  });
+  it('preserves fresh 2D direction when camera/world alignment alone is unavailable', () => {
+    const direction = navigationArrow(arrow);
+    assert.ok(direction);
+    assert.equal(navigationArRecovery({ positioning, arTracking: { kind: 'limited', reason: 'relocalizing' },
+      hasDirection: direction !== undefined })?.title, 'Realign the camera');
+    assert.equal(direction.rotationDeg, 90);
+  });
   it('withholds arrows when the matched route or location is no longer trustworthy', () => {
     assert.equal(navigationArrow({ ...arrow, matchTimestampMs: 0 }), undefined);
     assert.equal(navigationArrow({ ...arrow, isMatched: false }), undefined);

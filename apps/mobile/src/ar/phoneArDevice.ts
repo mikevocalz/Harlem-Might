@@ -11,12 +11,15 @@ export interface PhoneArDeviceInput {
  * The current full-screen walking HUD is limited to ordinary phones. The app
  * has no live fold-feature bounds bridge, so it cannot promise hinge-safe AR
  * controls or preserve a rail through this root route on other families.
- * Missing Android capability evidence is unknown, never an ordinary phone.
+ * Missing native capability evidence is unknown, never an ordinary phone.
  * The existing Android bridge's device-family detection gaps still apply.
  */
 export function supportsPhoneArLayout(input: PhoneArDeviceInput): boolean {
   if (input.hasHardwareColumn) return false;
-  if (input.platform === 'ios') return input.isPad === false;
+  // isPad=false and missing geometry do not distinguish an unopened iOS
+  // foldable. The current native capability module is Android-only. Keep
+  // new iOS walking-AR entry off until a mounted native hinge bridge exists.
+  if (input.platform === 'ios') return false;
   if (input.platform !== 'android') return false;
   const capabilities = input.androidCapabilities;
   return capabilities?.isFoldable === false && capabilities.isTablet === false;

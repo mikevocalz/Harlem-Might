@@ -80,20 +80,21 @@ describe('paused AR walking-pace recovery', () => {
     assert.ok(position.kind === 'tracking' && position.isMovingTooFast);
     assert.equal(useNavigationStore.getState().session.phase, 'paused');
   });
-  it('does not request location without existing permission or for a manual origin', async (t) => {
+  it('does not check location for a manual origin or an idle session', async (t) => {
     const trip = await pausedTrip(t, false);
     stopLocation();
     assert.equal(await checkWalkingPace(() => true), false);
     assert.equal(trip.watches(), 1);
     const session = useNavigationStore.getState().session;
-    assert.equal(canCheckWalkingPace({ session, location: 'denied' }), false);
-    assert.equal(canCheckWalkingPace({ session: { phase: 'idle' }, location: 'granted' }), false);
+    assert.equal(canCheckWalkingPace({ session }), false);
+    assert.equal(canCheckWalkingPace({ session: { phase: 'idle' } }), false);
   });
   it('rechecks permission at action time after an enabled button was rendered', async (t) => {
     const trip = await pausedTrip(t);
     stopLocation();
-    assert.equal(canCheckWalkingPace({ session: useNavigationStore.getState().session, location: 'granted' }), true);
+    assert.equal(canCheckWalkingPace({ session: useNavigationStore.getState().session }), true);
     useNavigationUi.getState().setLocation('denied');
+    trip.setCheck(async () => 'denied');
     assert.equal(await checkWalkingPace(() => true), false);
     assert.equal(isLocationRunning(), false);
     assert.equal(trip.watches(), 1);
@@ -146,4 +147,50 @@ describe('async walking-pace recovery boundaries', () => {
     assert.equal(useNavigationStore.getState().session.phase, 'paused');
     assert.equal(trip.watches(), 1);
   });
+});
+
+
+describe('walking-pace checks after restoring permission in Settings', () => {
+  for (const cached of ['denied', 'disabled'] as const) {
+    for (const restored of ['granted', 'approximate'] as const) {
+      it(`refreshes a cached ${cached} status from a current ${restored} result`, async (t) => {
+        const trip = await pausedTrip(t);
+        stopLocation();
+        useNavigationUi.getState().setLocation(cached);
+        let checks = 0;
+        trip.setCheck(async () => { checks += 1; return restored; });
+        assert.equal(canCheckWalkingPace({ session: useNavigationStore.getState().session }), true, 'the HUD check remains enabled');
+        assert.equal(await checkWalkingPace(() => true), true);
+        assert.equal(checks, 1);
+        assert.equal(useNavigationUi.getState().location, restored);
+        assert.equal(trip.watches(), 2);
+        assert.equal(useNavigationStore.getState().session.phase, 'paused');
+      });
+    }
+    it(`leaves location stopped when the fresh result is still ${cached}`, async (t) => {
+      const trip = await pausedTrip(t);
+      stopLocation();
+      useNavigationUi.getState().setLocation(cached);
+      let checks = 0;
+      trip.setCheck(async () => { checks += 1; return cached; });
+      assert.equal(await checkWalkingPace(() => true), false);
+      assert.equal(checks, 1, 'an eligible paused trip performs the non-prompting read');
+      assert.equal(trip.watches(), 1);
+      assert.equal(isLocationRunning(), false);
+      assert.equal(useNavigationStore.getState().session.phase, 'paused');
+    });
+    it(`rejects a newer ${cached} event even when its value matches the initial cache`, async (t) => {
+      const trip = await pausedTrip(t);
+      stopLocation();
+      useNavigationUi.getState().setLocation(cached);
+      const pending = deferred<LocationAvailability>();
+      trip.setCheck(() => pending.promise);
+      const recovery = checkWalkingPace(() => true);
+      useNavigationUi.getState().setLocation(cached);
+      pending.resolve('granted');
+      assert.equal(await recovery, false);
+      assert.equal(trip.watches(), 1);
+      assert.equal(useNavigationUi.getState().location, cached);
+    });
+  }
 });

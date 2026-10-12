@@ -281,7 +281,7 @@ export function HarlemNavigationArHud({ onBackToMap, onExplorePlace }: HarlemNav
               <>
                 <Line>Check your walking pace after slowing down. Guidance will stay paused.</Line>
                 <Action
-                  disabled={paceCheck.checking || !canCheckWalkingPace({ session, location })}
+                  disabled={paceCheck.checking || !canCheckWalkingPace({ session })}
                   onPress={() => {
                     const state = paceCheckRef.current!;
                     state.setState({ checking: true, message: undefined });
@@ -294,7 +294,7 @@ export function HarlemNavigationArHud({ onBackToMap, onExplorePlace }: HarlemNav
                     });
                   }}
                 >{paceCheck.checking ? 'Checking walking pace…' : 'Check walking pace'}</Action>
-                {location !== 'granted' && location !== 'approximate' ? <Line>Location access is needed to check your pace. You can return to the map.</Line> : null}
+                {location !== 'granted' && location !== 'approximate' ? <Line>If location access or services are off, restore them in Settings, then check your pace again.</Line> : null}
                 {paceCheck.message ? <Line tone="amber">{paceCheck.message}</Line> : null}
               </>
             ) : null}
