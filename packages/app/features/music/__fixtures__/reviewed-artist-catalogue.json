@@ -1,0 +1,334 @@
+{
+  "snapshotDate": "2026-10-12",
+  "sourceCommit": "a9709cba2a914c7f5cb6a1e829fa70906b467d8d",
+  "catalogue": {
+    "draftsExcluded": [
+      "Dave East",
+      "Jim Jones",
+      "Ray Barretto"
+    ]
+  },
+  "artists": [
+    {
+      "name": "40 Cal"
+    },
+    {
+      "name": "A$AP Ant"
+    },
+    {
+      "name": "A$AP Ferg"
+    },
+    {
+      "name": "A$AP Nast"
+    },
+    {
+      "name": "A$AP Rocky"
+    },
+    {
+      "name": "A$AP Twelvyy"
+    },
+    {
+      "name": "Alyson Williams"
+    },
+    {
+      "name": "Andy Razaf"
+    },
+    {
+      "name": "Arcángel"
+    },
+    {
+      "name": "Art Blakey"
+    },
+    {
+      "name": "Art Taylor"
+    },
+    {
+      "name": "Azealia Banks"
+    },
+    {
+      "name": "Bessie Smith"
+    },
+    {
+      "name": "Big L"
+    },
+    {
+      "name": "Bill Saxton"
+    },
+    {
+      "name": "Billie Holiday"
+    },
+    {
+      "name": "Black Ivory",
+      "storedAction": "replace-known-defect",
+      "storedSourceAtAudit": "https://commons.wikimedia.org/wiki/File:Black_Ivory_first_promo_picture.jpg",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Black_Ivory_MG_8784.jpg"
+    },
+    {
+      "name": "Black Rob"
+    },
+    {
+      "name": "Bloodshed"
+    },
+    {
+      "name": "Bobby Darin"
+    },
+    {
+      "name": "Bodega Bamz"
+    },
+    {
+      "name": "Bud Powell"
+    },
+    {
+      "name": "Cab Calloway"
+    },
+    {
+      "name": "Cam'ron"
+    },
+    {
+      "name": "Cameo"
+    },
+    {
+      "name": "Charles Hamilton"
+    },
+    {
+      "name": "Charlie Palmieri"
+    },
+    {
+      "name": "Charlie Parker"
+    },
+    {
+      "name": "Chick Webb"
+    },
+    {
+      "name": "Coleman Hawkins"
+    },
+    {
+      "name": "Count Basie"
+    },
+    {
+      "name": "DJ Hollywood"
+    },
+    {
+      "name": "DJ Red Alert"
+    },
+    {
+      "name": "Dani Stevenson"
+    },
+    {
+      "name": "Diddy"
+    },
+    {
+      "name": "Dizzy Gillespie",
+      "storedAction": "replace-known-defect",
+      "storedSourceAtAudit": "https://commons.wikimedia.org/wiki/File:(Portrait_of_Dizzy_Gillespie,_New_York,_N.Y.,_between_1946_and_1948)_(LOC)_(4976469817).jpg",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Portrait_of_Dizzy_Gillespie,_Famous_Door,_New_York,_N.Y.,_ca._June_1946_(cropped).jpg"
+    },
+    {
+      "name": "Doug E. Fresh"
+    },
+    {
+      "name": "Duke Ellington"
+    },
+    {
+      "name": "Eddie Palmieri"
+    },
+    {
+      "name": "Edward W. Hardy"
+    },
+    {
+      "name": "Ella Fitzgerald"
+    },
+    {
+      "name": "Ethel Waters"
+    },
+    {
+      "name": "Eubie Blake"
+    },
+    {
+      "name": "Famous Dex"
+    },
+    {
+      "name": "Fatman Scoop"
+    },
+    {
+      "name": "Fats Waller"
+    },
+    {
+      "name": "Fletcher Henderson"
+    },
+    {
+      "name": "Florence Mills"
+    },
+    {
+      "name": "Frankie Cutlass",
+      "storedAction": "replace-known-defect",
+      "storedSourceAtAudit": "https://commons.wikimedia.org/wiki/File:Victor_Cruz_And_Frankie_Cutlass.jpg",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Frankie_Cutlass.jpg"
+    },
+    {
+      "name": "Frankie Lymon"
+    },
+    {
+      "name": "Frankie Lymon & the Teenagers"
+    },
+    {
+      "name": "Freddie Jackson"
+    },
+    {
+      "name": "Freekey Zekey"
+    },
+    {
+      "name": "Gladys Bentley"
+    },
+    {
+      "name": "Hall Johnson"
+    },
+    {
+      "name": "Harlem Gospel Choir",
+      "storedAction": "replace-known-defect",
+      "storedSourceAtAudit": "https://commons.wikimedia.org/wiki/File:ArtFund_Promo_Photo_Credit_Yvonnetnt.jpg",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Harlem_Gospel_Choir.jpg"
+    },
+    {
+      "name": "Harlem Quartet"
+    },
+    {
+      "name": "Hazel Scott"
+    },
+    {
+      "name": "Herb McGruff"
+    },
+    {
+      "name": "Immortal Technique"
+    },
+    {
+      "name": "J. Rosamond Johnson",
+      "storedAction": "replace-known-defect",
+      "storedSourceAtAudit": "https://commons.wikimedia.org/wiki/File:Coleandjohnson.jpg",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Portrait_of_J._Rosamond_Johnson_LCCN2004663097.jpg"
+    },
+    {
+      "name": "J.R. Writer"
+    },
+    {
+      "name": "Jackie McLean"
+    },
+    {
+      "name": "Jae Millz"
+    },
+    {
+      "name": "James P. Johnson"
+    },
+    {
+      "name": "James Weldon Johnson"
+    },
+    {
+      "name": "Joe Bataan"
+    },
+    {
+      "name": "Johnny Kemp"
+    },
+    {
+      "name": "Josephine Baker"
+    },
+    {
+      "name": "Juelz Santana"
+    },
+    {
+      "name": "Keith Sweat"
+    },
+    {
+      "name": "Kelis"
+    },
+    {
+      "name": "Kenny Drew"
+    },
+    {
+      "name": "Kool Moe Dee"
+    },
+    {
+      "name": "Kurtis Blow"
+    },
+    {
+      "name": "Lena Horne"
+    },
+    {
+      "name": "Leroy Burgess"
+    },
+    {
+      "name": "Lil Mama"
+    },
+    {
+      "name": "Louis Armstrong"
+    },
+    {
+      "name": "Ma$e"
+    },
+    {
+      "name": "Marc Anthony"
+    },
+    {
+      "name": "Mary Lou Williams"
+    },
+    {
+      "name": "Max Roach"
+    },
+    {
+      "name": "Noble Sissle"
+    },
+    {
+      "name": "Paul Robeson"
+    },
+    {
+      "name": "Rob Base"
+    },
+    {
+      "name": "Sarah Vaughan"
+    },
+    {
+      "name": "Sheck Wes"
+    },
+    {
+      "name": "Smoke DZA"
+    },
+    {
+      "name": "Sonny Rollins"
+    },
+    {
+      "name": "Spoonie Gee"
+    },
+    {
+      "name": "Stuart Bascombe"
+    },
+    {
+      "name": "Sugarhill Ddot"
+    },
+    {
+      "name": "T-Rex"
+    },
+    {
+      "name": "Teddy Riley"
+    },
+    {
+      "name": "Teyana Taylor"
+    },
+    {
+      "name": "The Main Ingredient"
+    },
+    {
+      "name": "Thelonious Monk"
+    },
+    {
+      "name": "Tito Puente"
+    },
+    {
+      "name": "Tupac Shakur"
+    },
+    {
+      "name": "Vado"
+    },
+    {
+      "name": "Willie The Lion Smith"
+    }
+  ]
+}
