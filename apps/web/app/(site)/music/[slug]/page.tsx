@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { MusicArtistScreen } from '@acme/app/features/music/MusicArtistScreen.tsx';
+import { musicArtistOpenGraphPhoto } from '@acme/app/features/music/artist-photo-metadata.ts';
 import { cachedMusicArtist as loadArtist } from '@/lib/cached-content';
 
 // No generateStaticParams: the build has no content database, and with Cache
@@ -14,11 +15,12 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
   const result = await loadArtist(slug);
   if (result.status !== 'ok') return { title: 'Harlem Music' };
-  const { name, shortBio, headshot } = result.data;
+  const { name, shortBio } = result.data;
+  const photo = musicArtistOpenGraphPhoto(result.data);
   return {
     title: name,
     description: shortBio,
-    openGraph: headshot ? { images: [{ url: headshot.url, alt: headshot.altText }] } : undefined,
+    openGraph: photo ? { images: [photo] } : undefined,
   };
 }
 

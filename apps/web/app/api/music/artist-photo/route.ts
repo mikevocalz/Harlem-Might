@@ -1,72 +1,12 @@
-import { cachedArtistPhotoFetch } from '../../../../lib/artist-photo-fetch.ts';
 import { NextResponse, type NextRequest } from 'next/server';
-import {
-  resolveArtistPhotos,
-  type ArtistPhotoResult,
-} from '@acme/app/features/music/artist-photo.ts';
-import {
-  hasVerifiedArtistPhotoSource,
-  resolveVerifiedArtistPhotos,
-} from '@acme/app/features/music/verified-artist-photo.ts';
-import {
-  listMusicArtists,
-  persistRightsClearedMusicArtistHeadshot,
-  type MusicArtistRecord,
-} from '@acme/payload/server';
+import { resolveReviewedArtistPhotos } from '@acme/app/features/music/reviewed-artist-photo.ts';
+import { ARTIST_PHOTO_VERSION } from '@acme/app/features/music/artist-photo-policy.ts';
+import { listMusicArtists } from '@acme/payload/server';
 
 const PHOTO_CACHE_SECONDS = 60 * 60 * 24 * 7;
-const PERSIST_CONCURRENCY = 4;
 
-const cachedFetch = cachedArtistPhotoFetch;
-
-async function persistRightsClearedPhotos(
-  catalogue: readonly MusicArtistRecord[],
-  photos: Record<string, ArtistPhotoResult | null>,
-): Promise<void> {
-  const byName = new Map(catalogue.map((artist) => [artist.name, artist]));
-  const queue = Object.entries(photos).filter(
-    ([name, photo]) =>
-      Boolean(photo) &&
-      photo?.provider === 'wikimedia_commons' &&
-      photo.rightsStatus === 'rights-cleared' &&
-      Boolean(photo.license) &&
-      !byName.get(name)?.headshot,
-  );
-  let cursor = 0;
-
-  const workers = Array.from(
-    { length: Math.min(PERSIST_CONCURRENCY, queue.length) },
-    async () => {
-      while (cursor < queue.length) {
-        const item = queue[cursor++];
-        if (!item) continue;
-        const [name, photo] = item;
-        const artist = byName.get(name);
-        if (!artist || !photo?.license) continue;
-        try {
-          await persistRightsClearedMusicArtistHeadshot(artist.id, {
-            name,
-            url: photo.url,
-            sourceUrl: photo.sourceUrl,
-            credit: photo.credit,
-            license: photo.license,
-            licenseUrl: photo.licenseUrl,
-            width: photo.width,
-            height: photo.height,
-          });
-        } catch (error) {
-          // Photo display must still succeed if durable CMS caching fails.
-          console.warn(
-            `artist headshot persistence failed for ${name}: ${String(error).slice(0, 180)}`,
-          );
-        }
-      }
-    },
-  );
-
-  await Promise.all(workers);
-}
-
+// This public GET is read-only. Durable media changes belong to an explicit,
+// authenticated curation operation, never a visitor's page view or crawler.
 export async function GET(request: NextRequest) {
   const catalogue = await listMusicArtists();
   if (catalogue.status !== 'ok') {
@@ -91,14 +31,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ photos: {} }, { status: 400 });
   }
 
-  const verifiedNames = names.filter((name) => hasVerifiedArtistPhotoSource(name));
-  const legacyNames = names.filter((name) => !hasVerifiedArtistPhotoSource(name));
-  const [verifiedPhotos, legacyPhotos] = await Promise.all([
-    resolveVerifiedArtistPhotos(verifiedNames, cachedFetch, 8),
-    resolveArtistPhotos(legacyNames, cachedFetch, 8),
-  ]);
-  const photos = { ...legacyPhotos, ...verifiedPhotos };
-  await persistRightsClearedPhotos(catalogue.data, photos);
+  const photos = resolveReviewedArtistPhotos(names);
 
   // Provider-reference images stay external and are never ingested into
   // Payload. Serve them through a name-allowlisted same-origin proxy so web,
@@ -110,7 +43,7 @@ export async function GET(request: NextRequest) {
         ? {
             ...photo,
             url: new URL(
-              `/api/music/artist-photo/image?name=${encodeURIComponent(name)}&v=5`,
+              `/api/music/artist-photo/image?name=${encodeURIComponent(name)}&v=${ARTIST_PHOTO_VERSION}`,
               request.nextUrl.origin,
             ).href,
           }

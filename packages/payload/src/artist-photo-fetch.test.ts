@@ -155,3 +155,12 @@ it('preserves the 20 MiB Commons ingestion ceiling without raising the proxy lim
   await assert.rejects(createPublicPhotoFetcher(oversized.transport, dns())('https://upload.wikimedia.org/wikipedia/commons/a/aa/portrait.jpg', { kind: 'commons-image' }), reason('too-large'));
   assert.equal(oversized.upstream.destroyed, true);
 });
+
+it('serves WEBP by response media type even when the selected Bloodshed URL ends in .jpg', async () => {
+  const fixture = upstreamFixture({ type: 'image/webp', chunks: [Buffer.from('RIFF-photo-WEBP')] });
+  const url = 'https://static.wikia.nocookie.net/hip-hop-music/images/a/a8/Bloodshed2.jpg/revision/latest?cb=20140201024637';
+  const result = await createPublicPhotoFetcher(fixture.transport, dns())(url, { kind: 'image' });
+  assert.equal(result.contentType, 'image/webp');
+  assert.equal(result.url, url);
+  assert.equal(await result.text(), 'RIFF-photo-WEBP');
+});
