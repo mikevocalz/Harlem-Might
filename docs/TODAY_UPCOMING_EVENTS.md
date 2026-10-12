@@ -36,6 +36,10 @@ retains its view/page and can reuse the corresponding fresh query cache. Opening
 a fresh `/today` link instead selects Today, page 1. Deep-link parameters are
 normalized for the read/UI; invalid or repeated values use safe defaults.
 
-Next retries immediately expire only the selected event range/page cache before
-refreshing the current URL. The server validates view/page and derives today’s
+Next retries inspect the selected cached range/page and immediately expire its
+failure-only tag only when the result is unavailable, then refresh the current
+URL. Successful entries carry no retry tag, so delayed concurrent retries cannot
+evict a recovered listing. The server validates view/page and derives today’s
 New York date; clients cannot supply cache tags or arbitrary date ranges.
+This is a cache-recovery boundary, not comprehensive abuse prevention: sustained
+outages and backend request throttling remain deployment concerns.

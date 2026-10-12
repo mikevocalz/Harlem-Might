@@ -60,8 +60,11 @@ export async function cachedEventsForDate(date: string) {
 
 export async function cachedEventsForDateRange(start: string, end: string, page: number) {
   'use cache';
-  cacheTag(eventRangeCacheTag(start, end, page));
-  return settle(`events ${start}–${end} p${page}`, await listEventsForDateRange(start, end, page));
+  const result = await listEventsForDateRange(start, end, page);
+  // A delayed concurrent retry may still have observed the old failure. Only
+  // failures carry this tag, so expiring it cannot evict a recovered success.
+  if (result.status === 'unavailable') cacheTag(eventRangeCacheTag(start, end, page));
+  return settle(`events ${start}–${end} p${page}`, result);
 }
 
 export async function cachedPlace(slug: string) {

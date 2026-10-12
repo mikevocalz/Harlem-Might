@@ -1,9 +1,12 @@
 'use server';
 
 import { updateTag } from 'next/cache';
-import { eventRetryCacheTag } from './event-cache-key.ts';
+import { cachedEventsForDateRange } from './cached-content.ts';
+import { eventRetryTarget } from './event-cache-key.ts';
 
-/** Immediately expire only the requested public calendar page before refresh. */
+/** Retry failed reads only; a successful cached listing is never invalidated. */
 export async function retryTodayEvents(input: unknown) {
-  updateTag(eventRetryCacheTag(input));
+  const { start, end, page, tag } = eventRetryTarget(input);
+  const result = await cachedEventsForDateRange(start, end, page);
+  if (result.status === 'unavailable') updateTag(tag);
 }
