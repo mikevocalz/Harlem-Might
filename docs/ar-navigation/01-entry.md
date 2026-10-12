@@ -1,44 +1,29 @@
-# Take Me There to phone AR
+# Take Me There to walking AR
 
-The existing Place Details → Take Me There → DirectionsPanel flow now exposes **Walk in AR** on a walking route from the device's location. The map guidance HUD exposes the same action. Both use the existing navigation controller, selected route, progress, location feed, and `/explore-ar` route. No route is fetched for AR.
+The existing Place Details → Take Me There → DirectionsPanel flow exposes **Walk in AR** on a walking route from the device's location. The map guidance HUD exposes the same action. Both keep the existing controller, selected route, progress and location feed. No route is fetched for AR.
 
-## Entry and cancellation
+## Cross-platform entry and shell
 
-- The new walking-AR entry is **Android-only in current builds**. iOS map/navigation and existing tabletop/street experiences are unchanged.
-- The native adapter requires ordinary-phone capability evidence and excludes tablets, foldables, missing Android capability data, measured Apple hardware columns, web, Quest/Horizon, PICO, and visionOS. The existing Android device-family detection gaps remain; no width or model heuristic is added. It checks Viro's actual device support before opening the camera.
-- Camera permission is requested only on a button press, using the pinned Viro API with `['camera']`. No microphone, storage, or extra location permission is requested.
-- Non-walking routes and manually selected starting points do not offer phone AR.
-- A route preview starts through the existing `startGuidance`; an active map walk retains its route and location watcher.
-- Both entry buttons share one pending native check. Repeated presses cannot create duplicate prompts or screens.
-- A late native result is discarded after cancellation, route replacement, host unmount, app backgrounding, loss of location permission, or newly detected non-phone layout. Denied permission, unsupported devices, and native failures leave the map trip intact. Router failure returns an entered trip to map guidance.
+- iOS and Android use the existing ReactVision `ViroARSceneNavigator`. Entry checks Viro's actual native AR support and camera permission, not an Android-only device-family module. Web, Quest/Horizon, PICO and visionOS remain outside this walking-AR build path; their existing experiences are unchanged.
+- Walking AR mounts inside Explore's permanent map region. Existing Expo Router ownership, tabs/right rail, Discover and Detail `ExplorePane` instances remain in place. There is no new navigator, hardware classifier, width-based device guess or Apple capability bridge.
+- The native map remains mounted underneath AR but is hidden from touch and accessibility. Resizing changes pane styles and HUD clearance, not the AR visit or selected trip. The existing trailing Detail overlay reserves its actual width in the AR HUD; shell safe-area/rail space is not consumed twice.
+- A legacy `/explore-ar` walking visit redirects to Explore without attaching a second navigation owner or mounting tabletop. The same root route continues to own existing tabletop/street experiences.
+- Camera-only permission is requested on explicit press through the pinned Viro API. No microphone, storage or extra location prompt is added. Non-walking routes and manually selected starting points do not offer walking AR.
+- A preview starts through the existing `startGuidance`; an active map walk retains its route and location watcher. Both buttons share one pending native check.
+- Late native results are discarded after cancellation, route replacement, unmount, tab blur, app backgrounding or location-permission loss. Denial and unsupported/native preflight failures preserve the map trip. An AR refusal after guidance starts reports unavailability and keeps that map walk active; failure opening the host also restores map guidance.
 
-The shared foreground `resumeGuidance` action restarts a paused device-origin watch after backgrounding, only with existing location permission. Map and AR HUDs use the same action; manual origins and denied permission cannot start a new watch.
+## Visit and camera lifetime
 
-## Checks and platform limits
+The map-return intent is committed before opening AR, including rotation during a native prompt. Back and hardware Back leave AR before handling Detail/Discover and preserve the walk. Arrival opens the existing destination Detail intent. Tab departure or a compact Detail/Discover screen closes the AR visit and releases its camera, without ending the trip.
 
-The 22 entry tests include the real shared navigation runtime, controller, and stores, with only route-provider/native boundaries substituted. They cover selected-route identity, exactly one route request and location watcher, return-to-map, End cleanup, duplicate presses, denied camera, native failure, cancellation, unmount, newer routes, and unsupported travel modes/manual origins.
+App backgrounding releases only the native camera, preserving the latched HUD/paused-trip intent. Camera attach and detach invalidate the previous native-world placement, so a new Viro world must calibrate again. Shared `resumeGuidance` restores a paused device-origin location watch with already-granted permission. Map and AR HUDs use that same action.
 
-Entry, hardware-capability and real-runtime resume regressions run alongside the full app/mobile suites. Mobile typing uses exact, blob-verified declarations/source from the CI-pinned Viro and Viro External forks, not the public stock package. The initial implemented head also passed hosted full CI; the PR reports results for the latest head. No phone, simulator, or headset was available here. Native camera prompts, visual layout, and physical walking accuracy are not device-verified.
+## Validation and physical acceptance
 
-## Skills and preserved contracts
+The 25 entry tests use the real shared runtime, controller and stores, substituting only routing/native boundaries. They cover route identity, one route request/watch, map return, End, duplicate presses, denied camera, native failure, delayed permission cancellation, tab blur, unsupported modes/manual origins and a refused AR transition after guidance starts. Host/visit/camera regressions cover backgrounding, tab departure, hidden compact maps, overlay clearance, resize identity and stale cleanup.
 
-Read repository AGENTS/CLAUDE, the pinned `mikevocalz-foldable-layouts` reference at `256a97b132803fd2fb8049f7a120cef9cb641f41`, Expo Router/native UI, Matt Pocock TDD, Margelo API design, Impeccable, no-ai-slop, and Nitro Mapbox AR guidance. The original Argent/agent-device URL was unavailable; the official Software Mansion Argent Android setup reference was read, and no SDK/device tools were present. Impeccable's context launcher could not write its engine cache; existing repository context was used. The independent local review found and drove the hardware gate and paused-watch recovery fixes. CodeRabbit skips drafts; its success status is not a substantive review.
+Mobile typing uses exact, blob-verified declarations/source from the CI-pinned Viro forks. Hosted CI runs the full repository checks; current head results are linked in the PR. These are not device tests. No phone, simulator or headset was available. Before release, validate supported iOS and Android builds, native camera prompts, background/reentry, actual fold/rotation geometry, physical-right rail in RTL, large text, screen-reader focus and outdoor walking/arrival. The existing shell's hardware-detection limits remain; AR does not claim new hinge geometry support.
 
-Existing semantic MightsButton/Text/View, Kinetrell map HUD, and Expo Router ownership remain in place. Tablets/foldables stay in the existing map shell with their physical-right rail and keep-mounted ExplorePane because this root AR route cannot satisfy their shell or hinge contract. Ordinary phones use the existing full-screen AR route. No dependency upgrade, Payload change, new navigation shell, merge, deployment, or live migration is included.
+## Preserved contracts
 
-## iOS capability follow-up
-
-`DeviceCapabilities` currently registers only an Android module. UIKit phone idiom
-or `isPad=false`, native AR support and absent safe-area columns do not prove that
-a closed iPhone is non-foldable. iOS walking-AR entry therefore remains unavailable.
-
-A bounded future bridge can use Apple's [UIHingeInteraction](https://developer.apple.com/documentation/uikit/uihingeinteraction)
-with its initial update callback and a mounted native view. The reference also
-permits a nil hinge when an interaction leaves a hinge-providing hierarchy, so
-nil must not be treated as non-foldable during attachment, detachment or scene
-changes. The [official hinge guidance](https://developer.apple.com/videos/play/tech-talks/111464/)
-and [reserved-region guidance](https://developer.apple.com/videos/play/tech-talks/111463/)
-provide the supported implementation path; no model list, width guess or fake
-hinge frame is an acceptable substitute. This requires the matching Apple SDK,
-native compilation, initial closed-cover/non-foldable observations, lifecycle
-and physical-device acceptance. No uncompiled Swift bridge is added here.
+Read repository AGENTS/CLAUDE, the pinned `mikevocalz-foldable-layouts` reference at `256a97b132803fd2fb8049f7a120cef9cb641f41`, Expo/native UI, Matt Pocock TDD, Margelo API, Impeccable, no-ai-slop and Nitro Mapbox AR guidance. Existing semantic UI, Kinetrell, Viro/Mapbox and Payload remain in use. No dependency upgrade, credential change, deployment or live migration is included.

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { AppState, Platform } from 'react-native';
-import { useRouter } from 'solito/navigation';
+import { useIsFocused } from 'expo-router/react-navigation';
 import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
 import { isARSupportedOnDevice, isMetaHorizonXR, isPico, isVisionOS, requestRequiredPermissions } from '@reactvision/react-viro';
@@ -12,7 +12,6 @@ import { useNavigationUi } from '@acme/app/features/navigation/view/navigationUi
 import { isHorizonBuild } from '../spatial/horizonBuild';
 import { arEntryRoute, canUseArNavigation, createArNavigationEntry, enterArNavigation, type ArEntryResult } from './arNavigationEntry';
 import { getNavigationController } from './navigationRuntime';
-import { usePhoneArLayout } from './usePhoneArLayout';
 
 const eligibleBuild = canUseArNavigation({ isHorizonBuild, isMetaHorizonXR, isPico, isVisionOS: isVisionOS(), platform: Platform.OS });
 const entryState = createStore(() => ({ pending: false }));
@@ -35,11 +34,10 @@ const ERROR_COPY: Partial<Record<ArEntryResult, string>> = {
 };
 
 /** Native adapter for the existing directions and map action slots. */
-export function ArNavigationButton({ onStarted }: { onStarted?: () => void } = {}) {
-  const router = useRouter();
-  const phoneArLayout = usePhoneArLayout();
-  const currentPhoneArLayout = useRef(phoneArLayout);
-  useLayoutEffect(() => { currentPhoneArLayout.current = phoneArLayout; }, [phoneArLayout]);
+export function ArNavigationButton({ onOpen, onStarted }: { onOpen: () => void; onStarted?: () => void }) {
+  const focused = useIsFocused();
+  const currentFocus = useRef(focused);
+  useLayoutEffect(() => { currentFocus.current = focused; }, [focused]);
   const session = useNavigationStore(selectSession);
   const location = useNavigationUi((state) => state.location);
   const pending = useStore(entryState, (state) => state.pending);
@@ -55,7 +53,7 @@ export function ArNavigationButton({ onStarted }: { onStarted?: () => void } = {
   }, []);
   useEffect(() => { local.current?.setState({ message: undefined }); }, [session.phase]);
 
-  if (!eligibleBuild || !phoneArLayout || !arEntryRoute(session) || (location !== 'granted' && location !== 'approximate')) return null;
+  if (!eligibleBuild || !focused || !arEntryRoute(session) || (location !== 'granted' && location !== 'approximate')) return null;
 
   return (
     <View className="min-w-0 shrink gap-2">
@@ -65,9 +63,9 @@ export function ArNavigationButton({ onStarted }: { onStarted?: () => void } = {
         aria-label="Follow this walking route in AR"
         onPress={() => {
           local.current?.setState({ message: undefined });
-          void entry.open(() => router.push('/explore-ar'), () => {
+          void entry.open(onOpen, () => {
             const currentLocation = useNavigationUi.getState().location;
-            return mounted.current && AppState.currentState === 'active' && currentPhoneArLayout.current && (currentLocation === 'granted' || currentLocation === 'approximate');
+            return mounted.current && AppState.currentState === 'active' && currentFocus.current && (currentLocation === 'granted' || currentLocation === 'approximate');
           }, onStarted).then((result) => {
             if (mounted.current) local.current?.setState({ message: ERROR_COPY[result] });
           });
