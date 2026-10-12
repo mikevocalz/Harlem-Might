@@ -7,11 +7,13 @@ import { useNavigationUi } from '@acme/app/features/navigation/view/navigationUi
 import { fixtureDestination, fixtureRoute, loadFixture, lngLatToCoordinate } from '@acme/app/features/navigation/testing/fixtures.ts';
 import { deferred } from '@acme/app/features/navigation/testing/manualClock.ts';
 import type { NavigationOrigin } from '@acme/app/features/navigation/model/session.ts';
+import { useExploreLayoutStore } from '../spatial/exploreLayout.store.ts';
+import { resolveExploreLayout } from '../spatial/exploreLayout.ts';
 import type { TravelMode } from '@acme/app/features/navigation/model/route.ts';
 
 const NAME = 'apollo-theater--sylvias-restaurant';
 const origin = lngLatToCoordinate(loadFixture(NAME).origin.lngLat);
-afterEach(() => { resetNavigationRuntimeForTests(); resetNavigationStores(); useNavigationUi.getState().resetTrip(); });
+afterEach(() => { useExploreLayoutStore.getState().setCompactPane('map'); resetNavigationRuntimeForTests(); resetNavigationStores(); useNavigationUi.getState().resetTrip(); });
 
 // Real shared runtime; only external routing and device boundaries are substituted.
 async function harness(options: { mode?: TravelMode; origin?: NavigationOrigin } = {}) {
@@ -41,6 +43,34 @@ describe('Take Me There → phone AR', () => {
     const session = useNavigationStore.getState().session;
     assert.equal(session.phase, 'calibratingAR'); assert.ok('activeRoute' in session); assert.equal(session.activeRoute.route, selected);
     assert.deepEqual(h.counts, { requests: 1, watches: 1, stops: 0, opens: 1 }); assert.deepEqual(h.pending, [true, false]);
+  });
+  it('commits the existing compact-map intent only after successful entry and before routing', async () => {
+    const h = await harness();
+    useExploreLayoutStore.getState().showCompactDetail('map');
+    let started = 0;
+    const onStarted = () => { started++; useExploreLayoutStore.getState().setCompactPane('map'); };
+    h.native.camera = async () => false;
+    assert.equal(await h.entry.open(() => assert.fail('denied camera must not route'), () => true, onStarted), 'camera-denied');
+    assert.equal(started, 0);
+    h.native.camera = async () => true;
+    assert.equal(await h.entry.open(() => {
+      const layout = resolveExploreLayout({ windowWidth: 390, hasSelection: true, detailPlacement: 'inline', isHorizon: false,
+        compactPane: useExploreLayoutStore.getState().compactPane, discoverDrawerOpen: false });
+      assert.equal(layout.showMap, true, 'returning from the root AR route must expose the map');
+    }, () => true, onStarted), 'opened');
+    assert.equal(started, 1);
+  });
+  it('keeps map return intent when a wide phone becomes compact during native permission', async () => {
+    const h = await harness(); const camera = deferred<boolean>(); h.native.camera = () => camera.promise;
+    useExploreLayoutStore.getState().showCompactDetail('map');
+    let width = 1200;
+    const pending = h.entry.open(() => {
+      const layout = resolveExploreLayout({ windowWidth: width, hasSelection: true, detailPlacement: 'inline', isHorizon: false,
+        compactPane: useExploreLayoutStore.getState().compactPane, discoverDrawerOpen: false });
+      assert.equal(layout.showMap, true);
+    }, () => true, () => useExploreLayoutStore.getState().setCompactPane('map'));
+    width = 390; camera.resolve(true);
+    assert.equal(await pending, 'opened');
   });
   it('carries a map walk into AR and back without restarting it; End stops the watch', async () => {
     const h = await harness(); startGuidance(); const before = useNavigationStore.getState().session;

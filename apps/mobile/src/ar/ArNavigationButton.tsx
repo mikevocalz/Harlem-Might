@@ -35,7 +35,7 @@ const ERROR_COPY: Partial<Record<ArEntryResult, string>> = {
 };
 
 /** Native adapter for the existing directions and map action slots. */
-export function ArNavigationButton() {
+export function ArNavigationButton({ onStarted }: { onStarted?: () => void } = {}) {
   const router = useRouter();
   const phoneArLayout = usePhoneArLayout();
   const currentPhoneArLayout = useRef(phoneArLayout);
@@ -68,7 +68,7 @@ export function ArNavigationButton() {
           void entry.open(() => router.push('/explore-ar'), () => {
             const currentLocation = useNavigationUi.getState().location;
             return mounted.current && AppState.currentState === 'active' && currentPhoneArLayout.current && (currentLocation === 'granted' || currentLocation === 'approximate');
-          }).then((result) => {
+          }, onStarted).then((result) => {
             if (mounted.current) local.current?.setState({ message: ERROR_COPY[result] });
           });
         }}

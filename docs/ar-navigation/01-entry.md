@@ -4,6 +4,7 @@ The existing Place Details → Take Me There → DirectionsPanel flow now expose
 
 ## Entry and cancellation
 
+- The new walking-AR entry is **Android-only in current builds**. iOS map/navigation and existing tabletop/street experiences are unchanged.
 - The native adapter requires ordinary-phone capability evidence and excludes tablets, foldables, missing Android capability data, measured Apple hardware columns, web, Quest/Horizon, PICO, and visionOS. The existing Android device-family detection gaps remain; no width or model heuristic is added. It checks Viro's actual device support before opening the camera.
 - Camera permission is requested only on a button press, using the pinned Viro API with `['camera']`. No microphone, storage, or extra location permission is requested.
 - Non-walking routes and manually selected starting points do not offer phone AR.
@@ -15,7 +16,7 @@ The shared foreground `resumeGuidance` action restarts a paused device-origin wa
 
 ## Checks and platform limits
 
-The 20 entry tests include the real shared navigation runtime, controller, and stores, with only route-provider/native boundaries substituted. They cover selected-route identity, exactly one route request and location watcher, return-to-map, End cleanup, duplicate presses, denied camera, native failure, cancellation, unmount, newer routes, and unsupported travel modes/manual origins.
+The 22 entry tests include the real shared navigation runtime, controller, and stores, with only route-provider/native boundaries substituted. They cover selected-route identity, exactly one route request and location watcher, return-to-map, End cleanup, duplicate presses, denied camera, native failure, cancellation, unmount, newer routes, and unsupported travel modes/manual origins.
 
 Entry, hardware-capability and real-runtime resume regressions run alongside the full app/mobile suites. Mobile typing uses exact, blob-verified declarations/source from the CI-pinned Viro and Viro External forks, not the public stock package. The initial implemented head also passed hosted full CI; the PR reports results for the latest head. No phone, simulator, or headset was available here. Native camera prompts, visual layout, and physical walking accuracy are not device-verified.
 
@@ -24,3 +25,20 @@ Entry, hardware-capability and real-runtime resume regressions run alongside the
 Read repository AGENTS/CLAUDE, the pinned `mikevocalz-foldable-layouts` reference at `256a97b132803fd2fb8049f7a120cef9cb641f41`, Expo Router/native UI, Matt Pocock TDD, Margelo API design, Impeccable, no-ai-slop, and Nitro Mapbox AR guidance. The original Argent/agent-device URL was unavailable; the official Software Mansion Argent Android setup reference was read, and no SDK/device tools were present. Impeccable's context launcher could not write its engine cache; existing repository context was used. The independent local review found and drove the hardware gate and paused-watch recovery fixes. CodeRabbit skips drafts; its success status is not a substantive review.
 
 Existing semantic MightsButton/Text/View, Kinetrell map HUD, and Expo Router ownership remain in place. Tablets/foldables stay in the existing map shell with their physical-right rail and keep-mounted ExplorePane because this root AR route cannot satisfy their shell or hinge contract. Ordinary phones use the existing full-screen AR route. No dependency upgrade, Payload change, new navigation shell, merge, deployment, or live migration is included.
+
+## iOS capability follow-up
+
+`DeviceCapabilities` currently registers only an Android module. UIKit phone idiom
+or `isPad=false`, native AR support and absent safe-area columns do not prove that
+a closed iPhone is non-foldable. iOS walking-AR entry therefore remains unavailable.
+
+A bounded future bridge can use Apple's [UIHingeInteraction](https://developer.apple.com/documentation/uikit/uihingeinteraction)
+with its initial update callback and a mounted native view. The reference also
+permits a nil hinge when an interaction leaves a hinge-providing hierarchy, so
+nil must not be treated as non-foldable during attachment, detachment or scene
+changes. The [official hinge guidance](https://developer.apple.com/videos/play/tech-talks/111464/)
+and [reserved-region guidance](https://developer.apple.com/videos/play/tech-talks/111463/)
+provide the supported implementation path; no model list, width guess or fake
+hinge frame is an acceptable substitute. This requires the matching Apple SDK,
+native compilation, initial closed-cover/non-foldable observations, lifecycle
+and physical-device acceptance. No uncompiled Swift bridge is added here.
