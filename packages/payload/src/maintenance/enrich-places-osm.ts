@@ -1,10 +1,10 @@
 import { getPayload } from 'payload';
 import { HARLEM_PLACE_PREVIEWS } from '@acme/app/features/explore/place-previews.ts';
-import { isHttpUrl } from './fields/provenance.ts';
+import { isHttpUrl } from '../fields/provenance.ts';
 import { bboxOf, fetchNtaBoundaries } from './nta.ts';
 import { readOsmFeatures } from './osm.ts';
-import config from './payload.config';
-import type { Place } from './payload-types';
+import config from '../payload.config';
+import type { Place } from '../payload-types';
 
 // Second pass over the OSM extract: the first import kept name + point and
 // dropped the rest of the tags. This writes the tags back onto existing

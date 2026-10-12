@@ -1,8 +1,8 @@
 import { getPayload } from 'payload';
 import { decodeEntities } from './seed-text.ts';
 import { containingNta, fetchNtaBoundaries, type Nta, type Point } from './nta.ts';
-import config from './payload.config';
-import type { Event } from './payload-types';
+import config from '../payload.config';
+import type { Event } from '../payload-types';
 
 // Harlem events from sources that need no key, both refreshed daily by the
 // city. Everything lands as a draft: Events is `publishedOrCurator`, so a

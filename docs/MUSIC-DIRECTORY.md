@@ -11,7 +11,7 @@ This feature is an editorial catalog in Payload's Postgres schema, not a second 
 - Preserve user gesture requirements and YouTube player terms; verify allow-embed for each selected official upload.
 
 ## Data governance
-- The candidates file lists artists from the discussion, **including scene-only visitors**; it is not a verified import of 100+ completed profiles.
+- The [candidates file](../packages/payload/src/maintenance/data/music-artist-candidates.ts) lists artists from the discussion, **including scene-only visitors**; it is not a verified import of 100+ completed profiles.
 - Curators verify birth/raised/residency relationships and use the scene value for visitors rather than mislabeling them as Harlem-born.
 - Store one verified official YouTube watch/share URL per artist; ensure public embeds work; skip unavailable videos rather than fabricating IDs.
 - Apply rights, attribution and source information for every artist photo. Rights-cleared media is stored in Payload. External reference photos remain remote, link back to their provider/editorial source, are explicitly marked as external references, and are not represented as locally licensed assets.

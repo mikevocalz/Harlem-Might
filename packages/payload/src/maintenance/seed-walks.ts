@@ -1,6 +1,6 @@
 import { getPayload } from 'payload';
-import config from './payload.config';
-import type { Walk } from './payload-types';
+import config from '../payload.config';
+import type { Walk } from '../payload-types';
 
 // Draft walks over the featured catalogue places. Distance and duration are
 // computed live with Mapbox walking directions between the actual stops —

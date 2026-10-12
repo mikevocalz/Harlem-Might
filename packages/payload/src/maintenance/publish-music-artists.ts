@@ -1,5 +1,5 @@
 import { getPayload } from 'payload';
-import config from './payload.config';
+import config from '../payload.config';
 import { publishMusicArtists } from './publish-music-artists-runner.ts';
 
 // Publishes every draft music artist — same run publish-walks never got for

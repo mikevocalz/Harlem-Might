@@ -1,7 +1,7 @@
 import { getPayload } from 'payload';
-import config from './payload.config';
+import config from '../payload.config';
 import { dekFrom } from './first-sentence';
-import type { Story } from './payload-types';
+import type { Story } from '../payload-types';
 
 // Wikipedia article plain-text extracts (CC BY-SA 4.0) become stories — real,
 // source-cited text a curator rewrites into editorial voice before publish.

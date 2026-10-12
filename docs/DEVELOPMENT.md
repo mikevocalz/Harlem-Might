@@ -10,6 +10,7 @@ Harlem Might is one cross-platform product. Web, mobile, foldables, tablets, and
 - Shared product UI should use `@acme/ui` and the repository's semantic component boundaries.
 - Platform-specific behavior belongs beside shared code in matching `.web.ts(x)` and `.native.ts(x)` files.
 - Payload-bound content readers belong in `packages/payload` and are exposed through `@acme/payload/server`; CMS services also live in that package. Next-specific caching and route composition stay in `apps/web`; platform-neutral records, reader contracts and mapping live in `packages/app/content`. See the [content read contract](../packages/app/content/README.md).
+- Operational Payload seed, enrichment, publishing and repair tools, datasets and their import-safe helpers belong in `packages/payload/src/maintenance/`. Runtime config, collections, migrations, types and public exports stay outside it. See the [maintenance command and offline-verification guide](../packages/payload/src/maintenance/README.md).
 - Shared home-widget and wearable snapshot/handoff contracts belong in `packages/widgets`; platform renderers and transport adapters remain in their host apps. See the [widget contract](../packages/widgets/README.md).
 - Imports from `@acme/app/features/*` include the file extension required by the package export map.
 
@@ -52,5 +53,5 @@ There are no automatic retries. Menu discovery retains its eight-worker,
 Successful empty results are not failures. Menu summaries separate checked HTML,
 non-HTML skips, and request failures; coordinate summaries separate genuine
 no-hits from unresolved request failures and identify fallback recoveries.
-The import-safe `*-runner.test.ts` tests use fake fetch and Payload I/O; they do
+The import-safe `packages/payload/src/maintenance/*-runner.test.ts` tests use fake fetch and Payload I/O; they do
 not initialize the maintenance entrypoints or use a live database/network.

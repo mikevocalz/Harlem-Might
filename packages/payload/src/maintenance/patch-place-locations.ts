@@ -1,12 +1,12 @@
 import { getPayload } from 'payload';
-import config from './payload.config';
+import config from '../payload.config';
 
 // Backfill coordinates for featured places the fixture imported as 'pending'.
 // Each update names its source; nothing is approximated by hand.
 //   - strivers-row        → OSM node 357642389 (already an imported row's point)
 //   - national-black-theatre → NYC Planning GeoSearch hit for its official
 //                            address, 2031 Fifth Avenue (the new NBT building)
-// `pnpm exec payload run src/patch-place-locations.ts`
+// `pnpm exec payload run src/maintenance/patch-place-locations.ts`
 
 const UPDATES: { slug: string; location: [number, number]; sourceUrl: string; sourceLabel: string }[] = [
   {

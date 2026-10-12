@@ -13,7 +13,7 @@
 // Points are marked `locationAccuracy: 'approx'` with the dataset or geocoder
 // URL as `locationSource.url`.
 //
-// `pnpm exec payload run src/fix-place-coords.ts` previews; `--apply` writes.
+// `pnpm exec payload run src/maintenance/fix-place-coords.ts` previews; `--apply` writes.
 
 const SOCRATA = 'https://data.cityofnewyork.us/resource';
 const UA = { 'User-Agent': process.env.EVENTS_SCRAPER_USER_AGENT ?? 'HarlemMightBot/1.0' };

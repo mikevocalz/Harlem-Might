@@ -1,8 +1,8 @@
 import { getPayload } from 'payload';
 import { uniquePlaceSlug } from '@acme/app/content';
 import { NTA_CODES, containingNta, fetchNtaBoundaries, type Nta } from './nta.ts';
-import config from './payload.config';
-import type { Place } from './payload-types';
+import config from '../payload.config';
+import type { Place } from '../payload-types';
 
 // NYC Open Data place enrichment, on top of the OSM import in seed-places.ts.
 // Both sources are keyless and carry official coordinates or clear geography:

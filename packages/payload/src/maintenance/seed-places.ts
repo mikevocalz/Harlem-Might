@@ -4,8 +4,8 @@ import { HARLEM_PLACE_PREVIEWS } from '@acme/app/features/explore/place-previews
 import type { HarlemPlaceCategory } from '@acme/app/features/explore/place-model.ts';
 import { bboxOf, containingNta, fetchNtaBoundaries } from './nta.ts';
 import { readOsmFeatures, representativePoint } from './osm.ts';
-import config from './payload.config';
-import type { Place } from './payload-types';
+import config from '../payload.config';
+import type { Place } from '../payload-types';
 
 const kinds: Record<HarlemPlaceCategory, 'business' | 'culture' | 'historic' | 'outdoors'> = {
   Food: 'business', Music: 'culture', Culture: 'culture', Books: 'culture', History: 'historic', Outdoors: 'outdoors',

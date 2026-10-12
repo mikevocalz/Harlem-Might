@@ -1,5 +1,5 @@
 import { getPayload } from 'payload';
-import config from './payload.config';
+import config from '../payload.config';
 
 // Publishes every draft walk. Stories publish the same way; walks just never
 // got their run. `pnpm publish:walks` lists; `--apply` flips _status.

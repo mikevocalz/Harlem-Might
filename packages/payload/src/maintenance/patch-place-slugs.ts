@@ -1,6 +1,6 @@
 import { getPayload } from 'payload';
 import { isGeneratedPlaceSlug, uniquePlaceSlug } from '@acme/app/content';
-import config from './payload.config';
+import config from '../payload.config';
 
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required to rename place slugs.');
 const apply = process.argv.includes('--apply');

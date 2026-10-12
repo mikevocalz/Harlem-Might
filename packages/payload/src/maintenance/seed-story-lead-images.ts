@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { getPayload } from 'payload';
-import config from './payload.config';
+import config from '../payload.config';
 import { fetchStoryImageJson } from './story-image-json.ts';
 
 // Each story's own lead image: the infobox image of the Wikipedia article the

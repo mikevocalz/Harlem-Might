@@ -4,6 +4,13 @@ The navigation controller owns the trip and the one Viro scene renders it.
 This change does not add a location controller, camera, renderer, map provider,
 or Payload schema. Compass guidance remains available when Earth cannot localize.
 
+`useNavigationArPlacement` owns the mounted scene's acquisition runtime: route
+projection/rebasing, camera and heading evidence, Earth polling/temporary anchors,
+compass solving/slewing and the calibration hand-off. `HarlemNavigationArScene`
+selects presentation from the shared stores and composes Viro nodes using the
+hook's callbacks. The controller remains the trip owner; the camera host still
+owns world/reset lifetime, and location/permission handling is unchanged.
+
 ## Provider and accuracy audit
 
 The current native build configures ReactVision and does not opt into ARCore
@@ -72,7 +79,7 @@ These are conservative app policies, not additional SDK guarantees:
 - Re-solves: every 10 seconds; compass additionally after 15 m. A comparable
   fresh solve can renew evidence. Rejected candidates cannot refresh old evidence.
 
-The scene publishes the observation clock at 4 Hz even if camera callbacks stop.
+The placement hook publishes the observation clock at 4 Hz even if camera callbacks stop.
 World cues therefore disappear on stale camera, heading, route match or Earth
 observations. The presented confidence is no higher than its weakest live input;
 an estimated height caps the result at medium. Frame id and generation must match
@@ -106,6 +113,13 @@ Recalibration preserves the route, along-track progress and acknowledged awarene
 notice. It clears placement and observation evidence without remounting Viro.
 
 ## Checks
+
+`HarlemNavigationArScene.test.ts` executes the actual scene and placement hook
+against the real stores, navigation controller, placement math and Earth polling
+helper. Only React scheduling, clock/timers and native leaves are bounded. It
+covers effect replay/remount, route replacement and rebasing, tracking loss,
+recalibration, expired observations, cancellation and late pose/anchor results.
+It does not establish React Native rendering or physical placement quality.
 
 Host checks performed for this scope:
 

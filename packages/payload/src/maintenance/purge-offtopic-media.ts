@@ -1,5 +1,5 @@
 import { getPayload } from 'payload';
-import config from './payload.config';
+import config from '../payload.config';
 
 // One-off cleanup: media rows the Commons import let through that aren't
 // Harlem NYC (identified by alt text after the first import run).

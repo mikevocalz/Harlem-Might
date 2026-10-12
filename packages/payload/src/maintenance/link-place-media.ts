@@ -1,5 +1,5 @@
 import { getPayload } from 'payload';
-import config from './payload.config';
+import config from '../payload.config';
 
 // Link imported media to the places it depicts. Matching is conservative:
 // the place's name must appear in the media's alt text (so "Apollo Theater,

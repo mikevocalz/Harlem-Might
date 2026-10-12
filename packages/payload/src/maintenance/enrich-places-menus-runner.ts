@@ -1,4 +1,4 @@
-import { isHttpUrl } from './fields/provenance.ts';
+import { isHttpUrl } from '../fields/provenance.ts';
 
 // Menu discovery: fetch each place's official homepage and look for an anchor
 // whose text or href says "menu". Only links actually published by the venue

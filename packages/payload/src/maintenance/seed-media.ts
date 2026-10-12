@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { getPayload } from 'payload';
 import { stripHtml } from './seed-text.ts';
-import config from './payload.config';
-import type { Media } from './payload-types';
+import config from '../payload.config';
+import type { Media } from '../payload-types';
 
 // Rights-cleared Harlem photography into the media collection. Only rows with
 // an explicit open rights statement are taken:
