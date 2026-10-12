@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { getPayload } from 'payload';
 import config from './payload.config';
+import { fetchStoryImageJson } from './story-image-json.ts';
 
 // Each story's own lead image: the infobox image of the Wikipedia article the
 // story cites (a portrait for a person, the building for a place). Only
@@ -20,15 +21,7 @@ const PD_MARK = 'https://creativecommons.org/publicdomain/mark/1.0/';
 const strip = (s = '') => s.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim();
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function json<T>(url: string): Promise<T> {
-  for (let attempt = 0; ; attempt++) {
-    const res = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(60_000) });
-    const text = await res.text();
-    if (res.ok && text.startsWith('{')) return JSON.parse(text) as T;
-    if (attempt === 3) throw new Error(`${new URL(url).host} answered ${res.status}`);
-    await sleep(5_000 * (attempt + 1)); // Wikimedia rate limit
-  }
-}
+const json = <T>(url: string): Promise<T> => fetchStoryImageJson<T>(url, HEADERS);
 
 type Info = {
   url?: string;
