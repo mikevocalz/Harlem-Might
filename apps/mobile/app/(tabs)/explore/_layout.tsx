@@ -46,7 +46,7 @@ import { isHorizonBuild } from '@/src/spatial/horizonBuild';
 import { ViewInArButton } from '@/src/ar/ViewInArButton';
 import { ArNavigationButton } from '@/src/ar/ArNavigationButton';
 import { ExploreNavigationAr } from '@/src/ar/ExploreNavigationAr';
-import { createNavigationArHost, navigationArHostPresentation } from '@/src/ar/navigationArHost';
+import { createNavigationArHost, navigationArHostPresentation, syncNavigationArHost } from '@/src/ar/navigationArHost';
 import { isArNavigationScreen } from '@/src/ar/navAr';
 import { getNavigationController } from '@/src/ar/navigationRuntime';
 import { prepareArMapReturn } from '@/src/ar/navigationArVisit';
@@ -75,10 +75,8 @@ export default function ExploreRouteLayout() {
   const focused = useIsFocused();
   const foregroundStore = useMemo(() => createStore(() => ({ active: AppState.currentState === 'active' })), []);
   const foreground = useStore(foregroundStore, (state) => state.active);
-  const arHost = useMemo(() => {
-    const { session, arTracking } = useNavigationStore.getState();
-    return createNavigationArHost(getNavigationController(), isArNavigationScreen(session, arTracking));
-  }, []);
+  const arHost = useMemo(() => createNavigationArHost(getNavigationController()), []);
+  const navigationInAr = useNavigationStore((state) => isArNavigationScreen(state.session, state.arTracking));
   const arVisit = useStore(arHost, (state) => state.visit);
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => foregroundStore.setState({ active: state === 'active' }));
@@ -141,8 +139,8 @@ export default function ExploreRouteLayout() {
   // Tabs and compact panes keep Explore mounted. Leaving its visible map
   // releases AR; a transient app background only suspends its camera.
   useEffect(() => {
-    if (!focused || !layout.showMap) arHost.getState().close();
-  }, [arHost, focused, layout.showMap]);
+    syncNavigationArHost(arHost, { focused, showMap: layout.showMap, navigationInAr });
+  }, [arHost, focused, layout.showMap, navigationInAr]);
 
   const open = (placeId: string, origin: 'map' | 'discover', focusId: string | null) => {
     openPlace(placeId, focusId);

@@ -78,6 +78,7 @@ export function ArNavigationButton({ onOpen, onStarted }: { onOpen: () => void; 
   );
 }
 
+/** Keeps native-entry feedback local to the initiating button. */
 function createMessageStore() {
   return createStore(() => ({ message: undefined as string | undefined }));
 }
