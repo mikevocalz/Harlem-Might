@@ -77,11 +77,20 @@ diagonal Harlem segment correctly…" shows the degree-space answer is off.
 - **Android:** `Location.getAccuracy()` is documented as the 68% radius.
 - **iOS:** `horizontalAccuracy` is documented as "the radius of uncertainty"
   with no confidence level. It is treated as 68%.
-- **ARCore Geospatial / Viro geospatial pose:** reports 95% radii. Convert
-  them with `radius68From95` before building a `LocationFix`.
+- **ARCore Geospatial / Viro with `provider="arcore"`:** horizontal, vertical
+  and yaw accuracies are already 68th-percentile intervals. The native Viro
+  bridge passes them through unchanged. Do **not** call `radius68From95` or
+  divide yaw by 1.96, despite the pinned Viro TypeScript comments saying 95%.
+  See [the provider audit](AR_PLACEMENT_CONFIDENCE.md).
 
 For a circular 2D Gaussian, P(r ≤ kσ) = 1 − e^(−k²/2), so σ = r68 / 1.51 =
 r95 / 2.45. The Kalman filter uses σ per axis (`config.location.radiusToSigma`).
+`FilteredPosition.sigmaM` remains per-axis sigma. The controller's legacy
+`PositioningState.sigmaM` is different: `ingestFix` already divides by
+`radiusToSigma` and rounds it to a 68% radius for display. AR uses
+`positioningRadius68M` to read that radius without converting it again.
+An accepted initial fix with an 18 m radius therefore stays 18 m at the AR
+boundary, rather than becoming 27.17 m.
 
 ## Device frame, Viro and anchors (Phase 3)
 

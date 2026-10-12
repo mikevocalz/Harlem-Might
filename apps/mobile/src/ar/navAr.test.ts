@@ -13,16 +13,18 @@ import {
   CHEVRON_PAST_MANEUVER_M,
   addYawSample,
   alongTrackOnFrame,
-  angle68From95,
   arTrackingFromViro,
   canCompleteCalibration,
   chevronStopAlongTrackM,
   compassYawAccuracyDeg,
+  freshYawSamples,
+  isFreshSample,
   guidanceBearingDeg,
   isArNavigationPhase,
   isArNavigationScreen,
   isBetterPlacement,
   isCompassSettled,
+  isCurrentNavFrame,
   localPointOf,
   maneuverTurnDeg,
   navArPresentation,
@@ -71,6 +73,18 @@ describe('projectNavRoute', () => {
     assert.equal(frame.origin.frame.kind, 'route-start');
     // Horizontal ENU length matches the provider's distance to within 2%.
     near(frame.cumulativeM[frame.cumulativeM.length - 1]!, route.distanceM, route.distanceM * 0.02, 'length');
+  });
+});
+
+describe('route-frame generation ownership', () => {
+  it('suppresses the old world frame while a new route awaits projection', () => {
+    const route = active(APOLLO_SYLVIAS, 1);
+    const frame = projectNavRoute(route);
+    assert.equal(isCurrentNavFrame(frame, route), true);
+    assert.equal(isCurrentNavFrame(frame, { ...route, generation: 2 }), false, 'same route id, new generation');
+    assert.equal(isCurrentNavFrame(frame, active(U_ROUTE, 1)), false, 'new route id');
+    assert.equal(isCurrentNavFrame(frame, undefined), false, 'trip ended');
+    assert.equal(isCurrentNavFrame(undefined, active(APOLLO_SYLVIAS)), false, 'not projected yet');
   });
 });
 
@@ -182,6 +196,14 @@ describe('compass calibration', () => {
     );
   });
 
+  it('drops expired/future yaw samples instead of settling from a previous calibration window', () => {
+    const old = samples(Array.from({ length: 30 }, () => 42));
+    assert.equal(freshYawSamples(old, 20_000).length, 0);
+    assert.deepEqual(freshYawSamples([{ yawDeg: 5, timestampMs: 8000 }, { yawDeg: 5, timestampMs: 9001 }], 9000),
+      [{ yawDeg: 5, timestampMs: 8000 }]);
+    assert.equal(isFreshSample(NaN, 9000, 1000), false);
+  });
+
   it('feeds solveCompassPlacement with the library sign convention', () => {
     // Camera turned 90° left of −z, compass says it faces north.
     const forward: GeoWorldPosition = [-1, 0, 0];
@@ -201,8 +223,7 @@ describe('compass calibration', () => {
 });
 
 describe('placement quality', () => {
-  it('converts 95% accuracies and grades them', () => {
-    near(angle68From95(19.6), 10, 0.001, '1D 95 → 68');
+  it('grades 68% accuracies without a second confidence conversion', () => {
     assert.equal(placementConfidence(5, 5), 'high');
     assert.equal(placementConfidence(15, 5), 'medium');
     assert.equal(placementConfidence(5, 30), 'low');
@@ -213,23 +234,28 @@ describe('placement quality', () => {
     placement: { position: [0, 0, 0], rotation: [0, 0, 0] },
     source,
     confidence: 'medium',
+    heightReference: 'estimated-eye-height',
     yawAccuracyDeg,
     solvedAtAlongM,
     solvedAtMs,
   });
 
-  it('re-solves compass placements every 15 m and geospatial ones every 10 s', () => {
+  it('re-solves compass placements every 15 m or 10s and geospatial ones every 10s', () => {
     assert.equal(shouldResolvePlacement({ current: placement('compass', 10, 100), alongM: 110, nowMs: 0 }), false);
     assert.equal(shouldResolvePlacement({ current: placement('compass', 10, 100), alongM: 115, nowMs: 0 }), true);
+    assert.equal(shouldResolvePlacement({ current: placement('compass', 10, 100), alongM: 100, nowMs: 10_000 }), true);
     assert.equal(shouldResolvePlacement({ current: placement('geospatial', 5, 0, 0), alongM: 0, nowMs: 9_999 }), false);
     assert.equal(shouldResolvePlacement({ current: placement('geospatial', 5, 0, 0), alongM: 0, nowMs: 10_000 }), true);
   });
 
-  it('prefers geospatial, and needs a 2° gain to replace one', () => {
+  it('prefers comparable geospatial confidence, and needs a 2° gain before the renewal interval', () => {
     assert.equal(isBetterPlacement(placement('compass', 6), placement('geospatial', 20)), true);
     assert.equal(isBetterPlacement(placement('geospatial', 20), placement('compass', 6)), false);
     assert.equal(isBetterPlacement(placement('geospatial', 8), placement('geospatial', 7)), false);
     assert.equal(isBetterPlacement(placement('geospatial', 8), placement('geospatial', 6)), true);
+    assert.equal(isBetterPlacement(placement('geospatial', 8), placement('geospatial', 8, 0, 10_000)), true, 'comparable fresh solve renews stale evidence');
+    assert.equal(isBetterPlacement({ ...placement('compass', 6), confidence: 'high' }, placement('geospatial', 20)), false, 'a worse Earth solution is not an upgrade');
+    assert.equal(isBetterPlacement(placement('geospatial', 8), placement('compass', 8, 0, 20_001)), true, 'expired Earth placement must allow compass recovery');
   });
 });
 
@@ -254,6 +280,7 @@ describe('navArPresentation', () => {
     placement: { position: [0, 0, 0], rotation: [0, 0, 0] },
     source: 'compass',
     confidence,
+    heightReference: 'measured-ground',
     yawAccuracyDeg: 8,
     solvedAtAlongM: 0,
     solvedAtMs: 0,
@@ -265,11 +292,12 @@ describe('navArPresentation', () => {
     placement: solved('high'),
     isMatched: true,
     headingConfidence: 'high',
+    observations: { nowMs: 0, cameraTimestampMs: 0, headingTimestampMs: 0, headingSource: 'compass', matchTimestampMs: 0 },
     ...over,
   });
 
   it('draws 3D content only when tracking, matching and placement all hold', () => {
-    assert.deepEqual(navArPresentation(input({})), { kind: 'guidance', render: '3d', showDestination: true, confidence: 'high' });
+    assert.deepEqual(navArPresentation(input({})), { kind: 'guidance', render: '3d', showGroundRoute: true, showDestination: true, confidence: 'high' });
     const medium = navArPresentation(input({ placement: solved('medium') }));
     assert.equal(medium.kind === 'guidance' && medium.render, '3d');
     assert.equal(medium.kind === 'guidance' && medium.showDestination, false, 'no destination marker below high');
@@ -286,6 +314,51 @@ describe('navArPresentation', () => {
     ] satisfies Partial<NavArPresentationInput>[]) {
       const p = navArPresentation(input(over));
       assert.equal(p.kind === 'guidance' && p.render, 'arrow-2d', JSON.stringify(over));
+    }
+  });
+
+  it('hides ground graphics and exact destination when height is only estimated', () => {
+    const p = navArPresentation(input({ placement: { ...solved('high'), heightReference: 'estimated-eye-height' } }));
+    assert.deepEqual(p, { kind: 'guidance', render: '3d', showGroundRoute: false, showDestination: false, confidence: 'medium' });
+  });
+
+  it('reports the weakest live evidence even when the original placement was high', () => {
+    const p = navArPresentation(input({ positioning: tracking('medium') }));
+    assert.equal(p.kind === 'guidance' && p.confidence, 'medium');
+    const geo = navArPresentation(input({ placement: { ...solved('high'), source: 'geospatial' },
+      observations: { ...input({}).observations, geospatialTimestampMs: 0, geospatialConfidence: 'medium' } }));
+    assert.equal(geo.kind === 'guidance' && geo.confidence, 'medium');
+    assert.equal(geo.kind === 'guidance' && geo.showDestination, false);
+  });
+
+  it('rejects stale/future camera, heading, route match and expired placement evidence', () => {
+    const observations = { nowMs: 10_000, cameraTimestampMs: 10_000, headingTimestampMs: 10_000, headingSource: 'compass' as const, matchTimestampMs: 10_000 };
+    for (const bad of [{ cameraTimestampMs: 8999 }, { headingTimestampMs: 8499 }, { matchTimestampMs: 4999 },
+      { cameraTimestampMs: 10_001 }, { headingTimestampMs: undefined }, { headingSource: 'course-over-ground' as const }]) {
+      const p = navArPresentation(input({ observations: { ...observations, ...bad } }));
+      assert.equal(p.kind === 'guidance' && p.render, 'arrow-2d', JSON.stringify(bad));
+    }
+    const p = navArPresentation(input({ observations: { ...observations, nowMs: 25_000, cameraTimestampMs: 25_000,
+      headingTimestampMs: 25_000, matchTimestampMs: 25_000 } }));
+    assert.equal(p.kind === 'guidance' && p.render, 'arrow-2d', 'old transform expires');
+  });
+
+  it('requires live Earth evidence for an Earth placement even with good compass and GPS', () => {
+    const placement = { ...solved('high'), source: 'geospatial' as const };
+    for (const bad of [{}, { geospatialTimestampMs: 0, geospatialConfidence: 'low' as const },
+      { geospatialTimestampMs: -3001, geospatialConfidence: 'high' as const }]) {
+      const p = navArPresentation(input({ placement, observations: { ...input({}).observations, ...bad } }));
+      assert.equal(p.kind === 'guidance' && p.render, 'arrow-2d');
+    }
+  });
+
+  it('applies the same location and freshness gates to arrival markers', () => {
+    const session: NavigationSession = { phase: 'arrived', ...trip };
+    for (const over of [{ positioning: { kind: 'lost', sinceMs: 0 } as const }, { positioning: tracking('low') },
+      { isMatched: false }, { observations: { ...input({}).observations, cameraTimestampMs: undefined } },
+      { placement: { ...solved('high'), heightReference: 'estimated-eye-height' as const } }]) {
+      const p = navArPresentation(input({ session, ...over }));
+      assert.equal(p.kind === 'arrived' && p.showDestination, false);
     }
   });
 
@@ -330,6 +403,8 @@ describe('navArPresentation', () => {
     const calibrating = { session: { phase: 'calibratingAR', ...trip } as NavigationSession };
     assert.equal(canCompleteCalibration(input(calibrating)), true);
     assert.equal(canCompleteCalibration(input({ ...calibrating, placement: undefined })), false);
+    assert.equal(canCompleteCalibration(input({ ...calibrating, placement: solved('low') })), false);
+    assert.equal(canCompleteCalibration(input({ ...calibrating, positioning: tracking('low') })), false);
     assert.equal(canCompleteCalibration(input({ ...calibrating, isMatched: false })), false);
     assert.equal(canCompleteCalibration(input({ ...calibrating, arTracking: { kind: 'initializing' } })), false);
     assert.equal(canCompleteCalibration(input({})), false, 'already navigating');

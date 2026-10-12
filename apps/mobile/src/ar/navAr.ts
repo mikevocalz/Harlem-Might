@@ -33,11 +33,16 @@ export interface NavRouteFrame {
   readonly cumulativeM: readonly number[];
 }
 
+/** Geometry and its transform must belong to the controller's current route generation. */
+export function isCurrentNavFrame(frame: NavRouteFrame | undefined, active: ActiveRoute | undefined): boolean {
+  return frame !== undefined && active !== undefined && frame.routeId === active.route.id && frame.generation === active.generation;
+}
+
 /**
  * Projects the active route from its first coordinate. The origin altitude is
- * 0 and every vertex uses it, so the route lies on a flat plane; the scene
- * puts that plane on the ground with the placement height. Harlem's slopes
- * (a few metres per block at most) are ignored.
+ * 0 and every vertex uses it, so the route lies on a flat reference plane. An estimated phone height
+ * does not locate the ground; surface geometry stays hidden until a measured
+ * ground reference is available. Route elevation is not modelled.
  *
  * @throws {RangeError} When the route geometry has fewer than two coordinates.
  */
@@ -234,9 +239,13 @@ export function compassYawAccuracyDeg(summary: YawSummary, heading: HeadingEstim
 // ---------------------------------------------------------------------------
 // Geospatial (ARCore Earth / VPS)
 
-/** 1D normal: the 68.27% half-width is 1σ, the 95% half-width is 1.96σ. */
-export function angle68From95(deg95: number): number {
-  return deg95 / 1.959964;
+/**
+ * The controller's legacy `positioning.sigmaM` display field already contains
+ * rounded r68, converted from filtered sigma in ingestFix. Never convert it again.
+ */
+export function positioningRadius68M(positioning: PositioningState): number | undefined {
+  return positioning.kind === 'tracking' && Number.isFinite(positioning.sigmaM) && positioning.sigmaM > 0
+    ? positioning.sigmaM : undefined;
 }
 
 /**
@@ -265,6 +274,8 @@ export interface NavPlacement {
   readonly placement: EnuPlacement;
   readonly source: PlacementSource;
   readonly confidence: CompassPlacementConfidence;
+  /** Neither GPS altitude nor a fixed eye-height offset measures the street surface. */
+  readonly heightReference: 'estimated-eye-height' | 'measured-ground';
   /** 68% yaw uncertainty in degrees. */
   readonly yawAccuracyDeg: number;
   /** Along-track distance where it was solved, for {@linkcode shouldResolvePlacement}. */
@@ -274,9 +285,9 @@ export interface NavPlacement {
 
 /**
  * Whether to re-solve the placement (and then slew to it). Geospatial
- * re-solves every 10 s, and only adopts results whose yaw accuracy is at
- * least 2° better. Compass re-solves after 15 m of walking, where VIO drift
- * and heading error have had room to grow.
+ * re-solves every 10 s. Compass also re-solves after 15 m of walking.
+ * Comparable fresh evidence can renew a placement before it expires;
+ * rejected evidence never refreshes its timestamp.
  */
 export function shouldResolvePlacement(input: {
   readonly current: NavPlacement;
@@ -284,16 +295,63 @@ export function shouldResolvePlacement(input: {
   readonly nowMs: number;
 }): boolean {
   if (input.current.source === 'geospatial') return input.nowMs - input.current.solvedAtMs >= 10_000;
-  return input.alongM !== undefined && Math.abs(input.alongM - input.current.solvedAtAlongM) >= 15;
+  return input.nowMs - input.current.solvedAtMs >= 10_000 ||
+    (input.alongM !== undefined && Math.abs(input.alongM - input.current.solvedAtAlongM) >= 15);
 }
 
 /** Whether a re-solved placement should replace the current one. */
 export function isBetterPlacement(current: NavPlacement, next: NavPlacement): boolean {
+  const rank = { low: 0, medium: 1, high: 2 };
+  if (next.confidence === 'low') return false;
+  // An expired source must not block recovery through the other source forever.
+  if (next.solvedAtMs - current.solvedAtMs > MAX_PLACEMENT_AGE_MS) return true;
+  if (rank[next.confidence] < rank[current.confidence]) return false;
   if (current.source === 'compass' && next.source === 'geospatial') return true;
   if (current.source === 'geospatial' && next.source === 'compass') return false;
-  if (next.source === 'geospatial') return next.yawAccuracyDeg <= current.yawAccuracyDeg - 2;
-  // Compass: a fresh solve near the user beats an old one far behind, unless much worse.
+  if (next.source === 'geospatial') {
+    return next.yawAccuracyDeg <= current.yawAccuracyDeg - 2 ||
+      (next.solvedAtMs - current.solvedAtMs >= 10_000 && next.yawAccuracyDeg <= current.yawAccuracyDeg + 2);
+  }
   return next.yawAccuracyDeg <= current.yawAccuracyDeg + 5;
+}
+
+/** App-owned bounds for evidence used to draw world content, not SDK guarantees. */
+export const MAX_CAMERA_AGE_MS = 1000;
+export const MAX_HEADING_AGE_MS = 1500;
+export const MAX_MATCH_AGE_MS = 5000;
+export const MAX_GEOSPATIAL_AGE_MS = 3000;
+export const MAX_PLACEMENT_AGE_MS = 20_000;
+export const MAX_YAW_PAIR_AGE_MS = 400;
+
+export interface NavArObservations {
+  readonly nowMs: number;
+  readonly cameraTimestampMs?: number;
+  readonly headingTimestampMs?: number;
+  readonly headingSource?: HeadingEstimate['source'];
+  readonly matchTimestampMs?: number;
+  readonly geospatialTimestampMs?: number;
+  readonly geospatialConfidence?: CompassPlacementConfidence;
+}
+
+export function isFreshSample(timestampMs: number | undefined, nowMs: number, maxAgeMs: number): boolean {
+  return timestampMs !== undefined && Number.isFinite(timestampMs) && Number.isFinite(nowMs) &&
+    nowMs >= timestampMs && nowMs - timestampMs <= maxAgeMs;
+}
+
+/** Pair only contemporaneous camera/heading samples; stale windows cannot settle. */
+export function freshYawSamples(samples: readonly YawSample[], nowMs: number): YawSample[] {
+  return samples.filter((sample) => isFreshSample(sample.timestampMs, nowMs, 7500));
+}
+
+export function hasFreshPlacement(input: NavArPresentationInput): boolean {
+  const { placement, observations: o } = input;
+  if (!placement || !isFreshSample(placement.solvedAtMs, o.nowMs, MAX_PLACEMENT_AGE_MS)) return false;
+  return placement.source === 'geospatial'
+    ? isFreshSample(o.geospatialTimestampMs, o.nowMs, MAX_GEOSPATIAL_AGE_MS) &&
+      o.geospatialConfidence !== undefined && o.geospatialConfidence !== 'low'
+    : isFreshSample(o.headingTimestampMs, o.nowMs, MAX_HEADING_AGE_MS) &&
+      input.headingConfidence !== undefined && input.headingConfidence !== 'low' &&
+      o.headingSource !== undefined && o.headingSource !== 'course-over-ground';
 }
 
 // ---------------------------------------------------------------------------
@@ -316,6 +374,8 @@ export type NavArPresentation =
       readonly kind: 'guidance';
       /** `arrow-2d` when the world transform cannot be trusted: no route content in 3D. */
       readonly render: '3d' | 'arrow-2d';
+      /** A floating turn cue can be approximate; a ground ribbon needs a measured surface. */
+      readonly showGroundRoute: boolean;
       readonly showDestination: boolean;
       readonly confidence: CompassPlacementConfidence;
     }
@@ -329,15 +389,18 @@ export interface NavArPresentationInput {
   readonly placement: NavPlacement | undefined;
   readonly isMatched: boolean;
   readonly headingConfidence: ConfidenceLevel | undefined;
+  readonly observations: NavArObservations;
 }
 
 function checklist(input: NavArPresentationInput): CalibrationChecklist {
   const p = input.positioning;
-  const gps = p.kind !== 'tracking' ? 'acquiring' : p.confidence === 'low' || !input.isMatched ? 'weak' : 'ready';
+  const gps = p.kind !== 'tracking' ? 'acquiring' : p.confidence === 'low' || !input.isMatched ||
+    !isFreshSample(input.observations.matchTimestampMs, input.observations.nowMs, MAX_MATCH_AGE_MS) ? 'weak' : 'ready';
   const a = input.arTracking;
-  const camera = a.kind === 'normal' ? 'ready' : a.kind === 'limited' ? 'limited' : 'starting';
+  const camera = a.kind === 'normal' && isFreshSample(input.observations.cameraTimestampMs, input.observations.nowMs, MAX_CAMERA_AGE_MS)
+    ? 'ready' : a.kind === 'limited' || a.kind === 'normal' ? 'limited' : 'starting';
   const heading =
-    input.placement !== undefined && input.placement.confidence !== 'low'
+    input.placement !== undefined && input.placement.confidence !== 'low' && hasFreshPlacement(input)
       ? 'ready'
       : input.placement !== undefined || input.headingConfidence === 'low'
         ? 'low'
@@ -354,6 +417,20 @@ function checklist(input: NavArPresentationInput): CalibrationChecklist {
 export function navArPresentation(input: NavArPresentationInput): NavArPresentation {
   const { session } = input;
   if (input.positioning.kind === 'tracking' && input.positioning.isMovingTooFast) return { kind: 'speed-paused' };
+  const trusted = input.placement !== undefined && input.placement.confidence !== 'low' &&
+    input.arTracking.kind === 'normal' && input.isMatched && input.positioning.kind === 'tracking' &&
+    input.positioning.confidence !== 'low' && hasFreshPlacement(input) &&
+    isFreshSample(input.observations.cameraTimestampMs, input.observations.nowMs, MAX_CAMERA_AGE_MS) &&
+    isFreshSample(input.observations.matchTimestampMs, input.observations.nowMs, MAX_MATCH_AGE_MS);
+  const confidence: CompassPlacementConfidence = !trusted ? 'low' :
+    input.placement?.confidence === 'medium' || input.positioning.kind !== 'tracking' || input.positioning.confidence !== 'high' ||
+    input.placement.heightReference === 'estimated-eye-height' ||
+    (input.placement.source === 'geospatial' ? input.observations.geospatialConfidence !== 'high' : input.headingConfidence !== 'high')
+      ? 'medium' : 'high';
+  const precise = trusted && confidence === 'high' && input.placement?.confidence === 'high' &&
+    input.placement.heightReference === 'measured-ground' && input.positioning.kind === 'tracking' &&
+    input.positioning.confidence === 'high' &&
+    (input.placement.source !== 'geospatial' || input.observations.geospatialConfidence === 'high');
   switch (session.phase) {
     case 'calibratingAR':
       return { kind: 'calibrating', checklist: checklist(input) };
@@ -365,25 +442,18 @@ export function navArPresentation(input: NavArPresentationInput): NavArPresentat
       const arrival = session.arrival;
       return {
         kind: 'arrived',
-        showDestination: input.placement?.confidence === 'high' && input.arTracking.kind === 'normal',
+        showDestination: precise,
         confidence: arrival.kind === 'arrived' ? arrival.confidence : 'estimated',
       };
     }
     case 'navigatingAR': {
       const placement = input.placement;
-      const trusted =
-        placement !== undefined &&
-        placement.confidence !== 'low' &&
-        input.arTracking.kind === 'normal' &&
-        input.isMatched &&
-        input.positioning.kind === 'tracking' &&
-        input.positioning.confidence !== 'low';
       return {
         kind: 'guidance',
         render: trusted ? '3d' : 'arrow-2d',
-        showDestination:
-          trusted && placement.confidence === 'high' && input.positioning.kind === 'tracking' && input.positioning.confidence === 'high',
-        confidence: placement?.confidence ?? 'low',
+        showGroundRoute: trusted && placement?.heightReference === 'measured-ground',
+        showDestination: precise,
+        confidence,
       };
     }
     default:
@@ -397,8 +467,12 @@ export function canCompleteCalibration(input: NavArPresentationInput): boolean {
     input.session.phase === 'calibratingAR' &&
     input.arTracking.kind === 'normal' &&
     input.positioning.kind === 'tracking' &&
+    input.positioning.confidence !== 'low' &&
     input.isMatched &&
-    input.placement !== undefined
+    isFreshSample(input.observations.cameraTimestampMs, input.observations.nowMs, MAX_CAMERA_AGE_MS) &&
+    isFreshSample(input.observations.matchTimestampMs, input.observations.nowMs, MAX_MATCH_AGE_MS) &&
+    hasFreshPlacement(input) &&
+    input.placement?.confidence !== 'low'
   );
 }
 

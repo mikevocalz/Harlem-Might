@@ -6,6 +6,7 @@ import type { RouteProvider } from '../providers/routeProvider.ts';
 import { navigationFixStore, resetNavigationStores, useNavigationStore } from '../session/navigationStore.ts';
 import { fixtureDestination, fixtureRoute, loadFixture, lngLatToCoordinate } from '../testing/fixtures.ts';
 import { flush } from '../testing/manualClock.ts';
+import { createNavigationHostLifecycle } from './hostLifecycle.ts';
 import type { LocationSource, LocationWatchHandlers } from './locationSource.ts';
 import { useNavigationUi } from './navigationUi.store.ts';
 import {
@@ -19,6 +20,8 @@ import {
   openDirections,
   requestDirections,
   resetNavigationRuntimeForTests,
+  resumeGuidance,
+  stopLocation,
   startGuidance,
   startLocation,
 } from './runtime.ts';
@@ -43,10 +46,12 @@ function recordingProvider() {
 function fakeSource() {
   let handlers: LocationWatchHandlers | undefined;
   let stopped = 0;
+  let started = 0;
   const source: LocationSource = {
     kind: 'browser',
     check: async () => 'granted',
     watch(h) {
+      started++;
       handlers = h;
       return () => (stopped += 1);
     },
@@ -57,6 +62,7 @@ function fakeSource() {
     emitHeading: (heading: HeadingSample) => handlers?.onHeading?.(heading),
     report: (a: Parameters<LocationWatchHandlers['onAvailability']>[0]) => handlers?.onAvailability(a),
     stopped: () => stopped,
+    started: () => started,
   };
 }
 
@@ -202,5 +208,61 @@ describe('directions panel lifecycle', () => {
     // Opening another place while guiding leaves the trip alone.
     openDirections('apollo-theater');
     assert.equal(useNavigationStore.getState().session.phase, 'navigating');
+  });
+});
+
+
+describe('foreground guidance resume', () => {
+  async function pausedTrip(device = true, ar = true) {
+    const fake = fakeSource();
+    configureNavigationRuntime({ provider: recordingProvider().provider, locationSource: fake.source });
+    const controller = navigationController();
+    await controller.planRoute({
+      origin: device ? { kind: 'device-location' } : { kind: 'manual', coordinate: ORIGIN, label: 'Apollo' },
+      originCoordinate: ORIGIN, destination: DESTINATION, mode: 'walking',
+    });
+    useNavigationUi.getState().setLocation('granted');
+    assert.ok(startGuidance());
+    if (ar) assert.ok(controller.enterAR());
+    assert.ok(controller.pause());
+    return fake;
+  }
+
+  for (const ar of [false, true]) {
+    it(`Resume restarts a paused ${ar ? 'AR' : 'map'} watch after background and foreground`, async () => {
+      const fake = await pausedTrip(true, ar);
+      const lifecycle = createNavigationHostLifecycle({
+        running: isLocationRunning, start: startLocation, stop: stopLocation,
+        mayResume: () => !['idle', 'paused', 'arrived', 'error'].includes(useNavigationStore.getState().session.phase),
+      });
+      const release = lifecycle.mount(true);
+      lifecycle.setActive(false);
+      lifecycle.setActive(true);
+      assert.equal(isLocationRunning(), false, 'paused trips must not automatically resume');
+      assert.equal(fake.stopped(), 1);
+      assert.ok(resumeGuidance());
+      assert.equal(isLocationRunning(), true);
+      assert.equal(fake.started(), 2);
+      assert.equal(useNavigationStore.getState().session.phase, ar ? 'calibratingAR' : 'navigating');
+      assert.equal(resumeGuidance(), false);
+      assert.equal(fake.started(), 2, 'duplicate Resume cannot create another watch');
+      release();
+    });
+  }
+
+  it('does not prompt or restart a watch when location permission was revoked', async () => {
+    const fake = await pausedTrip();
+    stopLocation();
+    useNavigationUi.getState().setLocation('denied');
+    assert.ok(resumeGuidance());
+    assert.equal(isLocationRunning(), false);
+    assert.equal(fake.started(), 1);
+  });
+
+  it('does not start location for a manual-origin preview', async () => {
+    const fake = await pausedTrip(false, false);
+    assert.ok(resumeGuidance());
+    assert.equal(isLocationRunning(), false);
+    assert.equal(fake.started(), 0);
   });
 });

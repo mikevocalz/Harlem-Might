@@ -1,4 +1,7 @@
-import { Platform } from 'react-native';
+import { useCallback, useEffect, useRef } from 'react';
+import { useStore } from 'zustand';
+import { createStore, type StoreApi } from 'zustand/vanilla';
+import { BackHandler, Platform } from 'react-native';
 import { useRouter } from 'solito/navigation';
 import { ViroXRSceneNavigator, isMetaHorizonXR, isPico, isVisionOS } from '@reactvision/react-viro';
 import { selectArTracking, selectSession, useNavigationStore } from '@acme/app/features/navigation/session/navigationStore.ts';
@@ -17,6 +20,8 @@ import { HarlemNavigationAr } from '../src/ar/HarlemNavigationAr';
 import { canUseArNavigation, chooseArExperience } from '../src/ar/arNavigationEntry';
 import { isArNavigationScreen } from '../src/ar/navAr';
 import { getNavigationController } from '../src/ar/navigationRuntime';
+import { createArVisit, finishArNavigation, prepareArMapReturn, prepareArPlaceReturn } from '../src/ar/navigationArVisit';
+import { usePhoneArLayout } from '../src/ar/usePhoneArLayout';
 import { isHorizonBuild } from '../src/spatial/horizonBuild';
 
 /** Phone AR navigation is a property of the build and device, fixed for the app's lifetime. */
@@ -42,10 +47,7 @@ const STREET_SCENE = { scene: HarlemStreetScene };
  */
 export default function ExploreArRoute() {
   const router = useRouter();
-  // The root layout is a Slot, not a Stack, so this route replaced the tabs
-  // and back() has no history ("GO_BACK was not handled"). Return to Explore
-  // by replacing; the selected place lives in useExplore and stays open.
-  const exit = () => router.replace(routes.explore());
+  const phoneLayoutSupported = usePhoneArLayout();
   const placeId = useArSession((s) => s.requested?.placeId);
   const sceneMode = useArSession((s) => sceneModeFor(s.requested));
   const selectedPlaceId = useExplore((s) => s.selectedPlaceId);
@@ -54,12 +56,45 @@ export default function ExploreArRoute() {
   const navigationSessionInAR = useNavigationStore(
     (s) => isArNavigationScreen(selectSession(s), selectArTracking(s)),
   );
-  const experience = chooseArExperience({
-    requestedScene: sceneMode,
-    navigationAvailable: AR_NAVIGATION_SUPPORTED,
-    navigationSessionInAR,
-  });
+  const visitRef = useRef<StoreApi<ReturnType<typeof createArVisit>> | null>(null);
+  if (visitRef.current === null) {
+    visitRef.current = createStore(() => createArVisit(chooseArExperience({
+      requestedScene: sceneMode,
+      navigationAvailable: AR_NAVIGATION_SUPPORTED,
+      navigationSessionInAR,
+    }), getNavigationController()));
+  }
+  // A per-visit external store keeps renderer identity across session changes.
+  // eslint-disable-next-line react-hooks/refs
+  const visit = useStore(visitRef.current);
+  const experience = visit.experience;
+  // This route replaces the tabs under a Slot, so there may be no back stack.
+  // A cancelled/unavailable navigation visit stays in its recovery screen;
+  // it must never mount the unrelated tabletop renderer or request its route.
+  const exit = useCallback(() => {
+    visit.leave();
+    router.replace(routes.explore());
+  }, [router, visit]);
+  const backToMap = useCallback(() => {
+    prepareArMapReturn();
+    exit();
+  }, [exit]);
+  useEffect(() => {
+    if (visit.experience !== 'navigation') return;
+    const back = BackHandler.addEventListener('hardwareBackPress', () => {
+      backToMap();
+      return true;
+    });
+    return () => back.remove();
+  }, [backToMap, visit]);
+  // Router callback identity can change without leaving this screen.
+  useEffect(() => visit.attach(), [visit]);
   const isNavigatingInAr = experience === 'navigation';
+  useEffect(() => {
+    // A direct/stale URL must obey the same ordinary-phone bound as entry.
+    // Return to the existing map shell without creating another AR renderer.
+    if (isNavigatingInAr && !phoneLayoutSupported) backToMap();
+  }, [backToMap, isNavigatingInAr, phoneLayoutSupported]);
   // Only the phone navigation layer reads the shared trip. Existing table
   // and street worlds, their place routes, and their controls stay untouched.
   useTabletopRoute(isNavigatingInAr ? undefined : (placeId ?? selectedPlaceId ?? undefined));
@@ -72,16 +107,11 @@ export default function ExploreArRoute() {
   if (isNavigatingInAr) {
     return (
       <HarlemNavigationAr
-        onBackToMap={() => {
-          // Leaves AR only; the walk keeps going on the map.
-          const controller = getNavigationController();
-          controller.exitAR();
-          controller.setArTracking({ kind: 'off' });
-          exit();
-        }}
+        cameraAllowed={phoneLayoutSupported}
+        onBackToMap={backToMap}
         onExplorePlace={(destinationPlaceId) => {
-          getNavigationController().cancel();
-          if (destinationPlaceId) useExplore.getState().selectPlace(destinationPlaceId);
+          finishArNavigation();
+          prepareArPlaceReturn(destinationPlaceId);
           exit();
         }}
       />
