@@ -29,7 +29,7 @@ object CompanionWire {
     } catch (_: Exception) { false }
     fun snapshot(json: String): JSONObject? {
         val s = parse(json, snapshotKeys) ?: return null
-        if (!integer(s, "schemaVersion") || s.getInt("schemaVersion") != 1 ||
+        if (!integer(s, "schemaVersion") || s.getLong("schemaVersion") != 1L ||
             !text(s, "handoffId") || !text(s, "sessionId") || !text(s, "walkTitle") || !integer(s, "revision") ||
             s.optString("status") !in listOf("active", "paused", "completed", "stopped") ||
             s.optString("routeState") !in listOf("ready", "offline", "unavailable") ||
@@ -50,7 +50,7 @@ object CompanionWire {
     fun command(json: String, s: JSONObject): JSONObject? {
         val c = parse(json, commandKeys) ?: return null
         val type = c.optString("type")
-        if (!integer(c, "schemaVersion") || c.getInt("schemaVersion") != 1 || !text(c, "commandId") ||
+        if (!integer(c, "schemaVersion") || c.getLong("schemaVersion") != 1L || !text(c, "commandId") ||
             c.opt("handoffId") != s.opt("handoffId") || c.opt("sessionId") != s.opt("sessionId") ||
             !integer(c, "expectedRevision") || c.getLong("expectedRevision") != s.getLong("revision") || !fresh(s) ||
             type !in listOf("pause", "resume", "stop", "confirm-stop") ||

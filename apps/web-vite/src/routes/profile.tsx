@@ -147,8 +147,7 @@ function SignedInProfile() {
 
   if (!member) return null;
 
-  const avatarUri =
-    typeof member.avatar === 'object' && member.avatar ? member.avatar.url : undefined;
+  const avatarUri = member.image ?? undefined;
 
   return (
     <Main className="flex-1 bg-surface">

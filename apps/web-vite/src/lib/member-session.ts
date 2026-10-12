@@ -3,12 +3,9 @@
 import { create } from 'zustand';
 import { PAYLOAD_API_BASE, type CmsPlace } from './payload.ts';
 
-export interface MemberProfile {
-  id: number | string;
-  email: string;
-  name?: string | null;
-  avatar?: number | string | { id: number | string; url?: string | null } | null;
-}
+// Reuse the Better Auth session shape consumed by the other supported hosts.
+import type { MemberProfile } from '@acme/app/features/auth/member-session.ts';
+export type { MemberProfile } from '@acme/app/features/auth/member-session.ts';
 
 export interface SavedPlaceRecord {
   id: number | string;

@@ -69,3 +69,15 @@ test('signed-in saved-place failures are announced without hiding the existing l
   assert.ok(tree.some((element) => element.props.role === 'alert' && text(element).includes('Could not remove this place')));
   assert.ok(button(tree, 'Remove'));
 });
+
+for (const image of ['https://images.example.test/member.png', null, undefined]) {
+  test(`signed-in avatar follows Better Auth image (${String(image)})`, () => {
+    useMemberSession.setState({ status: 'signed-in', member: {
+      id: 7, email: 'member@example.test', name: 'Member', image,
+    } });
+    const avatar = elements(Route.component()).find((element) => element.type === 'Avatar');
+    assert.ok(avatar);
+    assert.equal(avatar.props.imageUri, image ?? undefined);
+    assert.equal(avatar.props.name, 'Member');
+  });
+}
