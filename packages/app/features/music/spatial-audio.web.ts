@@ -10,6 +10,7 @@ export function createWebSpatialMusicEngine(): SpatialMusicEngine {
   let audio: HTMLAudioElement | null = null;
   let panner: PannerNode | null = null;
   let source: MediaElementAudioSourceNode | null = null;
+  let playbackRequest: { audio: HTMLAudioElement } | null = null;
   let lastPosition: Vector3 = { x: 0, y: 0, z: -2 };
   let lastPose: ListenerPose = {
     position: { x: 0, y: 0, z: 0 },
@@ -48,6 +49,7 @@ export function createWebSpatialMusicEngine(): SpatialMusicEngine {
   };
 
   async function dispose() {
+    playbackRequest = null;
     audio?.pause();
     if (audio) {
       audio.removeAttribute('src');
@@ -71,6 +73,7 @@ export function createWebSpatialMusicEngine(): SpatialMusicEngine {
         throw new Error('Spatial playback requires licensed HTTPS media and its provenance');
       }
       if (track.format === 'ambisonic') throw new Error('Ambisonic decoding is not supported');
+      playbackRequest = null;
       if (!context) {
         context = new AudioContext();
         panner = context.createPanner();
@@ -92,11 +95,29 @@ export function createWebSpatialMusicEngine(): SpatialMusicEngine {
         source = context.createMediaElementSource(audio);
         source.connect(panner!);
       }
-      await context.resume();
-      await audio.play();
+      const request = { audio };
+      const requestContext = context;
+      playbackRequest = request;
+      try {
+        await requestContext.resume();
+        // Pause, stop, disposal or a later play revokes this request's intent.
+        if (playbackRequest !== request) return;
+        await request.audio.play();
+        // A late completion may clean up its own element, but must not pause
+        // a newer request that has reused the same media element.
+        if (playbackRequest !== request && playbackRequest?.audio !== request.audio) {
+          request.audio.pause();
+        }
+      } catch (error) {
+        // Browser pause/load/close may reject pending work after cancellation.
+        if (playbackRequest !== request) return;
+        playbackRequest = null;
+        request.audio.pause();
+        throw error;
+      }
     },
-    async pause() { audio?.pause(); },
-    async stop() { if (audio) { audio.pause(); audio.currentTime = 0; } },
+    async pause() { playbackRequest = null; audio?.pause(); },
+    async stop() { playbackRequest = null; if (audio) { audio.pause(); audio.currentTime = 0; } },
     setSourcePosition(v) {
       lastPosition = v;
       if (panner) setParams(panner, v);

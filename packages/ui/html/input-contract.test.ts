@@ -31,7 +31,9 @@ const leaves: Record<string, string> = {
     export const Host = 'Host';
     export const Picker = Object.assign(() => null, { Item: 'Picker.Item' });
     export function TextInput() { return null; }
-    export const useNativeState = value => ({ value });
+    let state;
+    export const resetNativeState = () => { state = undefined; };
+    export const useNativeState = value => (state ??= { value });
   `,
   uniwind: `export const withUniwind = Component => Component;`,
 };
@@ -66,6 +68,8 @@ const hooks = registerHooks({
 const native = await import(nativeUrl) as typeof import('./dom.native');
 const { NativeInput } = await import(fieldUrl) as typeof import('./native-input.native');
 const web = await import(webUrl) as typeof import('./dom.web');
+const expoLeafUrl = 'input-contract:@expo/ui';
+const { resetNativeState } = await import(expoLeafUrl) as { resetNativeState(): void };
 hooks.deregister();
 
 type Element = ReactElement<{ children: Element; [key: string]: unknown }>;
@@ -73,7 +77,8 @@ function fieldProps(element: ReactElement<NativeInputProps>) {
   assert.equal(element.type, NativeInput);
   return element.props;
 }
-function expoProps(props: NativeInputProps) {
+function expoProps(props: NativeInputProps, mount = true) {
+  if (mount) resetNativeState();
   const wrapper = NativeInput(props) as Element;
   assert.equal(wrapper.type, 'Div');
   const host = wrapper.props.children;
@@ -138,6 +143,50 @@ for (const [name, render] of [['InputBase', native.InputBase], ['TextareaBase', 
     }
     assert.deepEqual(props.containerStyle, {});
   });
+
+  test(`${name} initializes uncontrolled text and forwards authentication input hints`, () => {
+    const props = fieldProps(render({
+      defaultValue: 'maya@example.com', autoComplete: 'email',
+      autoCapitalize: 'none', inputMode: 'email', autoFocus: true,
+    }));
+    const field = expoProps(props);
+    assert.deepEqual(field.value, { value: 'maya@example.com' });
+    assert.equal(field.autoComplete, 'email');
+    assert.equal(field.autoCapitalize, 'none');
+    assert.equal(field.inputMode, 'email');
+    assert.equal(field.autoFocus, true);
+  });
+
+  test(`${name} gives controlled values precedence over default text, including an empty reset`, () => {
+    for (const value of ['Controlled name', '']) {
+      const field = expoProps(fieldProps(render({ value, defaultValue: 'Initial name' })));
+      assert.deepEqual(field.value, { value });
+    }
+  });
+
+  test(`${name} does not overwrite edits when an uncontrolled default changes after mount`, () => {
+    const field = expoProps(fieldProps(render({ defaultValue: 'Initial name' })));
+    const state = field.value as { value: string };
+    state.value = 'Edited name';
+    const rerendered = expoProps(fieldProps(render({ defaultValue: 'New default' })), false);
+    assert.equal(rerendered.value, state);
+    assert.equal(state.value, 'Edited name');
+    const reset = expoProps(fieldProps(render({ value: '', defaultValue: 'New default' })), false);
+    assert.equal(reset.value, state);
+    assert.equal(state.value, '');
+  });
+
+  test(`${name} forwards password autofill without changing secure-entry behavior`, () => {
+    const field = expoProps(fieldProps(render({
+      secureTextEntry: true, autoComplete: 'current-password',
+      autoCapitalize: 'none', inputMode: 'text', autoFocus: false,
+    })));
+    assert.equal(field.secureTextEntry, true);
+    assert.equal(field.autoComplete, 'current-password');
+    assert.equal(field.autoCapitalize, 'none');
+    assert.equal(field.inputMode, 'text');
+    assert.equal(field.autoFocus, false);
+  });
 }
 
 test('TextareaBase keeps its default and explicit native line counts', () => {
@@ -148,6 +197,9 @@ test('TextareaBase keeps its default and explicit native line counts', () => {
   }
   const input = expoProps(fieldProps(native.InputBase({})));
   assert.equal(input.multiline, undefined);
+  const multilineInput = expoProps(fieldProps(native.InputBase({ multiline: true, numberOfLines: 5 })));
+  assert.equal(multilineInput.multiline, true);
+  assert.equal(multilineInput.numberOfLines, 5);
 });
 
 test('the web input still uses DOM text changes, focus handlers and Enter-only submission', () => {

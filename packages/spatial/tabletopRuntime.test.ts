@@ -15,7 +15,7 @@ type Effect = { deps: unknown[]; cleanup?: () => void };
 
 // Execute the native components' real callbacks and effect lifetimes without
 // loading Viro, audio assets or a device renderer. This is not device AR coverage.
-function nativeFixture() {
+function nativeFixture(platform = { isQuest: true, isPico: false, isVisionOS: false }) {
   let active: ReturnType<typeof mount>;
   const jsx = (type: any, props: any, key?: string): Element => ({ type, props, key });
   function mount(Component: (props: any) => Element | null) {
@@ -82,8 +82,9 @@ function nativeFixture() {
   const viro = new Proxy({
     ViroAnimations: { registerAnimations: () => {} },
     ViroMaterials: { createMaterials: () => {} },
-    isQuest: true, isPico: false, isVisionOS: false,
+    ...platform,
     metaSpatialAnchorFrameSource: (key: string) => ({ key }),
+    cloudAnchorFrameSource: (key: string) => ({ key }),
     useViroColocationRoom: (options: { enabled: boolean }) => {
       room.enabled = options.enabled;
       return {
@@ -456,3 +457,244 @@ it('native guest runtime and scoreboard reject malformed snapshots and recover o
   scoreboard.unmount();
   tabletopRace.leaveRoom(room);
 });
+
+
+type HostedAnchor = { success: boolean; cloudAnchorId?: string; error?: string };
+
+function deferredAnchor() {
+  let resolve!: (result: HostedAnchor) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<HostedAnchor>((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+
+function anchorFixture(platform = { isQuest: false, isPico: false, isVisionOS: false }) {
+  const fixture = nativeFixture(platform);
+  const requests: ReturnType<typeof deferredAnchor>[] = [];
+  const calls: unknown[][] = [];
+  const navigator = {
+    hostCloudAnchor: (...args: unknown[]) => {
+      calls.push(args);
+      const request = deferredAnchor();
+      requests.push(request);
+      return request.promise;
+    },
+  };
+  const session = tabletopSession.getState();
+  session.setPlayerName('HOST');
+  session.beginHost();
+  const select = (id = 'table') => session.setPlacementCandidate({
+    anchorId: id, worldPosition: [1, 2, 3], surface: 'table',
+  });
+  select();
+  let scene = fixture.mount(fixture.Scene);
+  const render = (props = { arSceneNavigator: navigator }) => scene.render(props);
+  const confirm = () => find(render(), 'ViroARPlaneSelector').props.children.props.onConfirm;
+  return {
+    ...fixture, requests, calls, select, render, confirm,
+    unmount: () => scene.unmount(),
+    remount: () => { scene.unmount(); scene = fixture.mount(fixture.Scene); },
+  };
+}
+
+const flushAnchor = () => new Promise<void>((resolve) => setImmediate(resolve));
+
+it('native phone placement publishes exactly once despite repeated confirmation before rerender', async () => {
+  const fixture = anchorFixture();
+  const confirm = fixture.confirm();
+  confirm();
+  confirm();
+  assert.deepEqual(fixture.calls, [['table', 1]]);
+  assert.equal(tabletopSession.getState().placementConfirmed, true);
+  assert.equal(tabletopSession.getState().phoneAnchorWorking, true);
+  assert.equal(find(fixture.render(), 'ViroText').props.text, 'PUBLISHING TABLE ANCHOR…');
+  fixture.requests[0]!.resolve({ success: true, cloudAnchorId: 'published-table' });
+  await flushAnchor();
+  assert.equal(tabletopSession.getState().phoneCloudAnchorId, 'published-table');
+  assert.equal(tabletopSession.getState().phoneAnchorWorking, false);
+  assert.equal(tabletopSession.getState().error, null);
+  assert.equal(find(fixture.render(), 'ViroSharedFrame').props.source.key, 'published-table');
+  confirm();
+  assert.equal(fixture.requests.length, 1);
+  fixture.unmount();
+  assert.equal(tabletopSession.getState().placementConfirmed, true);
+});
+
+for (const failure of ['rejection', 'unsuccessful', 'missing-id', 'synchronous'] as const) {
+  it(`native phone placement recovers from ${failure} and retries the same candidate`, async () => {
+    const fixture = anchorFixture();
+    if (failure === 'synchronous') {
+      const tree = fixture.render({ arSceneNavigator: {
+        hostCloudAnchor: () => { throw new Error('synchronous hosting failure'); },
+      } });
+      find(tree, 'ViroARPlaneSelector').props.children.props.onConfirm();
+    } else {
+      fixture.confirm()();
+      if (failure === 'rejection') fixture.requests[0]!.reject(new Error('hosting failure'));
+      if (failure === 'unsuccessful') fixture.requests[0]!.resolve({ success: false, error: 'hosting failure' });
+      if (failure === 'missing-id') fixture.requests[0]!.resolve({ success: true });
+    }
+    await flushAnchor();
+    assert.equal(tabletopSession.getState().placementConfirmed, false);
+    assert.equal(tabletopSession.getState().phoneAnchorWorking, false);
+    assert.equal(tabletopSession.getState().phoneCloudAnchorId, null);
+    assert.match(tabletopSession.getState().error!, /hosting failure|Unable to publish/);
+    fixture.confirm()();
+    assert.equal(tabletopSession.getState().error, null);
+    assert.equal(tabletopSession.getState().phoneAnchorWorking, true);
+    fixture.requests.at(-1)!.resolve({ success: true, cloudAnchorId: 'retry-table' });
+    await flushAnchor();
+    assert.equal(tabletopSession.getState().phoneCloudAnchorId, 'retry-table');
+    fixture.unmount();
+  });
+}
+
+for (const staleResult of ['success', 'failure', 'rejection'] as const) {
+  for (const replacement of ['host', 'candidate', 'clear', 'close', 'remount'] as const) {
+    it(`native phone ${staleResult} cannot overwrite ${replacement} replacement work`, async () => {
+      const fixture = anchorFixture();
+      const oldConfirm = fixture.confirm();
+      oldConfirm();
+      const old = fixture.requests[0]!;
+      const session = tabletopSession.getState();
+      if (replacement === 'host') session.beginHost();
+      if (replacement === 'candidate') fixture.select('other-table');
+      if (replacement === 'clear') session.clearPlacement();
+      if (replacement === 'close') {
+        session.setSpatialViewOpen(false);
+        session.setSpatialViewOpen(true);
+      }
+      if (replacement === 'remount') fixture.remount();
+      if (replacement === 'host' || replacement === 'clear') fixture.select('other-table');
+      assert.equal(tabletopSession.getState().phoneAnchorWorking, false);
+      assert.equal(tabletopSession.getState().placementConfirmed, false);
+      fixture.confirm()();
+      const replacementState = tabletopSession.getState();
+      assert.equal(replacementState.phoneAnchorWorking, true);
+      assert.equal(fixture.requests.length, 2);
+      if (staleResult === 'success') old.resolve({ success: true, cloudAnchorId: 'stale-anchor' });
+      if (staleResult === 'failure') old.resolve({ success: false, error: 'stale failure' });
+      if (staleResult === 'rejection') old.reject(new Error('stale rejection'));
+      await flushAnchor();
+      assert.equal(tabletopSession.getState(), replacementState);
+      fixture.requests[1]!.resolve({ success: true, cloudAnchorId: 'replacement-anchor' });
+      await flushAnchor();
+      assert.equal(tabletopSession.getState().phoneCloudAnchorId, 'replacement-anchor');
+      assert.equal(tabletopSession.getState().phoneAnchorWorking, false);
+      oldConfirm();
+      assert.equal(fixture.requests.length, 2);
+      fixture.unmount();
+    });
+  }
+}
+
+for (const leave of ['reset', 'guest', 'solo', 'unmount'] as const) {
+  for (const reject of [false, true]) {
+    it(`native phone ${reject ? 'failure' : 'success'} is ignored after ${leave}`, async () => {
+      const fixture = anchorFixture();
+      const oldConfirm = fixture.confirm();
+      oldConfirm();
+      const session = tabletopSession.getState();
+      if (leave === 'reset') session.reset();
+      if (leave === 'guest') { session.setJoinCode('ABCDEF'); session.beginGuest(); }
+      if (leave === 'solo') session.beginSolo();
+      if (leave === 'unmount') fixture.unmount();
+      const expected = tabletopSession.getState();
+      if (reject) fixture.requests[0]!.reject(new Error('late hosting failure'));
+      else fixture.requests[0]!.resolve({ success: true, cloudAnchorId: 'late-anchor' });
+      await flushAnchor();
+      assert.equal(tabletopSession.getState(), expected);
+      assert.equal(expected.phoneAnchorWorking, false);
+      oldConfirm();
+      assert.equal(fixture.requests.length, 1);
+      fixture.unmount();
+    });
+  }
+}
+
+it('native placement rejects a stale UI callback before it starts hosting a replacement session', () => {
+  const fixture = anchorFixture();
+  const oldConfirm = fixture.confirm();
+  tabletopSession.getState().beginHost();
+  fixture.select('replacement-table');
+  const expected = tabletopSession.getState();
+  oldConfirm();
+  assert.equal(tabletopSession.getState(), expected);
+  assert.equal(fixture.requests.length, 0);
+  fixture.unmount();
+});
+
+it('native hosting revokes ownership even if the same candidate object is restored before resolution', async () => {
+  const fixture = anchorFixture();
+  fixture.confirm()();
+  const candidate = tabletopSession.getState().placementCandidate;
+  tabletopSession.getState().setPlacementCandidate(null);
+  tabletopSession.getState().setPlacementCandidate(candidate);
+  fixture.confirm()();
+  const expected = tabletopSession.getState();
+  fixture.requests[0]!.resolve({ success: true, cloudAnchorId: 'stale-anchor' });
+  await flushAnchor();
+  assert.equal(tabletopSession.getState(), expected);
+  fixture.requests[1]!.resolve({ success: true, cloudAnchorId: 'current-anchor' });
+  await flushAnchor();
+  assert.equal(tabletopSession.getState().phoneCloudAnchorId, 'current-anchor');
+  fixture.unmount();
+});
+
+it('native Quest confirmation retains its spatial-anchor path without phone hosting', () => {
+  const fixture = anchorFixture({ isQuest: true, isPico: false, isVisionOS: false });
+  const confirm = fixture.confirm();
+  confirm();
+  confirm();
+  assert.equal(tabletopSession.getState().placementConfirmed, true);
+  assert.equal(tabletopSession.getState().phoneAnchorWorking, false);
+  assert.equal(fixture.calls.length, 0);
+  assert.equal(fixture.effects.filter((event: any) => event.type === 'mat-lock').length, 1);
+  assert.equal(find(fixture.render(), 'ViroSharedFrame').props.source.key,
+    tabletopSession.getState().hostFrameRef);
+  fixture.unmount();
+});
+
+it('native phone placement without cloud hosting returns to preview with an actionable error', () => {
+  const fixture = anchorFixture();
+  const tree = fixture.render({ arSceneNavigator: {} as any });
+  const confirmations: boolean[] = [];
+  const unsubscribe = useTabletopSessionStore.subscribe((state) => confirmations.push(state.placementConfirmed));
+  find(tree, 'ViroARPlaneSelector').props.children.props.onConfirm();
+  unsubscribe();
+  assert.equal(tabletopSession.getState().placementConfirmed, false);
+  assert.equal(tabletopSession.getState().phoneAnchorWorking, false);
+  assert.equal(tabletopSession.getState().error, 'This device does not expose cloud-anchor hosting.');
+  assert.ok(confirmations.every((confirmed) => !confirmed), 'unsupported placement must never appear confirmed');
+  assert.equal(fixture.effects.filter((event: any) => event.type === 'mat-lock').length, 0);
+  fixture.unmount();
+});
+
+it('native PICO continues to hide unsupported placement controls', () => {
+  const fixture = anchorFixture({ isQuest: false, isPico: true, isVisionOS: false });
+  assert.equal(find(fixture.render(), 'ViroText').props.text, 'PICO SHARED-FRAME MODE NOT AVAILABLE');
+  assert.throws(() => find(fixture.render(), 'ViroARPlaneSelector'), /Missing/);
+  assert.equal(fixture.calls.length, 0);
+  fixture.unmount();
+});
+
+for (const replacementSucceeds of [false, true]) {
+  it(`native stale completion preserves an already ${replacementSucceeds ? 'published' : 'failed'} replacement`, async () => {
+    const fixture = anchorFixture();
+    fixture.confirm()();
+    tabletopSession.getState().beginHost();
+    fixture.select('replacement-table');
+    fixture.confirm()();
+    fixture.requests[1]!.resolve(replacementSucceeds
+      ? { success: true, cloudAnchorId: 'replacement-anchor' }
+      : { success: false, error: 'replacement failed' });
+    await flushAnchor();
+    const expected = tabletopSession.getState();
+    fixture.requests[0]!.resolve({ success: true, cloudAnchorId: 'obsolete-anchor' });
+    await flushAnchor();
+    assert.equal(tabletopSession.getState(), expected);
+    assert.equal(expected.error, replacementSucceeds ? null : 'replacement failed');
+    assert.equal(expected.phoneCloudAnchorId, replacementSucceeds ? 'replacement-anchor' : null);
+    fixture.unmount();
+  });
+}

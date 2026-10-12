@@ -71,3 +71,11 @@ export const invalidSubmitText = <Textarea onSubmitEditing={(_text: string) => {
 
 // @ts-expect-error Contextual focus handlers cannot require an event, either.
 export const invalidContextualFocus = <Input onFocus={(event) => { void event.nativeEvent; }} />;
+
+// The facade must not silently accept unsupported React Native options.
+// @ts-expect-error NativeInput has no RN key-press event bridge.
+export const invalidKeyPress = <Input onKeyPress={() => {}} />;
+// @ts-expect-error Selection control is not exposed by the portable adapter.
+export const invalidSelection = <TextInput selection={{ start: 0, end: 1 }} />;
+// @ts-expect-error Use the portable inputMode rather than an unimplemented RN keyboard option.
+export const invalidKeyboardType = <Input keyboardType="email-address" />;

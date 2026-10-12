@@ -40,7 +40,9 @@ type DetailResult<T> = ContentResult<T> | { status: 'not-found' };
 - `unavailable`: we could not check. Say so ("Couldn't load walks right now"), never the empty state, and never 404. `not-configured` means `DATABASE_URL` is unset in this process; `query-failed` carries the error for logging.
 - `not-found` (detail reads only): the database answered and no published record has that slug. Call `notFound()`.
 
-A malformed slug returns `not-found` without a query.
+A malformed slug returns `not-found` without a query when the content source is
+configured. If it is unconfigured, the reader returns `unavailable` with reason
+`not-configured`, including for malformed slugs.
 
 `listMusicArtistsPage` accepts positive safe integer page numbers and defaults to page 1. Zero, negative, fractional, non-finite and unsafe page numbers reject with `RangeError` before configuration checks or database queries, even when content is unconfigured. Valid reads keep the usual `unavailable` behavior for missing configuration or query failures.
 

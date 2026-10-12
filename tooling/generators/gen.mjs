@@ -43,7 +43,7 @@ if (kind === 'domain') {
   const name = rawName.toLowerCase();
   const dir = join('packages/app/features', name);
   const pascal = name.replace(/(^|-)./g, (m) => m.slice(-1).toUpperCase());
-  const impl = (fork) => `import { View } from 'react-native';\nimport { Text } from '@acme/ui';\n\n// ${fork} fork\nexport function ${pascal}Screen() {\n  return (\n    <View className=\"flex-1 items-center justify-center\">\n      <Text>${pascal}</Text>\n    </View>\n  );\n}\n`;
+  const impl = (fork) => `import { View } from '@acme/ui/tw';\nimport { Text } from '@acme/ui';\n\n// ${fork} fork\nexport function ${pascal}Screen() {\n  return (\n    <View className=\"flex-1 items-center justify-center\">\n      <Text>${pascal}</Text>\n    </View>\n  );\n}\n`;
   write(join(dir, 'screen.native.tsx'), impl('Native'));
   write(join(dir, 'screen.web.tsx'), impl('Web'));
   write(join(dir, 'screen.tsx'),
@@ -60,7 +60,7 @@ if (kind === 'domain') {
     `import { View } from 'react-native';\n\nexport interface ${name}Props {\n  className?: string;\n}\n\nexport function ${name}({ className }: ${name}Props) {\n  return <View className={className} />;\n}\n`);
   write(join(dir, `${name}.stories.tsx`),
     `import type { Meta, StoryObj } from '@storybook/react-vite';\nimport { ${name} } from './${name}';\n\nconst meta = {\n  title: 'UI/${name}',\n  component: ${name},\n} satisfies Meta<typeof ${name}>;\n\nexport default meta;\ntype Story = StoryObj<typeof meta>;\n\nexport const Default: Story = {};\n`);
-  console.log(`\nAdd 'export { ${name} } from './${name}';' to packages/ui/src/index.ts — a component without a story is incomplete (§7).`);
+  console.log(`\nAdd 'export { ${name} } from './${name}';' to packages/ui/index.ts — a component without a story is incomplete (§7).`);
 } else {
   console.error(`unknown generator '${kind}' — use 'domain', 'feature' or 'component'`);
   process.exit(1);

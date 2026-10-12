@@ -93,7 +93,7 @@ export function MightsAssistant({ onOpenPlace, onShowDetails, onShowOnMap, layou
     );
   }
 
-  const run = (suggestion: AssistantSuggestion) => {
+  const applySuggestion = (suggestion: AssistantSuggestion) => {
     switch (suggestion.kind) {
       case 'show-details':
         onShowDetails();
@@ -178,7 +178,7 @@ export function MightsAssistant({ onOpenPlace, onShowDetails, onShowOnMap, layou
           {suggestions.map((suggestion) => (
             <Pressable
               key={suggestion.kind + suggestion.placeId}
-              onPress={() => run(suggestion)}
+              onPress={() => applySuggestion(suggestion)}
               className="min-h-target justify-center rounded-card border border-border-strong bg-surface px-4"
             >
               <Text className={type.label + ' font-sans-semibold text-text'}>{suggestion.label}</Text>

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useParams } from 'solito/navigation';
-import { useExplore } from '@acme/app';
+import { useRoute } from 'expo-router/react-navigation';
+import { selectExplorePlaceRoute } from '../../../src/navigation/explorePlaceRoute';
 
 /**
  * Deep link `/explore/[placeId]`: selects the place, and the Explore layout
@@ -11,11 +12,11 @@ import { useExplore } from '@acme/app';
 export default function ExplorePlaceRoute() {
   const params = useParams<{ placeId?: string | string[] }>();
   const placeId = Array.isArray(params?.placeId) ? params.placeId[0] : params?.placeId;
-  const openPlace = useExplore((state) => state.openPlace);
+  const route = useRoute();
 
   useEffect(() => {
-    if (placeId) openPlace(placeId, null);
-  }, [placeId, openPlace]);
+    if (placeId) selectExplorePlaceRoute({ key: route.key, params: route.params, placeId });
+  }, [placeId, route.key, route.params]);
 
   return null;
 }

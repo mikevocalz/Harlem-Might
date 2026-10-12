@@ -1,4 +1,18 @@
-# Explore spatial workspace
+# Explore spatial workspace (historical proposal)
+
+This records the original SplitView UI slice and its preview fixtures. It is
+superseded by the [responsive layout contract](RESPONSIVE_LAYOUT.md) and
+[development guide](DEVELOPMENT.md). The current native implementation uses
+[`resolveExploreLayout`](../apps/mobile/src/spatial/exploreLayout.ts) and
+keep-mounted [`ExplorePane`](../apps/mobile/src/spatial/ExplorePane.tsx) surfaces;
+do not restore the removed SplitView implementation.
+
+Current catalogue data comes through the
+[shared content readers](../packages/app/content/readers.ts) and
+[catalogue store](../packages/app/features/explore/place-catalogue.store.ts).
+The eight-record fixture description below applies only to this historical slice.
+
+## Original proposal
 
 Explore is the first production-shaped consumer of Harlem Might SplitView.
 

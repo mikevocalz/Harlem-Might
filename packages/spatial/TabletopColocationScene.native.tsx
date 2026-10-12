@@ -37,6 +37,7 @@ import { gridFx } from './rive-fx/store';
 import {
   tabletopSession,
   useTabletopSessionStore,
+  type PlacementCandidate,
 } from './tabletopSessionStore';
 
 const API_KEY = process.env.EXPO_PUBLIC_REACTVISION_API_KEY ?? '';
@@ -652,6 +653,11 @@ export function TabletopColocationScene({
   arSceneNavigator,
 }: SceneProps) {
   const selectorRef = useRef<any>(null);
+  const mounted = useRef(false);
+  const anchorRequest = useRef<{
+    hostFrameRef: string;
+    candidate: PlacementCandidate;
+  } | null>(null);
   const detectedPlaneIds = useRef(new Set<string>());
 
   const mode = useTabletopSessionStore((state) => state.mode);
@@ -687,12 +693,6 @@ export function TabletopColocationScene({
   const setDetectedSurfaceCount = useTabletopSessionStore(
     (state) => state.setDetectedSurfaceCount,
   );
-  const setPhoneCloudAnchorId = useTabletopSessionStore(
-    (state) => state.setPhoneCloudAnchorId,
-  );
-  const setPhoneAnchorWorking = useTabletopSessionStore(
-    (state) => state.setPhoneAnchorWorking,
-  );
   const setHostPlacement = useTabletopSessionStore(
     (state) => state.setHostPlacement,
   );
@@ -704,8 +704,53 @@ export function TabletopColocationScene({
   const navigator = arSceneNavigator ?? sceneNavigator;
   const configured = Boolean(API_KEY && PROJECT_ID);
 
+  // Native hosting cannot be cancelled, so revoke its write ownership as soon
+  // as its session/candidate is replaced or this scene leaves its lifetime.
+  useEffect(() => {
+    mounted.current = true;
+    const cancelRequest = () => {
+      const request = anchorRequest.current;
+      if (!request) return;
+      anchorRequest.current = null;
+      const current = tabletopSession.getState();
+      if (current.mode === 'host' && current.hostFrameRef === request.hostFrameRef) {
+        tabletopSession.setState({ phoneAnchorWorking: false, placementConfirmed: false });
+      }
+    };
+    const unsubscribe = useTabletopSessionStore.subscribe((current) => {
+      const request = anchorRequest.current;
+      if (request && (
+        current.mode !== 'host' ||
+        current.hostFrameRef !== request.hostFrameRef ||
+        current.placementCandidate !== request.candidate ||
+        !current.spatialViewOpen ||
+        !current.placementConfirmed
+      )) cancelRequest();
+    });
+    return () => {
+      mounted.current = false;
+      unsubscribe();
+      cancelRequest();
+    };
+  }, []);
+
   const confirmPlacement = useCallback(async () => {
-    if (!candidate) return;
+    const current = tabletopSession.getState();
+    if (
+      !mounted.current || !candidate || !hostFrameRef ||
+      current.mode !== 'host' || current.hostFrameRef !== hostFrameRef ||
+      current.placementCandidate !== candidate || !current.spatialViewOpen ||
+      current.placementConfirmed || anchorRequest.current
+    ) return;
+
+    if (!isQuest && isPico) {
+      setError('Physical co-location is not available on PICO in this runtime.');
+      return;
+    }
+    if (!isQuest && !navigator?.hostCloudAnchor) {
+      setError('This device does not expose cloud-anchor hosting.');
+      return;
+    }
 
     setPlacementConfirmed(true);
     setError(null);
@@ -721,39 +766,42 @@ export function TabletopColocationScene({
 
     if (isQuest) return;
 
-    if (isPico) {
-      setPlacementConfirmed(false);
-      setError('Physical co-location is not available on PICO in this runtime.');
-      return;
-    }
-
-    if (!navigator?.hostCloudAnchor) {
-      setPlacementConfirmed(false);
-      setError('This device does not expose cloud-anchor hosting.');
-      return;
-    }
-
-    setPhoneAnchorWorking(true);
+    const request = { hostFrameRef, candidate };
+    anchorRequest.current = request;
+    const ownsRequest = () => {
+      const state = tabletopSession.getState();
+      return mounted.current && anchorRequest.current === request &&
+        state.mode === 'host' && state.hostFrameRef === request.hostFrameRef &&
+        state.placementCandidate === request.candidate &&
+        state.spatialViewOpen && state.placementConfirmed;
+    };
+    tabletopSession.setState({ phoneAnchorWorking: true });
     try {
       const result = await navigator.hostCloudAnchor(candidate.anchorId, 1);
+      if (!ownsRequest()) return;
       if (!result?.success || !result.cloudAnchorId) {
-        setPlacementConfirmed(false);
-        setError(result?.error ?? 'Unable to publish the tabletop anchor.');
+        tabletopSession.setState({
+          placementConfirmed: false,
+          error: result?.error ?? 'Unable to publish the tabletop anchor.',
+        });
         return;
       }
-      setPhoneCloudAnchorId(result.cloudAnchorId);
-      setError(null);
+      tabletopSession.setState({ phoneCloudAnchorId: result.cloudAnchorId, error: null });
     } catch (error) {
-      setPlacementConfirmed(false);
-      setError(
-        error instanceof Error
+      if (!ownsRequest()) return;
+      tabletopSession.setState({
+        placementConfirmed: false,
+        error: error instanceof Error
           ? error.message
           : 'Unable to publish the tabletop anchor.',
-      );
+      });
     } finally {
-      setPhoneAnchorWorking(false);
+      if (ownsRequest()) {
+        anchorRequest.current = null;
+        tabletopSession.setState({ phoneAnchorWorking: false });
+      }
     }
-  }, [candidate, navigator, setError]);
+  }, [candidate, hostFrameRef, navigator, setError, setPlacementConfirmed]);
 
   const hostFrameSource = useMemo(() => {
     if (mode !== 'host' || !placementConfirmed) return null;

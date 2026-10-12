@@ -49,14 +49,14 @@ export function AttachSheet() {
 
   const report = (next: AttachProgress) => store?.getState().set(next);
 
-  const run = async (acquire: () => Promise<{ uri: string; name?: string } | null>) => {
+  const acquireAndResolveAttachment = async (acquire: () => Promise<{ uri: string; name?: string } | null>) => {
     const request = useAttachStore.getState().settle;
     const isCurrent = () => request !== null && useAttachStore.getState().settle === request;
     const attachment = await acquireAttachment(acquire, report, isCurrent);
     if (attachment && isCurrent()) useAttachStore.getState().resolve(attachment);
   };
 
-  const choose = () => run(pickFile);
+  const choose = () => acquireAndResolveAttachment(pickFile);
 
   const percent = Math.round(progress.ratio * 100);
   const indeterminate =
@@ -115,7 +115,7 @@ export function AttachSheet() {
               // A text-only drop carries no uri — there is nothing to attach.
               if (asset?.uri === undefined) return;
               const source = { uri: asset.uri, name: asset.fileName };
-              void run(async () => source);
+              void acquireAndResolveAttachment(async () => source);
             }}
           >
             <View className="h-full w-full items-center justify-center gap-3">

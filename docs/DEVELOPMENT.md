@@ -40,3 +40,17 @@ Keep state and continuity in the existing Zustand/ref architecture. Preserve Kin
 ## Verification
 
 Changes should run the relevant type checks, lint checks, and tests for the packages touched. Device-specific claims require device validation; browser or simulator checks should be described as such.
+
+### Place maintenance reporting
+
+Menu enrichment and coordinate repair preview by default; only `--apply` writes.
+Both commands are best effort: usable discoveries can still be written after
+another request or write fails, but any such failure makes the final exit status
+nonzero (including a failed geocode request later recovered through a fallback).
+There are no automatic retries. Menu discovery retains its eight-worker,
+400-homepage bound; coordinate repair tries each existing candidate in order.
+Successful empty results are not failures. Menu summaries separate checked HTML,
+non-HTML skips, and request failures; coordinate summaries separate genuine
+no-hits from unresolved request failures and identify fallback recoveries.
+The import-safe `*-runner.test.ts` tests use fake fetch and Payload I/O; they do
+not initialize the maintenance entrypoints or use a live database/network.

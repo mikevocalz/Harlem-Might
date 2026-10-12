@@ -152,10 +152,11 @@ test('successful catalogue and detail reads persist for the next launch', async 
   assert.equal((last.details['new-cafe'] as { status: string }).status, 'ok');
 });
 
-test('a failed refresh retries on the configured backoff and recovers without a caller', async () => {
+test('a failed refresh retries on the configured backoff and recovers without a caller', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
   let fail = true;
   let reads = 0;
-  const store = createPlaceCatalogueStore({ retryDelaysMs: [1] });
+  const store = createPlaceCatalogueStore({ retryDelaysMs: [50] });
   store.getState().connect({
     listExploreCatalogue: async () => {
       reads++;
@@ -167,21 +168,38 @@ test('a failed refresh retries on the configured backoff and recovers without a 
   await store.getState().refresh();
   assert.equal(store.getState().loadState.status, 'unavailable');
   fail = false;
-  await new Promise((resolve) => setTimeout(resolve, 30));
+  t.mock.timers.tick(49);
+  await Promise.resolve();
+  assert.equal(reads, 1, 'the retry must wait for its configured delay');
+  t.mock.timers.tick(1);
+  await Promise.resolve();
   assert.equal(reads, 2);
+  // Join the request the timer already started; refresh deduplicates it.
+  await store.getState().refresh();
   assert.equal(store.getState().loadState.status, 'ready');
   assert.equal(store.getState().places[0]?.id, 'recovered');
 });
 
-test('retries stop after the configured delays are exhausted', async () => {
+test('retries stop after the configured delays are exhausted', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
   let reads = 0;
-  const store = createPlaceCatalogueStore({ retryDelaysMs: [1, 1] });
+  const store = createPlaceCatalogueStore({ retryDelaysMs: [50, 100] });
   store.getState().connect({
     listExploreCatalogue: async () => { reads++; throw new Error('offline'); },
     getPlace: async () => ({ status: 'not-found' }),
   });
   await store.getState().refresh();
-  await new Promise((resolve) => setTimeout(resolve, 30));
+  for (const [delay, expectedReads] of [[50, 2], [100, 3]] as const) {
+    t.mock.timers.tick(delay - 1);
+    await Promise.resolve();
+    assert.equal(reads, expectedReads - 1, 'each retry must honor its own backoff');
+    t.mock.timers.tick(1);
+    await Promise.resolve();
+    assert.equal(reads, expectedReads);
+    await store.getState().refresh();
+  }
+  t.mock.timers.tick(1_000);
+  await Promise.resolve();
   assert.equal(reads, 3);
   assert.equal(store.getState().loadState.status, 'unavailable');
 });

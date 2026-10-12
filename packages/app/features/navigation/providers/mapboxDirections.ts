@@ -86,6 +86,7 @@ export function createMapboxDirectionsProvider(options: MapboxDirectionsOptions)
     id: 'mapbox',
     supportedModes: ['walking', 'cycling', 'driving'],
     async getRoutes(request, { signal } = {}) {
+      if (signal?.aborted) throw new RouteProviderError('aborted', 'mapbox', 'Route request was cancelled');
       if (request.mode === 'transit') {
         return {
           kind: 'unsupported',
@@ -94,7 +95,6 @@ export function createMapboxDirectionsProvider(options: MapboxDirectionsOptions)
           handoff: buildExternalMapsHandoff(request),
         };
       }
-      if (signal?.aborted) throw new RouteProviderError('aborted', 'mapbox', 'Route request was cancelled');
       let url: string;
       try {
         const query = buildMapboxDirectionsQuery(request);

@@ -258,6 +258,18 @@ describe('createMapboxDirectionsProvider', () => {
     assert.ok(!provider.supportedModes.includes('transit'));
   });
 
+  it('rejects every pre-cancelled mode before fetching or producing a transit handoff', async () => {
+    const { impl, calls } = fakeFetch(() => json(500, {}));
+    const provider = createMapboxDirectionsProvider({ accessToken: FAKE_TOKEN, fetchImpl: impl });
+    const abort = new AbortController();
+    abort.abort();
+    for (const mode of ['walking', 'cycling', 'driving', 'transit'] as const) {
+      await assert.rejects(provider.getRoutes(requestFor(NAME, mode), { signal: abort.signal }),
+        (error: unknown) => error instanceof RouteProviderError && error.kind === 'aborted');
+    }
+    assert.deepEqual(calls, []);
+  });
+
   const failures: [string, () => Response, string][] = [
     ['401', () => json(401, { message: 'Not Authorized - Invalid Token' }), 'unauthorized'],
     ['429', () => json(429, { message: 'Too Many Requests' }), 'rate-limited'],

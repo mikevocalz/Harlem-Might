@@ -103,6 +103,8 @@ jobs:
       - name: Run all workspace unit tests
         # Discover each package's test script, preserving its platform-specific setup.
         run: pnpm --recursive --if-present test
+      - name: Test generated feature boundaries
+        run: pnpm test:generators
       - run: pnpm --filter mobile test:scripts
       - run: pnpm turbo run build typecheck lint
       - name: Require deployable build artifacts

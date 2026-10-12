@@ -91,14 +91,15 @@ export const ButtonBase = ({ role, onKeyDown: _onKeyDown, ...props }: PressBaseP
   <Pressable role={(role ?? 'button') as never} {...props} />
 );
 
-type NativeInputCallbacks = Pick<NativeInputProps, 'onFocus' | 'onBlur' | 'onSubmitEditing'>;
-
 /**
- * Keep the shared RN-style prop surface, but use the callbacks the native
- * adapter actually emits. NativeInput has no RN focus/blur/submit events;
- * these notifications take no arguments, matching the web fork's contract.
+ * Expose only the input options this adapter implements. RN event objects,
+ * selection and imperative refs are not part of the portable field contract.
+ * Style and semantic presentation props remain compatible with the shared
+ * wrappers; focus/blur/submit notifications take no arguments on both forks.
  */
-export type InputBaseProps = Omit<TextInputProps, keyof NativeInputCallbacks> & NativeInputCallbacks;
+export type InputBaseProps = Omit<NativeInputProps, 'color' | 'fontSize' | 'containerStyle'>
+  & Pick<TextInputProps, 'style' | 'role'>
+  & { 'aria-invalid'?: boolean };
 
 /**
  * Text fields render through `@expo/ui`'s universal TextInput (SwiftUI /
@@ -140,6 +141,11 @@ function toNativeInputProps(
     fontSize: typeof flat.fontSize === 'number' ? flat.fontSize : undefined,
     containerStyle,
     value: typeof props.value === 'string' ? props.value : undefined,
+    defaultValue: props.defaultValue,
+    autoComplete: props.autoComplete,
+    autoCapitalize: props.autoCapitalize,
+    inputMode: props.inputMode,
+    autoFocus: props.autoFocus,
     onChangeText: props.onChangeText,
     onFocus: props.onFocus,
     onBlur: props.onBlur,
@@ -149,7 +155,9 @@ function toNativeInputProps(
       typeof props.placeholderTextColor === 'string' ? props.placeholderTextColor : undefined,
     secureTextEntry: props.secureTextEntry,
     editable: props.editable,
-    returnKeyType: props.returnKeyType as NativeInputProps['returnKeyType'],
+    returnKeyType: props.returnKeyType,
+    multiline: props.multiline,
+    numberOfLines: props.numberOfLines,
     'aria-label': typeof props['aria-label'] === 'string' ? props['aria-label'] : undefined,
   };
 }

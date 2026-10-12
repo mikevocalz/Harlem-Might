@@ -25,6 +25,14 @@ The committed `packages/app/features/music/spatial-audio.ts` defines the portabl
 listener pose, source positioning and capability reporting. **This is an interface
 and a fail-closed adapter, not yet a functioning React Native Audio API engine.**
 
+The optional browser adapter is not currently wired to a production caller.
+Its pending play requests are cancelled by pause, stop, dispose or a newer play;
+cancelled work settles without reporting obsolete playback failures. Current
+playback failures still reject. Tests drive the actual adapter with controllable
+browser API leaves, including late media settlement and same-element reuse:
+`node --test packages/app/features/music/spatial-audio.web.test.ts`.
+These tests do not validate audible output, browser autoplay policy or device audio.
+
 ### Implementation phases
 
 1. Validate the **installed latest compatible stable** `react-native-audio-api` against

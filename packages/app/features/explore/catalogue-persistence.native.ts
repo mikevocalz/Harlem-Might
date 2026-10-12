@@ -4,8 +4,12 @@ import type {
   PlaceCataloguePersistence,
   PlaceCatalogueSnapshot,
 } from './catalogue-persistence.ts';
+import { decodePlaceCatalogueSnapshot } from './catalogue-snapshot.ts';
 
-const storage = createMMKV({ id: 'explore-catalogue' });
+let storage: ReturnType<typeof createMMKV> | undefined;
+// Native construction can fail too. Keep it inside the same load/save guards
+// as I/O, and cache only a successful instance so a later operation can retry.
+const getStorage = () => storage ??= createMMKV({ id: 'explore-catalogue' });
 const KEY = 'explore.place-catalogue.v1';
 
 type OkDetails = Record<string, { status: 'ok'; data: PlaceRecord }>;
@@ -22,23 +26,17 @@ const okOnly = (details: PlaceCatalogueSnapshot['details']): OkDetails =>
 export const platformCataloguePersistence: PlaceCataloguePersistence = {
   load() {
     try {
-      const raw = storage.getString(KEY);
+      const raw = getStorage().getString(KEY);
       if (!raw) return undefined;
       const parsed: unknown = JSON.parse(raw);
-      if (typeof parsed !== 'object' || parsed === null) return undefined;
-      const snapshot = parsed as Partial<PlaceCatalogueSnapshot>;
-      if (!Array.isArray(snapshot.places)) return undefined;
-      return {
-        ...(snapshot.schemaVersion === 2 ? { schemaVersion: 2 as const } : {}),
-        places: snapshot.places, details: okOnly(snapshot.details ?? {}),
-      };
+      return decodePlaceCatalogueSnapshot(parsed);
     } catch {
       return undefined;
     }
   },
   save(snapshot) {
     try {
-      storage.set(KEY, JSON.stringify({ schemaVersion: snapshot.schemaVersion, places: snapshot.places, details: okOnly(snapshot.details) }));
+      getStorage().set(KEY, JSON.stringify({ schemaVersion: snapshot.schemaVersion, places: snapshot.places, details: okOnly(snapshot.details) }));
     } catch {
       // A storage failure must never take a working catalogue down with it.
     }
