@@ -17,7 +17,7 @@ it('uses a same-origin relative API path on the web and encodes artist names', (
   const path = artistPhotoEndpoint(['A$AP Ant', 'Frankie Lymon & the Teenagers']);
   assert.ok(path.startsWith('/api/music/artist-photo?'));
   const query = new URL(path, 'https://web.example').searchParams;
-  assert.equal(query.get('v'), '5');
+  assert.equal(query.get('v'), '6');
   assert.equal(query.get('names'), 'A$AP Ant|Frankie Lymon & the Teenagers');
 });
 
