@@ -291,3 +291,36 @@ test('listMusicArtistsPage reports a failed read without leaking it', async () =
   if (result.status !== 'unavailable') return;
   assert.equal(result.reason, 'query-failed');
 });
+
+test('listMusicArtists reads every published page, including artists 101 and 102', async () => {
+  const docs = Array.from({ length: 102 }, (_, i) => artist(i + 1, `artist-${i + 1}`));
+  docs[100]!.name = 'Vado';
+  docs[101]!.name = 'Willie The Lion Smith';
+  const { source, queries } = fakeSource({ docs: { 'music-artists': docs } });
+  const result = await createContentReaders(source).listMusicArtists();
+  assert.equal(result.status, 'ok');
+  if (result.status !== 'ok') return;
+  assert.equal(result.data.length, 102);
+  assert.deepEqual(result.data.slice(-2).map((record) => record.name), ['Vado', 'Willie The Lion Smith']);
+  assert.deepEqual(queries.map((query) => [query.page, query.limit, query.sort]), [[1, 100, 'name,id'], [2, 100, 'name,id']]);
+  for (const query of queries) assert.deepEqual(query.where, { _status: { equals: 'published' } });
+});
+
+test('listMusicArtists never exposes a partial catalogue when a later page fails', async () => {
+  const { source } = fakeSource({ docs: { 'music-artists': Array.from({ length: 102 }, (_, i) => artist(i, `artist-${i}`)) } });
+  const findPage = source.findPage;
+  source.findPage = async (query) => {
+    if (query.page === 2) throw new Error('Second-page read failed');
+    return findPage(query);
+  };
+  const result = await createContentReaders(source).listMusicArtists();
+  assert.equal(result.status, 'unavailable');
+  assert.ok(!('data' in result));
+});
+
+test('listMusicArtists fails closed when a paginated source repeats records', async () => {
+  const { source } = fakeSource({ docs: { 'music-artists': [artist(1, 'one')] } });
+  const findPage = source.findPage;
+  source.findPage = async (query) => ({ ...await findPage({ ...query, page: 1 }), hasNextPage: true });
+  assert.equal((await createContentReaders(source).listMusicArtists()).status, 'unavailable');
+});

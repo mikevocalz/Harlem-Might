@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { artistPhotoImageProps, artistPhotoProviderLabel, type ArtistPhotoResult } from './artist-photo.ts';
 import { fetchArtistPhotos } from './artist-photo-client.ts';
 import { musicConnectionLabel } from './music-format.ts';
+import { artistPhotoFraming, shouldUseStoredArtistPhoto } from './artist-photo-policy.ts';
 import { musicKeys } from './music.keys.ts';
 
 function ArtistPortrait({
@@ -25,7 +26,7 @@ function ArtistPortrait({
   photo: ArtistPhotoResult | null | undefined;
   loading: boolean;
 }) {
-  const image = artist.headshot;
+  const image = shouldUseStoredArtistPhoto(artist) ? artist.headshot : undefined;
   if (image) {
     return (
       <View
@@ -51,18 +52,17 @@ function ArtistPortrait({
   }
 
   if (photo) {
-    const aspect = photo.width && photo.height ? photo.width / photo.height : 4 / 5;
+    const framing = artistPhotoFraming(photo);
     return (
       <View
         className="relative w-full shrink-0 overflow-hidden border-b border-rule-hairline bg-mights-night"
-        style={{ aspectRatio: Math.max(0.72, Math.min(aspect, 1.25)) }}
+        style={{ aspectRatio: framing.aspectRatio }}
       >
         <Image
           {...artistPhotoImageProps(photo)}
           alt={`${artist.name} artist photo`}
           fill
-          contentFit="cover"
-          contentPosition={{ top: '30%', left: '50%' }}
+          contentFit={framing.contentFit}
           sizes="(min-width: 1024px) 30vw, (min-width: 640px) 45vw, 100vw"
           className="h-full w-full"
         />
@@ -125,7 +125,7 @@ function ArtistCard({
 }
 
 export function MusicArtistGrid({ artists }: { artists: readonly MusicArtistRecord[] }) {
-  const unresolvedNames = artists.filter((artist) => !artist.headshot).map((artist) => artist.name);
+  const unresolvedNames = artists.filter((artist) => !shouldUseStoredArtistPhoto(artist)).map((artist) => artist.name);
   const query = useQuery({
     queryKey: musicKeys.artistPhotos(unresolvedNames),
     queryFn: () => fetchArtistPhotos(unresolvedNames),
@@ -140,8 +140,8 @@ export function MusicArtistGrid({ artists }: { artists: readonly MusicArtistReco
           <ArtistCard
             key={artist.id}
             artist={artist}
-            photo={artist.headshot ? undefined : query.data?.[artist.name]}
-            loading={!artist.headshot && query.isPending}
+            photo={shouldUseStoredArtistPhoto(artist) ? undefined : query.data?.[artist.name]}
+            loading={!shouldUseStoredArtistPhoto(artist) && query.isPending}
           />
         ))}
       </View>

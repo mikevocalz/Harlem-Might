@@ -95,7 +95,7 @@ export interface ContentReaders {
   getPlace(slug: string): Promise<DetailResult<PlaceRecord>>;
   /** Resolves a stored generated path (osm-*, lpc-*, mon-*) for a permanent redirect. */
   getPlaceByLegacySlug(slug: string): Promise<DetailResult<PlaceRecord>>;
-  /** Published Harlem artists, name-ordered. Draft candidates never leave the CMS. */
+  /** All published Harlem artists, name-ordered across every page. Drafts never leave the CMS. */
   listMusicArtists(): Promise<ContentResult<MusicArtistRecord[]>>;
   /** One {@linkcode MUSIC_PAGE_SIZE} page of the directory, 1-based. */
   listMusicArtistsPage(page?: number): Promise<ContentResult<MusicArtistPage>>;
@@ -242,8 +242,32 @@ export const createContentReaders = (source: ContentSource): ContentReaders => {
       const [record] = result.data;
       return record === undefined ? { status: 'not-found' } : ok(record);
     },
-    listMusicArtists: () =>
-      list({ collection: 'music-artists', where: PUBLISHED, depth: 1, limit: LIST_LIMIT, sort: 'name' }, mapMusicArtist),
+    listMusicArtists: async () => {
+      if (!source.isConfigured()) return notConfigured();
+      try {
+        const artists: MusicArtistRecord[] = [];
+        const seen = new Set<string | number>();
+        for (let page = 1; ; page++) {
+          const result = await source.findPage({
+            collection: 'music-artists', where: PUBLISHED, depth: 1,
+            limit: LIST_LIMIT, sort: 'name,id', page,
+          });
+          // Fail closed rather than expose a partial allowlist or loop forever
+          // if a source stops advancing while claiming another page exists.
+          if (result.hasNextPage && result.docs.length === 0) {
+            throw new Error('Music catalogue pagination stopped advancing');
+          }
+          for (const doc of result.docs) {
+            if (seen.has(doc.id)) throw new Error('Music catalogue pagination repeated an artist');
+            seen.add(doc.id);
+            artists.push(mapMusicArtist(doc));
+          }
+          if (!result.hasNextPage) return ok(artists);
+        }
+      } catch (error) {
+        return queryFailed(error);
+      }
+    },
     listMusicArtistsPage: async (page = 1) => {
       if (!source.isConfigured()) return notConfigured();
       try {

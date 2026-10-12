@@ -15,6 +15,8 @@ export interface MightsEditorialImageProps {
   image: EditorialImage;
   screenId: string;
   ratio?: 'wide' | 'standard';
+  /** Keep every ensemble member and the curator-reviewed portrait framing visible. */
+  preserveFraming?: boolean;
   sizes?: string;
   priority?: boolean;
   /** False inside linked cards, where nested source/license links would be invalid HTML. */
@@ -25,6 +27,7 @@ export function MightsEditorialImage({
   image,
   screenId,
   ratio = 'wide',
+  preserveFraming = false,
   sizes = '100vw',
   priority = false,
   interactiveCredit = true,
@@ -38,7 +41,10 @@ export function MightsEditorialImage({
 
   return (
     <Figure aria-label={image.altText} className="flex flex-col gap-2">
-      <View className={`relative overflow-hidden bg-surface-sunken ${ratio === 'wide' ? 'aspect-video' : 'aspect-4/3'}`}>
+      <View
+        className={`relative overflow-hidden bg-surface-sunken ${preserveFraming ? '' : ratio === 'wide' ? 'aspect-video' : 'aspect-4/3'}`}
+        style={preserveFraming ? { aspectRatio: image.aspect ?? 4 / 5 } : undefined}
+      >
         <Image
           src={image.url}
           alt={image.altText}
@@ -46,12 +52,12 @@ export function MightsEditorialImage({
           sizes={sizes}
           loading={priority ? 'eager' : 'lazy'}
           priority={priority}
-          contentFit={editorialImageContentFit(image)}
+          contentFit={preserveFraming ? 'contain' : editorialImageContentFit(image)}
           // A portrait-shaped photo is usually a person, and the face sits
           // about a third of the way down: anchor the crop there so a wide
           // frame keeps the face (centre cuts at the eyes, top keeps only hair).
-          contentPosition={portrait ? { top: '30%', left: '50%' } : 'center'}
-          style={portrait ? { objectPosition: '50% 30%' } : undefined}
+          contentPosition={!preserveFraming && portrait ? { top: '30%', left: '50%' } : 'center'}
+          style={!preserveFraming && portrait ? { objectPosition: '50% 30%' } : undefined}
           className="absolute inset-0 h-full w-full"
           onLoadingComplete={() => setStatus(screenId, image.id, 'loaded')}
           onError={() => setStatus(screenId, image.id, 'error')}

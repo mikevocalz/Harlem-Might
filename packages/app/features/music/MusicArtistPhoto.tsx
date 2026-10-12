@@ -8,22 +8,25 @@ import { Text, View } from '@acme/ui/tw';
 import { useQuery } from '@tanstack/react-query';
 import { fetchArtistPhotos } from './artist-photo-client.ts';
 import { artistPhotoImageProps, artistPhotoProviderLabel } from './artist-photo.ts';
+import { artistPhotoFraming, shouldUseStoredArtistPhoto } from './artist-photo-policy.ts';
 import { musicKeys } from './music.keys.ts';
 
 export function MusicArtistPhoto({ artist }: { artist: MusicArtistRecord }) {
+  const useStored = shouldUseStoredArtistPhoto(artist);
   const query = useQuery({
     queryKey: musicKeys.artistPhoto(artist.name),
     queryFn: async () => (await fetchArtistPhotos([artist.name]))[artist.name] ?? null,
-    enabled: !artist.headshot,
+    enabled: !useStored,
     staleTime: 24 * 60 * 60 * 1000,
   });
 
-  if (artist.headshot) {
+  if (useStored && artist.headshot) {
     return (
       <MightsEditorialImage
         image={artist.headshot}
         screenId={`music-${artist.slug}`}
         ratio="standard"
+        preserveFraming
         priority
         sizes="(min-width: 768px) 60vw, 100vw"
       />
@@ -32,20 +35,19 @@ export function MusicArtistPhoto({ artist }: { artist: MusicArtistRecord }) {
 
   const photo = query.data;
   if (photo) {
-    const aspect = photo.width && photo.height ? photo.width / photo.height : 4 / 5;
+    const framing = artistPhotoFraming(photo);
     return (
       <Figure aria-label={`${artist.name} artist photo`} className="flex flex-col gap-2">
         <View
           className="relative overflow-hidden bg-surface-sunken"
-          style={{ aspectRatio: Math.max(0.72, Math.min(aspect, 1.25)) }}
+          style={{ aspectRatio: framing.aspectRatio }}
         >
           <Image
             {...artistPhotoImageProps(photo)}
             alt={`${artist.name} artist photo`}
             fill
             priority
-            contentFit="cover"
-            contentPosition={{ top: '30%', left: '50%' }}
+            contentFit={framing.contentFit}
             sizes="(min-width: 768px) 60vw, 100vw"
             className="absolute inset-0 h-full w-full"
           />

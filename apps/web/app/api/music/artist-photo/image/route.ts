@@ -1,9 +1,7 @@
-import { cachedArtistPhotoFetch } from '../../../../../lib/artist-photo-fetch.ts';
 import { NextResponse, type NextRequest } from 'next/server';
 import {
-  hasVerifiedArtistPhotoSource,
-  resolveVerifiedArtistPhoto,
-} from '@acme/app/features/music/verified-artist-photo.ts';
+  resolveReviewedArtistPhoto,
+} from '@acme/app/features/music/reviewed-artist-photo.ts';
 import { listMusicArtists } from '@acme/payload/server';
 import { fetchPublicPhotoResource, PhotoFetchError } from '@acme/payload/artist-photo-fetch';
 
@@ -12,7 +10,8 @@ const PHOTO_CACHE_SECONDS = 60 * 60 * 24 * 7;
 /** Only catalogue-selected references may reach the bounded, DNS-validated proxy. */
 export async function GET(request: NextRequest) {
   const name = request.nextUrl.searchParams.get('name')?.trim() ?? '';
-  if (!name || !hasVerifiedArtistPhotoSource(name)) {
+  const photo = resolveReviewedArtistPhoto(name);
+  if (!name || !photo || photo.provider !== 'curated_web') {
     return new NextResponse('Not found', { status: 404 });
   }
 
@@ -25,10 +24,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const photo = await resolveVerifiedArtistPhoto(name, cachedArtistPhotoFetch);
-    if (!photo || photo.provider !== 'curated_web') {
-      return new NextResponse('Not found', { status: 404 });
-    }
     const upstream = await fetchPublicPhotoResource(photo.url, {
       kind: 'image',
       headers: {
