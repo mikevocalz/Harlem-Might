@@ -27,3 +27,9 @@ Solito/Next-only rendering. The only added dependency is the existing
 No global navigation, pane geometry, renderer, device-family policy or XR
 session ownership changes. Existing phone tabs, foldable/tablet/headset
 physical-right rails, web headers, and Explore panes are unchanged.
+
+Native Back follows the existing Expo tab policy: Today returns to Explore,
+without stepping through calendar query changes. Selecting the Today tab again
+retains its view/page and can reuse the corresponding fresh query cache. Opening
+a fresh `/today` link instead selects Today, page 1. Deep-link parameters are
+normalized for the read/UI; invalid or repeated values use safe defaults.

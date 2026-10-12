@@ -15,6 +15,8 @@ type Harness = {
 const harness: Harness = { params: {}, query: {}, result: { data: undefined }, removed: 0 };
 Object.assign(globalThis, { __harlemTodayHarness: harness });
 const base = 'const h = globalThis.__harlemTodayHarness;';
+// Component wiring only: these hook stubs do not exercise navigation history.
+// todayTabRouter.test.ts covers the installed Expo router/parser separately.
 const stubs: Record<string, string> = {
   react: `${base} export const useSyncExternalStore = (subscribe, getSnapshot) => { h.subscribe = subscribe; return getSnapshot(); };`,
   'react-native': `${base} export const AppState = { addEventListener: (_, cb) => { h.onAppState = cb; return { remove: () => h.removed++ }; } };`,
@@ -37,7 +39,7 @@ registerHooks({
 });
 const { default: TodayRoute } = await import('../../app/(tabs)/today.tsx');
 
-it('native Today derives view/page from the router and isolates query caches through Back', (t) => {
+it('native Today maps supplied route params to isolated query keys', (t) => {
   t.mock.timers.enable({ apis: ['Date'], now: Date.parse('2026-10-12T15:00:00Z') });
   harness.params = {};
   assert.equal(TodayRoute().props.view, 'today');

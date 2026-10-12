@@ -21,7 +21,7 @@ it('Upcoming is a 90-calendar-day range including today across NY DST and year b
   assert.deepEqual(eventDateRange('2026-10-12', 'upcoming'), { start: '2026-10-12', end: '2027-01-09' });
 });
 
-it('cache keys and readers follow the URL on view, page, Back, and New York midnight changes', async () => {
+it('cache keys and readers follow view, page, restored params, and New York midnight changes', async () => {
   const calls: unknown[][] = [];
   const readers: Pick<ContentReaders, 'listEventsForDateRange'> = {
     listEventsForDateRange: async (...args) => { calls.push(args); return { status: 'ok', data: { events: [], totalDocs: 0, hasNextPage: false } }; },
