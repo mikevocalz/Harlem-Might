@@ -25,13 +25,13 @@ async function harness(options: { mode?: TravelMode; origin?: NavigationOrigin }
   const controller = navigationController();
   const plan = () => controller.planRoute({ origin: options.origin ?? { kind: 'device-location' }, originCoordinate: origin, destination: fixtureDestination(NAME), mode: options.mode ?? 'walking' });
   await plan();
-  const native = { supported: async () => true, camera: async () => true, mounted: true, phoneLayout: true };
+  const native = { supported: async () => true, camera: async () => true, mounted: true, phoneLayout: true, foreground: true };
   const pending: boolean[] = [];
   const entry = createArNavigationEntry({
     getSession: () => useNavigationStore.getState().session, supported: () => native.supported(), requestCamera: () => native.camera(),
     startGuidance, enterAR: () => controller.enterAR(), exitAR: () => controller.exitAR(), setPending: (value) => pending.push(value),
   });
-  return { controller, entry, native, counts, pending, plan, open: () => entry.open(() => { counts.opens += 1; }, () => native.mounted && native.phoneLayout) };
+  return { controller, entry, native, counts, pending, plan, open: () => entry.open(() => { counts.opens += 1; }, () => native.mounted && native.phoneLayout && native.foreground) };
 }
 
 describe('Take Me There → phone AR', () => {
@@ -62,11 +62,11 @@ describe('Take Me There → phone AR', () => {
     const first = h.open(); assert.equal(await h.open(), 'busy'); permission.resolve(true);
     assert.equal(await first, 'opened'); assert.equal(h.counts.opens, 1);
   });
-  for (const cause of ['cancel', 'unmount', 'new route', 'non-phone layout'] as const) {
+  for (const cause of ['cancel', 'unmount', 'new route', 'non-phone layout', 'background'] as const) {
     it(`ignores a late permission result after ${cause}`, async () => {
       const h = await harness(); const permission = deferred<boolean>(); h.native.camera = () => permission.promise;
       const first = h.open(); await Promise.resolve();
-      if (cause === 'cancel') endNavigation(); else if (cause === 'unmount') h.native.mounted = false; else if (cause === 'non-phone layout') h.native.phoneLayout = false; else await h.plan();
+      if (cause === 'cancel') endNavigation(); else if (cause === 'unmount') h.native.mounted = false; else if (cause === 'non-phone layout') h.native.phoneLayout = false; else if (cause === 'background') h.native.foreground = false; else await h.plan();
       permission.resolve(true); assert.equal(await first, 'cancelled'); assert.equal(h.counts.opens, 0); assert.equal(h.counts.watches, 0);
     });
   }
