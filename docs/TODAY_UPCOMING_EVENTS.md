@@ -8,6 +8,8 @@ The existing `/today` page now has URL-backed Today and Upcoming controls.
   inclusive range is displayed, and ongoing multi-day events are included.
 - Both views paginate 24 records at a time with total counts, Previous/Next
   links, and an empty-page recovery. Views reset to page 1 when switched.
+- Upcoming preserves the reader’s chronological `startsAt,id` order; Today
+  keeps scheduled events ahead of cancelled/postponed listings.
 - Upcoming cards include dates and years. Cancelled/postponed records retain
   visible warnings and their source, but never offer tickets.
 - Drafts remain excluded by both the query and existing anonymous Payload
@@ -33,3 +35,7 @@ without stepping through calendar query changes. Selecting the Today tab again
 retains its view/page and can reuse the corresponding fresh query cache. Opening
 a fresh `/today` link instead selects Today, page 1. Deep-link parameters are
 normalized for the read/UI; invalid or repeated values use safe defaults.
+
+Next retries immediately expire only the selected event range/page cache before
+refreshing the current URL. The server validates view/page and derives today’s
+New York date; clients cannot supply cache tags or arbitrary date ranges.

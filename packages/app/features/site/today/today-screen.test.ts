@@ -93,3 +93,16 @@ it('cancelled and postponed listings retain warnings/source but suppress tickets
     assert.doesNotMatch(html, /https:\/\/example.org\/tickets/);
   }
 });
+
+it('Upcoming preserves startsAt/id chronology while Today keeps scheduled listings first', () => {
+  const events: EventRecord[] = [
+    { ...event, id: 10, title: 'Earlier cancelled', startsAt: '2026-10-12T14:00:00Z', status: 'cancelled' },
+    { ...event, id: 11, title: 'Earlier postponed', startsAt: '2026-10-12T14:00:00Z', status: 'postponed' },
+    { ...event, id: 12, title: 'Later scheduled', startsAt: '2026-10-12T16:00:00Z' },
+  ];
+  const titles = (view: 'today' | 'upcoming') => [...render({ view, result: page(events) }).matchAll(/<h2>(.*?)<\/h2>/g)]
+    .map((match) => match[1]).filter((title) => events.some((entry) => entry.title === title));
+  assert.deepEqual(titles('upcoming'), ['Earlier cancelled', 'Earlier postponed', 'Later scheduled']);
+  assert.deepEqual(titles('today'), ['Later scheduled', 'Earlier cancelled', 'Earlier postponed']);
+  assert.deepEqual(events.map((entry) => entry.id), [10, 11, 12]);
+});

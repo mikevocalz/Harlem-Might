@@ -1,12 +1,26 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { MightsButton } from '@acme/ui/mights';
+import { MightsButton, MightsText } from '@acme/ui/mights';
+import type { EventSearch } from '@acme/app/features/site/today/event-query.ts';
+import { retryTodayEvents } from '../../lib/today-retry-action.ts';
 
-/** Refresh the current view/page rather than navigating to an already-open URL. */
-export function TodayRetry() {
+/** Expire this range/page, then refresh the current URL (including query state). */
+export function TodayRetry(search: EventSearch) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  return <MightsButton disabled={pending} onPress={() => startTransition(() => router.refresh())}>{pending ? 'Checking…' : 'Try again'}</MightsButton>;
+  const [failed, setFailed] = useState(false);
+  return <>
+    <MightsButton disabled={pending} onPress={() => startTransition(async () => {
+      setFailed(false);
+      try {
+        await retryTodayEvents(search);
+        router.refresh();
+      } catch {
+        setFailed(true);
+      }
+    })}>{pending ? 'Checking…' : 'Try again'}</MightsButton>
+    {failed ? <MightsText size="small">The retry didn’t reach our records. Please try again.</MightsText> : null}
+  </>;
 }

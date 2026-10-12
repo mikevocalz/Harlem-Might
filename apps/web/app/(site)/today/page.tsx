@@ -24,7 +24,7 @@ async function TodayContent({ searchParams }: { searchParams: SearchParams }) {
   const search = eventSearch(await searchParams);
   const { start, end } = eventDateRange(date, search.view);
   const result = await cachedEventsForDateRange(start, end, search.page);
-  return <><TodayDateRefresh date={date} /><TodayScreen date={date} now={now} {...search} result={result} retryAction={<TodayRetry />} /></>;
+  return <><TodayDateRefresh date={date} /><TodayScreen date={date} now={now} {...search} result={result} retryAction={<TodayRetry {...search} />} /></>;
 }
 
 export default function TodayPage({ searchParams }: { searchParams: SearchParams }) {

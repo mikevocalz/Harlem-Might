@@ -86,7 +86,8 @@ function EventBody({ event, featured, now, showDate }: { event: EventRecord; fea
 }
 
 export function TodayEvents({ events, now, showDate = false }: { events: readonly EventRecord[]; now: Date; showDate?: boolean }) {
-  const ordered = orderForToday(events);
+  // Upcoming retains the reader’s startsAt/id order across paginated results.
+  const ordered = showDate ? events : orderForToday(events);
   // One event is a single card; a bento needs something to be dominant over.
   if (ordered.length < 2) {
     const only = ordered[0];

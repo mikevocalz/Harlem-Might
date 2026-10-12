@@ -73,7 +73,7 @@ function TodayPage() {
           <>
             <Text className="text-sm text-text-muted">Showing {(page - 1) * EVENTS_PAGE_SIZE + 1}–{(page - 1) * EVENTS_PAGE_SIZE + result.data.events.length} of {result.data.totalDocs} listings.</Text>
             <View className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {orderForToday(result.data.events).map((event) => {
+              {(upcoming ? result.data.events : orderForToday(result.data.events)).map((event) => {
                 const checked = checkedAt(event);
                 const source = safeHttpUrl(event.sourceUrl);
                 const ticket = event.status === 'scheduled' ? safeHttpUrl(event.ticketUrl) : null;

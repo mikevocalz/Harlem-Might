@@ -1,5 +1,6 @@
 import 'server-only';
-import { cacheLife } from 'next/cache';
+import { cacheLife, cacheTag } from 'next/cache';
+import { eventRangeCacheTag } from './event-cache-key.ts';
 import {
   getMusicArtist,
   getPlace,
@@ -59,6 +60,7 @@ export async function cachedEventsForDate(date: string) {
 
 export async function cachedEventsForDateRange(start: string, end: string, page: number) {
   'use cache';
+  cacheTag(eventRangeCacheTag(start, end, page));
   return settle(`events ${start}–${end} p${page}`, await listEventsForDateRange(start, end, page));
 }
 
