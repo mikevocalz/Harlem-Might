@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { useRouter } from 'solito/navigation';
 import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
@@ -67,7 +67,7 @@ export function ArNavigationButton() {
           local.current?.setState({ message: undefined });
           void entry.open(() => router.push('/explore-ar'), () => {
             const currentLocation = useNavigationUi.getState().location;
-            return mounted.current && currentPhoneArLayout.current && (currentLocation === 'granted' || currentLocation === 'approximate');
+            return mounted.current && AppState.currentState === 'active' && currentPhoneArLayout.current && (currentLocation === 'granted' || currentLocation === 'approximate');
           }).then((result) => {
             if (mounted.current) local.current?.setState({ message: ERROR_COPY[result] });
           });
