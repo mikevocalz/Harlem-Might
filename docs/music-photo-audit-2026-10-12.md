@@ -16,7 +16,7 @@ This is **not a production-completion certificate**. A working deployment/media 
 - Replace James P. Johnson's distant group-scene framing and Stuart Bascombe's three-person image with individual photographs.
 - Quarantine exactly five known stored source assignments: Black Ivory's sleeve, Dizzy Gillespie's distant orchestra scene, Frankie Cutlass and J. Rosamond Johnson's ambiguous two-person photos, and Harlem Gospel Choir's photo with conflicting embedded copyright metadata. Later curator replacements are preserved; quarantine is by source identity, not an unconditional artist override.
 - Preserve the entire photo and ensemble membership in artist cards/detail views. Existing non-music editorial framing stays unchanged by default.
-- Read every published catalogue page for photo allowlisting, including artists101 and102; fail closed rather than returning a partial allowlist if a later read fails.
+- Read every published catalogue page for photo allowlisting, including artists 101 and 102; fail closed rather than returning a partial allowlist if a later read fails.
 - Apply the same stored-source quarantine to artist-page Open Graph images.
 - Version both API and React Query image caches.
 - Make both public photo GET routes read-only. Displaying an image no longer uploads media or rewrites the live catalogue.
@@ -40,7 +40,7 @@ Charles Hamilton remains a low-quality but correctly attributed video-frame phot
 - All 20 external-reference upstream URLs: HTTP200, supported image media type, no redirect under the proxy request headers. This is an upstream check, not proof of deployed proxy access.
 - App, content, UI and web TypeScript checks: passed.
 - Changed app, UI and web files: ESLint passed.
-- Production web build: passed after localizing existing dependencies and bounding CPU/Node memory for this shared environment. The first attempts hit an external dependency-link root error and then exit137; the bounded retry exited0. No deployment was performed.
+- Production web build: passed after localizing existing dependencies and bounding CPU/Node memory for this shared environment. The first attempts hit an external dependency-link root error and then exit 137; the bounded retry exited 0. No deployment was performed.
 - No merge, deployment or live CMS/database mutation performed.
 
 Repository AGENTS.md and its pinned `mikevocalz-foldable-layouts` reference were read. Existing Image, Figure, MightsEditorialImage and React Query abstractions are reused. No navigation, pane, router, hinge or device-family policy is changed. Native/headset hardware was not tested.

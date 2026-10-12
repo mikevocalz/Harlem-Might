@@ -87,8 +87,8 @@ it('social previews replace all quarantined photos, retain later uploads, and co
   for (const artist of evidence.artists.filter((item: { storedAction: string }) => item.storedAction === 'replace-known-defect')) {
     const old = { name: artist.name, headshot: { url: 'https://cms.example/old.jpg', sourceUrl: artist.storedSourceAtAudit, altText: 'Old image' } };
     assert.equal(musicArtistOpenGraphPhoto(old)?.url, resolveReviewedArtistPhoto(artist.name)?.url);
-    const corrected = { ...old, headshot: { ...old.headshot, sourceUrl: 'https://example.org/new-upload' } };
-    assert.equal(musicArtistOpenGraphPhoto(corrected)?.url, old.headshot.url);
+    const corrected = { ...old, headshot: { ...old.headshot, url: 'https://cms.example/new.jpg', sourceUrl: 'https://example.org/new-upload' } };
+    assert.equal(musicArtistOpenGraphPhoto(corrected)?.url, corrected.headshot.url);
   }
   assert.equal(musicArtistOpenGraphPhoto({ name: 'Vado' })?.url, resolveReviewedArtistPhoto('Vado')?.url);
   assert.equal(musicArtistOpenGraphPhoto({ name: 'Unknown' }), undefined);
