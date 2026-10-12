@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import type { PlaceRecord } from '../../content/records.ts';
 import type { ContentResult } from '../../content/result.ts';
 import { createPlaceCatalogueStore, catalogueNearbyPlaces } from './place-catalogue.store.ts';
+import { explorePlaceFromRecord } from './catalogue.ts';
 import { filterPlaces } from './explore.store.ts';
 import { placesGeoJson } from './explore-map-layers.ts';
 
@@ -108,4 +109,71 @@ test('a synchronous reader failure releases the request so retry can recover', a
   await store.getState().refresh();
   assert.equal(store.getState().places[0]?.id, 'recovered');
   assert.equal(store.getState().loadState.status, 'ready');
+});
+
+test('a persisted snapshot hydrates the catalogue before the first refresh', () => {
+  const cached = place('cached-cafe');
+  const store = createPlaceCatalogueStore({
+    persistence: {
+      load: () => ({
+        places: [explorePlaceFromRecord(cached)],
+        details: { 'cached-cafe': { status: 'ok', data: cached } },
+      }),
+      save: () => {},
+    },
+  });
+  assert.equal(store.getState().places[0]?.id, 'cached-cafe');
+  assert.equal(store.getState().details['cached-cafe']?.status, 'ok');
+  assert.equal(store.getState().loadState.status, 'idle');
+});
+
+test('successful catalogue and detail reads persist for the next launch', async () => {
+  const saved: { places: readonly unknown[]; details: Record<string, unknown> }[] = [];
+  const store = createPlaceCatalogueStore({
+    persistence: { load: () => undefined, save: (snapshot) => saved.push(snapshot) },
+  });
+  store.getState().connect({
+    listExploreCatalogue: async () => ({ status: 'ok', data: [place('new-cafe')] }),
+    getPlace: async (slug) => ({ status: 'ok', data: place(slug) }),
+  });
+  await store.getState().refresh();
+  await store.getState().loadPlace('new-cafe');
+  const last = saved.at(-1);
+  assert.ok(last);
+  assert.equal(last.places.length, 1);
+  assert.equal((last.details['new-cafe'] as { status: string }).status, 'ok');
+});
+
+test('a failed refresh retries on the configured backoff and recovers without a caller', async () => {
+  let fail = true;
+  let reads = 0;
+  const store = createPlaceCatalogueStore({ retryDelaysMs: [1] });
+  store.getState().connect({
+    listExploreCatalogue: async () => {
+      reads++;
+      if (fail) throw new Error('offline');
+      return { status: 'ok', data: [place('recovered')] };
+    },
+    getPlace: async () => ({ status: 'not-found' }),
+  });
+  await store.getState().refresh();
+  assert.equal(store.getState().loadState.status, 'unavailable');
+  fail = false;
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.equal(reads, 2);
+  assert.equal(store.getState().loadState.status, 'ready');
+  assert.equal(store.getState().places[0]?.id, 'recovered');
+});
+
+test('retries stop after the configured delays are exhausted', async () => {
+  let reads = 0;
+  const store = createPlaceCatalogueStore({ retryDelaysMs: [1, 1] });
+  store.getState().connect({
+    listExploreCatalogue: async () => { reads++; throw new Error('offline'); },
+    getPlace: async () => ({ status: 'not-found' }),
+  });
+  await store.getState().refresh();
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.equal(reads, 3);
+  assert.equal(store.getState().loadState.status, 'unavailable');
 });

@@ -1,7 +1,7 @@
-import type { ContentDocs, ContentPage, ContentQuery, ContentSource } from './readers.ts';
+import type { ContentDocs, ContentPage, ContentQuery, ContentRequestOptions, ContentSource } from './readers.ts';
 
 /** The slice of WHATWG `fetch` the REST source calls. */
-export type ContentFetch = (url: string, init: { headers: Record<string, string> }) => Promise<{
+export type ContentFetch = (url: string, init: { headers: Record<string, string>; signal?: AbortSignal }) => Promise<{
   ok: boolean;
   status: number;
   json(): Promise<unknown>;
@@ -31,10 +31,10 @@ export function createRestContentSource({ apiUrl, fetch }: RestContentSourceOpti
   const base = apiUrl?.replace(/\/+$/, '');
   return {
     isConfigured: () => Boolean(base),
-    async find<TSlug extends keyof ContentDocs>(query: ContentQuery<TSlug>): Promise<ContentDocs[TSlug][]> {
+    async find<TSlug extends keyof ContentDocs>(query: ContentQuery<TSlug>, options?: ContentRequestOptions): Promise<ContentDocs[TSlug][]> {
       if (!base) throw new Error('No Payload API URL configured for the REST content source.');
       const url = `${base}/${query.collection}?${restQueryString(query)}`;
-      const response = await fetch(url, { headers: { accept: 'application/json' } });
+      const response = await fetch(url, { headers: { accept: 'application/json' }, signal: options?.signal });
       if (!response.ok) throw new Error(`Payload REST ${query.collection} answered ${response.status}`);
       const body = (await response.json()) as { docs?: ContentDocs[TSlug][] };
       if (!Array.isArray(body.docs)) throw new Error(`Payload REST ${query.collection} returned no docs array`);
@@ -42,10 +42,11 @@ export function createRestContentSource({ apiUrl, fetch }: RestContentSourceOpti
     },
     async findPage<TSlug extends keyof ContentDocs>(
       query: ContentQuery<TSlug>,
+      options?: ContentRequestOptions,
     ): Promise<ContentPage<ContentDocs[TSlug]>> {
       if (!base) throw new Error('No Payload API URL configured for the REST content source.');
       const url = `${base}/${query.collection}?${restQueryString(query)}`;
-      const response = await fetch(url, { headers: { accept: 'application/json' } });
+      const response = await fetch(url, { headers: { accept: 'application/json' }, signal: options?.signal });
       if (!response.ok) throw new Error(`Payload REST ${query.collection} answered ${response.status}`);
       const body = (await response.json()) as {
         docs?: ContentDocs[TSlug][];

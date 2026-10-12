@@ -1,9 +1,11 @@
+import { contentFetch } from '../../content/content-fetch.ts';
+import type { ContentRequestOptions } from '../../content/readers.ts';
 import {
   isArtistPhotoResult,
   type ArtistPhotoResult,
 } from './artist-photo.ts';
 
-const PHOTO_RESOLVER_VERSION = '3';
+export const PHOTO_RESOLVER_VERSION = '4';
 
 const photoServiceBase = (): string | undefined => {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
@@ -38,9 +40,11 @@ export const artistPhotoEndpoint = (names: readonly string[]): string => {
 
 export async function fetchArtistPhotos(
   names: readonly string[],
+  options?: ContentRequestOptions,
 ): Promise<Record<string, ArtistPhotoResult | null>> {
-  const response = await fetch(artistPhotoEndpoint(names), {
+  const response = await contentFetch(artistPhotoEndpoint(names), {
     headers: { accept: 'application/json' },
+    signal: options?.signal,
   });
   if (!response.ok) throw new Error(`Artist photo service answered ${response.status}`);
   const body = (await response.json()) as { photos?: Record<string, unknown> };

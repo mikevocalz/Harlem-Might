@@ -16,7 +16,7 @@ export const unstable_settings = { initialRouteName: 'explore' };
  * Profile, Settings. None had a site counterpart or real data.
  *
  * On a quest build the rail moves into its own window on the main window's
- * end edge (DECISIONS S18, `AppTabBarHost`).
+ * physical left edge (`AppTabBarHost`).
  *
  * JS tabs, not `NativeTabs`: `NativeTabs` cannot draw an Android navigation
  * rail (`sidebarAdaptable` is iOS 18+ iPad only), and `tabBarPosition` exists

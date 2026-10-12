@@ -8,6 +8,7 @@ import { APP_TABS, TAB_SCREEN, type AppTabRoute } from '@/src/site/app-tabs';
 import { isTabShown } from '@/src/site/tabVisibility';
 import { isHorizonBuild } from '@/src/spatial/horizonBuild';
 import { useNavigationPresentation } from '@/src/navigation/useNavigationPresentation';
+import { navigationRailStyle } from '@/src/navigation/navigationPresentation';
 import { RAIL_WINDOW_DP } from '@/src/spatial/railWindow';
 
 /** Material 3 navigation rail width. Items keep the 48dp target floor. */
@@ -55,7 +56,7 @@ export function AppTabBar({
   insets,
   layout,
 }: Pick<BottomTabBarProps, 'state' | 'emitter' | 'navigateToTab' | 'insets'> & { layout: AppTabBarLayout }) {
-  const { hardwareColumnWidth } = useNavigationPresentation();
+  const { hardwareColumnWidth, physicalPosition, isRTL } = useNavigationPresentation();
   const rail = layout !== 'bar';
   const xr = layout === 'window';
   const items = state.routes.map((route, index) => {
@@ -135,8 +136,14 @@ export function AppTabBar({
   return (
     <View
       role="tablist"
-      style={{ width: hardwareColumnWidth || RAIL_WIDTH + insets.right, paddingRight: hardwareColumnWidth ? 0 : insets.right }}
-      className="h-full border-l border-rule-hairline bg-paper"
+      style={navigationRailStyle({
+        position: physicalPosition === 'left' ? 'left' : 'right',
+        isRTL,
+        insets,
+        hardwareColumnWidth,
+        railWidth: RAIL_WIDTH,
+      })}
+      className="h-full border-rule-hairline bg-paper"
     >
       <ScrollView
         showsVerticalScrollIndicator={false}

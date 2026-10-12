@@ -8,10 +8,11 @@ export const METRO_PORTS = Array.from({ length: 20 }, (_, i) => 8081 + i);
 
 /** @param {string[]} argv */
 export function parseArgs(argv) {
-  const args = { install: false, serial: undefined, help: false };
+  const args = { install: false, resetAppData: false, serial: undefined, help: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--install') args.install = true;
+    else if (arg === '--reset-app-data') args.resetAppData = true;
     else if (arg === '--help' || arg === '-h') args.help = true;
     else if (arg === '--serial') {
       const value = argv[i + 1];
@@ -25,7 +26,14 @@ export function parseArgs(argv) {
     }
   }
   if (args.serial && !args.install) args.install = true;
+  if (args.resetAppData && !args.install) throw new Error('--reset-app-data requires --install (or --serial)');
   return args;
+}
+
+export function installPlan(args, apkPath, installed = false) {
+  if (!args.install) return [];
+  if (!args.resetAppData) return [['install', '-r', apkPath]];
+  return [...(installed ? [['uninstall', PACKAGE_NAME]] : []), ['install', apkPath]];
 }
 
 /** True when `version` (e.g. "24.15.0") is on the pinned major.minor. */

@@ -15,6 +15,7 @@ export type SpatialAudioDistanceModel =
 export type AmbientAudioOptions = {
   loop?: boolean;
   volume?: number;
+  onFinish?: () => void;
 };
 
 export type PositionalAudioOptions = AmbientAudioOptions & {

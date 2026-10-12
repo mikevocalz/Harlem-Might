@@ -4,6 +4,8 @@
 // ready-to-call readers are bound to Payload in @acme/payload/server.
 export { createContentReaders, LIST_LIMIT, MUSIC_PAGE_SIZE, PLACES_LIMIT } from './readers.ts';
 export { createRestContentSource, restQueryString } from './rest-source.ts';
+export { contentFetch } from './content-fetch.ts';
+export { contentQuery, contentQueryResult, ContentQueryError } from './result.ts';
 export { HARLEM_HISTORY_FACTS, harlemHistoryFactFor } from './history-facts.ts';
 export type { HarlemHistoryFact } from './history-facts.ts';
 export type { ContentFetch, RestContentSourceOptions } from './rest-source.ts';
@@ -19,6 +21,7 @@ export type {
   ContentPage,
   ContentQuery,
   ContentReaders,
+  ContentRequestOptions,
   ContentSource,
   ContentWhere,
   MusicArtistPage,

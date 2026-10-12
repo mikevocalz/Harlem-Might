@@ -71,7 +71,22 @@ const config: ExpoConfig = {
     ],
     // Quest and PICO run Android 12+; Meta's layout library and
     // react-native-webgpu's AHardwareBuffer use both need minSdk 29.
-    ['expo-build-properties', { android: { minSdkVersion: 29 } }],
+    [
+      'expo-build-properties',
+      {
+        android: {
+          minSdkVersion: 29,
+          // Viro's bundled GVR logging protos ship without the proto-nano
+          // classes they reference; R8 release minify fails without these.
+          extraProguardRules: `
+            -dontwarn com.google.common.logging.Vr$VREvent$**
+            -dontwarn com.google.protobuf.nano.**
+            -dontwarn logs.proto.wireless.performance.mobile.**
+            -keep class * extends androidx.room.RoomDatabase { <init>(); }
+          `,
+        },
+      },
+    ],
     [
       'expo-splash-screen',
       {

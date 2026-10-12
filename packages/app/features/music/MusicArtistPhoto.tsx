@@ -1,7 +1,7 @@
 'use client';
 
 import type { MusicArtistRecord } from '@acme/app/content';
-import { Image } from '@acme/ui';
+import { FadeIn, Image, useReducedMotion } from '@acme/ui';
 import { Figure, Figcaption, Link } from '@acme/ui/html';
 import { MightsEditorialImage, MightsText } from '@acme/ui/mights';
 import { Text, View } from '@acme/ui/tw';
@@ -11,9 +11,10 @@ import { artistPhotoProviderLabel } from './artist-photo.ts';
 import { musicKeys } from './music.keys.ts';
 
 export function MusicArtistPhoto({ artist }: { artist: MusicArtistRecord }) {
+  const reduceMotion = useReducedMotion();
   const query = useQuery({
     queryKey: musicKeys.artistPhoto(artist.name),
-    queryFn: async () => (await fetchArtistPhotos([artist.name]))[artist.name] ?? null,
+    queryFn: async ({ signal }) => (await fetchArtistPhotos([artist.name], { signal }))[artist.name] ?? null,
     enabled: !artist.headshot,
     staleTime: 24 * 60 * 60 * 1000,
   });
@@ -33,7 +34,7 @@ export function MusicArtistPhoto({ artist }: { artist: MusicArtistRecord }) {
   const photo = query.data;
   if (photo) {
     const aspect = photo.width && photo.height ? photo.width / photo.height : 4 / 5;
-    return (
+    const figure = (
       <Figure aria-label={`${artist.name} artist photo`} className="flex flex-col gap-2">
         <View
           className="relative overflow-hidden bg-surface-sunken"
@@ -82,6 +83,8 @@ export function MusicArtistPhoto({ artist }: { artist: MusicArtistRecord }) {
         </Figcaption>
       </Figure>
     );
+    // Fetched photos get the kit's entrance motion; CMS headshots stay static.
+    return reduceMotion ? figure : <FadeIn>{figure}</FadeIn>;
   }
 
   return (

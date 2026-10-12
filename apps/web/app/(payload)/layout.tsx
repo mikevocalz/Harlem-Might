@@ -4,6 +4,7 @@ import type { ServerFunctionClient } from 'payload';
 import config from '@payload-config';
 import '@payloadcms/next/css';
 import { handleServerFunctions, RootLayout } from '@payloadcms/next/layouts';
+import { connection } from 'next/server';
 import React from 'react';
 
 import { importMap } from './admin/importMap.js';
@@ -23,7 +24,8 @@ const serverFunction: ServerFunctionClient = async (args) => {
   });
 };
 
-export default function PayloadLayout({ children }: Args) {
+export default async function PayloadLayout({ children }: Args) {
+  await connection();
   return (
     <RootLayout config={config} importMap={importMap} serverFunction={serverFunction}>
       {children}

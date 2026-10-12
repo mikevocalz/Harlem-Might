@@ -50,7 +50,7 @@ export const RAIL_WINDOW_DP = (() => {
 
 /**
  * The app's navigation rail as its own Horizon window on the main window's
- * end edge, like a visionOS tab bar ornament (DECISIONS S18). Same depth
+ * physical left edge, like a visionOS tab bar ornament (DECISIONS S18). Same depth
  * as the main window (no offset) and centred on it vertically. Priority 20
  * so navigation wins a slot over any content window.
  */
@@ -61,5 +61,5 @@ export const RAIL_WINDOW: MetaWindowProps = {
   priority: 20,
   promotable: true,
   fallback: 'drop',
-  anchor: { parent: 'end', child: 'start' },
+  anchor: { parent: 'left', child: 'right' },
 };

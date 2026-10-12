@@ -5,8 +5,9 @@ import {
   type ArtistPhotoResult,
 } from '@acme/app/features/music/artist-photo.ts';
 import {
-  listMusicArtists,
+  listMusicArtistsPage,
   persistRightsClearedMusicArtistHeadshot,
+  type ContentResult,
   type MusicArtistRecord,
 } from '@acme/payload/server';
 
@@ -63,8 +64,20 @@ async function persistRightsClearedPhotos(
   await Promise.all(workers);
 }
 
+// The directory has outgrown LIST_LIMIT's flat read: page through every
+// published artist so photo admission and persistence never truncate the tail.
+async function listAllMusicArtists(): Promise<ContentResult<MusicArtistRecord[]>> {
+  const artists: MusicArtistRecord[] = [];
+  for (let page = 1; ; page += 1) {
+    const result = await listMusicArtistsPage(page);
+    if (result.status !== 'ok') return result;
+    artists.push(...result.data.artists);
+    if (!result.data.hasNextPage) return { status: 'ok', data: artists };
+  }
+}
+
 export async function GET(request: NextRequest) {
-  const catalogue = await listMusicArtists();
+  const catalogue = await listAllMusicArtists();
   if (catalogue.status !== 'ok') {
     return NextResponse.json(
       { photos: {}, error: 'catalogue-unavailable' },

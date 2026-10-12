@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import { Fragment, type ReactElement, type ReactNode } from 'react';
 import type { MetaWindowProps } from '@viro-external/meta-layout';
 import { createMetaWindows, type MetaLayoutModules } from './metaWindowsCore.ts';
+import { RAIL_WINDOW } from './railWindow.ts';
 
 const SpatialWindow = () => null;
 const SpatialSceneProvider = () => null;
@@ -41,6 +42,16 @@ describe('metaWindows.Window', () => {
     assert.equal(inner.type, WindowOwners);
     assert.deepEqual(inner.props.style, { flex: 1 });
     assert.equal(inner.props.children, content);
+  });
+
+  it('passes the physical-left rail placement to Meta without a host override', () => {
+    const windows = createMetaWindows(true, fakeModules);
+    const outer = windows.Window({ window: RAIL_WINDOW, children: content }) as ReactElement<MetaWindowProps>;
+    assert.equal(outer.type, SpatialWindow);
+    assert.deepEqual(outer.props.anchor, { parent: 'left', child: 'right' });
+    for (const key of ['label', 'windowWidth', 'windowHeight', 'priority', 'promotable', 'fallback', 'offset'] as const) {
+      assert.equal(outer.props[key], RAIL_WINDOW[key]);
+    }
   });
 
   it('renders the content in a fragment, unwrapped, when the SDK is not enabled', () => {

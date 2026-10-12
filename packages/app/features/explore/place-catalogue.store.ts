@@ -3,6 +3,10 @@ import { useStore } from 'zustand';
 import type { ContentReaders } from '../../content/readers.ts';
 import type { PlaceRecord } from '../../content/records.ts';
 import type { DetailResult } from '../../content/result.ts';
+import {
+  platformCataloguePersistence,
+  type PlaceCataloguePersistence,
+} from './catalogue-persistence.ts';
 import { explorePlaceFromRecord } from './catalogue.ts';
 import { haversine, type ExplorePlace } from './explore.store.ts';
 
@@ -19,20 +23,56 @@ export interface PlaceCatalogueState {
   loadPlace: (slug: string) => Promise<void>;
 }
 
+export interface PlaceCatalogueStoreOptions {
+  /** Durable home for the last good catalogue — MMKV on native, none elsewhere. */
+  persistence?: PlaceCataloguePersistence;
+  /**
+   * Backoff delays (ms) for self-healing retries after a failed refresh.
+   * Empty (the default for isolated stores) means callers drive retries.
+   */
+  retryDelaysMs?: readonly number[];
+}
+
 /** Creates an isolated catalogue; failed reads retain the last successful list. */
-export function createPlaceCatalogueStore() {
+export function createPlaceCatalogueStore(options: PlaceCatalogueStoreOptions = {}) {
+  const restored = options.persistence?.load();
+  const retryDelays = options.retryDelaysMs ?? [];
   let readers: Readers | undefined;
   let pending: Promise<void> | undefined;
+  let retryAttempt = 0;
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
   const detailRequests = new Map<string, Promise<void>>();
-  return createStore<PlaceCatalogueState>((set, get) => ({
-    places: [],
+  return createStore<PlaceCatalogueState>((set, get) => {
+    const persistSnapshot = () => {
+      try {
+        options.persistence?.save({ places: get().places, details: get().details });
+      } catch {
+        // Durable caching must never take a working catalogue down with it.
+      }
+    };
+    const scheduleRetry = () => {
+      const delay = retryDelays[retryAttempt];
+      if (delay === undefined || retryTimer !== undefined) return;
+      retryAttempt += 1;
+      retryTimer = setTimeout(() => {
+        retryTimer = undefined;
+        void get().refresh();
+      }, delay);
+      (retryTimer as { unref?: () => void }).unref?.();
+    };
+    const markUnavailable = (message: string) => {
+      set({ loadState: { status: 'unavailable', message } });
+      scheduleRetry();
+    };
+    return {
+    places: restored?.places ?? [],
     loadState: { status: 'idle' },
-    details: {},
+    details: restored?.details ?? {},
     connect: (value) => { readers = value; },
     refresh: () => {
       if (pending) return pending;
       if (!readers) {
-        set({ loadState: { status: 'unavailable', message: 'The place catalogue is not configured.' } });
+        markUnavailable('The place catalogue is not configured.');
         return Promise.resolve();
       }
       const source = readers;
@@ -41,13 +81,16 @@ export function createPlaceCatalogueStore() {
         try {
           const result = await source.listExploreCatalogue();
           if (result.status === 'ok') {
+            retryAttempt = 0;
+            if (retryTimer !== undefined) { clearTimeout(retryTimer); retryTimer = undefined; }
             set({ places: result.data.map(explorePlaceFromRecord), loadState: { status: 'ready' } });
+            persistSnapshot();
           } else {
-            set({ loadState: { status: 'unavailable', message: result.reason === 'not-configured'
-              ? 'The place catalogue is not configured.' : 'We couldn’t load the place catalogue. Try again.' } });
+            markUnavailable(result.reason === 'not-configured'
+              ? 'The place catalogue is not configured.' : 'We couldn’t load the place catalogue. Try again.');
           }
         } catch {
-          set({ loadState: { status: 'unavailable', message: 'We couldn’t load the place catalogue. Try again.' } });
+          markUnavailable('We couldn’t load the place catalogue. Try again.');
         }
       }).finally(() => { pending = undefined; });
       return pending;
@@ -69,15 +112,22 @@ export function createPlaceCatalogueStore() {
           places: result.status === 'ok' && !state.places.some((p) => p.id === slug)
             ? [...state.places, explorePlaceFromRecord(result.data)] : state.places,
         }));
+        if (result.status === 'ok') persistSnapshot();
       })().finally(() => { detailRequests.delete(slug); });
       detailRequests.set(slug, request);
       return request;
     },
-  }));
+    };
+  });
 }
 
 /** One catalogue for all native surfaces in the app's JS runtime. */
-export const placeCatalogueStore = createPlaceCatalogueStore();
+export const placeCatalogueStore = createPlaceCatalogueStore({
+  persistence: platformCataloguePersistence,
+  // A dead read self-heals across foregrounds; the last attempt waits long
+  // enough for flaky radios without polling forever in the background.
+  retryDelaysMs: [1500, 5000, 15_000],
+});
 
 /** Subscribes to a stable slice of the shared native catalogue. */
 export function usePlaceCatalogue<T>(selector: (state: PlaceCatalogueState) => T): T {

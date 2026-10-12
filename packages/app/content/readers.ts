@@ -58,18 +58,23 @@ export interface ContentSource {
   /** False when this process has no content database. */
   isConfigured(): boolean;
   /** Runs a published-only query. Rejects when the database cannot answer. */
-  find<TSlug extends keyof ContentDocs>(query: ContentQuery<TSlug>): Promise<ContentDocs[TSlug][]>;
+  find<TSlug extends keyof ContentDocs>(query: ContentQuery<TSlug>, options?: ContentRequestOptions): Promise<ContentDocs[TSlug][]>;
   /** Runs a published-only query one page at a time (`query.page`, 1-based). */
   findPage<TSlug extends keyof ContentDocs>(
     query: ContentQuery<TSlug>,
+    options?: ContentRequestOptions,
   ): Promise<ContentPage<ContentDocs[TSlug]>>;
 }
 
+export interface ContentRequestOptions {
+  signal?: AbortSignal;
+}
+
 export interface ContentReaders {
-  listWalks(): Promise<ContentResult<WalkRecord[]>>;
-  getWalk(slug: string): Promise<DetailResult<WalkRecord>>;
-  listStories(): Promise<ContentResult<StoryRecord[]>>;
-  getStory(slug: string): Promise<DetailResult<StoryRecord>>;
+  listWalks(options?: ContentRequestOptions): Promise<ContentResult<WalkRecord[]>>;
+  getWalk(slug: string, options?: ContentRequestOptions): Promise<DetailResult<WalkRecord>>;
+  listStories(options?: ContentRequestOptions): Promise<ContentResult<StoryRecord[]>>;
+  getStory(slug: string, options?: ContentRequestOptions): Promise<DetailResult<StoryRecord>>;
   /**
    * Published events that overlap one New York calendar day, earliest first.
    *
@@ -77,29 +82,29 @@ export interface ContentReaders {
    * @throws {RangeError} when `dateInNY` is not a real date. Validate route
    * params with `isHarlemDate()` first and 404 on failure.
    */
-  listEventsForDate(dateInNY: string): Promise<ContentResult<EventRecord[]>>;
+  listEventsForDate(dateInNY: string, options?: ContentRequestOptions): Promise<ContentResult<EventRecord[]>>;
   /** Every catalogue place, name-ordered. Places are not versioned: import state is carried on the record itself. */
-  listPlaces(): Promise<ContentResult<PlaceRecord[]>>;
+  listPlaces(options?: ContentRequestOptions): Promise<ContentResult<PlaceRecord[]>>;
   /**
    * The catalogue in the shape browse surfaces render — same `PlaceRecord`,
    * but the query selects only the columns Explore rows, the map and nearby
    * modules read. Detail facts (menus, phone, images…) stay in `getPlace`.
    */
-  listExploreCatalogue(): Promise<ContentResult<PlaceRecord[]>>;
+  listExploreCatalogue(options?: ContentRequestOptions): Promise<ContentResult<PlaceRecord[]>>;
   /**
    * The map's read: `EXPLORE_POINT_FIELDS` only. The Explore map region
    * suspends on this while the list and sheet take `listExploreCatalogue`,
    * so dots and GL init never wait on catalogue columns they don't render.
    */
-  listExplorePoints(): Promise<ContentResult<PlaceRecord[]>>;
-  getPlace(slug: string): Promise<DetailResult<PlaceRecord>>;
+  listExplorePoints(options?: ContentRequestOptions): Promise<ContentResult<PlaceRecord[]>>;
+  getPlace(slug: string, options?: ContentRequestOptions): Promise<DetailResult<PlaceRecord>>;
   /** Resolves a stored generated path (osm-*, lpc-*, mon-*) for a permanent redirect. */
-  getPlaceByLegacySlug(slug: string): Promise<DetailResult<PlaceRecord>>;
+  getPlaceByLegacySlug(slug: string, options?: ContentRequestOptions): Promise<DetailResult<PlaceRecord>>;
   /** Published Harlem artists, name-ordered. Draft candidates never leave the CMS. */
-  listMusicArtists(): Promise<ContentResult<MusicArtistRecord[]>>;
+  listMusicArtists(options?: ContentRequestOptions): Promise<ContentResult<MusicArtistRecord[]>>;
   /** One {@linkcode MUSIC_PAGE_SIZE} page of the directory, 1-based. */
-  listMusicArtistsPage(page?: number): Promise<ContentResult<MusicArtistPage>>;
-  getMusicArtist(slug: string): Promise<DetailResult<MusicArtistRecord>>;
+  listMusicArtistsPage(page?: number, options?: ContentRequestOptions): Promise<ContentResult<MusicArtistPage>>;
+  getMusicArtist(slug: string, options?: ContentRequestOptions): Promise<DetailResult<MusicArtistRecord>>;
 }
 
 /** A page of the music directory. */
@@ -169,10 +174,11 @@ export const createContentReaders = (source: ContentSource): ContentReaders => {
   const list = async <TSlug extends keyof ContentDocs, TRecord>(
     query: ContentQuery<TSlug>,
     map: (doc: ContentDocs[TSlug]) => TRecord,
+    options?: ContentRequestOptions,
   ): Promise<ContentResult<TRecord[]>> => {
     if (!source.isConfigured()) return notConfigured();
     try {
-      const docs = await source.find(query);
+      const docs = await source.find(query, options);
       return ok(docs.map(map));
     } catch (error) {
       return queryFailed(error);
@@ -184,23 +190,24 @@ export const createContentReaders = (source: ContentSource): ContentReaders => {
     slug: string,
     map: (doc: ContentDocs[TSlug]) => TRecord,
     base: ContentWhere = PUBLISHED,
+    options?: ContentRequestOptions,
   ): Promise<DetailResult<TRecord>> => {
     // A malformed slug can never match a stored one (Payload validates the
     // same pattern on save), so skip the round trip.
     if (!SLUG_PATTERN.test(slug)) return source.isConfigured() ? { status: 'not-found' } : notConfigured();
-    const result = await list({ collection, where: { and: [base, { slug: { equals: slug } }] }, depth: 1, limit: 1 }, map);
+    const result = await list({ collection, where: { and: [base, { slug: { equals: slug } }] }, depth: 1, limit: 1 }, map, options);
     if (result.status !== 'ok') return result;
     const [record] = result.data;
     return record === undefined ? { status: 'not-found' } : ok(record);
   };
 
   return {
-    listWalks: () => list({ collection: 'walks', where: PUBLISHED, depth: 1, limit: LIST_LIMIT, sort: '-updatedAt' }, mapWalk),
-    getWalk: (slug) => bySlug('walks', slug, mapWalk),
-    listStories: () =>
-      list({ collection: 'stories', where: PUBLISHED, depth: 1, limit: LIST_LIMIT, sort: '-publishedAt' }, mapStory),
-    getStory: (slug) => bySlug('stories', slug, mapStory),
-    listEventsForDate: (dateInNY) => {
+    listWalks: (options) => list({ collection: 'walks', where: PUBLISHED, depth: 1, limit: LIST_LIMIT, sort: '-updatedAt' }, mapWalk, options),
+    getWalk: (slug, options) => bySlug('walks', slug, mapWalk, PUBLISHED, options),
+    listStories: (options) =>
+      list({ collection: 'stories', where: PUBLISHED, depth: 1, limit: LIST_LIMIT, sort: '-publishedAt' }, mapStory, options),
+    getStory: (slug, options) => bySlug('stories', slug, mapStory, PUBLISHED, options),
+    listEventsForDate: (dateInNY, options) => {
       const { start, end } = harlemDayBounds(dateInNY);
       return list(
         {
@@ -217,34 +224,38 @@ export const createContentReaders = (source: ContentSource): ContentReaders => {
           sort: 'startsAt',
         },
         mapEvent,
+        options,
       );
     },
-    listPlaces: () =>
-      list({ collection: 'places', where: {}, depth: 0, limit: PLACES_LIMIT, sort: 'name' }, mapPlaceRecord),
-    listExploreCatalogue: () =>
+    listPlaces: (options) =>
+      list({ collection: 'places', where: {}, depth: 0, limit: PLACES_LIMIT, sort: 'name' }, mapPlaceRecord, options),
+    listExploreCatalogue: (options) =>
       list(
         { collection: 'places', where: {}, depth: 0, limit: PLACES_LIMIT, sort: 'name', select: EXPLORE_PLACE_FIELDS },
         mapPlaceRecord,
+        options,
       ),
-    listExplorePoints: () =>
+    listExplorePoints: (options) =>
       list(
         { collection: 'places', where: {}, depth: 0, limit: PLACES_LIMIT, sort: 'name', select: EXPLORE_POINT_FIELDS },
         mapPlaceRecord,
+        options,
       ),
-    getPlace: (slug) => bySlug('places', slug, mapPlaceRecord, {}),
-    getPlaceByLegacySlug: async (slug) => {
+    getPlace: (slug, options) => bySlug('places', slug, mapPlaceRecord, {}, options),
+    getPlaceByLegacySlug: async (slug, options) => {
       if (!SLUG_PATTERN.test(slug)) return source.isConfigured() ? { status: 'not-found' } : notConfigured();
       const result = await list(
         { collection: 'places', where: { 'legacySlugs.slug': { equals: slug } }, depth: 1, limit: 1 },
         mapPlaceRecord,
+        options,
       );
       if (result.status !== 'ok') return result;
       const [record] = result.data;
       return record === undefined ? { status: 'not-found' } : ok(record);
     },
-    listMusicArtists: () =>
-      list({ collection: 'music-artists', where: PUBLISHED, depth: 1, limit: LIST_LIMIT, sort: 'name' }, mapMusicArtist),
-    listMusicArtistsPage: async (page = 1) => {
+    listMusicArtists: (options) =>
+      list({ collection: 'music-artists', where: PUBLISHED, depth: 1, limit: LIST_LIMIT, sort: 'name' }, mapMusicArtist, options),
+    listMusicArtistsPage: async (page = 1, options) => {
       if (!source.isConfigured()) return notConfigured();
       try {
         const result = await source.findPage({
@@ -254,7 +265,7 @@ export const createContentReaders = (source: ContentSource): ContentReaders => {
           limit: MUSIC_PAGE_SIZE,
           sort: 'name,id',
           page,
-        });
+        }, options);
         return ok({
           artists: result.docs.map(mapMusicArtist),
           hasNextPage: result.hasNextPage,
@@ -264,6 +275,6 @@ export const createContentReaders = (source: ContentSource): ContentReaders => {
         return queryFailed(error);
       }
     },
-    getMusicArtist: (slug) => bySlug('music-artists', slug, mapMusicArtist),
+    getMusicArtist: (slug, options) => bySlug('music-artists', slug, mapMusicArtist, PUBLISHED, options),
   };
 };

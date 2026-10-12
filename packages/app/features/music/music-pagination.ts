@@ -1,3 +1,15 @@
+import type { ContentReaders, ContentRequestOptions } from '../../content/readers.ts';
+import { contentQuery } from '../../content/result.ts';
+
+export async function fetchMusicArtistsPage(
+  fetchPage: (page: number, options?: ContentRequestOptions) => ReturnType<ContentReaders['listMusicArtistsPage']>,
+  page: number,
+  options?: ContentRequestOptions,
+) {
+  const result = await contentQuery(fetchPage(page, options));
+  return { ...result.data, page };
+}
+
 interface MusicPaginationState {
   hasNextPage: boolean;
   isFetching: boolean;

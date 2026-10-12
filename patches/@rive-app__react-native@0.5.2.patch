@@ -1,0 +1,12 @@
+diff --git a/android/src/new/java/com/rive/RiveReactNativeView.kt b/android/src/new/java/com/rive/RiveReactNativeView.kt
+index 020b96a8922afe6ac317171eed0c194185e84567..36d0baf4de7e5c480a3179fb733b11f35b643427 100644
+--- a/android/src/new/java/com/rive/RiveReactNativeView.kt
++++ b/android/src/new/java/com/rive/RiveReactNativeView.kt
+@@ -122,6 +122,7 @@ class RiveReactNativeView(context: ThemedReactContext) : FrameLayout(context) {
+   private val viewScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+ 
+   private val textureView = TextureView(context).apply {
++    isOpaque = false
+     layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+     surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+       override fun onSurfaceTextureAvailable(st: SurfaceTexture, w: Int, h: Int) {
