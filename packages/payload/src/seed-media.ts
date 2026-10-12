@@ -2,6 +2,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { getPayload } from 'payload';
+import { stripHtml } from './seed-text.ts';
 import config from './payload.config';
 import type { Media } from './payload-types';
 
@@ -80,15 +81,6 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { signal: AbortSignal.timeout(60_000), ...init });
   if (!response.ok) throw new Error(`Source request failed (${response.status}): ${new URL(url).host}`);
   return (await response.json()) as T;
-}
-
-function stripHtml(text: string): string {
-  return text
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
-    .replace(/&(\w+);/g, (m, n) => ({ amp: '&', apos: "'", gt: '>', lt: '<', nbsp: ' ', quot: '"' })[n as 'amp' | 'apos' | 'gt' | 'lt' | 'nbsp' | 'quot'] ?? m)
-    .replace(/\s+/g, ' ')
-    .trim();
 }
 
 async function locCandidates(): Promise<Candidate[]> {

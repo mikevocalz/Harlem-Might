@@ -1,224 +1,100 @@
-import type {
-  AmbientAudioOptions,
-  PositionalAudioOptions,
-  SpatialAudioListenerTransform,
-  SpatialAudioSource,
-  SpatialAudioVec3,
-} from './types';
+import { SpatialAudioEngineCore, setVec3 } from './SpatialAudioEngineCore.ts';
+import type { AudioPlayback } from './SpatialAudioEngineCore.ts';
+import type { PositionalAudioOptions } from './types';
 
-type WebPlayback = {
-  source: AudioBufferSourceNode;
-  gain: GainNode;
-  panner?: PannerNode;
-};
-
-function sourceUri(source: SpatialAudioSource) {
-  if (typeof source === 'string') return source;
-  if (typeof source === 'number') {
-    throw new Error(
-      'Bundled React Native numeric audio sources are not available on web. Pass a public URL instead.',
-    );
+function createPlayback(
+  context: AudioContext,
+  buffer: AudioBuffer,
+  options: PositionalAudioOptions,
+  spatial: boolean,
+): AudioPlayback {
+  if (spatial && buffer.numberOfChannels > 2) {
+    throw new Error('Positional audio supports mono or stereo sources only.');
   }
-  return source.uri;
-}
-
-function setParam(param: AudioParam, value: number) {
-  param.setValueAtTime(value, 0);
-}
-
-function setVec3(
-  x: AudioParam,
-  y: AudioParam,
-  z: AudioParam,
-  value: SpatialAudioVec3,
-) {
-  setParam(x, value[0]);
-  setParam(y, value[1]);
-  setParam(z, value[2]);
-}
-
-export class SpatialAudioEngine {
-  private context: AudioContext | null = null;
-  private readonly buffers = new Map<string, AudioBuffer>();
-  private readonly active = new Map<string, WebPlayback>();
-
-  private ensureContext() {
-    if (typeof window === 'undefined') {
-      throw new Error('Spatial audio is only available in the browser.');
+  const source = context.createBufferSource();
+  let gain: ReturnType<AudioContext['createGain']>;
+  try {
+    gain = context.createGain();
+  } catch (error) {
+    try { source.disconnect(); } catch { /* Preserve the construction error. */ }
+    throw error;
+  }
+  let panner: PannerNode | undefined;
+  const disconnect = () => {
+    let failed = false;
+    for (const node of [source, gain, panner]) {
+      try { node?.disconnect(); } catch { failed = true; }
     }
-    this.context ??= new window.AudioContext();
-    return this.context;
+    if (failed) throw new Error('Audio graph could not disconnect cleanly.');
+  };
+  try {
+    source.buffer = buffer;
+    source.loop = options.loop ?? false;
+    gain.gain.value = options.volume ?? 1;
+    source.connect(gain);
+    if (spatial) {
+      panner = context.createPanner();
+      panner.panningModel = 'equalpower';
+      panner.distanceModel = options.distanceModel ?? 'inverse';
+      panner.refDistance = options.refDistance ?? 1;
+      panner.maxDistance = options.maxDistance ?? 10000;
+      panner.rolloffFactor = options.rolloffFactor ?? 1;
+      panner.coneInnerAngle = options.coneInnerAngle ?? 360;
+      panner.coneOuterAngle = options.coneOuterAngle ?? 360;
+      panner.coneOuterGain = options.coneOuterGain ?? 0;
+      setVec3(panner.positionX, panner.positionY, panner.positionZ, options.position ?? [0, 0, -1]);
+      setVec3(panner.orientationX, panner.orientationY, panner.orientationZ, options.orientation ?? [0, 0, 1]);
+      gain.connect(panner);
+      panner.connect(context.destination);
+    } else {
+      gain.connect(context.destination);
+    }
+  } catch (error) {
+    try { disconnect(); } catch { /* Preserve the construction error. */ }
+    throw error;
   }
+  return {
+    start: () => source.start(context.currentTime),
+    stop: () => {
+      try {
+        source.stop();
+      } catch {
+        // Already ended.
+      }
+    },
+    disconnect,
+    onEnded: (callback) => { source.onended = callback; },
+    setVolume: (volume) => { gain.gain.value = volume; },
+    setPosition: (position) => {
+      if (panner) setVec3(panner.positionX, panner.positionY, panner.positionZ, position);
+    },
+    setOrientation: (orientation) => {
+      if (panner) setVec3(panner.orientationX, panner.orientationY, panner.orientationZ, orientation);
+    },
+  };
+}
 
-  async preload(key: string, source: SpatialAudioSource) {
-    if (this.buffers.has(key)) return this.buffers.get(key)!;
-
-    const context = this.ensureContext();
-    const uri = sourceUri(source);
-    const buffer = await fetch(uri)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(
-            `Failed to load audio "${key}": ${response.status} ${response.statusText}`,
-          );
+export class SpatialAudioEngine extends SpatialAudioEngineCore<AudioBuffer, AudioContext> {
+  constructor() {
+    super(
+      () => {
+        if (typeof window === 'undefined') {
+          throw new Error('Spatial audio is only available in the browser.');
         }
-        return response.arrayBuffer();
-      })
-      .then((data) => context.decodeAudioData(data));
-
-    this.buffers.set(key, buffer);
-    return buffer;
-  }
-
-  async playAmbient(
-    key: string,
-    source: SpatialAudioSource,
-    options: AmbientAudioOptions = {},
-  ) {
-    const context = this.ensureContext();
-    if (context.state === 'suspended') await context.resume();
-    const buffer = await this.preload(key, source);
-    this.stop(key);
-
-    const player = context.createBufferSource();
-    const gain = context.createGain();
-    player.buffer = buffer;
-    player.loop = options.loop ?? false;
-    gain.gain.value = options.volume ?? 1;
-    player.connect(gain);
-    gain.connect(context.destination);
-    this.active.set(key, { source: player, gain });
-    player.onended = () => {
-      if (!player.loop) this.active.delete(key);
-    };
-    player.start();
-
-    return key;
-  }
-
-  async playSpatial(
-    key: string,
-    source: SpatialAudioSource,
-    options: PositionalAudioOptions = {},
-  ) {
-    const context = this.ensureContext();
-    if (context.state === 'suspended') await context.resume();
-    const buffer = await this.preload(key, source);
-    this.stop(key);
-
-    const player = context.createBufferSource();
-    const gain = context.createGain();
-    const panner = context.createPanner();
-
-    player.buffer = buffer;
-    player.loop = options.loop ?? false;
-    gain.gain.value = options.volume ?? 1;
-    panner.panningModel = 'equalpower';
-    panner.distanceModel = options.distanceModel ?? 'inverse';
-    panner.refDistance = options.refDistance ?? 1;
-    panner.maxDistance = options.maxDistance ?? 10000;
-    panner.rolloffFactor = options.rolloffFactor ?? 1;
-    panner.coneInnerAngle = options.coneInnerAngle ?? 360;
-    panner.coneOuterAngle = options.coneOuterAngle ?? 360;
-    panner.coneOuterGain = options.coneOuterGain ?? 0;
-
-    setVec3(
-      panner.positionX,
-      panner.positionY,
-      panner.positionZ,
-      options.position ?? [0, 0, -1],
+        return new window.AudioContext();
+      },
+      async (context, source, key) => {
+        if (typeof source === 'number') {
+          throw new Error('Bundled React Native numeric audio sources are not available on web. Pass a public URL instead.');
+        }
+        const response = await fetch(typeof source === 'string' ? source : source.uri);
+        if (!response.ok) {
+          throw new Error(`Failed to load audio "${key}": ${response.status} ${response.statusText}`);
+        }
+        return context.decodeAudioData(await response.arrayBuffer());
+      },
+      createPlayback,
     );
-    setVec3(
-      panner.orientationX,
-      panner.orientationY,
-      panner.orientationZ,
-      options.orientation ?? [0, 0, 1],
-    );
-
-    player.connect(gain);
-    gain.connect(panner);
-    panner.connect(context.destination);
-    this.active.set(key, { source: player, gain, panner });
-    player.onended = () => {
-      if (!player.loop) this.active.delete(key);
-    };
-    player.start();
-
-    return key;
-  }
-
-  setListenerTransform(transform: SpatialAudioListenerTransform) {
-    const listener = this.ensureContext().listener;
-    setVec3(
-      listener.positionX,
-      listener.positionY,
-      listener.positionZ,
-      transform.position,
-    );
-    setVec3(
-      listener.forwardX,
-      listener.forwardY,
-      listener.forwardZ,
-      transform.forward ?? [0, 0, -1],
-    );
-    setVec3(
-      listener.upX,
-      listener.upY,
-      listener.upZ,
-      transform.up ?? [0, 1, 0],
-    );
-  }
-
-  setSourcePosition(key: string, position: SpatialAudioVec3) {
-    const panner = this.active.get(key)?.panner;
-    if (!panner) return;
-    setVec3(panner.positionX, panner.positionY, panner.positionZ, position);
-  }
-
-  setSourceOrientation(key: string, orientation: SpatialAudioVec3) {
-    const panner = this.active.get(key)?.panner;
-    if (!panner) return;
-    setVec3(
-      panner.orientationX,
-      panner.orientationY,
-      panner.orientationZ,
-      orientation,
-    );
-  }
-
-  setVolume(key: string, volume: number) {
-    const gain = this.active.get(key)?.gain;
-    if (!gain) return;
-    gain.gain.value = Math.max(0, volume);
-  }
-
-  stop(key: string) {
-    const playback = this.active.get(key);
-    if (!playback) return;
-    playback.source.onended = null;
-    try {
-      playback.source.stop();
-    } catch {
-      // Already ended.
-    }
-    this.active.delete(key);
-  }
-
-  stopAll() {
-    for (const key of [...this.active.keys()]) this.stop(key);
-  }
-
-  unload(key: string) {
-    this.stop(key);
-    this.buffers.delete(key);
-  }
-
-  async close() {
-    this.stopAll();
-    this.buffers.clear();
-    const context = this.context;
-    this.context = null;
-    if (context) await context.close();
   }
 }
 

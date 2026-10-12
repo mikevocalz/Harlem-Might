@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, it } from 'node:test';
-import { artistPhotoEndpoint } from './artist-photo-client.ts';
+import { artistPhotoEndpoint, fetchArtistPhotos } from './artist-photo-client.ts';
 
 const keys = ['NEXT_PUBLIC_SITE_URL', 'EXPO_PUBLIC_PAYLOAD_API_BASE', 'EXPO_PUBLIC_APP_URL'] as const;
 const saved = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
@@ -28,4 +28,18 @@ it('uses an absolute HTTP origin for mobile and headset clients', () => {
   delete process.env.EXPO_PUBLIC_PAYLOAD_API_BASE;
   process.env.EXPO_PUBLIC_APP_URL = 'https://app.example/app';
   assert.ok(artistPhotoEndpoint(['Big L']).startsWith('https://app.example/api/music/artist-photo?'));
+});
+
+it('keeps object-property names as own results without changing the batch prototype', async (t) => {
+  const names = ['__proto__', 'constructor', 'toString', 'Unknown Artist'];
+  t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({
+    photos: Object.fromEntries(names.map((name) => [name, null])),
+  })));
+  const photos = await fetchArtistPhotos(names);
+  assert.deepEqual(Object.keys(photos).sort(), names.sort());
+  for (const name of names) {
+    assert.equal(Object.hasOwn(photos, name), true, name);
+    assert.equal(photos[name], null, name);
+  }
+  assert.equal(Object.getPrototypeOf(photos), Object.prototype);
 });

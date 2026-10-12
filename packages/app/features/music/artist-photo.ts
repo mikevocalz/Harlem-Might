@@ -88,6 +88,134 @@ const CURATED_WEB_PHOTOS: Readonly<Record<string, ArtistPhotoResult>> = {
     rightsStatus: 'provider-reference',
     credit: 'XXL artist memorial',
   },
+  'charlie palmieri': {
+    name: 'Charlie Palmieri',
+    url: 'https://i.ytimg.com/vi/5ztsJGpsuBU/maxresdefault.jpg',
+    sourceUrl: 'https://www.youtube.com/watch?v=5ztsJGpsuBU',
+    provider: 'curated_web',
+    rightsStatus: 'provider-reference',
+    credit: '“La Herencia” album portrait via YouTube',
+    width: 1280,
+    height: 720,
+  },
+  'chick webb': {
+    name: 'Chick Webb',
+    url: 'https://ids.si.edu/ids/deliveryService?id=NPG-NPG_2013_57&max=800',
+    sourceUrl: 'https://npg.si.edu/object/npg_NPG.2013.57',
+    provider: 'curated_web',
+    rightsStatus: 'provider-reference',
+    credit: 'Apeda Studio / National Portrait Gallery, Smithsonian Institution',
+  },
+  'dj hollywood': {
+    name: 'DJ Hollywood',
+    url: 'https://i.ytimg.com/vi/coq45Gp-iDk/maxresdefault.jpg',
+    sourceUrl: 'https://www.youtube.com/watch?v=coq45Gp-iDk',
+    provider: 'curated_web',
+    rightsStatus: 'provider-reference',
+    credit: '“Rarities” album art via YouTube',
+    width: 1280,
+    height: 720,
+  },
+  'kool moe dee': {
+    name: 'Kool Moe Dee',
+    url: 'https://i.ytimg.com/vi/auhwI00iKWg/maxresdefault.jpg',
+    sourceUrl: 'https://www.youtube.com/watch?v=auhwI00iKWg',
+    provider: 'curated_web',
+    rightsStatus: 'provider-reference',
+    credit: 'YouTube video still',
+    width: 1280,
+    height: 720,
+  },
+  'freekey zekey': {
+    name: 'Freekey Zekey',
+    url: 'https://i.ytimg.com/vi/dlNNx16OPDg/hqdefault.jpg',
+    sourceUrl: 'https://www.youtube.com/watch?v=dlNNx16OPDg',
+    provider: 'curated_web',
+    rightsStatus: 'provider-reference',
+    credit: 'YouTube video still',
+    width: 480,
+    height: 360,
+  },
+  'j r writer': {
+    name: 'J.R. Writer',
+    url: 'https://i.ytimg.com/vi/udba39mpBnM/hqdefault.jpg',
+    sourceUrl: 'https://www.youtube.com/watch?v=udba39mpBnM',
+    provider: 'curated_web',
+    rightsStatus: 'provider-reference',
+    credit: 'YouTube video still',
+    width: 480,
+    height: 360,
+  },
+  vado: {
+    name: 'Vado',
+    url: 'https://i.ytimg.com/vi/x-s41Ejjbwc/maxresdefault.jpg',
+    sourceUrl: 'https://www.youtube.com/watch?v=x-s41Ejjbwc',
+    provider: 'curated_web',
+    rightsStatus: 'provider-reference',
+    credit: 'YouTube video still',
+    width: 1280,
+    height: 720,
+  },
+  'herb mcgruff': {
+    name: 'Herb McGruff',
+    url: 'https://i.ytimg.com/vi/dLkPUQH2t60/maxresdefault.jpg',
+    sourceUrl: 'https://www.youtube.com/watch?v=dLkPUQH2t60',
+    provider: 'curated_web',
+    rightsStatus: 'provider-reference',
+    credit: '“Destined to Be” album art via YouTube',
+    width: 1280,
+    height: 720,
+  },
+  'johnny kemp': {
+    name: 'Johnny Kemp',
+    url: 'https://i.ytimg.com/vi/jl1mQASHc48/maxresdefault.jpg',
+    sourceUrl: 'https://www.youtube.com/watch?v=jl1mQASHc48',
+    provider: 'curated_web',
+    rightsStatus: 'provider-reference',
+    credit: 'YouTube video still',
+    width: 1280,
+    height: 720,
+  },
+  cameo: {
+    name: 'Cameo',
+    url: 'https://i.ytimg.com/vi/sn8KYD1Vco0/maxresdefault.jpg',
+    sourceUrl: 'https://www.youtube.com/watch?v=sn8KYD1Vco0',
+    provider: 'curated_web',
+    rightsStatus: 'provider-reference',
+    credit: 'YouTube video still',
+    width: 1280,
+    height: 720,
+  },
+  'big l': {
+    name: 'Big L',
+    url: 'https://i.ytimg.com/vi/WWMjRMJ0dTI/maxresdefault.jpg',
+    sourceUrl: 'https://www.youtube.com/watch?v=WWMjRMJ0dTI',
+    provider: 'curated_web',
+    rightsStatus: 'provider-reference',
+    credit: 'YouTube video still',
+    width: 1280,
+    height: 720,
+  },
+  'black rob': {
+    name: 'Black Rob',
+    url: 'https://i.ytimg.com/vi/EC5LzftfcjI/maxresdefault.jpg',
+    sourceUrl: 'https://www.youtube.com/watch?v=EC5LzftfcjI',
+    provider: 'curated_web',
+    rightsStatus: 'provider-reference',
+    credit: 'YouTube video still',
+    width: 1280,
+    height: 720,
+  },
+  'dani stevenson': {
+    name: 'Dani Stevenson',
+    url: 'https://i.ytimg.com/vi/x5Ldzol3a2E/hqdefault.jpg',
+    sourceUrl: 'https://www.youtube.com/watch?v=x5Ldzol3a2E',
+    provider: 'curated_web',
+    rightsStatus: 'provider-reference',
+    credit: '“Honk Your Horn” single art via YouTube',
+    width: 480,
+    height: 360,
+  },
 };
 
 /**
@@ -99,6 +227,14 @@ const CURATED_COMMONS_FILES: Readonly<Record<string, string>> = {
   'charles hamilton': 'File:Charles Hamilton (rapper).jpg',
   'frankie lymon and the teenagers':
     'File:Frankie Lymon and the Teenagers.jpg',
+  'james weldon johnson':
+    'File:JAMES WELDON JOHNSON - AUTHOR, DIPLOMAT, PUBLIC SERVANT - NARA - 535623.jpg',
+  'james p johnson': 'File:James P. Johnson (ALP BIB 3056).jpg',
+  'the main ingredient': 'File:Main Ingredient 1971.jpg',
+  'stuart bascombe': 'File:Stuart page photo.jpg',
+  'leroy burgess': 'File:Leroy burgess promo dg.JPG',
+  'tupac shakur': 'File:Tupac Shakur in 1995.jpg',
+  'rob base': 'File:Rob Base and DJ EZ Rock in 2006.jpg',
 };
 
 /**
@@ -273,7 +409,8 @@ async function resolveWikipedia(
   name: string,
   fetcher: ArtistPhotoFetch,
 ): Promise<ArtistPhotoResult | undefined> {
-  const aliasTitle = WIKIPEDIA_TITLE_ALIASES[normalizeArtistName(name)];
+  const key = normalizeArtistName(name);
+  const aliasTitle = Object.hasOwn(WIKIPEDIA_TITLE_ALIASES, key) ? WIKIPEDIA_TITLE_ALIASES[key] : undefined;
   const params = new URLSearchParams({
     action: 'query',
     format: 'json',
@@ -331,10 +468,10 @@ export async function resolveArtistPhoto(
   if (!trimmed || trimmed.length > 120) return undefined;
 
   const key = normalizeArtistName(trimmed);
-  const curatedWeb = CURATED_WEB_PHOTOS[key];
+  const curatedWeb = Object.hasOwn(CURATED_WEB_PHOTOS, key) ? CURATED_WEB_PHOTOS[key] : undefined;
   if (curatedWeb) return { ...curatedWeb, name: trimmed };
 
-  const curatedCommonsFile = CURATED_COMMONS_FILES[key];
+  const curatedCommonsFile = Object.hasOwn(CURATED_COMMONS_FILES, key) ? CURATED_COMMONS_FILES[key] : undefined;
   if (curatedCommonsFile) {
     return resolveCommonsFileByTitle(trimmed, curatedCommonsFile, fetcher);
   }
@@ -351,7 +488,8 @@ export async function resolveArtistPhotos(
   const unique = [
     ...new Set(names.map((name) => name.trim()).filter(Boolean)),
   ].slice(0, 120);
-  const output: Record<string, ArtistPhotoResult | null> = {};
+  // Define own data properties before assignment, including names such as __proto__.
+  const output: Record<string, ArtistPhotoResult | null> = Object.fromEntries(unique.map((name) => [name, null]));
   let cursor = 0;
 
   const workers = Array.from(

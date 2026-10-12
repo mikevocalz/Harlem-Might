@@ -133,26 +133,71 @@ App config, look-and-pinch input, the testing ladder and open questions for the 
 - Pico uses the shared Viro/OpenXR scene and inline window fallback.
 - Web uses the Viro browser renderer.
 
-## Use the mikevocalz Viro fork
+## Use the pinned native siblings
 
-The Quest/PICO native development target is `mikevocalz/viro#decax9-three-panel`. Because this starter repository is public while that fork is private, the checked-in catalog keeps public `@reactvision/react-viro@3.0.2` only as an unauthenticated **web/Storybook/CI resolution fallback**. It is not an accepted native SDK-58 runtime.
+Native/headset development uses the existing `link:` dependencies on sibling Git
+checkouts of `mikevocalz/viro`, `mikevocalz/viro-external` and
+`mikevocalz/nitro-mapbox-ar`. Place them beside Harlem Might, under the directory
+names `viro`, `viro-external` and `nitro-mapbox-ar`. Private repository access is
+required for Viro and Viro External.
 
-Every native command now runs `apps/mobile/scripts/assert-viro-fork.mjs` first. If public Viro is installed, `dev`, `android`, `ios`, and `prebuild` fail before Expo starts. A native/headset build therefore cannot accidentally ship against the unsupported public 3.0.1 peer lane.
+[tooling/native-revisions.json](../tooling/native-revisions.json) is the source of
+truth for their tested, full commit SHAs. CI reads this file, validates that every
+pin is an immutable 40-character SHA, checks out those commits, and verifies the
+clean sibling checkouts before installing dependencies. Do not substitute branch
+names or change a pin without validating the corresponding native source change.
 
-For native/headset development, enable the private fork so the Expo 58/RN 0.88 peer lane, PICO routing, OpenXR bridge, spatial windows and native Viro/Rive surface are present:
-
-```yaml
-overrides:
-  "@reactvision/react-viro": "github:mikevocalz/viro#decax9-three-panel"
-```
-
-Then run:
+Prepare clean checkouts or separate Git worktrees at those commits, preserving
+any local work elsewhere. The preflight only inspects repositories; it never
+fetches, switches, resets, cleans or rewrites them. From Harlem Might's root:
 
 ```bash
+node tooling/native-revisions.mjs
 pnpm install
 pnpm --filter mobile viro:assert-fork
-pnpm spatial:prepare-web
-pnpm skia:prepare-web
+```
+
+The standalone check works before installation with only Node and Git. It prints
+the exact resolved SHA and path for each sibling, rejects missing/non-Git
+checkouts and wrong revisions, and reports staged, modified, deleted and
+untracked source changes. Git-ignored dependency/build outputs are not considered
+source changes. Git worktrees and detached HEAD checkouts are supported.
+
+Every native entrypoint (`dev`, `android`, `ios`, `prebuild`, `android:quest`, and
+`quest`) runs `apps/mobile/scripts/assert-viro-fork.mjs` first. In addition to the
+revision check, it verifies that installed native links point at those siblings
+using the mobile application's nearest-first package lookup paths, including
+workspace-root hoisted packages. A nearer stale link still fails, even when a
+correct hoisted package exists. The preflight retains the existing Viro peer-lane
+and capability gates: PICO routing,
+Meta Horizon/OpenXR, Meta VR Glasses targeting, spatial layout and Viro/Rive
+surfaces. Installing the public Viro catalog fallback does not satisfy this
+native contract. Missing/stale links require `pnpm install` after preparing the
+correct siblings.
+
+### Intentional local sibling development
+
+To test changes in a sibling, opt in explicitly for that command:
+
+```bash
+HARLEM_NATIVE_LOCAL_DEV=1 pnpm --filter mobile quest
+# Or another existing native entrypoint, such as:
+HARLEM_NATIVE_LOCAL_DEV=1 pnpm --filter mobile ios
+```
+
+This allows a different HEAD or dirty source outside CI, prints each deviation,
+and labels the run as local development rather than reproducible pinned-native
+validation. Missing/invalid repositories, incorrect installed links and the
+existing Viro capability gates still fail. CI rejects this opt-in, including on
+GitHub Actions. Unset it to return to strict checks; do not set it globally for
+release validation. Neither mode claims that a physical native/device build has
+passed.
+
+The builtin-only regression suite creates temporary Git repositories; it needs
+no private checkout or installed packages:
+
+```bash
+node --test apps/mobile/scripts/native-revisions.test.mjs
 ```
 
 ## Checked-in Android XR project

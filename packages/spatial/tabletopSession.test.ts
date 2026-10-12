@@ -22,6 +22,7 @@ function seedRoom(roomId: string) {
   runtime.boostHeld.p2 = true;
   runtime.localSequence = 8;
   runtime.localHistory = [input];
+  runtime.lastDerezFxRound = 3;
   runtime.lastDerezFxTick = 42;
   tabletopRace.setRoomRenderState(runtime, match);
   return { runtime, match, input };
@@ -102,6 +103,7 @@ describe('tabletop room lifetime', () => {
     assert.equal(remounted.localSequence, 8);
     assert.deepEqual(remounted.localHistory, [input]);
     assert.equal(remounted.boostHeld.p2, true);
+    assert.equal(remounted.lastDerezFxRound, 3);
     assert.equal(remounted.lastDerezFxTick, 42);
     tabletopSession.getState().setLocalized(true);
     assert.equal(tabletopSession.getState().ready, false);
@@ -124,6 +126,7 @@ describe('tabletop room lifetime', () => {
     assert.deepEqual(next.boostHeld, { p1: false, p2: false });
     assert.equal(next.localSequence, 0);
     assert.deepEqual(next.localHistory, []);
+    assert.equal(next.lastDerezFxRound, -1);
     assert.equal(next.lastDerezFxTick, -1);
     tabletopRace.setRoomRenderState(old, match);
     tabletopRace.leaveRoom(old);

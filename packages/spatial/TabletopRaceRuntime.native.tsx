@@ -432,10 +432,18 @@ export function TabletopRaceRuntime({
       !displayState?.derezEvents.length
     ) return;
 
-    for (const event of displayState.derezEvents) {
-      if (event.tick <= runtime.lastDerezFxTick) continue;
-      runtime.lastDerezFxTick = event.tick;
+    if (displayState.round < runtime.lastDerezFxRound) return;
+    const lastTick = displayState.round === runtime.lastDerezFxRound
+      ? runtime.lastDerezFxTick
+      : -1;
+    // Compare the whole batch against the previous checkpoint: simultaneous
+    // riders share a tick, and the deterministic core resets ticks each round.
+    const events = displayState.derezEvents.filter((event) => event.tick > lastTick);
+    if (!events.length) return;
+    runtime.lastDerezFxRound = displayState.round;
+    runtime.lastDerezFxTick = Math.max(...events.map((event) => event.tick));
 
+    for (const event of events) {
       const playerColor = event.playerId === 'p1' ? '#00f3ff' : '#ff7a00';
       const opponentColor = event.playerId === 'p1' ? '#ff7a00' : '#00f3ff';
 

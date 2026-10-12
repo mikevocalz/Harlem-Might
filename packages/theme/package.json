@@ -18,6 +18,7 @@
     "@acme/config": "workspace:*",
     "eslint": "catalog:",
     "eslint-config-expo": "catalog:",
+    "react-native": "catalog:",
     "typescript": "catalog:"
   },
   "peerDependencies": {

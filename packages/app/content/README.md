@@ -21,6 +21,7 @@ The readers are bound to Payload in `packages/payload/server.ts` because `packag
 | `getStory(slug)` | `DetailResult<StoryRecord>` |
 | `listEventsForDate(dateInNY)` | `ContentResult<EventRecord[]>`, earliest start first |
 | `listEventsForDateRange(startDateInNY, endDateInNY, page = 1)` | `ContentResult<EventPage>`, 24 records per page, start/id order |
+| `listMusicArtistsPage(page = 1)` | `ContentResult<MusicArtistPage>`, 24 artists per page, name/id order |
 
 Every query filters on `_status = published` and runs with `overrideAccess: false`, so the anonymous read rule applies as well. Drafts never come back. Non-paginated editorial lists cap at 100 (`LIST_LIMIT`); the paginated event reader returns `events`, `hasNextPage`, and `totalDocs`.
 
@@ -40,6 +41,8 @@ type DetailResult<T> = ContentResult<T> | { status: 'not-found' };
 - `not-found` (detail reads only): the database answered and no published record has that slug. Call `notFound()`.
 
 A malformed slug returns `not-found` without a query.
+
+`listMusicArtistsPage` accepts positive safe integer page numbers and defaults to page 1. Zero, negative, fractional, non-finite and unsafe page numbers reject with `RangeError` before configuration checks or database queries, even when content is unconfigured. Valid reads keep the usual `unavailable` behavior for missing configuration or query failures.
 
 ## Events and Harlem time
 

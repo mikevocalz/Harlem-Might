@@ -22,9 +22,9 @@ export default function ArPage() {
       <ArWalkthrough />
       <MightsBand title="Sightline, a concept render">
         <MightsText>
-          We also sketched the same idea without a phone in your hand: Sightline, slim glasses with a separate compute
-          puck that would show the walking route and place markers ahead of you. It’s a render of hardware that doesn’t
-          exist.
+          We also sketched the same idea without a phone in your hand: Sightline, lightweight glasses paired with a
+          small compute puck, drawing a walking route across the street and floating place labels ahead of you —
+          Apollo Theater in four minutes, Sylvia’s Restaurant in seven. It’s a render of hardware that doesn’t exist.
         </MightsText>
         <SightlineIsland />
       </MightsBand>

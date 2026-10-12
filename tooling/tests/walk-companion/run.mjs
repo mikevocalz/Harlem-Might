@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, delimiter, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -61,8 +61,15 @@ try {
     run('java', ['-cp', compilerClasspath, 'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler',
       '-no-stdlib', '-no-reflect', '-jvm-target', '17', '-classpath', runtimeClasspath,
       join(root, 'apps/mobile/modules/walk-companion/shared/android/com/harlemmight/companion/CompanionWire.kt'),
-      join(here, 'CompanionWireTests.kt'), '-d', binary]);
-    run('java', ['-cp', [binary, runtimeClasspath].join(delimiter), 'com.harlemmight.companion.CompanionWireTestsKt', await freshFixtures()]);
+      join(here, 'CompanionWireTests.kt'),
+      join(root, 'apps/mobile/modules/walk-companion/android/src/main/java/com/harlemmight/companion/WalkCompanionModule.kt'),
+      join(root, 'apps/wearos/app/src/main/java/com/harlemmight/watch/WalkCompanion.kt'),
+      join(here, 'CompanionLifecycleTests.kt'),
+      ...(await readdir(join(here, 'platform-fakes'))).filter(name => name.endsWith('.kt')).sort().map(name => join(here, 'platform-fakes', name)),
+      '-d', binary]);
+    const fixtures = await freshFixtures();
+    run('java', ['-cp', [binary, runtimeClasspath].join(delimiter), 'com.harlemmight.companion.CompanionWireTestsKt', fixtures]);
+    run('java', ['-cp', [binary, runtimeClasspath].join(delimiter), 'com.harlemmight.lifecycle.CompanionLifecycleTestsKt', fixtures]);
   }
 } finally {
   await rm(build, { recursive: true, force: true });

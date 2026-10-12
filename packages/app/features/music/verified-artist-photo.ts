@@ -377,7 +377,8 @@ export async function resolveVerifiedArtistPhotos(
   concurrency = 10,
 ): Promise<Record<string, ArtistPhotoResult | null>> {
   const unique = [...new Set(names.map((name) => name.trim()).filter(Boolean))];
-  const output: Record<string, ArtistPhotoResult | null> = {};
+  // Define own data properties before assignment, including names such as __proto__.
+  const output: Record<string, ArtistPhotoResult | null> = Object.fromEntries(unique.map((name) => [name, null]));
   let cursor = 0;
 
   const workers = Array.from(

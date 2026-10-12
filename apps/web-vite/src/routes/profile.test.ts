@@ -4,7 +4,7 @@ import { registerHooks } from 'node:module';
 import { beforeEach, test } from 'node:test';
 import { Children, isValidElement, type ReactElement, type ReactNode } from 'react';
 import ts from 'typescript';
-import { useMemberSession } from '../lib/member-session.ts';
+import { useMemberSession, useMemberAuthForm } from '../lib/member-session.ts';
 
 // Execute the actual route composition with inert leaf UI elements. This
 // verifies feedback/actions, not primitive rendering or browser appearance.
@@ -15,7 +15,7 @@ const boundaries: Record<string, string> = {
   '@tanstack/react-router': "export const Link = 'Link'; export const createFileRoute = () => config => config;",
   '@acme/ui': leaves(['Avatar', 'Button', 'Card', 'EmptyState', 'Heading', 'Text', 'TextField']),
   '@acme/ui/tw': leaves(['Main', 'Section', 'View']),
-  '@/lib/member-session': `import { useMemberSession as store } from '${new URL('../lib/member-session.ts', import.meta.url).href}'; export const useMemberSession = selector => selector(store.getState());`,
+  '@/lib/member-session': `import { useMemberSession as store, useMemberAuthForm as form } from '${new URL('../lib/member-session.ts', import.meta.url).href}'; export const useMemberSession = selector => selector(store.getState()); export const useMemberAuthForm = selector => selector(form.getState());`,
 };
 registerHooks({
   resolve(specifier, context, next) {
@@ -39,7 +39,10 @@ function elements(node: ReactNode): Element[] {
 }
 const text = (node: ReactNode): string => Children.toArray(node).map((child) => isValidElement<Element['props']>(child) ? text(child.props.children) : typeof child === 'string' || typeof child === 'number' ? String(child) : '').join('');
 const button = (tree: Element[], title: string) => tree.find((element) => element.type === 'Button' && element.props.title === title);
-beforeEach(() => useMemberSession.setState({ status: 'signed-out', member: null, savedPlaces: [], signOutError: null, signOutPending: false, error: null, mode: 'login' }));
+beforeEach(() => {
+  useMemberSession.setState({ status: 'signed-out', member: null, savedPlaces: [], signOutError: null, signOutPending: false, error: null });
+  useMemberAuthForm.setState({ mode: 'login', email: '', password: '', name: '', error: null });
+});
 
 test('unconfirmed logout is visible with a working retry action', async (t) => {
   useMemberSession.setState({ signOutError: 'Sign-out could not be confirmed. Please retry.' });

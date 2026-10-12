@@ -24,6 +24,21 @@ describe('normalizeArtistName', () => {
 });
 
 describe('resolveArtistPhoto', () => {
+  it('does not treat inherited keys as curated photos, files or encyclopedia aliases', async () => {
+    for (const name of ['constructor', '__proto__', 'toString', 'Unknown Artist']) {
+      const calls: URL[] = [];
+      const photo = await resolveArtistPhoto(name, async (url) => {
+        calls.push(new URL(url));
+        return response({ query: { pages: {} } });
+      });
+      assert.equal(photo, undefined, name);
+      assert.equal(calls.length, 1, name);
+      assert.equal(calls[0]!.hostname, 'en.wikipedia.org');
+      assert.equal(calls[0]!.searchParams.get('titles'), null);
+      assert.equal(calls[0]!.searchParams.get('gsrsearch'), `"${name}" musician`);
+    }
+  });
+
   it('does not fall back to fuzzy Commons or same-name streaming profiles', async () => {
     const calls: string[] = [];
     const fetcher: ArtistPhotoFetch = async (url) => {
@@ -32,7 +47,7 @@ describe('resolveArtistPhoto', () => {
       return response({ query: { pages: {} } });
     };
 
-    const result = await resolveArtistPhoto('Black Rob', fetcher);
+    const result = await resolveArtistPhoto('Spoonie Gee', fetcher);
     assert.equal(result, undefined);
     assert.equal(calls.length, 1);
   });
@@ -181,7 +196,7 @@ describe('resolveArtistPhoto', () => {
       });
     };
 
-    const result = await resolveArtistPhoto('Big L', fetcher);
+    const result = await resolveArtistPhoto('Spoonie Gee', fetcher);
     assert.equal(result, undefined);
   });
 
@@ -281,14 +296,25 @@ it('resolveArtistPhotos preserves every requested artist key and leaves unverifi
   };
 
   const result = await resolveArtistPhotos(
-    ["Cam'ron", 'Big L', 'Ma$e'],
+    ["Cam'ron", 'Spoonie Gee', 'Ma$e'],
     fetcher,
     2,
   );
   assert.deepEqual(
     Object.keys(result).sort(),
-    ['Big L', "Cam'ron", 'Ma$e'].sort(),
+    ['Spoonie Gee', "Cam'ron", 'Ma$e'].sort(),
   );
-  assert.equal(result['Big L'], null);
+  assert.equal(result['Spoonie Gee'], null);
   assert.equal(result["Cam'ron"], null);
+});
+
+it('preserves special object-property names as own batch results', async () => {
+  const names = ['__proto__', 'constructor', 'toString', 'Unknown Artist'];
+  const photos = await resolveArtistPhotos(names, async () => response({ query: { pages: {} } }));
+  assert.deepEqual(Object.keys(photos).sort(), names.sort());
+  for (const name of names) {
+    assert.equal(Object.hasOwn(photos, name), true, name);
+    assert.equal(photos[name], null, name);
+  }
+  assert.equal(Object.getPrototypeOf(photos), Object.prototype);
 });

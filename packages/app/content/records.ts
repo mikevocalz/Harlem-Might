@@ -14,7 +14,7 @@ export interface PlaceRef {
   summary?: string;
   /** Present only when populated media passed the rights/provenance gate. */
   images?: EditorialImage[];
-  /** `[lng, lat]`, when the place has a map point; cards render it as a satellite image. */
+  /** `[lng, lat]`, absent while verification is pending; cards render it as a satellite image. */
   lngLat?: readonly [number, number];
 }
 

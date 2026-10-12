@@ -1,8 +1,9 @@
-import { Dimensions, Platform, useWindowDimensions } from 'react-native';
+import { Dimensions, I18nManager, Platform, useWindowDimensions } from 'react-native';
+import { isMetaHorizonXR, isPico, isVisionOS } from '@reactvision/react-viro';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { requireOptionalNativeModule } from 'expo';
 import { isHorizonBuild } from '../spatial/horizonBuild';
-import { navigationPresentation } from './navigationPresentation';
+import { navigationPresentation, tabBarPositionForDirection } from './navigationPresentation';
 
 const capabilities = Platform.OS === 'android'
   ? requireOptionalNativeModule<{ getDeviceCapabilities(): { isFoldable: boolean; isTablet: boolean } }>('DeviceCapabilities')?.getDeviceCapabilities()
@@ -16,13 +17,18 @@ export function useNavigationPresentation() {
   const screen = Dimensions.get('screen');
   const isTablet = Platform.OS === 'ios' ? Platform.isPad
     : capabilities?.isTablet ?? Math.min(screen.width, screen.height) >= 600;
+  const presentation = navigationPresentation({
+    isHorizon: isHorizonBuild,
+    isSpatial: isMetaHorizonXR || isPico || isVisionOS(),
+    isFoldable: capabilities?.isFoldable ?? hardwareColumnWidth > 0,
+    isTablet,
+    hardwareColumnWidth,
+  });
   return {
-    ...navigationPresentation({
-      isHorizon: isHorizonBuild,
-      isFoldable: capabilities?.isFoldable ?? hardwareColumnWidth > 0,
-      isTablet,
-      hardwareColumnWidth,
-    }),
+    ...presentation,
+    position: tabBarPositionForDirection(presentation.position, I18nManager.isRTL),
+    physicalPosition: presentation.position,
+    isRTL: I18nManager.isRTL,
     hardwareColumnWidth,
   };
 }

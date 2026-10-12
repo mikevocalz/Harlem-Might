@@ -21,6 +21,14 @@ The Bunny integration follows the known-good MoyoLearn Payload 4 implementation:
 - Bunny storage credentials are server-only.
 - NEXT_PUBLIC_BUNNY_CDN_BASE_URL is the only public Bunny value.
 
+### Safe remote reads on the pinned adapter
+
+Cloud-storage canary.33 couples `disablePayloadAccessControl: true` (public CDN delivery) to `upload.skipSafeFetch: true`. The application’s Bunny boundary resets `skipSafeFetch` to `false` after the plugin runs, preserving CDN URLs while restoring Payload’s private-address and redirect checks. This is the narrow app-level mitigation for the [upstream storage security change](https://payloadcms.com/posts/blog/payload-security-update-available-for-3x-and-40); it grants no URL-upload allowlist or additional collection access.
+
+The runtime regression suite loads the actual application config through Payload 4’s sanitizer with Bunny enabled/absent in production/development. It covers private IPs and DNS, redirects, public CDN reads, member PNG processing, curator access, and rejection of arbitrary URL uploads without contacting Bunny or a database: `pnpm --filter @acme/payload exec node --test src/plugins/storage-safe-fetch.test.ts`.
+
+This boundary does not align the full storage adapter API. Do not independently bump the cloud-storage pin: Bunny 3.0.0 lacks the `deleteFile` and `copyFile` operations required by newer Payload 4 cloud-storage adapters. A future alignment needs its own lifecycle verification; it must not silently alter the live schema or storage configuration.
+
 ## Environment
 
 Required production values:

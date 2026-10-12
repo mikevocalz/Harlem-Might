@@ -833,7 +833,7 @@ export function TabletopColocationScene({
     status = 'PREVIEW MAT · LOCK OR MOVE';
   } else if (phoneAnchorWorking) {
     status = 'PUBLISHING TABLE ANCHOR…';
-  } else if (frameSource && !localized) {
+  } else if (mode === 'host' && frameSource && !localized) {
     status = 'LOCKING SHARED COORDINATE FRAME…';
   } else if (mode === 'guest' && room.status === 'working') {
     status = 'LOOKING UP GRID ROOM…';

@@ -23,6 +23,7 @@ import {
   REQUIRED_NODE,
   checkQuestManifest,
   chooseMetroPort,
+  installPlan,
   isRequiredNode,
   newestBuildTools,
   parseAdbDevices,
@@ -73,14 +74,17 @@ const tailOf = (logPath, lines = 25) =>
 
 // --- arguments -------------------------------------------------------------
 
+const usage = 'pnpm --filter mobile quest [--install] [--serial <adb serial>] [--reset-app-data]';
 let args;
 try {
   args = parseArgs(process.argv.slice(2));
 } catch (error) {
-  fail(error.message, 'pnpm --filter mobile quest [--install] [--serial <adb serial>]');
+  fail(error.message, usage);
 }
 if (args.help) {
-  console.log('usage: pnpm --filter mobile quest [--install] [--serial <adb serial>]');
+  console.log(`usage: ${usage}`);
+  console.log('  --install updates with adb install -r, preserving app data; --serial implies --install.');
+  console.log(`  --reset-app-data requires --install (or --serial); uninstalls ${PACKAGE_NAME}, deleting its app data before installing.`);
   process.exit(0);
 }
 
@@ -94,9 +98,12 @@ if (!isRequiredNode(process.versions.node)) {
 }
 {
   const result = capture(process.execPath, [join(appDir, 'scripts/assert-viro-fork.mjs')], { cwd: appDir });
+  // Keep the exact native revisions and any explicit local-development warning
+  // visible even when the preflight succeeds.
+  if (result.stdout.trim()) console.log(result.stdout.trim());
+  if (result.stderr.trim()) console.error(result.stderr.trim());
   if (result.status !== 0) {
-    console.error(result.stderr.trim() || result.stdout.trim());
-    fail('Viro fork / Nitro Rive check', 'apply the change printed above, run `pnpm install`, then rerun');
+    fail('Native revisions / Viro fork / Nitro Rive check', 'apply the change printed above, run `pnpm install`, then rerun');
   }
   const nitro = result.stdout.includes('Nitro Rive GPU bridge verified')
     ? 'Nitro Rive bridge present'
@@ -184,17 +191,18 @@ if (picked.error) fail('device selection', picked.error);
 const adb = (...rest) => capture('adb', ['-s', picked.serial, ...rest]);
 
 {
-  // Only this app's package is removed; nothing else on the headset is touched.
-  const installed = adb('shell', 'pm', 'list', 'packages', PACKAGE_NAME).stdout
-    .split('\n')
-    .some((line) => line.trim() === `package:${PACKAGE_NAME}`);
-  if (installed) {
-    const removed = adb('uninstall', PACKAGE_NAME);
-    if (removed.status !== 0) fail(`adb uninstall ${PACKAGE_NAME}: ${removed.stdout.trim()} ${removed.stderr.trim()}`, `adb -s ${picked.serial} uninstall ${PACKAGE_NAME}, then rerun`);
+  let installed = false;
+  if (args.resetAppData) {
+    // Only this app's package is removed; nothing else on the headset is touched.
+    installed = adb('shell', 'pm', 'list', 'packages', PACKAGE_NAME).stdout
+      .split('\n')
+      .some((line) => line.trim() === `package:${PACKAGE_NAME}`);
   }
-  const install = adb('install', apkPath);
-  if (install.status !== 0) fail(`adb install: ${install.stdout.trim()} ${install.stderr.trim()}`, 'wake the headset, keep it connected, then rerun with --install');
-  ok(`installed on ${picked.serial}${installed ? ' (old build uninstalled first)' : ''}`);
+  for (const command of installPlan(args, apkPath, installed)) {
+    const result = adb(...command);
+    if (result.status !== 0) fail(`adb ${command[0]}: ${result.stdout.trim()} ${result.stderr.trim()}`, 'resolve the adb error, then rerun; signature mismatches require an APK signed with the installed app\'s signing key');
+  }
+  ok(`installed on ${picked.serial}${args.resetAppData && installed ? ' (old build and app data removed first)' : ' (app data preserved)'}`);
 }
 
 const listenerCwd = (port) => {

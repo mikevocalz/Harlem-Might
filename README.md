@@ -15,20 +15,27 @@ race that becomes the headset entry experience.
 apps/
   mobile      Expo Router app; Meta Horizon/PICO configuration lives here
   web         Next.js app + Payload CMS; /spatial mounts the shared Grid experience
+  web-vite    Curator workspace with supported public, Today and profile routes
   storybook   Storybook 10 + Vite; includes Spatial / Grid World showcases
 packages/
-  app         Shared product screens and providers
+  app         Shared product screens, providers and platform-neutral content contracts
   ui          Universal semantic UI + Skia backgrounds + futuristic controls
   spatial     Shared Viro scene, XR routing, race state, Rive surfaces
   theme       Design tokens + Tailwind theme CSS
   assets      Shared fonts/assets
-  payload     Payload config
+  payload     Payload 4 config, server content readers and walk-session services
+  widgets     Shared snapshot and handoff contracts for home widgets and wearables
   config      Shared TypeScript/ESLint presets and architecture boundaries
 tooling/
   generators
   copy-viro-web-assets.mjs
   copy-skia-web-assets.mjs
 ```
+
+Next.js and Expo host the primary shared product surfaces. Vite retains its
+current public and member routes alongside curator tooling; it uses the shared
+content and member-session capabilities. Presentation consolidation is deferred,
+as described in [docs/AUTH_PROFILE.md](docs/AUTH_PROFILE.md).
 
 ## Quick start
 
@@ -45,6 +52,11 @@ pnpm --filter mobile ios      # or: android / dev
 # Storybook — open Spatial / Grid World
 pnpm --filter storybook dev
 ```
+
+Native commands require clean sibling checkouts at the revisions in
+[tooling/native-revisions.json](tooling/native-revisions.json). See the
+[native checkout setup and explicit local-development opt-in](docs/SPATIAL.md#use-the-pinned-native-siblings).
+Run `node tooling/native-revisions.mjs` to check them before installation.
 
 Postinstall copies Viro WASM/SLAM sidecars and CanvasKit into the app public
 directories. Do not replace those scripts with remote CDN dependencies; the starter

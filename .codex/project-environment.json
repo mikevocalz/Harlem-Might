@@ -1,0 +1,36 @@
+{
+  "quest_map_session": {
+    "is_react_native": true,
+    "root": "/Users/mikevocalz/Harlem-Might",
+    "app": "apps/mobile",
+    "package": "com.harlemmight.app",
+    "expo": "58.0.7",
+    "react_native": "0.88.0-rc.4",
+    "metro": {
+      "port": 8081,
+      "reuse": true
+    },
+    "device": "340YC10GC3014S",
+    "logicalDeviceId": "452ebafb1413d94c5cf91e1e286897571320980c",
+    "window": {
+      "orientation": "default",
+      "main": "1440dp x 900dp",
+      "secondary": "400dp x 600dp"
+    },
+    "map_native_modules_linked": true,
+    "avoid": "quest --install uninstalls app and deletes data; use android:quest --device 340YC10GC3014S --no-bundler for an in-place native update; reuse Metro 8081",
+    "verification": "Quest APK built and installed in place earlier; main1440x900dp/default and detail400x600dp preserved. Native Quest streets and real catalogue markers verified; selected 3D buildings and latest separate-panel spacing remain unverified after device disconnected. Duo open/folded right rail verified; latest header and Stories60/40 seen open. See docs/RESPONSIVE_LAYOUT.md.",
+    "middle_panel_contract": "User explicitly requires the established middle-panel aspect ratio never change (2026-10-10). Preserve current dimensions and ratio during map/panel work.",
+    "apk": "apps/mobile/android/app/build/outputs/apk/quest/debug/app-quest-debug.apk",
+    "content_source": {
+      "port": 3000,
+      "payload_push": false,
+      "places": 1688,
+      "mapped": 1686,
+      "stories": 25,
+      "walks": 3,
+      "events": 0
+    },
+    "duo_udid": "302107D3-219E-4B4A-B480-7D6292BAA1C3"
+  }
+}

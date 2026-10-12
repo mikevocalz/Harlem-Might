@@ -25,6 +25,7 @@ import { acceptsGameSurface } from '@acme/spatial/arSurface';
 import { palette } from '@acme/theme';
 import { resolveArMode } from './arMode';
 import { useArSession } from './arSession.store';
+import { tabletopRouteUnavailableMessage } from './tabletopRouteMessage';
 import {
   DIORAMA_ALTITUDE_M,
   fitTabletopScale,
@@ -236,6 +237,7 @@ export function HarlemTabletopScene() {
     degradedReasons: degraded.map((event) => event.reason),
     route,
     loading: routeState.status === 'loading',
+    unavailable: tabletopRouteUnavailableMessage(routeState),
   });
 
   return (
@@ -410,6 +412,7 @@ function statusLine(input: {
   degradedReasons: readonly string[];
   route: { kind: 'walking' | 'straight'; reason?: string } | null;
   loading: boolean;
+  unavailable: string | null;
 }): string {
   if (input.capabilities && !input.capabilities.passthroughAvailable) {
     return 'Passthrough is unavailable on this headset';
@@ -422,6 +425,7 @@ function statusLine(input: {
   }
   const surface = input.degradedReasons.includes('no-table-anchor') ? 'On the floor (no table found)' : 'On the table';
   if (input.loading) return `${surface} · Finding a walking route`;
+  if (input.unavailable) return `${surface} · ${input.unavailable}`;
   if (!input.route) return surface;
   if (input.route.kind === 'straight') return `${surface} · Straight lines, not a walking route`;
   return `${surface} · Walking route to nearby places`;

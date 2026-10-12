@@ -6,9 +6,11 @@ Harlem Might is one cross-platform product. Web, mobile, foldables, tablets, and
 
 - Shared screens and feature UI belong in `packages/app/features/<feature>/`.
 - `apps/web` and `apps/mobile` should stay thin: bind routing, platform services, and data to shared screens.
+- `apps/web-vite` hosts curator tooling and its supported public, Today and profile routes. Keep its TanStack routing and form presentation local while sharing content contracts and member-session behavior; see [AUTH_PROFILE.md](AUTH_PROFILE.md).
 - Shared product UI should use `@acme/ui` and the repository's semantic component boundaries.
 - Platform-specific behavior belongs beside shared code in matching `.web.ts(x)` and `.native.ts(x)` files.
-- Server-only reads stay in `apps/web`.
+- Payload-bound content readers belong in `packages/payload` and are exposed through `@acme/payload/server`; CMS services also live in that package. Next-specific caching and route composition stay in `apps/web`; platform-neutral records, reader contracts and mapping live in `packages/app/content`. See the [content read contract](../packages/app/content/README.md).
+- Shared home-widget and wearable snapshot/handoff contracts belong in `packages/widgets`; platform renderers and transport adapters remain in their host apps. See the [widget contract](../packages/widgets/README.md).
 - Imports from `@acme/app/features/*` include the file extension required by the package export map.
 
 Before adding a screen to an app directory, check whether another platform needs it. If it does, put the screen in the shared feature package.

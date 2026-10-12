@@ -122,6 +122,24 @@ Required before merge/release:
 5. VoiceOver/TalkBack, maximum text size, Crown/rotary, haptics disabled, low power,
    denied notifications/location, airplane mode and small/round screen captures.
 
+## Additional host lifecycle evidence (2026-10-12)
+
+`node tooling/tests/walk-companion/run.mjs kotlin` now compiles and executes the
+actual Android phone module and Wear store, as well as the shared production
+wire validator. The 36 deterministic lifecycle/callback scenarios use controlled
+host boundaries for the main scheduler, Wear capability/message completion,
+Expo callbacks and Compose state storage. They cover delayed discovery/expiry,
+background and observer revocation, stale callbacks and handoffs, wrong peers,
+reconnect, replay caps, timer cancellation and authoritative confirmation.
+They reproduced and guard fixes for expired publication after discovery,
+ambiguous Wear peers retaining guidance, and guidance surviving a phone switch.
+
+This extends the earlier source-only evidence above; it does not satisfy the
+native-target build, actual platform callback/threading or paired-device gates.
+No Android SDK, Gradle, Expo runtime, Swift lifecycle, UI or device test is implied.
+See `tooling/tests/walk-companion/README.md` for the exact boundary and commands.
+Wire schema, Payload 4 and Viro platform support are unchanged.
+
 ## Explicitly outstanding issue 41 work
 
 - Independently authenticated watch HTTPS and revocable, narrowly scoped watch

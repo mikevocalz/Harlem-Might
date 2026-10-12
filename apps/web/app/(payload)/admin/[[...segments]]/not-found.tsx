@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 
 import config from '@payload-config';
 import { generatePageMetadata, NotFoundPage } from '@payloadcms/next/views';
+import { connection } from 'next/server';
 
 import { importMap } from '../importMap.js';
 
@@ -13,9 +14,12 @@ type Args = {
 
 export const instant = false;
 
-export const generateMetadata = ({ params, searchParams }: Args): Promise<Metadata> =>
-  generatePageMetadata({ config, params, searchParams });
+export const generateMetadata = async ({ params, searchParams }: Args): Promise<Metadata> => {
+  await connection();
+  return generatePageMetadata({ config, params, searchParams });
+};
 
-export default function NotFound({ params, searchParams }: Args) {
+export default async function NotFound({ params, searchParams }: Args) {
+  await connection();
   return NotFoundPage({ config, params, searchParams, importMap });
 }

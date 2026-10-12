@@ -17,6 +17,7 @@ export type TabletopRoomRuntime = {
   boostHeld: Record<LightCyclePlayerId, boolean>;
   localSequence: number;
   localHistory: LightCycleInputEvent[];
+  lastDerezFxRound: number;
   lastDerezFxTick: number;
 };
 
@@ -44,6 +45,7 @@ export const useTabletopRaceStore = create<TabletopRaceState>((set, get) => ({
       boostHeld: { p1: false, p2: false },
       localSequence: 0,
       localHistory: [],
+      lastDerezFxRound: -1,
       lastDerezFxTick: -1,
     };
     set({ roomRuntime: runtime, hostRenderState: null });

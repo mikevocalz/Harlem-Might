@@ -4,6 +4,7 @@ import { useCallback, useEffect } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { ExploreLoader } from '@acme/spatial/explore-loader';
 import {
+  type ContentRequestOptions,
   type ContentResult,
   type MusicArtistPage,
   type UnavailableReason,
@@ -20,10 +21,10 @@ import { ContentLoader } from '../site/content/ContentLoader.tsx';
 import { ContentNotice } from '../site/content/ContentNotice.tsx';
 import { musicKeys } from './music.keys.ts';
 import { MusicArtistGrid } from './MusicArtistGrid.tsx';
-import { requestNextMusicPage } from './music-pagination.ts';
+import { fetchMusicArtistsPage, requestNextMusicPage } from './music-pagination.ts';
 
 /** Reads one 1-based page of the directory — Local API on the web server, REST everywhere else. */
-export type MusicPageFetch = (page: number) => Promise<ContentResult<MusicArtistPage>>;
+export type MusicPageFetch = (page: number, options?: ContentRequestOptions) => Promise<ContentResult<MusicArtistPage>>;
 
 /**
  * Page 1 as the host read it. Serialized across the RSC boundary on web, so a
@@ -165,13 +166,7 @@ function useMusicArtists(firstPage: MusicFirstPage | undefined, fetchPage: Music
         : undefined,
     initialDataUpdatedAt: () => Date.now(),
     staleTime: 60_000,
-    queryFn: async ({ pageParam }): Promise<PagedArtists> => {
-      const result = await fetchPage(pageParam);
-      if (result.status !== 'ok') {
-        throw new Error(`music-artists page ${pageParam} unavailable: ${result.reason ?? 'unknown'}`);
-      }
-      return { ...result.data, page: pageParam };
-    },
+    queryFn: ({ pageParam, signal }): Promise<PagedArtists> => fetchMusicArtistsPage(fetchPage, pageParam, { signal }),
     getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
   });
 }

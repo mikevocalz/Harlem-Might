@@ -33,7 +33,6 @@
     "@acme/assets": "workspace:*",
     "@acme/theme": "workspace:*",
     "@expo/html-elements": "catalog:",
-    "@expo/material-symbols": "catalog:",
     "@expo/ui": "catalog:",
     "@legendapp/list": "catalog:",
     "@legendapp/motion": "catalog:",

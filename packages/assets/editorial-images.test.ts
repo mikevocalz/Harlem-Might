@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import test from 'node:test';
 import {
   HARLEM_ARCHIVAL_IMAGES,
@@ -45,4 +46,29 @@ test('no-derivative and unknown-aspect images are never cover-cropped', () => {
   assert.equal(editorialImageContentFit({ ...image, noDerivatives: true }), 'contain');
   assert.equal(editorialImageContentFit({ ...image, aspect: undefined }), 'contain');
   assert.equal(editorialImageContentFit({ ...image, aspect: 2 }), 'cover');
+});
+
+
+test('the asset package entry imports in a data-only server without presentation dependencies', () => {
+  const entry = new URL('./index.ts', import.meta.url).href;
+  const probe = `
+    import assert from 'node:assert/strict';
+    import { registerHooks } from 'node:module';
+    registerHooks({
+      resolve(specifier, context, nextResolve) {
+        if (specifier === 'react' || specifier.startsWith('react/') ||
+            specifier === 'zustand' || specifier.startsWith('zustand/')) {
+          throw new Error('Data-only assets must not load presentation dependency: ' + specifier);
+        }
+        return nextResolve(specifier, context);
+      },
+    });
+    const assets = await import(${JSON.stringify(entry)});
+    assert.ok(assets.HARLEM_ARCHIVAL_IMAGES.length > 0);
+    assert.equal(assets.isDisplayableEditorialImage(assets.HARLEM_ARCHIVAL_IMAGES[0]), true);
+  `;
+  assert.doesNotThrow(() => execFileSync(process.execPath, ['--input-type=module', '-e', probe], {
+    stdio: 'pipe',
+    timeout: 5_000,
+  }));
 });

@@ -1,6 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
+import { runNativeRevisionPreflight } from '../../../tooling/native-revisions.mjs';
+
+if (!runNativeRevisionPreflight({ checkInstalledLinks: true })) process.exit(1);
 
 const require = createRequire(import.meta.url);
 
@@ -104,16 +107,15 @@ Resolved package:
 Resolved version:
   ${pkg.version ?? 'unknown'}
 
-The public @reactvision/react-viro package remains installed only so public
-clones, web, Storybook and CI can resolve Viro without access to the private
-fork. It is intentionally NOT accepted for Expo SDK 58 native/headset builds.
+The public @reactvision/react-viro catalog fallback supports web and Storybook
+resolution. It is NOT accepted for Expo SDK 58 native/headset builds.
+Native CI validates the pinned sibling checkouts and capabilities.
 
-Enable the fork, reinstall, then retry:
-
-  overrides:
-    "@reactvision/react-viro": "github:mikevocalz/viro#decax9-three-panel"
+Restore the linked ../viro checkout at the commit in
+tooling/native-revisions.json, reinstall, then retry:
 
   pnpm install
+  pnpm --filter mobile viro:assert-fork
 
 Required fork capabilities:
   Expo <59 peer lane

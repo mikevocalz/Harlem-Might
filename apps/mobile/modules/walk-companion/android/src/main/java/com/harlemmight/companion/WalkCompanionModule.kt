@@ -16,9 +16,10 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.util.UUID
 import java.time.Instant
+import java.time.Clock
 
 /** No DataItems/outbox: personal data and commands exist only in foreground memory. */
-class WalkCompanionModule : Module(), MessageClient.OnMessageReceivedListener, CapabilityClient.OnCapabilityChangedListener {
+class WalkCompanionModule(private val clock: Clock = Clock.systemUTC()) : Module(), MessageClient.OnMessageReceivedListener, CapabilityClient.OnCapabilityChangedListener {
     private val main = Handler(Looper.getMainLooper())
     private var snapshotJSON: String? = null
     private var targetNode: String? = null
@@ -83,7 +84,7 @@ class WalkCompanionModule : Module(), MessageClient.OnMessageReceivedListener, C
         AsyncFunction("clear") { clearState() }.runOnQueue(Queues.MAIN)
         AsyncFunction("publish") { json: String, promise: Promise ->
             val ctx = context
-            val next = CompanionWire.snapshot(json)
+            val next = CompanionWire.snapshot(json, clock.millis())
             if (ctx == null || next == null || next.optString("handoffId") != authorizedHandoff || !active()) {
                 clearState()
                 promise.reject("HANDOFF_UNAVAILABLE", "Open both phone and watch apps before sharing.", null)
@@ -92,8 +93,10 @@ class WalkCompanionModule : Module(), MessageClient.OnMessageReceivedListener, C
                 Wearable.getCapabilityClient(ctx).getCapability(CompanionWire.WATCH, CapabilityClient.FILTER_REACHABLE)
                     .addOnSuccessListener { result ->
                         val node = result.nodes.singleOrNull()
-                        val previous = snapshotJSON?.let { CompanionWire.snapshot(it) }
+                        // Discovery can outlive the payload, even before its first expiry timer exists.
+                        val previous = snapshotJSON?.let { CompanionWire.snapshot(it, clock.millis()) }
                         if (operation != generation || !active() || node == null || node.id != targetNode ||
+                            !CompanionWire.fresh(next, clock.millis()) ||
                             (previous != null && previous.getString("handoffId") == next.getString("handoffId") &&
                                 (previous.getString("sessionId") != next.getString("sessionId") || previous.getLong("revision") > next.getLong("revision") ||
                                     (previous.getLong("revision") == next.getLong("revision") && Instant.parse(previous.getString("updatedAt")) > Instant.parse(next.getString("updatedAt")))))) {
@@ -106,7 +109,7 @@ class WalkCompanionModule : Module(), MessageClient.OnMessageReceivedListener, C
                             expiry?.let { main.removeCallbacks(it) }
                             // A refresh lookup must not disarm the installed snapshot's expiry.
                             expiry = Runnable { if (snapshotJSON == json) clearState() }.also {
-                                main.postDelayed(it, (Instant.parse(next.getString("expiresAt")).toEpochMilli() - System.currentTimeMillis()).coerceAtLeast(1))
+                                main.postDelayed(it, (Instant.parse(next.getString("expiresAt")).toEpochMilli() - clock.millis()).coerceAtLeast(1))
                             }
                             Wearable.getMessageClient(ctx).sendMessage(node.id, CompanionWire.SNAPSHOT, json.toByteArray(Charsets.UTF_8))
                                 .addOnSuccessListener { promise.resolve(null) }
@@ -147,7 +150,7 @@ class WalkCompanionModule : Module(), MessageClient.OnMessageReceivedListener, C
                 event.data.toString(Charsets.UTF_8) == handoffId) clearState()
             return@post
         }
-        val current = snapshotJSON?.let { CompanionWire.snapshot(it) }
+        val current = snapshotJSON?.let { CompanionWire.snapshot(it, clock.millis()) }
         if (event.sourceNodeId != targetNode || !active() || current == null) {
             if (event.path == CompanionWire.REQUEST) {
                 if (event.sourceNodeId == targetNode && handoffId.isNotEmpty() &&
@@ -159,7 +162,7 @@ class WalkCompanionModule : Module(), MessageClient.OnMessageReceivedListener, C
         if (event.path == CompanionWire.REQUEST) { send(event.sourceNodeId, CompanionWire.SNAPSHOT, snapshotJSON!!); return@post }
         if (event.path != CompanionWire.COMMAND) return@post
         val json = event.data.toString(Charsets.UTF_8)
-        val command = CompanionWire.command(json, current)
+        val command = CompanionWire.command(json, current, clock.millis())
         if (command == null || commands.size >= 128 || !commands.add(command.getString("commandId"))) {
             send(event.sourceNodeId, CompanionWire.SNAPSHOT, snapshotJSON!!); return@post
         }

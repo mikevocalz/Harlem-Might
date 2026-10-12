@@ -19,6 +19,7 @@ export interface MemberProfile {
 /** A saved-place row; `depth=1` populates the place relation where the read allows. */
 export interface SavedPlaceEntry {
   id: number | string;
+  createdAt?: string;
   place: number | string | { id?: number | string; name?: string | null; slug?: string | null };
 }
 
@@ -34,26 +35,31 @@ export interface MemberProfileUpdate {
 
 /** Cookie-changing auth requests must own a boundary before they can start. */
 export interface MemberAuthenticationAttempt {
+  /** Exact API mount owned by this store, including any custom path. */
+  apiBaseUrl: string;
   signal: AbortSignal;
   isCurrent: () => boolean;
   /** Release this attempt only; successful auth starts a fresh session read. */
   finish: (succeeded: boolean) => boolean;
 }
 
-interface MemberSessionState {
+export interface MemberSessionState {
   /** Explicit auth boundaries remain observable even when owner/status do not change. */
   authBoundary: number;
   status: MemberSessionStatus;
   member: MemberProfile | null;
   savedPlaces: SavedPlaceEntry[];
-  /** Origin the calls were bound to ('' = same-origin on web). */
+  /** Default transport origin ('' = same-origin); a factory apiBase overrides its mount. */
   siteUrl: string;
   /** A failed logout remains explicit until it is retried or a new auth starts. */
   signOutError: string | null;
+  signOutPending: boolean;
+  /** Session/list/mutation feedback; never clears last-good rows on read failure. */
+  error: string | null;
   /** Capture the owner/origin/lifetime before awaiting a native or web picker. */
   captureIdentity: () => (() => boolean);
   /** First read of the session cookie; safe to call on every mount. */
-  hydrate: (siteUrl: string) => Promise<void>;
+  hydrate: (siteUrl?: string) => Promise<void>;
   /** Clears the previous identity before a sign-in/sign-up POST; refuses overlap. */
   beginAuthentication: (siteUrl: string) => MemberAuthenticationAttempt | null;
   /** Credentials were just accepted — fetch the member the cookie now names. */
@@ -65,13 +71,13 @@ interface MemberSessionState {
   /** Uploads a picked photo to the media library and sets it as the avatar. */
   uploadAvatar: (photo: MemberPhotoAsset) => Promise<MemberSessionResult>;
   refreshSavedPlaces: () => Promise<void>;
+  savePlace: (placeId: number | string) => Promise<void>;
+  removeSavedPlace: (savedPlaceId: number | string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
-const api = (siteUrl: string, path: string) => `${siteUrl.replace(/\/$/, '')}/payload-api${path}`;
-
-const getSession = async (siteUrl: string, signal: AbortSignal): Promise<MemberProfile | null> => {
-  const response = await fetch(api(siteUrl, '/auth/get-session'), { credentials: 'include', signal });
+const getSession = async (endpoint: string, signal: AbortSignal): Promise<MemberProfile | null> => {
+  const response = await fetch(endpoint, { credentials: 'include', signal });
   if (response.status >= 500 || response.status === 408 || response.status === 429) {
     throw new Error(`Session read temporarily failed (${response.status}).`);
   }
@@ -97,7 +103,15 @@ interface MemberScope {
 
 const sessionChanged = { ok: false as const, message: 'Your login changed. Try again from your current account.' };
 
-export const useMemberSession = create<MemberSessionState>((set, get) => {
+export interface MemberSessionOptions {
+  /** Full Payload API mount. Omit for the Next/native siteUrl + /payload-api API. */
+  apiBase?: string;
+}
+
+/** One domain owner per host. Custom mounts bind reads, auth and writes together. */
+export const createMemberSession = ({ apiBase }: MemberSessionOptions = {}) => create<MemberSessionState>((set, get) => {
+  const api = (siteUrl: string, path: string) =>
+    `${(apiBase ?? `${siteUrl.replace(/\/+$/, '')}/payload-api`).replace(/\/+$/, '')}${path}`;
   let generation = 0;
   let sessionRead: AbortController | undefined;
   let savedPlacesRead: AbortController | undefined;
@@ -139,13 +153,17 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
         credentials: 'include',
         signal: controller.signal,
       });
-      if (!current() || !response.ok) return;
+      if (!current()) return;
+      if (!response.ok) throw new Error('Saved-place read failed.');
       const body = (await response.json()) as { docs?: SavedPlaceEntry[] } | null;
       // Only a valid list replaces last-good data. Parsing can also finish
       // after the account or request changes. An empty array is a valid result.
-      if (current() && Array.isArray(body?.docs)) set({ savedPlaces: body.docs });
+      if (!current()) return;
+      if (!Array.isArray(body?.docs)) throw new Error('Invalid saved-place response.');
+      set({ savedPlaces: body.docs, error: null });
     } catch {
       // A failed list read keeps the session and its last successful list.
+      if (current()) set({ error: 'Could not load your saved places. Check your connection and try again.' });
     } finally {
       if (savedPlacesRead === controller) savedPlacesRead = undefined;
     }
@@ -173,10 +191,10 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
     // background. Initial/auth-boundary and ordinary refreshes remain fail-closed.
     const backgroundScope = !boundary && confirmedScope && owns(confirmedScope)
       && get().status === 'signed-in' ? confirmedScope : null;
-    if (!backgroundScope) set({ status: 'loading', siteUrl, ...(boundary ? { member: null, savedPlaces: [], signOutError: null, ...(newSession === 'authentication' ? { authBoundary: generation } : {}) } : {}) });
+    if (!backgroundScope) set({ status: 'loading', siteUrl, error: null, ...(boundary ? { member: null, savedPlaces: [], signOutError: null, signOutPending: false, ...(newSession === 'authentication' ? { authBoundary: generation } : {}) } : {}) });
     try {
       if (!current()) return;
-      const member = await getSession(siteUrl, controller.signal);
+      const member = await getSession(api(siteUrl, '/auth/get-session'), controller.signal);
       if (!current()) return;
       const changedOwner = ownerOf(member) !== ownerOf(get().member);
       if (changedOwner) invalidate();
@@ -193,7 +211,7 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
       // its follow-on read has a transient failure. Never restore an old owner.
       if (backgroundScope && owns(backgroundScope)) return;
       invalidate();
-      set({ status: 'signed-out', member: null, savedPlaces: [] });
+      set({ status: 'signed-out', member: null, savedPlaces: [], error: 'Could not load your account. Check your connection and try again.' });
     } finally {
       if (sessionRead === controller) sessionRead = undefined;
     }
@@ -224,6 +242,28 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
     }
   };
 
+  const writeSavedPlace = async (path: string, init: RequestInit, failure: string) => {
+    const scope = scopeFor();
+    if (!scope) return;
+    const controller = new AbortController();
+    mutations.add(controller);
+    try {
+      const response = await fetch(api(scope.siteUrl, path), {
+        ...init,
+        credentials: 'include',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!active(scope, controller)) return;
+      if (!response.ok) throw new Error('Saved-place write failed.');
+      await readSavedPlaces(scope);
+    } catch {
+      if (active(scope, controller)) set({ error: failure });
+    } finally {
+      mutations.delete(controller);
+    }
+  };
+
   return {
     authBoundary: 0,
     status: 'idle',
@@ -231,12 +271,14 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
     savedPlaces: [],
     siteUrl: '',
     signOutError: null,
+    signOutPending: false,
+    error: null,
     captureIdentity: () => {
       const scope = scopeFor();
       return () => Boolean(scope && owns(scope));
     },
 
-    hydrate: async (siteUrl) => {
+    hydrate: async (siteUrl = '') => {
       if (get().status !== 'idle') return;
       await load(siteUrl, 'hydrate');
     },
@@ -249,8 +291,9 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
       const startedGeneration = generation;
       const isCurrent = () => authentication === controller && generation === startedGeneration
         && !controller.signal.aborted && get().siteUrl === siteUrl;
-      set({ status: 'loading', siteUrl, member: null, savedPlaces: [], signOutError: null, authBoundary: generation });
+      set({ status: 'loading', siteUrl, member: null, savedPlaces: [], signOutError: null, signOutPending: false, error: null, authBoundary: generation });
       return {
+        apiBaseUrl: api(siteUrl, ''),
         signal: controller.signal,
         isCurrent,
         finish: (succeeded) => {
@@ -313,8 +356,9 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
         if (!active(scope, controller)) return sessionChanged;
         const url = body?.doc?.url;
         if (!url) return { ok: false, message: 'The photo uploaded but no file URL came back.' };
-        const base = scope.siteUrl || (typeof location === 'undefined' ? '' : location.origin);
-        const image = url.startsWith('http') ? url : `${base}${url}`;
+        const base = api(scope.siteUrl, '/');
+        const origin = typeof location === 'undefined' ? undefined : location.origin;
+        const image = /^https?:\/\//.test(url) ? url : new URL(url, origin ? new URL(base, origin) : base).href;
         return await saveProfile({ image }, scope, controller);
       } catch {
         return active(scope, controller) ? unreachable : sessionChanged;
@@ -328,6 +372,14 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
       if (scope) await readSavedPlaces(scope);
     },
 
+    savePlace: (placeId) => writeSavedPlace('/saved-places', {
+      method: 'POST', body: JSON.stringify({ place: placeId }),
+    }, 'Could not save this place. Check your connection and try again.'),
+
+    removeSavedPlace: (savedPlaceId) => writeSavedPlace(`/saved-places/${encodeURIComponent(savedPlaceId)}`, {
+      method: 'DELETE',
+    }, 'Could not remove this place. Check your connection and try again.'),
+
     signOut: () => {
       if (logout?.promise) return logout.promise;
       const { siteUrl } = get();
@@ -336,7 +388,7 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
       logout = operation;
       // Invalidate and hide private data before the network can yield. A late
       // logout response must never overwrite a newer sign-in.
-      set({ status: 'signed-out', member: null, savedPlaces: [], signOutError: null, authBoundary: generation });
+      set({ status: 'signed-out', member: null, savedPlaces: [], signOutError: null, signOutPending: true, error: null, authBoundary: generation });
       operation.promise = (async () => {
         try {
           if (logout !== operation || operation.controller.signal.aborted) return;
@@ -355,19 +407,25 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
           // A separate transport may have verified the still-valid cookie while
           // logout was pending. Revoke that work again once deletion is confirmed.
           invalidate();
-          set({ authBoundary: generation });
+          set({ authBoundary: generation, signOutPending: false });
         } catch {
           if (logout === operation && !operation.controller.signal.aborted) {
             set({ signOutError: 'Sign-out could not be confirmed. Check your connection and retry before leaving this device.' });
           }
         } finally {
-          if (logout === operation) logout = undefined;
+          if (logout === operation) {
+            logout = undefined;
+            set({ signOutPending: false });
+          }
         }
       })();
       return operation.promise;
     },
   };
 });
+
+/** Default same-origin web / site-origin native session; existing callers keep their API. */
+export const useMemberSession = createMemberSession();
 
 /** The first word of a display name, for the account control's label. */
 export const memberFirstName = (member: MemberProfile): string => {

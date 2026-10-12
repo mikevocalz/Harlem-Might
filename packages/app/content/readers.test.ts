@@ -9,6 +9,7 @@ import type {
   WalkDoc as Walk,
 } from './docs.ts';
 import { addHarlemDays } from './harlem-time.ts';
+import { explorePlaceFromRecord } from '../features/explore/catalogue.ts';
 import {
   createContentReaders,
   EVENT_RANGE_DAYS,
@@ -456,6 +457,53 @@ test('event mapping keeps cancelled status, venue fallback and provenance', asyn
   });
 });
 
+for (const options of [
+  { configured: true },
+  { configured: false },
+  { configured: true, fail: new Error('socket hangup') },
+]) {
+  test(`listMusicArtistsPage rejects invalid pages before configuration or queries (${JSON.stringify(options)})`, async () => {
+    const { source, queries } = fakeSource(options);
+    let configurationChecks = 0;
+    const isConfigured = source.isConfigured;
+    source.isConfigured = () => {
+      configurationChecks++;
+      return isConfigured();
+    };
+    const readers = createContentReaders(source);
+    for (const page of [0, -1, 1.5, NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+      await assert.rejects(readers.listMusicArtistsPage(page), {
+        name: 'RangeError',
+        message: 'Expected a positive safe integer music page.',
+      }, `page ${page}`);
+    }
+    assert.equal(configurationChecks, 0);
+    assert.deepEqual(queries, []);
+  });
+}
+
+test('listMusicArtistsPage defaults to page 1 and accepts positive safe integer pages', async () => {
+  const { source, queries } = fakeSource();
+  const readers = createContentReaders(source);
+  for (const page of [undefined, 1, 2, Number.MAX_SAFE_INTEGER]) {
+    assert.deepEqual(await readers.listMusicArtistsPage(page), {
+      status: 'ok', data: { artists: [], hasNextPage: false, totalDocs: 0 },
+    });
+  }
+  assert.deepEqual(queries.map((query) => query.page), [1, 1, 2, Number.MAX_SAFE_INTEGER]);
+});
+
+test('listMusicArtistsPage keeps valid unconfigured reads unavailable without querying', async () => {
+  const { source, queries } = fakeSource({ configured: false });
+  const readers = createContentReaders(source);
+  for (const page of [undefined, 1, 2, Number.MAX_SAFE_INTEGER]) {
+    assert.deepEqual(await readers.listMusicArtistsPage(page), {
+      status: 'unavailable', reason: 'not-configured',
+    });
+  }
+  assert.deepEqual(queries, []);
+});
+
 test('listMusicArtistsPage pages the directory in MUSIC_PAGE_SIZE steps', async () => {
   const docs = Array.from({ length: 50 }, (_, i) => artist(100 + i, `artist-${i}`));
   const { source, queries } = fakeSource({ docs: { 'music-artists': docs } });
@@ -521,3 +569,42 @@ test('listMusicArtists fails closed when a paginated source repeats records', as
   source.findPage = async (query) => ({ ...await findPage({ ...query, page: 1 }), hasNextPage: true });
   assert.equal((await createContentReaders(source).listMusicArtists()).status, 'unavailable');
 });
+
+for (const accuracy of ['pending', 'approx', 'verified'] as const) {
+  test(`${accuracy} place coordinates obey the read-model contract on every public projection`, async () => {
+    const location = [-73.94, 40.81] as const;
+    const doc: Place = {
+      ...place(10, 'stop-a'), location, locationAccuracy: accuracy,
+      locationSource: { url: 'https://example.org/place', verifiedAt: '2026-10-01T00:00:00Z' },
+    };
+    const readers = createContentReaders(fakeSource({ docs: {
+      places: [doc], walks: [{ ...walk, stops: [{ place: doc }] }],
+      stories: [{ ...story, places: [doc] }], events: [{ ...event, place: doc }],
+    } }).source);
+    const expected = accuracy === 'pending' ? undefined : location;
+    for (const result of [await readers.listPlaces(), await readers.listExploreCatalogue(), await readers.listExplorePoints()]) {
+      assert.ok(result.status === 'ok');
+      assert.equal(result.data.length, 1, 'Pending locations retain their catalogue record');
+      assert.deepEqual(result.data[0]!.location, expected);
+      assert.equal(result.data[0]!.locationAccuracy, accuracy);
+      assert.deepEqual(explorePlaceFromRecord(result.data[0]!).lngLat, expected);
+    }
+    for (const result of [await readers.getPlace(doc.slug), await readers.getPlaceByLegacySlug('legacy-stop')]) {
+      assert.ok(result.status === 'ok');
+      assert.deepEqual(result.data.location, expected);
+      assert.equal(result.data.locationAccuracy, accuracy);
+      assert.equal(result.data.locationSourceUrl, doc.locationSource!.url);
+      assert.equal(result.data.locationSourceReadAt, doc.locationSource!.verifiedAt);
+    }
+    const walkResult = await readers.getWalk(walk.slug);
+    const storyResult = await readers.getStory(story.slug);
+    const eventResult = await readers.listEventsForDate('2026-10-07');
+    assert.ok(walkResult.status === 'ok' && storyResult.status === 'ok' && eventResult.status === 'ok');
+    for (const related of [walkResult.data.stops[0]!.place, storyResult.data.places[0], eventResult.data[0]!.place]) {
+      assert.ok(related, 'Pending locations retain their place relationship');
+      assert.equal(related.slug, doc.slug);
+      assert.deepEqual(related.lngLat, expected);
+    }
+    assert.deepEqual(doc.location, location, 'Mapping does not mutate the editorial source');
+  });
+}

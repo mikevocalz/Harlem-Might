@@ -1,4 +1,5 @@
 import { getPayload } from 'payload';
+import { decodeEntities } from './seed-text.ts';
 import { containingNta, fetchNtaBoundaries, type Nta, type Point } from './nta.ts';
 import config from './payload.config';
 import type { Event } from './payload-types';
@@ -114,17 +115,6 @@ function nyLocalToUtc(local: string): string | undefined {
     Number(parts.second),
   );
   return new Date(guess.getTime() - (asNy - guess.getTime())).toISOString();
-}
-
-// Feeds publish HTML entities in titles and venues (&#8217;, &nbsp;).
-const HTML_ENTITIES: Record<string, string> = {
-  amp: '&', apos: "'", gt: '>', lt: '<', nbsp: ' ', quot: '"',
-};
-function decodeEntities(text: string): string {
-  return text
-    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
-    .replace(/&(\w+);/g, (m, name) => HTML_ENTITIES[name] ?? m)
-    .trim();
 }
 
 /** Parks prefix "CANCELED: X" / "POSTPONED: X"; permits keep the flag in the name too. */

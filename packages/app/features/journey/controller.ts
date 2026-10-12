@@ -43,23 +43,49 @@ export function commandId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `local-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
 }
 
+function isCacheRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+// Content dates support parseable strings; walk-session instants have a separate validator.
+function isCacheDate(value: unknown): value is string {
+  return typeof value === 'string' && Number.isFinite(Date.parse(value));
+}
+
 export function readLocalJourney(raw: string | undefined, now = Date.now()): Pick<JourneyState, 'plan' | 'session' | 'synopsis'> | undefined {
   if (!raw || raw.length > 100_000) return undefined;
   try {
-    const data = JSON.parse(raw);
-    validateWalkSession(data.session);
-    const plan = data.plan as JourneyPlan;
-    if (data.schemaVersion !== 1 || !plan || plan.id !== data.session.walkId || plan.slug !== data.session.walkSlug ||
-        typeof plan.title !== 'string' || plan.title.length > 300 || !Array.isArray(plan.stops) || plan.stops.length !== data.session.stopIds.length ||
-        plan.stops.some((stop, i) => typeof stop.title !== 'string' || typeof stop.slug !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(stop.slug) || stop.title.length > 300 || stop.id !== data.session.stopIds[i]) ||
-        now - Date.parse(data.savedAt) < 0 || now - Date.parse(data.savedAt) > CACHE_MAX_AGE_MS || !Number.isFinite(Date.parse(data.savedAt))) return undefined;
+    const data: unknown = JSON.parse(raw);
+    if (!isCacheRecord(data) || data.schemaVersion !== 1 || !isCacheDate(data.savedAt)) return undefined;
+    const age = now - Date.parse(data.savedAt);
+    if (age < 0 || age > CACHE_MAX_AGE_MS) return undefined;
+    const session = data.session;
+    validateWalkSession(session);
+    const plan = data.plan;
+    if (!isCacheRecord(plan) || typeof plan.id !== 'string' || plan.id !== session.walkId ||
+        typeof plan.slug !== 'string' || plan.slug !== session.walkSlug || typeof plan.title !== 'string' || plan.title.length > 300 ||
+        !isCacheDate(plan.updatedAt) || Date.parse(plan.updatedAt) > now ||
+        !Array.isArray(plan.stops) || plan.stops.length !== session.stopIds.length) return undefined;
+    const savedStops: unknown[] = plan.stops;
+    const stops: JourneyPlan['stops'] = [];
+    for (const [i, stop] of savedStops.entries()) {
+      if (!isCacheRecord(stop) || typeof stop.id !== 'string' || stop.id !== session.stopIds[i] ||
+          typeof stop.title !== 'string' || stop.title.length > 300 || typeof stop.slug !== 'string' ||
+          !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(stop.slug)) return undefined;
+      stops.push({ id: stop.id, slug: stop.slug, title: stop.title, ...(typeof stop.note === 'string' ? { note: stop.note } : {}) });
+    }
     const cached = data.synopsis;
-    const synopsis = cached && cached.schemaVersion === 1 && typeof cached.stopId === 'string' && plan.stops.some(stop => stop.id === cached.stopId) &&
-      Number.isFinite(cached.distanceM) && cached.distanceM >= 0 && Number.isFinite(cached.durationS) && cached.durationS >= 0 &&
-      Number.isFinite(Date.parse(cached.generatedAt)) && Array.isArray(cached.instructions) && cached.instructions.length <= 200 &&
-      cached.instructions.every((line: unknown) => typeof line === 'string' && line.length < 2000) ? { schemaVersion: 1 as const, stopId: cached.stopId as string, generatedAt: cached.generatedAt as string, distanceM: cached.distanceM as number, durationS: cached.durationS as number, instructions: cached.instructions as string[] } : null;
+    let synopsis: RouteSynopsis | null = null;
+    if (isCacheRecord(cached) && cached.schemaVersion === 1 && typeof cached.stopId === 'string' && stops.some(stop => stop.id === cached.stopId) &&
+        typeof cached.distanceM === 'number' && Number.isFinite(cached.distanceM) && cached.distanceM >= 0 &&
+        typeof cached.durationS === 'number' && Number.isFinite(cached.durationS) && cached.durationS >= 0 &&
+        isCacheDate(cached.generatedAt) && Array.isArray(cached.instructions) && cached.instructions.length <= 200 &&
+        cached.instructions.every((line: unknown): line is string => typeof line === 'string' && line.length < 2000)) {
+      synopsis = { schemaVersion: 1, stopId: cached.stopId, generatedAt: cached.generatedAt,
+        distanceM: cached.distanceM, durationS: cached.durationS, instructions: cached.instructions };
+    }
     // Project the cache, rather than hydrating arbitrary saved fields into runtime state.
-    return { plan: { id: plan.id, slug: plan.slug, title: plan.title, updatedAt: plan.updatedAt, stops: plan.stops.map(stop => ({ id: stop.id, slug: stop.slug, title: stop.title, ...(typeof stop.note === 'string' ? { note: stop.note } : {}) })) }, session: data.session, synopsis };
+    return { plan: { id: plan.id, slug: plan.slug, title: plan.title, updatedAt: plan.updatedAt, stops }, session, synopsis };
   } catch { return undefined; }
 }
 

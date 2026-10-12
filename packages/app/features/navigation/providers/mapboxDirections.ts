@@ -238,7 +238,7 @@ const MANEUVER_TYPES: Readonly<Record<string, ManeuverType>> = {
 };
 
 function parseManeuverType(value: unknown): ManeuverType {
-  return (typeof value === 'string' && MANEUVER_TYPES[value]) || 'other';
+  return typeof value === 'string' && Object.hasOwn(MANEUVER_TYPES, value) ? MANEUVER_TYPES[value]! : 'other';
 }
 
 const MODIFIERS: Readonly<Record<string, ManeuverModifier>> = {
@@ -253,7 +253,7 @@ const MODIFIERS: Readonly<Record<string, ManeuverModifier>> = {
 };
 
 function parseModifier(value: unknown): ManeuverModifier | undefined {
-  return typeof value === 'string' ? MODIFIERS[value] : undefined;
+  return typeof value === 'string' && Object.hasOwn(MODIFIERS, value) ? MODIFIERS[value] : undefined;
 }
 
 function parseGeometry(raw: unknown, label: string): RouteGeometry {

@@ -83,6 +83,12 @@ export function ExplorePlaceDetail({
   const place = useMemo(() => record ? explorePlaceFromRecord(record)
     : catalogue.find((p) => p.id === placeId), [record, catalogue, placeId]);
   useEffect(() => { void loadPlace(placeId); }, [placeId, loadPlace]);
+  const needsDetail = detail === undefined;
+  // Foreground catalogue refreshes invalidate older full detail. Revalidate
+  // only this mounted panel; unavailable results wait for explicit retry.
+  useEffect(() => {
+    if (needsDetail) void loadPlace(placeId);
+  }, [catalogue, placeId, loadPlace, needsDetail]);
   const pad = padding === 'window' ? 'px-window' : 'px-4';
   // The rail sits on the edge that meets the map: leading beside it, top over it.
   const frame = dismissKind === 'back' ? 'pt-rail' : 'pl-rail';

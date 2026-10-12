@@ -302,3 +302,14 @@ it('preserves reviewed institutional and official profile title formats', async 
     assert.equal(result?.url, 'https://cdn.example/portrait.jpg', name);
   }
 });
+
+it('preserves object-property names as explicit empty batch results', async () => {
+  const names = ['__proto__', 'constructor', 'toString', 'Unknown Artist'];
+  const photos = await resolveVerifiedArtistPhotos(names, async () => { throw new Error('must not fetch'); });
+  assert.deepEqual(Object.keys(photos).sort(), names.sort());
+  for (const name of names) {
+    assert.equal(Object.hasOwn(photos, name), true, name);
+    assert.equal(photos[name], null, name);
+  }
+  assert.equal(Object.getPrototypeOf(photos), Object.prototype);
+});

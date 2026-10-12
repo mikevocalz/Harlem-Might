@@ -166,6 +166,23 @@ describe('parseMapboxDirections', () => {
     }
   });
 
+  it('treats inherited object keys as unknown maneuver vocabulary', () => {
+    for (const key of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'unrecognized']) {
+      const body = structuredClone(loadFixture('apollo-theater--sylvias-restaurant').response) as {
+        routes: { legs: { steps: { maneuver: { type: string; modifier?: string } }[] }[] }[];
+      };
+      const maneuver = body.routes[0]!.legs[0]!.steps[1]!.maneuver;
+      maneuver.type = key;
+      maneuver.modifier = key;
+      const result = parseMapboxDirections(body, 'walking');
+      assert.equal(result.kind, 'routes');
+      if (result.kind !== 'routes') return;
+      const parsed = result.routes[0].legs[0]!.steps[1]!.maneuver;
+      assert.equal(parsed.type, 'other', key);
+      assert.equal(parsed.modifier, undefined, key);
+    }
+  });
+
   it('maps unknown maneuver types to other and rejects malformed shapes', () => {
     const f = loadFixture('apollo-theater--sylvias-restaurant');
     const body = structuredClone(f.response) as { routes: { legs: { steps: { maneuver: { type: string } }[] }[]; geometry: unknown }[] };

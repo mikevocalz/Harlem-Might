@@ -10,7 +10,7 @@ import {
   TextField,
 } from '@acme/ui';
 import { Main, Section, View } from '@acme/ui/tw';
-import { useMemberSession, type SavedPlaceRecord } from '@/lib/member-session';
+import { useMemberSession, useMemberAuthForm, type SavedPlaceRecord } from '@/lib/member-session';
 import type { CmsPlace } from '@/lib/payload';
 
 export const Route = createFileRoute('/profile')({
@@ -41,17 +41,19 @@ function ProfilePage() {
 }
 
 function SignInPanel() {
-  const mode = useMemberSession((state) => state.mode);
-  const email = useMemberSession((state) => state.email);
-  const password = useMemberSession((state) => state.password);
-  const name = useMemberSession((state) => state.name);
-  const error = useMemberSession((state) => state.error);
-  const setMode = useMemberSession((state) => state.setMode);
-  const setEmail = useMemberSession((state) => state.setEmail);
-  const setPassword = useMemberSession((state) => state.setPassword);
-  const setName = useMemberSession((state) => state.setName);
-  const submit = useMemberSession((state) => state.submit);
-  const signOut = useMemberSession((state) => state.signOut);
+  const mode = useMemberAuthForm((state) => state.mode);
+  const email = useMemberAuthForm((state) => state.email);
+  const password = useMemberAuthForm((state) => state.password);
+  const name = useMemberAuthForm((state) => state.name);
+  const formError = useMemberAuthForm((state) => state.error);
+  const sessionError = useMemberSession((state) => state.error);
+  const error = formError ?? sessionError;
+  const setMode = useMemberAuthForm((state) => state.setMode);
+  const setEmail = useMemberAuthForm((state) => state.setEmail);
+  const setPassword = useMemberAuthForm((state) => state.setPassword);
+  const setName = useMemberAuthForm((state) => state.setName);
+  const submit = useMemberAuthForm((state) => state.submit);
+  const signOut = useMemberAuthForm((state) => state.signOut);
   const signOutError = useMemberSession((state) => state.signOutError);
   const signOutPending = useMemberSession((state) => state.signOutPending);
 
@@ -141,7 +143,7 @@ function SignInPanel() {
 function SignedInProfile() {
   const member = useMemberSession((state) => state.member);
   const savedPlaces = useMemberSession((state) => state.savedPlaces);
-  const signOut = useMemberSession((state) => state.signOut);
+  const signOut = useMemberAuthForm((state) => state.signOut);
   const removeSavedPlace = useMemberSession((state) => state.removeSavedPlace);
   const error = useMemberSession((state) => state.error);
 

@@ -27,7 +27,7 @@ object CompanionWire {
         val expires = Instant.parse(s.getString("expiresAt")).toEpochMilli()
         updated <= now + 30_000 && expires > now && expires > updated && expires - updated <= 300_000 && now - updated <= 300_000
     } catch (_: Exception) { false }
-    fun snapshot(json: String): JSONObject? {
+    fun snapshot(json: String, now: Long = System.currentTimeMillis()): JSONObject? {
         val s = parse(json, snapshotKeys) ?: return null
         if (!integer(s, "schemaVersion") || s.getLong("schemaVersion") != 1L ||
             !text(s, "handoffId") || !text(s, "sessionId") || !text(s, "walkTitle") || !integer(s, "revision") ||
@@ -39,7 +39,7 @@ object CompanionWire {
             s.isNull("nextStopId") != s.isNull("nextStopTitle") ||
             (!s.isNull("nextStopId") && !text(s, "nextStopId")) ||
             (!s.isNull("nextStopTitle") && !text(s, "nextStopTitle")) ||
-            (!s.isNull("instruction") && !text(s, "instruction", 500)) || !fresh(s)) return null
+            (!s.isNull("instruction") && !text(s, "instruction", 500)) || !fresh(s, now)) return null
         if ((s.getString("status") == "completed") != (s.getLong("completedCount") == s.getLong("totalStops")) ||
             (!s.isNull("nextStopId")) != (s.getString("status") in listOf("active", "paused")) ||
             (s.getString("routeState") != "ready" && !s.isNull("instruction"))) return null
@@ -47,12 +47,12 @@ object CompanionWire {
         if (s.getLong("revision") < minimumRevision) return null
         return s
     }
-    fun command(json: String, s: JSONObject): JSONObject? {
+    fun command(json: String, s: JSONObject, now: Long = System.currentTimeMillis()): JSONObject? {
         val c = parse(json, commandKeys) ?: return null
         val type = c.optString("type")
         if (!integer(c, "schemaVersion") || c.getLong("schemaVersion") != 1L || !text(c, "commandId") ||
             c.opt("handoffId") != s.opt("handoffId") || c.opt("sessionId") != s.opt("sessionId") ||
-            !integer(c, "expectedRevision") || c.getLong("expectedRevision") != s.getLong("revision") || !fresh(s) ||
+            !integer(c, "expectedRevision") || c.getLong("expectedRevision") != s.getLong("revision") || !fresh(s, now) ||
             type !in listOf("pause", "resume", "stop", "confirm-stop") ||
             (c.has("confirmed") && c.opt("confirmed") != true) ||
             (type in listOf("stop", "confirm-stop") && c.opt("confirmed") != true) ||

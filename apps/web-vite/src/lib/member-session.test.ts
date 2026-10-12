@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
-import { useMemberSession } from './member-session.ts';
+import { useMemberSession, useMemberAuthForm } from './member-session.ts';
 
 const member = { id: 7, email: 'member@example.test', name: 'Member' };
 const saved = { id: 11, place: 5, createdAt: '2026-01-01T00:00:00Z' };
@@ -9,10 +9,10 @@ const deferred = <T>() => {
   const promise = new Promise<T>((done) => { resolve = done; });
   return { promise, resolve };
 };
-beforeEach(() => useMemberSession.setState({
-  status: 'signed-in', mode: 'login', member, savedPlaces: [saved],
-  email: '', password: '', name: '', error: null, signOutError: null, signOutPending: false,
-}));
+beforeEach(() => {
+  useMemberSession.setState({ status: 'signed-in', member, savedPlaces: [saved], error: null, signOutError: null, signOutPending: false });
+  useMemberAuthForm.setState({ mode: 'login', email: '', password: '', name: '', error: null });
+});
 
 for (const action of ['savePlace', 'removeSavedPlace'] as const) {
   test(`${action} contains request failure and preserves the last confirmed saved list`, async (t) => {
@@ -97,7 +97,8 @@ test('sign-out aborts an in-flight registration and prevents a later sign-in req
   const registration = deferred<Response>();
   let registrationSignal: AbortSignal | undefined;
   const paths: string[] = [];
-  useMemberSession.setState({ status: 'signed-out', member: null, savedPlaces: [], mode: 'register', name: 'Member', email: member.email, password: 'offline-example-only' });
+  useMemberSession.setState({ status: 'signed-out', member: null, savedPlaces: [] });
+  useMemberAuthForm.setState({ mode: 'register', name: 'Member', email: member.email, password: 'offline-example-only' });
   t.mock.method(globalThis, 'fetch', async (input: string | URL | Request, init?: RequestInit) => {
     const path = new URL(String(input)).pathname;
     paths.push(path);
@@ -108,7 +109,7 @@ test('sign-out aborts an in-flight registration and prevents a later sign-in req
     assert.ok(path.endsWith('/sign-out'));
     return new Response(null, { status: 204 });
   });
-  const submitting = useMemberSession.getState().submit();
+  const submitting = useMemberAuthForm.getState().submit();
   await useMemberSession.getState().signOut();
   assert.equal(registrationSignal?.aborted, true);
   registration.resolve(Response.json({ user: member }));
@@ -118,12 +119,15 @@ test('sign-out aborts an in-flight registration and prevents a later sign-in req
   assert.equal(useMemberSession.getState().status, 'signed-out');
 });
 
-test('an in-flight sign-out blocks a competing cookie-changing sign-in', async (t) => {
+test('an in-flight sign-out blocks competing cookie-changing sign-in and registration', async (t) => {
   const response = deferred<Response>();
   const fetch = t.mock.method(globalThis, 'fetch', async () => response.promise);
   const signingOut = useMemberSession.getState().signOut();
-  await useMemberSession.getState().submit();
-  assert.equal(fetch.mock.callCount(), 1);
+  for (const mode of ['login', 'register'] as const) {
+    useMemberAuthForm.setState({ mode, name: 'Member', email: member.email, password: 'fixture-only' });
+    await useMemberAuthForm.getState().submit();
+    assert.equal(fetch.mock.callCount(), 1);
+  }
   response.resolve(new Response(null, { status: 204 }));
   await signingOut;
 });
@@ -137,11 +141,77 @@ test('a successful saved-place retry clears the error and accepts a genuinely em
 });
 
 test('successful authentication refreshes the member saved list and clears private form state', async (t) => {
-  useMemberSession.setState({ status: 'signed-out', member: null, savedPlaces: [], email: member.email, password: 'offline-example-only' });
-  t.mock.method(globalThis, 'fetch', async (input: string | URL | Request) => String(input).endsWith('/auth/sign-in/email') ? Response.json({ user: member }) : Response.json({ docs: [saved] }));
-  await useMemberSession.getState().submit();
+  useMemberSession.setState({ status: 'signed-out', member: null, savedPlaces: [] });
+  useMemberAuthForm.setState({ email: member.email, password: 'offline-example-only' });
+  t.mock.method(globalThis, 'fetch', async (input: string | URL | Request) => String(input).includes('/auth/') ? Response.json({ user: member }) : Response.json({ docs: [saved] }));
+  await useMemberAuthForm.getState().submit();
+  // Shared auth verifies the cookie and loads the list in the background.
+  await new Promise<void>((resolve) => setImmediate(resolve));
   assert.equal(useMemberSession.getState().status, 'signed-in');
   assert.deepEqual(useMemberSession.getState().savedPlaces, [saved]);
-  assert.equal(useMemberSession.getState().password, '');
+  assert.equal(useMemberAuthForm.getState().password, '');
   assert.equal(useMemberSession.getState().error, null);
+});
+
+test('registration can retry after invalid-name validation clears its transient password', async (t) => {
+  useMemberSession.setState({ status: 'signed-out', member: null, savedPlaces: [] });
+  useMemberAuthForm.setState({ mode: 'register', name: '  ', password: 'fixture-only' });
+  const sentPasswords: string[] = [];
+  const fetch = t.mock.method(globalThis, 'fetch', async (input: string | URL | Request, init?: RequestInit) => {
+    if (init?.body) sentPasswords.push((JSON.parse(String(init.body)) as { password: string }).password);
+    return String(input).includes('/auth/') ? Response.json({ user: member }) : Response.json({ docs: [] });
+  });
+  await useMemberAuthForm.getState().submit();
+  assert.equal(fetch.mock.callCount(), 0);
+  assert.match(useMemberAuthForm.getState().error ?? '', /Add your name/);
+  assert.equal(useMemberAuthForm.getState().password, '');
+  useMemberAuthForm.getState().setName(' Member ');
+  useMemberAuthForm.getState().setEmail(member.email);
+  useMemberAuthForm.getState().setPassword('new-fixture-only');
+  await useMemberAuthForm.getState().submit();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.deepEqual(sentPasswords, ['new-fixture-only', 'new-fixture-only']);
+  assert.equal(useMemberAuthForm.getState().password, '');
+  assert.equal(useMemberAuthForm.getState().error, null);
+  assert.equal(useMemberSession.getState().member?.id, member.id);
+});
+
+test('shared auth errors stay visible in the Vite form and a successful retry clears them', async (t) => {
+  useMemberSession.setState({ status: 'signed-out', member: null, savedPlaces: [] });
+  useMemberAuthForm.setState({ email: member.email, password: 'fixture-only' });
+  let rejected = true;
+  t.mock.method(globalThis, 'fetch', async (input: string | URL | Request) => {
+    if (String(input).endsWith('/sign-in/email') && rejected) return Response.json({ errors: [{ message: 'Check your email and password.' }] }, { status: 401 });
+    return String(input).includes('/auth/') ? Response.json({ user: member }) : Response.json({ docs: [] });
+  });
+  await useMemberAuthForm.getState().submit();
+  assert.equal(useMemberSession.getState().status, 'signed-out');
+  assert.equal(useMemberAuthForm.getState().error, 'Check your email and password.');
+  assert.equal(useMemberAuthForm.getState().password, '');
+  rejected = false;
+  useMemberAuthForm.getState().setPassword('fixture-only');
+  await useMemberAuthForm.getState().submit();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(useMemberAuthForm.getState().error, null);
+  assert.equal(useMemberSession.getState().member?.id, member.id);
+});
+
+test('form logout clears private inputs before IO and ignores a stale auth error', async (t) => {
+  useMemberSession.setState({ status: 'signed-out', member: null, savedPlaces: [] });
+  useMemberAuthForm.setState({ email: member.email, name: 'Member', password: 'fixture-only' });
+  const login = deferred<Response>();
+  const logout = deferred<Response>();
+  t.mock.method(globalThis, 'fetch', async (input: string | URL | Request) => String(input).endsWith('/sign-in/email') ? login.promise : logout.promise);
+  const submitting = useMemberAuthForm.getState().submit();
+  const signingOut = useMemberAuthForm.getState().signOut();
+  assert.equal(useMemberAuthForm.getState().email, '');
+  assert.equal(useMemberAuthForm.getState().name, '');
+  assert.equal(useMemberAuthForm.getState().password, '');
+  assert.equal(useMemberSession.getState().signOutPending, true);
+  login.resolve(Response.json({ message: 'Old login error' }, { status: 401 }));
+  await submitting;
+  assert.equal(useMemberAuthForm.getState().error, null);
+  logout.resolve(new Response(null, { status: 204 }));
+  await signingOut;
+  assert.equal(useMemberSession.getState().signOutPending, false);
 });

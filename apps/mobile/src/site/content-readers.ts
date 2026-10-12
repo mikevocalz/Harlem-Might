@@ -1,6 +1,5 @@
 import { placeCatalogueStore } from '@acme/app/features/explore/place-catalogue.store.ts';
-import { fetch } from 'react-native-nitro-fetch';
-import { createContentReaders, createRestContentSource } from '@acme/app/content';
+import { contentFetch, createContentReaders, createRestContentSource } from '@acme/app/content';
 import { siteOrigin } from './site-url';
 
 /**
@@ -14,7 +13,17 @@ const origin = siteOrigin();
 export const contentReaders = createContentReaders(
   createRestContentSource({
     apiUrl: process.env.EXPO_PUBLIC_PAYLOAD_API_BASE?.trim() || (origin ? `${origin}/payload-api` : undefined),
-    fetch: (url, init) => fetch(url, init),
+    fetch: async (url, init) => {
+      try {
+        const response = await contentFetch(url, init);
+        if (!response.ok) console.warn('[content] HTTP request failed', response.status);
+        return response;
+      } catch (error) {
+        const code = error instanceof Error ? error.message.match(/\bERR_[A-Z_]+\b/)?.[0] ?? error.name : 'UnknownError';
+        console.warn('[content] Native request failed', code);
+        throw error;
+      }
+    },
   }),
 );
 

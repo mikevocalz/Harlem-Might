@@ -58,6 +58,10 @@ test('configured Payload migrations are discoverable independently of the CLI wo
         assert.ok(walkSessions, 'the checked-in walk-session migration is discovered');
         assert.equal(typeof walkSessions.up, 'function');
         assert.equal(typeof walkSessions.down, 'function');
+        const usersApiKeys = migrations.find(({ name }) => name === '20261012_152659_users_api_keys');
+        assert.ok(usersApiKeys, 'the checked-in user API-key migration is discovered');
+        assert.equal(typeof usersApiKeys.up, 'function');
+        assert.equal(typeof usersApiKeys.down, 'function');
         assert.ok(migrations.every(({ name }) => name !== 'index'));
         assert.equal(payload.db.pool, undefined);
       } finally {

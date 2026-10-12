@@ -75,7 +75,10 @@ function nativeFixture() {
     state: 'joined', localPeerId: 'host-peer',
     peers: [{ peerId: 'guest-peer', localized: true }], publishPose: () => {},
   };
-  const room = { roomId: 'room-a', enabled: false };
+  const room = {
+    roomId: 'room-a', enabled: false, status: 'ready',
+    frameSource: null as { key: string } | null,
+  };
   const viro = new Proxy({
     ViroAnimations: { registerAnimations: () => {} },
     ViroMaterials: { createMaterials: () => {} },
@@ -83,7 +86,11 @@ function nativeFixture() {
     metaSpatialAnchorFrameSource: (key: string) => ({ key }),
     useViroColocationRoom: (options: { enabled: boolean }) => {
       room.enabled = options.enabled;
-      return { roomId: options.enabled ? room.roomId : null, status: 'ready' };
+      return {
+        roomId: options.enabled ? room.roomId : null,
+        status: room.status,
+        frameSource: room.frameSource,
+      };
     },
     useViroColocation: () => colocated,
     useViroReplicatedState: () => replication,
@@ -178,6 +185,148 @@ function prepareHost() {
 }
 
 afterEach(() => tabletopSession.getState().reset());
+
+it('native host status follows surface search, placement, frame locking and room readiness', () => {
+  const fixture = nativeFixture();
+  const session = tabletopSession.getState();
+  session.setPlayerName('HOST');
+  assert.equal(session.beginHost(), true);
+  const scene = fixture.mount(fixture.Scene);
+  const status = () => find(scene.render({ arSceneNavigator: {} }), 'ViroText').props.text;
+
+  assert.equal(status(), 'SCANNING FOR TABLE / FLOOR…');
+  session.setDetectedSurfaceCount(1);
+  assert.equal(status(), 'TAP A CYAN TABLE OR FLOOR');
+  session.setPlacementCandidate({ anchorId: 'table', worldPosition: [0, 0, 0], surface: 'table' });
+  assert.equal(status(), 'PREVIEW MAT · LOCK OR MOVE');
+  session.setPlacementConfirmed(true);
+  assert.equal(status(), 'LOCKING SHARED COORDINATE FRAME…');
+  session.setLocalized(true);
+  fixture.room.roomId = '';
+  assert.equal(status(), 'CREATING ROOM CODE…');
+  fixture.room.roomId = 'room-a';
+  assert.equal(status(), 'GRID FOUND · SHARED FRAME LOCKED');
+  scene.unmount();
+});
+
+it('native guest status follows room lookup, host-frame localization, readiness and frame loss', () => {
+  const fixture = nativeFixture();
+  const session = tabletopSession.getState();
+  session.setPlayerName('GUEST');
+  session.setJoinCode('GRID1234');
+  assert.equal(session.beginGuest(), true);
+  const scene = fixture.mount(fixture.Scene);
+  const status = () => find(scene.render({ arSceneNavigator: {} }), 'ViroText').props.text;
+
+  fixture.room.status = 'working';
+  assert.equal(status(), 'LOOKING UP GRID ROOM…');
+  fixture.room.status = 'ready';
+  fixture.room.frameSource = { key: 'host-frame' };
+  assert.equal(status(), 'LOCALIZING TO HOST GRID…');
+  const frame = find(scene.render({ arSceneNavigator: {} }), 'ViroSharedFrame');
+  assert.equal(frame.props.source, fixture.room.frameSource);
+  frame.props.onLocalized({ transform: null });
+  assert.equal(status(), 'GRID FOUND · SHARED FRAME LOCKED');
+  frame.props.onLocalizeError('tracking temporarily lost');
+  assert.equal(status(), 'LOCALIZING TO HOST GRID…');
+  scene.unmount();
+});
+
+function crashEffectFixture(localPlayerId: core.LightCyclePlayerId) {
+  const fixture = nativeFixture();
+  const room = tabletopRace.enterRoom('crash-room');
+  const props = {
+    roomId: room.roomId, replication: fixture.replication, localPlayerId,
+    placementReady: true, playerNames: { p1: 'HOST', p2: 'GUEST' }, bothReady: true,
+  };
+  let renderer = fixture.mount(fixture.Runtime);
+  return {
+    effects: fixture.effects,
+    render(state: core.LightCycleMatchState) {
+      if (localPlayerId === 'p1') tabletopRace.setRoomRenderState(room, state);
+      else fixture.replication.set(protocol.LIGHTCYCLE_REPLICATION_IDS.snapshot, { state });
+      renderer.render(props);
+    },
+    remount() {
+      renderer.unmount();
+      renderer = fixture.mount(fixture.Runtime);
+    },
+  };
+}
+
+function setCrashRider(
+  state: core.LightCycleMatchState,
+  id: core.LightCyclePlayerId,
+  x: number,
+  direction: core.LightCycleDirection,
+) {
+  Object.assign(state.riders[id], {
+    position: { x, z: 0 }, segmentStart: { x, z: 0 }, direction,
+  });
+}
+
+for (const localPlayerId of ['p1', 'p2'] as const) {
+  it(`native ${localPlayerId} emits both simultaneous crash effects once across renders and remounts`, () => {
+    const fixture = crashEffectFixture(localPlayerId);
+    let state = core.startLightCycleRoundImmediately(core.createLightCycleMatch({
+      config: { baseStepUnits: 1000 },
+    }));
+    setCrashRider(state, 'p1', -500, 1);
+    setCrashRider(state, 'p2', 500, 3);
+    state = core.advanceLightCycleMatch(state);
+    assert.equal(state.roundWinner, 'draw');
+    assert.deepEqual(state.derezEvents.map(({ playerId, tick }) => ({ playerId, tick })), [
+      { playerId: 'p1', tick: state.tick }, { playerId: 'p2', tick: state.tick },
+    ]);
+
+    fixture.render(state);
+    assert.deepEqual(fixture.effects, state.derezEvents.map((event) => ({
+      type: 'derez', seed: event.seed, intensity: 1,
+      playerColor: event.playerId === 'p1' ? '#00f3ff' : '#ff7a00',
+      opponentColor: event.playerId === 'p1' ? '#ff7a00' : '#00f3ff',
+      localPlayer: localPlayerId, winner: event.byPlayerId ?? 'none',
+      collisionCause: event.cause,
+      world: { x: event.point.x * 0.001, y: 0.08, z: event.point.z * 0.001 },
+    })));
+    fixture.render(state);
+    fixture.render(structuredClone(state));
+    // A newer snapshot containing the same event batch must not replay it.
+    fixture.render({ ...state, tick: state.tick + 1 });
+    fixture.remount();
+    fixture.render(structuredClone(state));
+    assert.equal(fixture.effects.length, 2);
+  });
+
+  it(`native ${localPlayerId} accepts a shorter next round and rejects stale round batches`, () => {
+    const fixture = crashEffectFixture(localPlayerId);
+    let state = core.startLightCycleRoundImmediately(core.createLightCycleMatch({
+      config: { baseStepUnits: 1000, roundOverTicks: 1 },
+    }));
+    setCrashRider(state, 'p1', core.LIGHTCYCLE_ARENA_HALF - 1050, 1);
+    state = core.advanceLightCycleMatch(core.advanceLightCycleMatch(state));
+    assert.equal(state.derezEvents.length, 1);
+    assert.equal(state.derezEvents[0]?.tick, 2);
+    fixture.render(state);
+    assert.equal(fixture.effects.length, 1);
+
+    // Advance the real round transition, without requiring the renderer to see
+    // the intervening empty countdown snapshot (a guest can miss that update).
+    let next = core.startLightCycleRoundImmediately(core.advanceLightCycleMatch(state));
+    assert.equal(next.round, state.round + 1);
+    assert.equal(next.tick, 0);
+    setCrashRider(next, 'p1', core.LIGHTCYCLE_ARENA_HALF - 50, 1);
+    next = core.advanceLightCycleMatch(next);
+    assert.equal(next.derezEvents.length, 1);
+    assert.equal(next.derezEvents[0]?.tick, 1);
+    fixture.render(next);
+    assert.equal(fixture.effects.length, 2);
+
+    fixture.render(structuredClone(next));
+    fixture.render(structuredClone(state));
+    fixture.render(structuredClone(next));
+    assert.equal(fixture.effects.length, 2);
+  });
+}
 
 it('native room ownership survives frame loss/remount, pauses play, and tears down on replacement', () => {
   const fixture = nativeFixture();

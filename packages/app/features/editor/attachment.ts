@@ -12,7 +12,7 @@ export interface AttachProgress {
   phase: AttachPhase;
   /** 0–1. Meaningful only while `phase` is 'attaching' and the size is known. */
   ratio: number;
-  /** Null when the source reports no length — see `attach` for why. */
+  /** Null when the source reports no valid length — see `attach` for why. */
   bytesTotal: number | null;
   name: string | null;
   error: string | null;
@@ -54,9 +54,9 @@ export function fileNameFrom(uri: string): string {
  *   happened. A progress bar with nothing behind it is theatre, and it teaches
  *   people to distrust the ones that mean something.
  *
- * `totalBytes` can be 0 when a server sends no content-length; the ratio then
- * stays 0 and the caller shows an indeterminate state rather than dividing by
- * zero and rendering NaN%.
+ * Missing or invalid lengths stay indeterminate. Valid lengths can still be
+ * underestimates (for example, compressed response sizes), so the measured
+ * ratio is clamped to 0–1; completion still waits for the actual transfer.
  */
 export async function attach(
   source: { uri: string; name?: string },
@@ -73,10 +73,12 @@ export async function attach(
 
   try {
     const uri = await downloadAttachment(source.uri, name, ({ bytesWritten, totalBytes }) => {
+      const bytesTotal = Number.isFinite(totalBytes) && totalBytes > 0 ? totalBytes : null;
       onProgress({
         phase: 'attaching',
-        ratio: totalBytes > 0 ? bytesWritten / totalBytes : 0,
-        bytesTotal: totalBytes > 0 ? totalBytes : null,
+        ratio: bytesTotal !== null && Number.isFinite(bytesWritten)
+          ? Math.min(1, Math.max(0, bytesWritten / bytesTotal)) : 0,
+        bytesTotal,
         name,
         error: null,
       });

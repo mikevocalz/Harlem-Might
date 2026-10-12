@@ -91,7 +91,14 @@ export const ButtonBase = ({ role, onKeyDown: _onKeyDown, ...props }: PressBaseP
   <Pressable role={(role ?? 'button') as never} {...props} />
 );
 
-export type InputBaseProps = TextInputProps;
+type NativeInputCallbacks = Pick<NativeInputProps, 'onFocus' | 'onBlur' | 'onSubmitEditing'>;
+
+/**
+ * Keep the shared RN-style prop surface, but use the callbacks the native
+ * adapter actually emits. NativeInput has no RN focus/blur/submit events;
+ * these notifications take no arguments, matching the web fork's contract.
+ */
+export type InputBaseProps = Omit<TextInputProps, keyof NativeInputCallbacks> & NativeInputCallbacks;
 
 /**
  * Text fields render through `@expo/ui`'s universal TextInput (SwiftUI /
@@ -134,11 +141,9 @@ function toNativeInputProps(
     containerStyle,
     value: typeof props.value === 'string' ? props.value : undefined,
     onChangeText: props.onChangeText,
-    onFocus: props.onFocus ? () => props.onFocus?.(undefined as never) : undefined,
-    onBlur: props.onBlur ? () => props.onBlur?.(undefined as never) : undefined,
-    onSubmitEditing: props.onSubmitEditing
-      ? () => props.onSubmitEditing?.(undefined as never)
-      : undefined,
+    onFocus: props.onFocus,
+    onBlur: props.onBlur,
+    onSubmitEditing: props.onSubmitEditing,
     placeholder: props.placeholder,
     placeholderTextColor:
       typeof props.placeholderTextColor === 'string' ? props.placeholderTextColor : undefined,

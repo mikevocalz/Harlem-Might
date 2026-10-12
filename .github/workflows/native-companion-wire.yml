@@ -5,19 +5,21 @@ on:
     paths:
       - 'apps/mobile/modules/walk-companion/**'
       - 'apps/mobile/targets/harlem-watch/CompanionWire.swift'
+      - 'apps/wearos/app/src/main/java/com/harlemmight/watch/WalkCompanion.kt'
       - 'tooling/tests/walk-companion/**'
       - '.github/workflows/native-companion-wire.yml'
   pull_request:
     paths:
       - 'apps/mobile/modules/walk-companion/**'
       - 'apps/mobile/targets/harlem-watch/CompanionWire.swift'
+      - 'apps/wearos/app/src/main/java/com/harlemmight/watch/WalkCompanion.kt'
       - 'tooling/tests/walk-companion/**'
       - '.github/workflows/native-companion-wire.yml'
 permissions:
   contents: read
 jobs:
   wire:
-    name: ${{ matrix.language }} wire contracts
+    name: ${{ matrix.language }} companion contracts
     strategy:
       fail-fast: false
       matrix:
@@ -38,5 +40,5 @@ jobs:
       # Swift and Java are supplied by the hosted images. Kotlin and the host
       # Android JSON implementation are version/checksum pinned in the runner.
       # This job needs no Expo install, private dependencies, SDK or device.
-      - name: Compile and execute production wire validation
+      - name: Compile and execute production companion contracts
         run: node tooling/tests/walk-companion/run.mjs ${{ matrix.language }}

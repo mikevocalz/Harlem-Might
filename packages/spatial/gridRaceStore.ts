@@ -36,82 +36,78 @@ const TURN_RELEASE = 0.34;
 const BOOST_TRIGGER = 0.58;
 const clampStick = (value: number) => Math.max(-1, Math.min(1, value));
 
-export const useGridRaceStore = create<GridRaceState>((set) => ({
-  phase: 'gateway',
-  simulation: createGridRaceSimulation(),
-  steer: 0,
-  throttle: 0,
-  turn: 0,
-  turnSerial: 0,
-  boostHeld: false,
-  boostPulseSerial: 0,
+export const useGridRaceStore = create<GridRaceState>((set) => {
+  // Remember release across intermediate analog samples, not just one frame.
+  let turnReady = true;
+  const neutralInput = () => {
+    turnReady = true;
+    return { steer: 0, throttle: 0, turn: 0 as const, boostHeld: false };
+  };
 
-  setStick: (x, y) =>
-    set((state) => {
-      const steer = clampStick(x);
-      const throttle = clampStick(y);
-      const wasReady = Math.abs(state.steer) <= TURN_RELEASE;
-      const crossedTurnGate = Math.abs(steer) >= TURN_TRIGGER;
-      const queuedTurn: GridTurn =
-        wasReady && crossedTurnGate ? (steer < 0 ? -1 : 1) : state.turn;
+  return {
+    phase: 'gateway',
+    simulation: createGridRaceSimulation(),
+    ...neutralInput(),
+    turnSerial: 0,
+    boostPulseSerial: 0,
 
-      return {
-        steer,
-        throttle,
-        boostHeld: throttle >= BOOST_TRIGGER,
-        turn: queuedTurn,
-        turnSerial:
-          wasReady && crossedTurnGate ? state.turnSerial + 1 : state.turnSerial,
-      };
-    }),
+    setStick: (x, y) =>
+      set((state) => {
+        const steer = clampStick(x);
+        const throttle = clampStick(y);
+        if (Math.abs(steer) <= TURN_RELEASE) turnReady = true;
+        const crossedTurnGate = turnReady && Math.abs(steer) >= TURN_TRIGGER;
+        if (crossedTurnGate) turnReady = false;
+        const queuedTurn: GridTurn =
+          crossedTurnGate ? (steer < 0 ? -1 : 1) : state.turn;
 
-  queueTurn: (turn) =>
-    set((state) => ({
-      turn,
-      turnSerial: state.turnSerial + 1,
-    })),
+        return {
+          steer,
+          throttle,
+          boostHeld: throttle >= BOOST_TRIGGER,
+          turn: queuedTurn,
+          turnSerial:
+            crossedTurnGate ? state.turnSerial + 1 : state.turnSerial,
+        };
+      }),
 
-  setBoost: (active) => set({ boostHeld: active }),
-  pulseBoost: () =>
-    set((state) => ({ boostPulseSerial: state.boostPulseSerial + 1 })),
+    queueTurn: (turn) =>
+      set((state) => ({
+        turn,
+        turnSerial: state.turnSerial + 1,
+      })),
 
-  enterGateway: () =>
-    set({
-      phase: 'gateway',
-      steer: 0,
-      throttle: 0,
-      turn: 0,
-      boostHeld: false,
-    }),
+    setBoost: (active) => set({ boostHeld: active }),
+    pulseBoost: () =>
+      set((state) => ({ boostPulseSerial: state.boostPulseSerial + 1 })),
 
-  startRace: () =>
-    set({
-      phase: 'race',
-      simulation: createGridRaceSimulation(),
-      steer: 0,
-      throttle: 0,
-      turn: 0,
-      boostHeld: false,
-    }),
+    enterGateway: () =>
+      set({
+        phase: 'gateway',
+        ...neutralInput(),
+      }),
 
-  advanceSimulation: (input, dt) =>
-    set((state) => ({
-      simulation: advanceGridRace(state.simulation, input, dt),
-    })),
+    startRace: () =>
+      set({
+        phase: 'race',
+        simulation: createGridRaceSimulation(),
+        ...neutralInput(),
+      }),
 
-  restartSimulation: () =>
-    set((state) => ({
-      simulation: restartGridRace(state.simulation),
-    })),
+    advanceSimulation: (input, dt) =>
+      set((state) => ({
+        simulation: advanceGridRace(state.simulation, input, dt),
+      })),
 
-  resetInput: () =>
-    set({
-      steer: 0,
-      throttle: 0,
-      turn: 0,
-      boostHeld: false,
-    }),
-}));
+    restartSimulation: () =>
+      set((state) => ({
+        simulation: restartGridRace(state.simulation),
+        ...neutralInput(),
+      })),
+
+    resetInput: () => set(neutralInput()),
+  };
+});
 
 export const gridRace = {
   getState: useGridRaceStore.getState,

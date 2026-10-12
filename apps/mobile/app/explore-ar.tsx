@@ -16,6 +16,7 @@ import { sceneModeFor, useArSession, type ArSceneMode } from '../src/ar/arSessio
 import { mapboxToken } from '../src/ar/mapboxToken';
 import { useStreetMapLoader } from '../src/ar/useStreetMapLoader';
 import { useTabletopRoute } from '../src/ar/useTabletopRoute';
+import { tabletopRouteUnavailableMessage } from '../src/ar/tabletopRouteMessage';
 import { canUseArNavigation, chooseArExperience } from '../src/ar/arNavigationEntry';
 import { isArNavigationScreen } from '../src/ar/navAr';
 import { getNavigationController } from '../src/ar/navigationRuntime';
@@ -149,7 +150,7 @@ function ArPanel({
         ? 'Walking route to the two nearest places.'
         : route.status === 'ready'
           ? 'No walking route available. Straight lines are shown instead.'
-          : '';
+          : tabletopRouteUnavailableMessage(route) ?? '';
   const mapLine =
     mode === 'street' && mapboxToken().kind !== 'public'
       ? 'This build has no public Mapbox token, so Harlem shows without real buildings or satellite ground.'

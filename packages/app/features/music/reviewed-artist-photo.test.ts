@@ -90,3 +90,13 @@ it('social previews replace all quarantined photos, retain later uploads, and co
   assert.equal(musicArtistOpenGraphPhoto({ name: 'Vado' })?.url, resolveReviewedArtistPhoto('Vado')?.url);
   assert.equal(musicArtistOpenGraphPhoto({ name: 'Unknown' }), undefined);
 });
+
+it('returns null for inherited table keys and retains every requested batch key', () => {
+  const names = ['constructor', '__proto__', 'toString', 'Unknown Artist'];
+  const results = resolveReviewedArtistPhotos(names);
+  for (const name of names) {
+    assert.equal(resolveReviewedArtistPhoto(name), null, name);
+    assert.equal(Object.hasOwn(results, name), true, name);
+    assert.equal(results[name], null, name);
+  }
+});
