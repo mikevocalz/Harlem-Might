@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 import {
   ViroBox,
   ViroGameLoop,
@@ -20,10 +20,7 @@ import {
 import {
   LIGHTCYCLE_METERS_PER_FIXED_UNIT,
 } from './lightcycle/assetContract';
-import {
-  LIGHTCYCLE_REPLICATION_IDS,
-  LightCycleInputQueue,
-} from './lightcycle/sessionProtocol';
+import { LIGHTCYCLE_REPLICATION_IDS } from './lightcycle/sessionProtocol';
 import { tabletopRace, useTabletopRaceStore } from './tabletopRaceStore';
 import { gridFx } from './rive-fx/store';
 import { McpPresence } from './mcp/McpPresence.native';
@@ -314,21 +311,11 @@ export function TabletopRaceRuntime({
   const inputEntity = replication.byId(inputId);
   const snapshotEntity = replication.byId(snapshotId);
 
-  const hostState = useRef<LightCycleMatchState | null>(null);
-  const queue = useRef(new LightCycleInputQueue());
-  const seenSequence = useRef<Record<LightCyclePlayerId, number>>({
-    p1: -1,
-    p2: -1,
-  });
-  const boostHeld = useRef<Record<LightCyclePlayerId, boolean>>({
-    p1: false,
-    p2: false,
-  });
-  const localSequence = useRef(0);
-  const localHistory = useRef<LightCycleInputEvent[]>([]);
-  const lastDerezFxTick = useRef(-1);
-  const hostRenderState = useTabletopRaceStore(
-    (state) => state.hostRenderState,
+  const roomRuntime = useTabletopRaceStore((state) =>
+    state.roomRuntime?.roomId === roomId ? state.roomRuntime : null,
+  );
+  const hostRenderState = useTabletopRaceStore((state) =>
+    state.roomRuntime?.roomId === roomId ? state.hostRenderState : null,
   );
 
   useEffect(() => {
@@ -353,6 +340,16 @@ export function TabletopRaceRuntime({
 
   const sendCommand = useCallback(
     (command: LightCycleInputEvent['command'], offsetTicks = 0) => {
+      const runtime = tabletopRace.getState().roomRuntime;
+      if (
+        !runtime ||
+        runtime !== roomRuntime ||
+        !placementReady ||
+        !bothReady ||
+        replication.state !== 'synced'
+      ) {
+        return;
+      }
       const currentEntity = replication.byId(inputId);
       if (!currentEntity) {
         replication.claim(inputId);
@@ -362,8 +359,8 @@ export function TabletopRaceRuntime({
 
       const existing = readInputEvents(currentEntity.fields.events);
       for (const event of existing) {
-        if (event.sequence > localSequence.current) {
-          localSequence.current = event.sequence;
+        if (event.sequence > runtime.localSequence) {
+          runtime.localSequence = event.sequence;
         }
       }
 
@@ -371,11 +368,11 @@ export function TabletopRaceRuntime({
       const lead = isHost ? HOST_INPUT_LEAD_TICKS : GUEST_INPUT_LEAD_TICKS;
       const event: LightCycleInputEvent = {
         playerId: localPlayerId,
-        sequence: localSequence.current + 1,
+        sequence: runtime.localSequence + 1,
         targetTick: baseTick + lead + offsetTicks,
         command,
       };
-      localSequence.current = event.sequence;
+      runtime.localSequence = event.sequence;
 
       const merged = [
         ...existing.filter(
@@ -383,7 +380,7 @@ export function TabletopRaceRuntime({
             item.sequence !== event.sequence &&
             item.playerId === localPlayerId,
         ),
-        ...localHistory.current,
+        ...runtime.localHistory,
         event,
       ]
         .sort((a, b) => a.sequence - b.sequence)
@@ -393,7 +390,7 @@ export function TabletopRaceRuntime({
         )
         .slice(-INPUT_HISTORY_LIMIT);
 
-      localHistory.current = merged;
+      runtime.localHistory = merged;
       replication.set(
         inputId,
         { events: merged },
@@ -401,15 +398,27 @@ export function TabletopRaceRuntime({
       );
     },
     [
+      bothReady,
       displayState?.tick,
       inputId,
       isHost,
       localPlayerId,
+      placementReady,
       replication,
+      roomRuntime,
     ],
   );
 
   const pulseBoost = useCallback(() => {
+    if (
+      !roomRuntime ||
+      tabletopRace.getState().roomRuntime !== roomRuntime ||
+      !placementReady ||
+      !bothReady ||
+      replication.state !== 'synced'
+    ) {
+      return;
+    }
     sendCommand('BOOST_DOWN');
     sendCommand('BOOST_UP', Math.round(LIGHTCYCLE_FIXED_HZ * 0.45));
     gridFx.emit({
@@ -420,14 +429,27 @@ export function TabletopRaceRuntime({
       opponentColor: localPlayerId === 'p1' ? '#ff7a00' : '#00f3ff',
       velocity: displayState?.riders[localPlayerId].speedUnitsPerTick ?? 0,
     });
-  }, [displayState, localPlayerId, sendCommand]);
+  }, [
+    bothReady,
+    displayState,
+    localPlayerId,
+    placementReady,
+    replication.state,
+    roomRuntime,
+    sendCommand,
+  ]);
 
   useEffect(() => {
-    if (!displayState?.derezEvents.length) return;
+    const runtime = tabletopRace.getState().roomRuntime;
+    if (
+      !runtime ||
+      runtime !== roomRuntime ||
+      !displayState?.derezEvents.length
+    ) return;
 
     for (const event of displayState.derezEvents) {
-      if (event.tick <= lastDerezFxTick.current) continue;
-      lastDerezFxTick.current = event.tick;
+      if (event.tick <= runtime.lastDerezFxTick) continue;
+      runtime.lastDerezFxTick = event.tick;
 
       const playerColor = event.playerId === 'p1' ? '#00f3ff' : '#ff7a00';
       const opponentColor = event.playerId === 'p1' ? '#ff7a00' : '#00f3ff';
@@ -453,10 +475,13 @@ export function TabletopRaceRuntime({
         },
       });
     }
-  }, [displayState, localPlayerId]);
+  }, [displayState, localPlayerId, roomRuntime]);
 
   const onFixedUpdate = useCallback(() => {
+    const runtime = tabletopRace.getState().roomRuntime;
     if (
+      !runtime ||
+      runtime !== roomRuntime ||
       !isHost ||
       !placementReady ||
       !bothReady ||
@@ -465,18 +490,18 @@ export function TabletopRaceRuntime({
       return;
     }
 
-    if (!hostState.current) {
+    if (!runtime.hostState) {
       const initial = createLightCycleMatch({
         seed: roomSeed(roomId),
         names: playerNames,
       });
-      hostState.current = initial;
-      queue.current.clear();
-      boostHeld.current = { p1: false, p2: false };
-      tabletopRace.setHostRenderState(initial);
+      runtime.hostState = initial;
+      runtime.queue.clear();
+      runtime.boostHeld = { p1: false, p2: false };
+      tabletopRace.setRoomRenderState(runtime, initial);
     }
 
-    const current = hostState.current;
+    const current = runtime.hostState;
     if (!current) return;
 
     for (const id of ['p1', 'p2'] as LightCyclePlayerId[]) {
@@ -485,21 +510,21 @@ export function TabletopRaceRuntime({
       );
       const events = readInputEvents(entity?.fields.events);
       for (const event of events) {
-        if (event.sequence <= seenSequence.current[id]) continue;
-        seenSequence.current[id] = event.sequence;
-        queue.current.push(event, current.tick);
+        if (event.sequence <= runtime.seenSequence[id]) continue;
+        runtime.seenSequence[id] = event.sequence;
+        runtime.queue.push(event, current.tick);
       }
     }
 
     const nextTick = current.tick + 1;
-    const events = queue.current.drain(nextTick);
+    const events = runtime.queue.drain(nextTick);
     const tickInputs: LightCycleTickInputs = {};
 
     for (const event of events) {
       if (event.command === 'BOOST_DOWN') {
-        boostHeld.current[event.playerId] = true;
+        runtime.boostHeld[event.playerId] = true;
       } else if (event.command === 'BOOST_UP') {
-        boostHeld.current[event.playerId] = false;
+        runtime.boostHeld[event.playerId] = false;
       } else {
         tickInputs[event.playerId] = {
           ...(tickInputs[event.playerId] ?? {}),
@@ -511,20 +536,20 @@ export function TabletopRaceRuntime({
     for (const id of ['p1', 'p2'] as LightCyclePlayerId[]) {
       tickInputs[id] = {
         ...(tickInputs[id] ?? {}),
-        boost: boostHeld.current[id],
+        boost: runtime.boostHeld[id],
       };
     }
 
     const next = advanceLightCycleMatch(current, tickInputs);
-    hostState.current = next;
+    runtime.hostState = next;
 
     if (next.round !== current.round) {
-      queue.current.clear();
-      boostHeld.current = { p1: false, p2: false };
+      runtime.queue.clear();
+      runtime.boostHeld = { p1: false, p2: false };
     }
 
     if (next.tick % 2 === 0 || next.phase !== current.phase) {
-      tabletopRace.setHostRenderState(next);
+      tabletopRace.setRoomRenderState(runtime, next);
     }
 
     if (
@@ -563,10 +588,11 @@ export function TabletopRaceRuntime({
     playerNames,
     replication,
     roomId,
+    roomRuntime,
     snapshotId,
   ]);
 
-  if (!placementReady) return null;
+  if (!roomRuntime || !placementReady) return null;
 
   return (
     <ViroNode>
@@ -586,7 +612,7 @@ export function TabletopRaceRuntime({
             sources={MCP_VOICE_SOURCES}
           />
 
-          {displayState.phase === 'running' ? (
+          {bothReady && displayState.phase === 'running' ? (
             <>
               <ControlButton
                 label="LEFT"

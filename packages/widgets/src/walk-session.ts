@@ -27,7 +27,7 @@ export function validateWalkSession(value: unknown): asserts value is WalkSessio
     || typeof s.walkTitle !== 'string' || !s.walkTitle.trim() || s.walkTitle.length > 300
     || !validIds(s.stopIds) || s.stopIds.length < 2 || s.stopIds.length > MAX_WALK_STOPS
     || new Set(s.stopIds).size !== s.stopIds.length || !validIds(s.completedStopIds)
-    || !['active', 'paused', 'completed', 'stopped'].includes(String(s.status))
+    || typeof s.status !== 'string' || !['active', 'paused', 'completed', 'stopped'].includes(s.status)
     || !Number.isSafeInteger(s.revision) || (s.revision as number) < 0
     || !validInstant(s.startedAt) || !validInstant(s.updatedAt)
     || Date.parse(s.updatedAt) < Date.parse(s.startedAt)) throw new Error('Invalid walk session');

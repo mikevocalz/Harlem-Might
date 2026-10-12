@@ -55,6 +55,23 @@ test('findPage sends the page and reads Payload pagination metadata', async () =
   assert.match(decodeURIComponent(urls[0] ?? ''), /music-artists\?.*limit=24.*page=2/);
 });
 
+test('find ignores page while findPage preserves it for the same query', async () => {
+  const urls: URL[] = [];
+  const source = createRestContentSource({
+    apiUrl: 'https://example.test/payload-api',
+    fetch: async (url) => {
+      urls.push(new URL(url));
+      return { ok: true, status: 200, json: async () => ({ docs: [], totalDocs: 0 }) };
+    },
+  });
+  const query = { collection: 'walks', where: {}, depth: 1, limit: 5, page: 2 } as const;
+  await source.find(query);
+  await source.findPage(query);
+  assert.equal(urls[0]?.searchParams.has('page'), false);
+  assert.equal(urls[1]?.searchParams.get('page'), '2');
+  assert.equal(query.page, 2, 'the adapter must not mutate its caller’s query');
+});
+
 test('no apiUrl means not configured', () => {
   const source = createRestContentSource({ apiUrl: undefined, fetch: async () => assert.fail('no request') });
   assert.equal(source.isConfigured(), false);

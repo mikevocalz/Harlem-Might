@@ -123,7 +123,6 @@ describe('in-pane navigation AR ownership', () => {
       const layout = () => resolveExploreLayout({
         windowWidth: 390, hasSelection: true, detailPlacement: 'inline', isHorizon: false,
         compactPane: useExploreLayoutStore.getState().compactPane,
-        discoverDrawerOpen: useExploreLayoutStore.getState().discoverDrawerOpen,
       });
       assert.equal(layout().showMap, false);
       let navigations = 0;

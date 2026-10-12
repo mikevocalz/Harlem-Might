@@ -85,9 +85,7 @@ export { GridScene, type GridSceneProps } from './backgrounds/GridScene';
 export { GlyphCity, type GlyphCityProps, type GlyphCityVariant } from './backgrounds/GlyphCity';
 export {
   CircuitButton,
-  MightsCircuitButton,
   type CircuitButtonProps,
   GridCard,
-  MightsNotchCard,
   type GridCardProps,
 } from './future';

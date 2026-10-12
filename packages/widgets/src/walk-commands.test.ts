@@ -35,6 +35,22 @@ test('runtime snapshots reject malformed, extra, inconsistent or future data eve
   assert.throws(() => applyWalkCommand({...session, revision: -1}, command('resume'), later));
 });
 
+test('command discriminants must be strings, never coercible arrays or objects', () => {
+  const session = beginWalk(walk, 's1', now);
+  for (const type of [['pause'], ['resume'], { toString: () => 'pause' }]) {
+    const malformed = { ...command('pause'), type };
+    assert.throws(() => validateWalkCommand(malformed), /Invalid walk command/);
+    assert.throws(() => applyWalkCommand(session, malformed as unknown as WalkCommand, later), /Invalid walk command/);
+  }
+});
+
+test('session status must be a string before transition and revision checks', () => {
+  const session = beginWalk(walk, 's1', now);
+  for (const status of [['active'], ['paused'], ['stopped'], { toString: () => 'active' }]) {
+    assert.throws(() => validateWalkSession({ ...session, status }), /Invalid walk session/);
+  }
+});
+
 test('snapshot revisions cover every confirmed stop and any pause or stop transition', () => {
   const session = beginWalk(walk, 's1', now);
   for (const bad of [

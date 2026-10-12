@@ -16,11 +16,6 @@ import { useMapStatus } from './map-status';
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
-// Start the mapbox-gl chunk fetch at module evaluation, not inside the mount
-// effect: the ~800 kB library is the first thing on the map's critical path,
-// so it downloads while React hydrates instead of after it.
-const mapboxglPromise = typeof window === 'undefined' ? null : import('mapbox-gl');
-
 export interface MapPlace {
   id: string;
   name: string;
@@ -389,7 +384,9 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
     let observer: ResizeObserver | null = null;
     const markers = markersRef.current;
 
-    void mapboxglPromise?.then(({ default: mapboxgl }) => {
+    // Load only for a usable mount. The module loader reuses successful loads;
+    // retaining our own promise would also retain a failed chunk request.
+    void import('mapbox-gl').then(({ default: mapboxgl }) => {
       if (cancelled) return;
       mapboxgl.accessToken = TOKEN;
       mapboxglRef.current = mapboxgl;
@@ -428,9 +425,11 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
         return;
       }
       map.on('error', (e) => {
+        if (cancelled) return;
         if (/webgl/i.test(e.error?.message ?? '')) setStatus('unavailable');
       });
       map.once('idle', () => {
+        if (cancelled) return;
         performance.mark('hm:map-idle');
         performance.measure('hm:map-ready', 'hm:map-create', 'hm:map-idle');
         setStatus('ready');
@@ -444,6 +443,7 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
       applyVisibility();
 
       map.once('load', () => {
+        if (cancelled) return;
         // The whole catalogue as canvas layers — circles plus names that fade
         // in at street zoom. Standard's top slot keeps them above basemap
         // labels and 3D objects; the route lines attach after them.
@@ -511,6 +511,7 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
       // fit the bounds the first time it gets one.
       let fitted = container.clientWidth > 0;
       observer = new ResizeObserver(() => {
+        if (cancelled) return;
         map.resize();
         if (!fitted && container.clientWidth > 0) {
           fitted = true;
@@ -521,6 +522,10 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
         }
       });
       observer.observe(container);
+    }).catch(() => {
+      // A failed import must stay local to this mount, including after cleanup
+      // or a newer mount has begun loading into the shared map status store.
+      if (!cancelled) setStatus('unavailable');
     });
 
     return () => {

@@ -28,10 +28,10 @@ export function nextToastId(): string {
 }
 
 export function durationFor(variant: NotifyVariant, requested?: number): number | undefined {
-  if (requested !== undefined) return requested;
   // A spinner that vanishes on a timer tells the user the work finished when
   // it has not. Loading toasts are closed by whoever opened them.
   if (variant === 'loading') return Infinity;
+  if (requested !== undefined) return requested;
   return variant === 'error' ? ERROR_DURATION : DEFAULT_DURATION;
 }
 

@@ -30,6 +30,8 @@ import {
 import { acceptsGameSurface } from './arSurface';
 import { LIGHTCYCLE_REPLICATION_IDS } from './lightcycle/sessionProtocol';
 import { TabletopRaceRuntime } from './TabletopRaceRuntime.native';
+import { tabletopRace } from './tabletopRaceStore';
+import { tabletopPresenceUpdate } from './tabletopPresence';
 import { TabletopRiveScoreboard } from './TabletopRiveScoreboard.native';
 import { gridFx } from './rive-fx/store';
 import {
@@ -380,6 +382,8 @@ function SharedTabletopRoom({
     Boolean(p2Entity?.fields.connected);
   const bothReady =
     placementReady &&
+    localFrameLocalized &&
+    ready &&
     colocated.state === 'joined' &&
     remotePeerLocalized &&
     p1Ready &&
@@ -407,27 +411,16 @@ function SharedTabletopRoom({
     }
     if (!replication.isMine(localEntityId)) return;
 
-    const fields = localEntity.fields ?? {};
-    if (
-      fields.name !== name ||
-      fields.ready !== ready ||
-      fields.localized !== true ||
-      fields.connected !== true ||
-      fields.peerId !== replication.localPeerId
-    ) {
-      replication.set(
-        localEntityId,
-        {
-          playerId: localPlayerId,
-          peerId: replication.localPeerId,
-          name,
-          ready,
-          localized: localFrameLocalized && colocated.state === 'joined',
-          connected: colocated.state === 'joined',
-          cycleColor: localPlayerId === 'p1' ? 'cyan' : 'orange',
-        },
-        { optimistic: true },
-      );
+    const update = tabletopPresenceUpdate(localEntity.fields ?? {}, {
+      playerId: localPlayerId,
+      peerId: replication.localPeerId,
+      name,
+      ready,
+      frameLocalized: localFrameLocalized,
+      connected: colocated.state === 'joined',
+    });
+    if (update) {
+      replication.set(localEntityId, update, { optimistic: true });
     }
   }, [
     localEntity,
@@ -561,7 +554,7 @@ function SharedTabletopRoom({
         roomId={roomId}
         replication={replication}
         localPlayerId={localPlayerId}
-        placementReady={placementReady}
+        placementReady={placementReady && localFrameLocalized}
         playerNames={playerNames}
         bothReady={bothReady}
       />
@@ -779,7 +772,7 @@ export function TabletopColocationScene({
   ]);
 
   const hostRoomFrame =
-    mode === 'host' && localized
+    mode === 'host' && (localized || hostPlacement !== null)
       ? isQuest && hostFrameRef
         ? ({
             frameKind: 'meta_group',
@@ -805,6 +798,14 @@ export function TabletopColocationScene({
       configured &&
       (mode === 'guest' || Boolean(hostRoomFrame)),
   });
+
+  // The room outlives frame localization and its rendered Viro subtree.
+  // Only leaving/replacing this room destroys simulation and render state.
+  useEffect(() => {
+    if (!room.roomId) return;
+    const runtime = tabletopRace.enterRoom(room.roomId);
+    return () => tabletopRace.leaveRoom(runtime);
+  }, [room.roomId]);
 
   useEffect(() => {
     if (room.displayCode) setRoomDisplayCode(room.displayCode);
@@ -993,8 +994,9 @@ export function TabletopColocationScene({
             />
           }
         >
-          {roomReady && room.roomId ? (
+          {room.roomId ? (
             <SharedTabletopRoom
+              key={room.roomId}
               roomId={room.roomId}
               hostPlacement={hostPlacement}
             />

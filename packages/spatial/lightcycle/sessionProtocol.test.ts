@@ -80,6 +80,17 @@ describe('light-cycle renderer asset contract', () => {
     assert.ok(result.missingClips.includes('bike_crumple'));
   });
 
+  it('projects rider presentation without traversing the arena trails', () => {
+    const state = createLightCycleMatch({ seed: 1 });
+    Object.defineProperty(state, 'trails', { get() { assert.fail('rider frames must not traverse trails'); } });
+    for (const playerId of ['p1', 'p2'] as const) {
+      const frame = createLightCycleRenderFrame(state, playerId);
+      assert.equal(frame.playerId, playerId);
+      assert.equal(frame.alive, true);
+      assert.equal('trails' in frame, false);
+    }
+  });
+
   it('maps deterministic state into renderer metres and procedural wheel state', () => {
     const state = startLightCycleRoundImmediately(createLightCycleMatch());
     const frame = createLightCycleRenderFrame(state, 'p1');

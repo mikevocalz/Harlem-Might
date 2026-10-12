@@ -1,4 +1,4 @@
-import { contentWidths, windowClass } from '@acme/theme';
+import { contentWidths } from '@acme/theme';
 import type { MetaWindowPlacement } from '@viro-external/meta-layout';
 import { windowSizeClassForWidth } from '../navigation/split-view/constants.ts';
 
@@ -32,11 +32,9 @@ export type CompactPane = 'map' | 'discover' | 'detail';
  * How Explore arranges its panes in the current window.
  *
  * - `single`: one pane at a time (phones below 600dp).
- * - `toggle`: the map is always visible; Discover opens from the map's
- *   "Places" button (a drawer over the map on tablets).
  * - `columns`: Discover is a permanent column beside the map; always used on Quest.
  */
-export type ExploreArrangement = 'single' | 'toggle' | 'columns';
+export type ExploreArrangement = 'single' | 'columns';
 
 export interface ExploreLayoutInput {
   /** `useWindowDimensions().width` in dp. The Horizon window is user-resizable. */
@@ -48,8 +46,6 @@ export interface ExploreLayoutInput {
   /** A quest build: the S17 three-column rules and Horizon widths apply. */
   isHorizon: boolean;
   compactPane: CompactPane;
-  /** `toggle` arrangement only: the user opened Discover from the map's "Places" button. */
-  discoverDrawerOpen: boolean;
 }
 
 /** A pane mode for a surface that never gets its own window (Discover, S12). */
@@ -67,13 +63,9 @@ export interface ExploreLayout {
   /** The map offers a "Places" button (Discover is reachable only through it). */
   showPlacesToggle: boolean;
   /**
-   * How Discover hands the window back: `show-map` where it covers the map
-   * (a phone screen or a tablet drawer), `close` where it is a column opened
-   * from "Places" beside a visible map (Horizon), `null` where it is permanent.
+   * `show-map` for the compact Discover screen; `null` for a permanent column.
    */
-  discoverDismiss: 'show-map' | 'close' | null;
-  /** Discover is showing because the user opened it from "Places"; Back closes it. */
-  discoverFromToggle: boolean;
+  discoverDismiss: 'show-map' | null;
   /** Detail's dismiss control: X beside the map, Back where it covers it. */
   detailDismiss: 'close' | 'back';
   /** Detail offers "Show on map" (the map is not visible beside it). */
@@ -99,12 +91,6 @@ export const EXPLORE_PANE_DP = {
   discoverXr: tokenDp('pane-discover-xr'),
   detailXr: tokenDp('pane-detail-xr'),
   mapMinXr: tokenDp('pane-map-min-xr'),
-} as const;
-
-/** Legacy width tokens retained for callers; Quest always uses columns. */
-export const HORIZON_BREAKPOINT_DP = {
-  toggle: windowClass.expanded,
-  columns: windowClass.large,
 } as const;
 
 const isSpatial = (placement: MetaWindowPlacement) => placement === 'spatial';
@@ -141,7 +127,6 @@ function resolveColumns(input: ExploreLayoutInput): ExploreLayout {
     mapInsets: { left: 0, right: 0 },
     showPlacesToggle: false,
     discoverDismiss: null,
-    discoverFromToggle: false,
     detailDismiss: 'close',
     showOnMapInDetail: false,
     assistant: 'panel',
@@ -179,7 +164,6 @@ function resolveSingleColumn(input: ExploreLayoutInput): ExploreLayout {
     mapInsets: { left: 0, right: 0 },
     showPlacesToggle: showMap,
     discoverDismiss: discover.kind === 'screen' ? 'show-map' : null,
-    discoverFromToggle: false,
     detailDismiss: detailCoversWindow ? 'back' : 'close',
     showOnMapInDetail: detailCoversWindow,
     assistant: 'sheet',
@@ -192,11 +176,11 @@ export function paneRowWidth(mode: ExplorePaneMode | null): number {
 }
 
 /** What Back does in Explore, most transient surface first (handoff §1). */
-export type ExploreBackAction = 'close-assistant' | 'close-detail' | 'show-map' | 'close-drawer';
+export type ExploreBackAction = 'close-assistant' | 'close-detail' | 'show-map';
 
 /**
  * Back closes the assistant panel, then a visible Detail, then a Discover
- * screen, then a Discover opened from "Places", then a Detail the user moved
+ * screen, then a Detail the user moved
  * away from ("Show on map", or Discover opened over it). `null` means Explore
  * has nothing to close and the system handles Back.
  */
@@ -208,7 +192,6 @@ export function exploreBackAction(input: {
   if (input.assistantOpen) return 'close-assistant';
   if (layout.detail && layout.detail.kind !== 'collapsed') return 'close-detail';
   if (layout.discover.kind === 'screen') return 'show-map';
-  if (layout.discoverFromToggle) return 'close-drawer';
   if (layout.detail) return 'close-detail';
   return null;
 }

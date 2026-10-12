@@ -16,7 +16,6 @@ const BASE: ExploreLayoutInput = {
   detailPlacement: 'inline',
   isHorizon: false,
   compactPane: 'map',
-  discoverDrawerOpen: false,
 };
 
 const layout = (patch: Partial<ExploreLayoutInput>) => resolveExploreLayout({ ...BASE, ...patch });
@@ -62,9 +61,11 @@ describe('Horizon Explore keeps the list and map visible on resize', () => {
       }
     }
   });
-  it('ignores stale phone drawer state on Quest', () => {
+  it('keeps both panes visible regardless of compact-pane intent on Quest', () => {
     for (const width of HORIZON_WIDTHS) {
-      assert.deepEqual(horizon(width), horizon(width, { discoverDrawerOpen: true }));
+      for (const compactPane of ['map', 'discover', 'detail'] as const) {
+        assert.deepEqual(horizon(width), horizon(width, { compactPane }));
+      }
     }
   });
 });
@@ -171,7 +172,7 @@ describe('exploreBackAction', () => {
       'show-map',
     );
     assert.equal(
-      exploreBackAction({ assistantOpen: false, layout: flat('medium', { discoverDrawerOpen: true }) }),
+      exploreBackAction({ assistantOpen: false, layout: flat('medium', { compactPane: 'discover' }) }),
       null,
     );
     assert.equal(exploreBackAction({ assistantOpen: false, layout: flat('large') }), null);

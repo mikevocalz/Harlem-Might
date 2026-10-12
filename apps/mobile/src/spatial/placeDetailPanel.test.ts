@@ -45,7 +45,6 @@ describe('placeDetailPlacement', () => {
       detailPlacement: placeDetailPlacement(status),
       isHorizon: true,
       compactPane: 'map',
-      discoverDrawerOpen: false,
     });
 
   it('drops the in-window Detail column while the panel is opening or open', () => {

@@ -1,7 +1,8 @@
 'use client';
 
 import { create } from 'zustand';
-import { normalizePlayerName } from './lightcycle/tabletopCore';
+import { normalizePlayerName } from './lightcycle/tabletopCore.ts';
+import { tabletopRace } from './tabletopRaceStore.ts';
 
 export type TabletopSessionMode = 'idle' | 'host' | 'guest' | 'solo';
 export type QuestSpatialPermission = 'checking' | 'granted' | 'denied';
@@ -122,7 +123,10 @@ export const useTabletopSessionStore = create<TabletopSessionState>((set, get) =
   error: null,
   ...placementReset,
 
-  setSpatialViewOpen: (spatialViewOpen) => set({ spatialViewOpen }),
+  setSpatialViewOpen: (spatialViewOpen) => {
+    if (!spatialViewOpen) tabletopRace.reset();
+    set({ spatialViewOpen });
+  },
   setPlayerName: (name) =>
     set({
       playerName: Array.from(name.replace(/[\u0000-\u001F\u007F]/g, '')).slice(0, 16).join(''),
@@ -137,6 +141,7 @@ export const useTabletopSessionStore = create<TabletopSessionState>((set, get) =
       set({ error: 'Enter your player name first.' });
       return false;
     }
+    tabletopRace.reset();
     set({
       mode: 'host',
       spatialViewOpen: true,
@@ -161,6 +166,7 @@ export const useTabletopSessionStore = create<TabletopSessionState>((set, get) =
       set({ error: 'Enter the six-character table code.' });
       return false;
     }
+    tabletopRace.reset();
     set({
       mode: 'guest',
       spatialViewOpen: true,
@@ -179,6 +185,7 @@ export const useTabletopSessionStore = create<TabletopSessionState>((set, get) =
       set({ error: 'Enter your player name first.' });
       return false;
     }
+    tabletopRace.reset();
     set({
       mode: 'solo',
       spatialViewOpen: true,
@@ -221,7 +228,8 @@ export const useTabletopSessionStore = create<TabletopSessionState>((set, get) =
     set({ sharedFrameTransform }),
   setCameraPose: (cameraPose) => set({ cameraPose }),
 
-  clearPlacement: () =>
+  clearPlacement: () => {
+    tabletopRace.reset();
     set({
       localized: false,
       ready: false,
@@ -235,9 +243,11 @@ export const useTabletopSessionStore = create<TabletopSessionState>((set, get) =
       cameraPose: null,
       roomDisplayCode: null,
       error: null,
-    }),
+    });
+  },
 
-  reset: () =>
+  reset: () => {
+    tabletopRace.reset();
     set({
       mode: 'idle',
       spatialViewOpen: false,
@@ -245,7 +255,8 @@ export const useTabletopSessionStore = create<TabletopSessionState>((set, get) =
       hostFrameRef: null,
       error: null,
       ...placementReset,
-    }),
+    });
+  },
 }));
 
 export const tabletopSession = {

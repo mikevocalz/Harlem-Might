@@ -2,7 +2,6 @@ import type {
   LightCycleDerezEvent,
   LightCycleMatchState,
   LightCyclePlayerId,
-  LightCycleTrailSegment,
 } from './tabletopCore.ts';
 import {
   LIGHTCYCLE_ARENA_HALF,
@@ -51,13 +50,6 @@ export const LIGHTCYCLE_FRAGMENT_NODES = [
 export type LightCycleFragmentNode =
   (typeof LIGHTCYCLE_FRAGMENT_NODES)[number];
 
-export type LightCycleRenderTrail = {
-  id: number;
-  owner: LightCyclePlayerId;
-  fromMeters: readonly [number, number, number];
-  toMeters: readonly [number, number, number];
-};
-
 export type LightCycleRenderFrame = {
   playerId: LightCyclePlayerId;
   positionMeters: readonly [number, number, number];
@@ -67,33 +59,8 @@ export type LightCycleRenderFrame = {
   energy01: number;
   emissionIntensity: number;
   alive: boolean;
-  trails: LightCycleRenderTrail[];
   derez: LightCycleDerezEvent | null;
 };
-
-export type LightCycleEffectName =
-  | 'spawn'
-  | 'turn'
-  | 'boost-start'
-  | 'boost-end'
-  | 'impact'
-  | 'derez'
-  | 'round-win'
-  | 'match-win';
-
-export interface LightCycleRendererAdapter {
-  mount(assetUri: string): Promise<void> | void;
-  render(frame: LightCycleRenderFrame): void;
-  playClip(
-    clip: LightCycleClipName,
-    options?: { loop?: boolean; speed?: number; reset?: boolean },
-  ): void;
-  emit(
-    effect: LightCycleEffectName,
-    payload?: Record<string, unknown>,
-  ): void;
-  destroy(): void;
-}
 
 export const LIGHTCYCLE_TABLETOP_WIDTH_METERS = 1.2;
 
@@ -108,17 +75,7 @@ function toMeters(value: number) {
   return value * LIGHTCYCLE_METERS_PER_FIXED_UNIT;
 }
 
-function trailToRender(
-  trail: LightCycleTrailSegment,
-): LightCycleRenderTrail {
-  return {
-    id: trail.id,
-    owner: trail.owner,
-    fromMeters: [toMeters(trail.from.x), 0, toMeters(trail.from.z)],
-    toMeters: [toMeters(trail.to.x), 0, toMeters(trail.to.z)],
-  };
-}
-
+/** Rider-only projection; the renderer handles completed and active trails once. */
 export function createLightCycleRenderFrame(
   state: LightCycleMatchState,
   playerId: LightCyclePlayerId,
@@ -143,7 +100,6 @@ export function createLightCycleRenderFrame(
     energy01: rider.energy / LIGHTCYCLE_UNIT_SCALE,
     emissionIntensity: 1 + (rider.speedUnitsPerTick / state.config.baseStepUnits - 1) * 0.8,
     alive: rider.alive,
-    trails: state.trails.map(trailToRender),
     derez:
       state.derezEvents.find((event) => event.playerId === playerId) ?? null,
   };

@@ -34,14 +34,14 @@ export function validateWalkCommand(value: unknown): asserts value is WalkComman
   const keys = [...common, ...extras];
   if (Object.keys(c).length !== keys.length || Object.keys(c).some(key => !keys.includes(key))
     || c.schemaVersion !== WALK_COMMAND_SCHEMA_VERSION
-    || !['start', 'pause', 'resume', 'stop', 'confirm-stop'].includes(String(c.type))
+    || typeof c.type !== 'string' || !['start', 'pause', 'resume', 'stop', 'confirm-stop'].includes(c.type)
     || typeof c.commandId !== 'string' || !WALK_ID_PATTERN.test(c.commandId)
     || typeof c.sessionId !== 'string' || !WALK_ID_PATTERN.test(c.sessionId)
     || (c.type === 'start' ? c.expectedRevision !== null
       : !Number.isSafeInteger(c.expectedRevision) || (c.expectedRevision as number) < 0)
     || (c.type === 'start' && (typeof c.walkId !== 'string' || !WALK_ID_PATTERN.test(c.walkId)))
     || (c.type === 'confirm-stop' && (typeof c.stopId !== 'string' || !WALK_ID_PATTERN.test(c.stopId)))
-    || (['stop', 'confirm-stop'].includes(String(c.type)) && c.confirmed !== true)) {
+    || ((c.type === 'stop' || c.type === 'confirm-stop') && c.confirmed !== true)) {
     throw new Error('Invalid walk command');
   }
 }

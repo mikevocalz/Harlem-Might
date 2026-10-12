@@ -189,6 +189,18 @@ test('a generated source slug resolves through the stored legacy slug', async ()
   assert.deepEqual(queries[0]?.where, { 'legacySlugs.slug': { equals: 'osm-node-2768136308' } });
 });
 
+test('invalid event dates reject the returned Promise without a synchronous throw', async () => {
+  const { source, queries } = fakeSource();
+  const readers = createContentReaders(source);
+  for (const date of ['2026-02-30', 'not-a-date', '2026-13-01']) {
+    let result: ReturnType<typeof readers.listEventsForDate> | undefined;
+    assert.doesNotThrow(() => { result = readers.listEventsForDate(date); });
+    assert.ok(result instanceof Promise);
+    await assert.rejects(result, RangeError);
+  }
+  assert.equal(queries.length, 0);
+});
+
 test('events for a date use the New York day window, overlap semantics, earliest first', async () => {
   const { source, queries } = fakeSource();
   await createContentReaders(source).listEventsForDate('2026-10-07');

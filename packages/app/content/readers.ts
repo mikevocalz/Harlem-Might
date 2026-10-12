@@ -74,7 +74,7 @@ export interface ContentReaders {
    * Published events that overlap one New York calendar day, earliest first.
    *
    * @param dateInNY `YYYY-MM-DD` in America/New_York (see `harlemToday()`).
-   * @throws {RangeError} when `dateInNY` is not a real date. Validate route
+   * Rejects with `RangeError` when `dateInNY` is not a real date. Validate route
    * params with `isHarlemDate()` first and 404 on failure.
    */
   listEventsForDate(dateInNY: string): Promise<ContentResult<EventRecord[]>>;
@@ -200,7 +200,7 @@ export const createContentReaders = (source: ContentSource): ContentReaders => {
     listStories: () =>
       list({ collection: 'stories', where: PUBLISHED, depth: 1, limit: LIST_LIMIT, sort: '-publishedAt' }, mapStory),
     getStory: (slug) => bySlug('stories', slug, mapStory),
-    listEventsForDate: (dateInNY) => {
+    listEventsForDate: async (dateInNY) => {
       const { start, end } = harlemDayBounds(dateInNY);
       return list(
         {

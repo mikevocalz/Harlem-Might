@@ -22,17 +22,14 @@ describe('AR return intent in compact Explore', () => {
     windowWidth: 375, hasSelection: useExplore.getState().selectedPlaceId !== null,
     detailPlacement: 'inline', isHorizon: false,
     compactPane: useExploreLayoutStore.getState().compactPane,
-    discoverDrawerOpen: useExploreLayoutStore.getState().discoverDrawerOpen,
   });
   it('Back from a directions-pane entry exposes the map without discarding selection', () => {
     useExplore.getState().openPlace('apollo-theater', 'place-row');
     useExploreLayoutStore.getState().showCompactDetail('discover');
-    useExploreLayoutStore.getState().setDiscoverDrawerOpen(true);
     assert.equal(layout().showMap, false);
     prepareArMapReturn();
     assert.equal(layout().showMap, true);
     assert.equal(useExplore.getState().selectedPlaceId, 'apollo-theater');
-    assert.equal(useExploreLayoutStore.getState().discoverDrawerOpen, false);
   });
   it('Explore place opens the destination with a return-to-map intent', () => {
     prepareArPlaceReturn('sylvias-restaurant');

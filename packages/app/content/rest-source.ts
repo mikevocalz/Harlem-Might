@@ -33,7 +33,7 @@ export function createRestContentSource({ apiUrl, fetch }: RestContentSourceOpti
     isConfigured: () => Boolean(base),
     async find<TSlug extends keyof ContentDocs>(query: ContentQuery<TSlug>): Promise<ContentDocs[TSlug][]> {
       if (!base) throw new Error('No Payload API URL configured for the REST content source.');
-      const url = `${base}/${query.collection}?${restQueryString(query)}`;
+      const url = `${base}/${query.collection}?${restQueryString({ ...query, page: undefined })}`;
       const response = await fetch(url, { headers: { accept: 'application/json' } });
       if (!response.ok) throw new Error(`Payload REST ${query.collection} answered ${response.status}`);
       const body = (await response.json()) as { docs?: ContentDocs[TSlug][] };

@@ -48,7 +48,6 @@ export function finishArNavigation() {
 export function prepareArMapReturn() {
   const layout = useExploreLayoutStore.getState();
   layout.setCompactPane('map');
-  layout.setDiscoverDrawerOpen(false);
 }
 
 /** Transfers a legacy AR route into Explore without ending its shared AR trip or watch. */
@@ -66,5 +65,4 @@ export function prepareArPlaceReturn(placeId: string | undefined) {
   useExplore.getState().openPlace(placeId, null);
   const layout = useExploreLayoutStore.getState();
   layout.showCompactDetail('map');
-  layout.setDiscoverDrawerOpen(false);
 }
