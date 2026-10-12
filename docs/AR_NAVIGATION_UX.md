@@ -69,7 +69,13 @@ From/To, the state body.
   Malcolm X Boulevard." A verified entrance will read "Verified entrance.
   Main doors on …".
 - **Routes are requested automatically** once an origin exists, and again
-  when mode or origin changes. There is no "Get route" button to find.
+  when mode, origin, or either catalogued coordinate changes. Equivalent
+  coordinate arrays do not refetch, and device fixes only trigger the first
+  usable origin rather than a request on every GPS sample. If coordinates
+  disappear or transit is chosen, an obsolete pending/ready preview is cleared;
+  late responses cannot restore it. The current device fix is retained for
+  recovery, and catalogue changes never replace a trip already under way.
+  There is no "Get route" button to find.
 
 ### States
 

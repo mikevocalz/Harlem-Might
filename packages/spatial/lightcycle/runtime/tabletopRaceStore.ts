@@ -5,8 +5,8 @@ import type {
   LightCycleInputEvent,
   LightCycleMatchState,
   LightCyclePlayerId,
-} from './lightcycle/tabletopCore.ts';
-import { LightCycleInputQueue } from './lightcycle/sessionProtocol.ts';
+} from '../tabletopCore.ts';
+import { LightCycleInputQueue } from '../sessionProtocol.ts';
 
 /** One room owns simulation, input history and rendering, even if AR relocalizes. */
 export type TabletopRoomRuntime = {

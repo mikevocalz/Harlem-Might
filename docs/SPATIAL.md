@@ -34,8 +34,23 @@ Storybook contains **Spatial / Grid World** stories for:
 - the complete Grid gateway composition;
 - Grid Scene + Glyph City;
 - Grid Floor;
-- cyan/orange CircuitButton variants;
+- primary/accent CircuitButton variants;
 - futuristic GridCard variants.
+
+### Semantic control props and compatibility
+
+Use `GridCard label="…"` for contextual labels and `tone="primary"` (the default)
+or `tone="accent"` for both controls. `GridCard` also supports `verdigris`.
+The shared gateway, tabletop panel and stories use these semantic names; the
+existing Tailwind/Uniwind styles, geometry and platform wrappers are unchanged.
+
+Public compatibility remains supported:
+
+- `GridCard eyebrow` is a fallback when `label` is absent. An explicit `label`
+  takes precedence; `label=""` suppresses the label. Text casing is preserved.
+- `tone="orange"` renders exactly like `tone="accent"` on both controls.
+- `tone="cyan"` keeps its existing focus-color styling. It is not an alias for
+  the default `primary` tone, so it must not be mechanically replaced.
 
 ## XR entryway and light-cycle race
 
@@ -66,6 +81,15 @@ The old Viro AR Driving Car sample informed the input/simulation direction: acce
 
 The headset scene remains usable without the 2D joystick because the steering pads live inside the world.
 
+
+## LightCycle code ownership
+
+The tabletop implementation is grouped under `packages/spatial/lightcycle`: shared
+state/input/driver modules in `runtime/`, native co-location and replication in
+`viro/`, session/scoreboard UI in `ui/`, and solo experiences beside the renderer
+in `three/`. The deterministic core and existing package entry points remain
+unchanged. See [LightCycle ownership](../packages/spatial/lightcycle/README.md)
+for the layer boundaries and test command.
 
 ## Futuristic tabletop placement (implemented)
 

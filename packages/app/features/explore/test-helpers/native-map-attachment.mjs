@@ -9,6 +9,11 @@ import { placeCatalogueStore } from '../place-catalogue.store.ts';
 import { navigationFixStore, useNavigationStore } from '../../navigation/session/navigationStore.ts';
 import { ROUTE_LAYERS, SELECTED_SOURCE } from '../explore-map-layers.ts';
 
+const [scenario, boundary, outcome, stage] = process.argv.slice(2);
+const permissionRequests = [];
+const FINE = 'android.permission.ACCESS_FINE_LOCATION';
+const COARSE = 'android.permission.ACCESS_COARSE_LOCATION';
+
 // Run the production component/effects and stores. Only React's scheduling,
 // presentation primitives and the unavailable native SDK are replaced.
 const slots = [];
@@ -50,6 +55,18 @@ function replayLayout() {
 }
 const selectStore = store => Object.assign(selector => selector(store.getState()), store);
 globalThis.nativeMapHarness = {
+  Platform: { OS: scenario.startsWith('permission') && boundary !== 'ios' ? 'android' : 'ios' },
+  PermissionsAndroid: {
+    PERMISSIONS: { ACCESS_FINE_LOCATION: FINE, ACCESS_COARSE_LOCATION: COARSE },
+    RESULTS: { GRANTED: 'granted' },
+    requestMultiple(permissions) {
+      assert.deepEqual(permissions, [FINE, COARSE], 'request precise and approximate together');
+      const request = deferred();
+      permissionRequests.push(request);
+      if (outcome === 'throw' && permissionRequests.length === 1) throw new Error('permission bridge failed');
+      return request.promise;
+    },
+  },
   useMemo: memo,
   useCallback: (fn, deps) => memo(() => fn, deps),
   useRef: initial => memo(() => ({ current: initial }), []),
@@ -61,7 +78,7 @@ globalThis.nativeMapHarness = {
 };
 const stubs = {
   react: 'export const { useMemo, useCallback, useRef, useEffect, useLayoutEffect } = globalThis.nativeMapHarness;',
-  'react-native': "export const Platform = { OS: 'ios' }; export const PermissionsAndroid = {};",
+  'react-native': 'export const { Platform, PermissionsAndroid } = globalThis.nativeMapHarness;',
   '@acme/ui': 'export const useReducedMotion = () => false;',
   '@acme/ui/tw': "export const View = 'View'; export const Text = 'Text';",
   '@acme/ui/mights': "export const MightsButton = 'MightsButton';",
@@ -143,7 +160,7 @@ const otherPlace = { ...place, id: 'sylvia', name: 'Sylvia', lngLat: [-73.945, 4
 placeCatalogueStore.setState({ places: [place, otherPlace] });
 const selections = [];
 const props = { insets: { top: 0, right: 0, bottom: 0, left: 0 }, onSelectPlace: value => selections.push(value) };
-const native = { MapView: () => null, callback: f => ({ f }), supportsLocationPuck: false };
+let native = { MapView: () => null, callback: f => ({ f }), supportsLocationPuck: scenario.startsWith('permission') && boundary !== 'unsupported' };
 registerNativeMap(native);
 let receiveMap;
 function render(initialMap) {
@@ -157,6 +174,9 @@ function render(initialMap) {
   tree.props.onLayout({ nativeEvent: { layout: { width: 400, height: 800 } } });
   if (initialMap) receiveMap(initialMap);
   commit();
+  const location = tree.props.children[1];
+  const locationTree = location ? location.type(location.props) : null;
+  return { view: view.props, button: locationTree?.props.children[0], message: locationTree?.props.children[1] };
 }
 let sessionSubscribers = 0;
 let fixSubscribers = 0;
@@ -166,9 +186,8 @@ for (const [store, count] of [[useNavigationStore, delta => { sessionSubscribers
 }
 const tap = { point: { x: 100, y: 100 }, coordinate: { latitude: 40.81, longitude: -73.95 } };
 const features = [{ toGeoJson: () => JSON.stringify({ type: 'Feature', properties: { id: place.id } }) }];
-const [scenario, boundary, outcome, stage] = process.argv.slice(2);
 const oldMap = makeMap();
-render(oldMap);
+let rendered = render(oldMap);
 assert.equal(sessionSubscribers, 1);
 assert.equal(fixSubscribers, 1);
 const oldStyle = makeStyle(scenario === 'style' || scenario === 'current-error' ? stage : undefined);
@@ -185,13 +204,159 @@ function crossBoundary() {
     assert.equal(useNativeMap.getState().status, 'off');
     assert.equal(sessionSubscribers, 0);
     receiveMap(oldMap);
+  } else if (boundary === 'native-replace') {
+    native = { ...native, MapView: () => null };
+    registerNativeMap(native);
+    currentMap = makeMap();
+    render(currentMap);
   } else if (boundary === 'effect-replay') replayLayout();
   else if (boundary === 'unmount') unmount();
+  else if (boundary === 'remount') {
+    unmount();
+    slots.length = 0;
+    currentMap = makeMap();
+    render(currentMap);
+  }
+  else if (boundary === 'detached') receiveMap(null);
+  else if (boundary === 'failed') useNativeMap.getState().setStatus('failed', 'map failed');
   else if (boundary === 'selection') useExplore.setState({ selectedPlaceId: otherPlace.id });
   else assert.equal(boundary, 'style-reload');
 }
+function finishPermission(request, result) {
+  if (result === 'reject') request.reject(new Error('permission bridge failed'));
+  else request.resolve({ [FINE]: result === 'fine' ? 'granted' : 'denied', [COARSE]: result === 'coarse' ? 'granted' : 'denied' });
+}
+function assertLocation(shown, denied = false) {
+  assert.equal(useNativeMap.getState().showUserLocation, shown, 'location visibility');
+  assert.equal(useNativeMap.getState().locationDenied, denied, 'permission denial state');
+  rendered = render();
+  assert.equal(rendered.view.showUserLocation, shown, 'native puck prop');
+  assert.equal(rendered.view.puckBearing, shown ? 'heading' : 'none');
+  assert.equal(rendered.button.props.pressed, shown, 'button pressed state');
+  assert.equal(rendered.button.props['aria-label'], shown ? 'Hide my location' : 'Show my location on the map');
+  assert.equal(Boolean(rendered.message), denied, 'only explicit denial displays Settings guidance');
+}
 try {
-  if (scenario === 'style') {
+  if (scenario === 'permission-stale') {
+    const oldPress = rendered.button.props.onPress;
+    oldPress();
+    assert.equal(permissionRequests.length, 1);
+    assertLocation(false);
+    crossBoundary();
+    const state = useNativeMap.getState();
+    finishPermission(permissionRequests[0], outcome);
+    await flush();
+    assert.equal(useNativeMap.getState(), state, 'stale permission completion cannot publish any shared state');
+    if (boundary === 'unmount' || boundary === 'detached' || boundary === 'failed') {
+      oldPress();
+      assert.equal(permissionRequests.length, 1, 'a queued button cannot request permission for an inactive map');
+    } else {
+      if (boundary === 'remount') {
+        oldPress();
+        assert.equal(permissionRequests.length, 1, 'a callback from the unmounted component stays inert');
+      }
+      rendered = render();
+      rendered.button.props.onPress();
+      assert.equal(permissionRequests.length, 2, 'the replacement can request permission');
+      finishPermission(permissionRequests[1], 'coarse');
+      await flush();
+      assertLocation(true);
+    }
+  } else if (scenario === 'permission-overlap') {
+    rendered.button.props.onPress();
+    crossBoundary();
+    rendered = render();
+    rendered.button.props.onPress();
+    assert.equal(permissionRequests.length, 2, 'each attachment owns its own request');
+    if (stage === 'old-first') {
+      const state = useNativeMap.getState();
+      finishPermission(permissionRequests[0], outcome);
+      await flush();
+      assert.equal(useNativeMap.getState(), state);
+      rendered.button.props.onPress();
+      assert.equal(permissionRequests.length, 2, 'stale finally cannot unlock a newer request');
+      finishPermission(permissionRequests[1], 'coarse');
+      await flush();
+    } else {
+      finishPermission(permissionRequests[1], 'coarse');
+      await flush();
+      const state = useNativeMap.getState();
+      finishPermission(permissionRequests[0], outcome);
+      await flush();
+      assert.equal(useNativeMap.getState(), state, 'old denial or rejection cannot hide the new puck');
+    }
+    assertLocation(true);
+  } else if (scenario === 'permission-current') {
+    rendered.button.props.onPress();
+    assert.equal(permissionRequests.length, 1);
+    if (outcome !== 'throw') finishPermission(permissionRequests[0], outcome);
+    await flush();
+    assertLocation(outcome === 'fine' || outcome === 'coarse', outcome === 'denied');
+    if (!useNativeMap.getState().showUserLocation) {
+      rendered.button.props.onPress();
+      assert.equal(permissionRequests.length, 2, 'failure or denial allows an explicit retry');
+      finishPermission(permissionRequests[1], 'fine');
+      await flush();
+      assertLocation(true);
+    }
+    rendered.button.props.onPress();
+    assertLocation(false);
+    assert.equal(permissionRequests.length, outcome === 'fine' || outcome === 'coarse' ? 1 : 2, 'hiding never asks permission');
+  } else if (scenario === 'permission-repeat') {
+    const press = rendered.button.props.onPress;
+    press();
+    press();
+    rendered = render();
+    rendered.button.props.onPress();
+    assert.equal(permissionRequests.length, 1, 'rapid/re-rendered taps share the pending permission request');
+    finishPermission(permissionRequests[0], 'coarse');
+    await flush();
+    // No React render between grant and press: the handler must read live state.
+    rendered.button.props.onPress();
+    assert.equal(useNativeMap.getState().showUserLocation, false, 'a pre-grant handler can still hide the current puck');
+    assert.equal(permissionRequests.length, 1);
+    press();
+    assert.equal(permissionRequests.length, 2, 'the next explicit turn-on asks again');
+    finishPermission(permissionRequests[1], 'fine');
+    await flush();
+    assertLocation(true);
+    // A callback rendered while shown must also respect a newer off state.
+    const shownPress = rendered.button.props.onPress;
+    shownPress();
+    shownPress();
+    assert.equal(permissionRequests.length, 3);
+    finishPermission(permissionRequests[2], 'coarse');
+    await flush();
+    assertLocation(true);
+  } else if (scenario === 'permission-hide') {
+    const press = rendered.button.props.onPress;
+    press();
+    // A newer store update can make the puck visible before React re-renders.
+    useNativeMap.getState().setShowUserLocation(true);
+    press();
+    assert.equal(useNativeMap.getState().showUserLocation, false);
+    finishPermission(permissionRequests[0], outcome);
+    await flush();
+    assertLocation(false);
+    rendered.button.props.onPress();
+    assert.equal(permissionRequests.length, 2, 'hide cancels only the old turn-on intent');
+    finishPermission(permissionRequests[1], 'coarse');
+    await flush();
+    assertLocation(true);
+  } else if (scenario === 'permission-platform') {
+    if (boundary === 'unsupported') {
+      assert.equal(rendered.button, undefined, 'unsupported/Quest builds retain no location action');
+      assert.equal(rendered.view.showUserLocation, false);
+    } else {
+      assert.equal(boundary, 'ios');
+      const press = rendered.button.props.onPress;
+      press();
+      assertLocation(true);
+      press();
+      assertLocation(false);
+    }
+    assert.equal(permissionRequests.length, 0, 'only Android owns an app permission prompt');
+  } else if (scenario === 'style') {
     assert.ok(oldStyle.calls.some(call => call.stage === stage), 'the native promise is in flight');
     const before = oldStyle.calls.length;
     crossBoundary();
@@ -278,6 +443,6 @@ try {
       for (const listener of listeners) assert.equal(listener.removed, 1, 'every native listener is removed exactly once');
     }
   }
-  assert.equal(useNativeMap.getState().status, scenario === 'current-error' ? 'failed' : 'off');
+  assert.equal(useNativeMap.getState().status, scenario === 'current-error' || boundary === 'failed' ? 'failed' : 'off');
   delete globalThis.nativeMapHarness;
 }

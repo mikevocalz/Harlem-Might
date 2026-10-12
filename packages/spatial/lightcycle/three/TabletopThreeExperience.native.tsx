@@ -2,13 +2,13 @@
 
 import { Pressable, Text, View } from '@acme/ui/tw';
 import { Image } from 'react-native';
-import { ThreeLightCycleCanvas } from './lightcycle/three/ThreeLightCycleCanvas.native';
-import { McpVoicePlaybackNative } from './mcp/McpVoicePlayback.native';
-import type { McpVoiceCueName } from './mcp/mcpVoice';
-import { tabletopSoloInput } from './tabletopSoloInputStore';
-import { useTabletopSoloDriver } from './useTabletopSoloDriver';
-import { useTabletopSessionStore } from './tabletopSessionStore';
-import { useTabletopRaceStore } from './tabletopRaceStore';
+import { ThreeLightCycleCanvas } from './ThreeLightCycleCanvas.native';
+import { McpVoicePlaybackNative } from '../../mcp/McpVoicePlayback.native';
+import type { McpVoiceCueName } from '../../mcp/mcpVoice';
+import { tabletopSoloInput } from '../runtime/tabletopSoloInputStore';
+import { useTabletopSoloDriver } from '../runtime/useTabletopSoloDriver';
+import { useTabletopSessionStore } from '../runtime/tabletopSessionStore';
+import { useTabletopRaceStore } from '../runtime/tabletopRaceStore';
 
 const LIGHTCYCLE_ASSET =
   process.env.EXPO_PUBLIC_LIGHTCYCLE_GLB_URL ?? undefined;
@@ -16,7 +16,7 @@ const LIGHTCYCLE_ASSET =
 // Resolve the bundled GLB through React Native's Metro asset registry so
 // Three/GLTFLoader receives a URI without introducing component state.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const BUNDLED_MCP_GNM_MODULE = require('./assets/mcp/mcp-gnm-head.glb') as number;
+const BUNDLED_MCP_GNM_MODULE = require('../../assets/mcp/mcp-gnm-head.glb') as number;
 const BUNDLED_MCP_GNM_ASSET =
   Image.resolveAssetSource(BUNDLED_MCP_GNM_MODULE)?.uri;
 const MCP_GNM_ASSET =
@@ -24,19 +24,19 @@ const MCP_GNM_ASSET =
 
 const MCP_VOICE_SOURCES: Partial<Record<McpVoiceCueName, number>> = {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  'race-start': require('./assets/mcp/voice/race-start.wav') as number,
+  'race-start': require('../../assets/mcp/voice/race-start.wav') as number,
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  boost: require('./assets/mcp/voice/boost.wav') as number,
+  boost: require('../../assets/mcp/voice/boost.wav') as number,
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  'low-energy': require('./assets/mcp/voice/low-energy.wav') as number,
+  'low-energy': require('../../assets/mcp/voice/low-energy.wav') as number,
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  'derez-local': require('./assets/mcp/voice/derez-local.wav') as number,
+  'derez-local': require('../../assets/mcp/voice/derez-local.wav') as number,
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  'derez-rival': require('./assets/mcp/voice/derez-rival.wav') as number,
+  'derez-rival': require('../../assets/mcp/voice/derez-rival.wav') as number,
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  'round-result': require('./assets/mcp/voice/round-result.wav') as number,
+  'round-result': require('../../assets/mcp/voice/round-result.wav') as number,
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  'match-end': require('./assets/mcp/voice/end-of-line.wav') as number,
+  'match-end': require('../../assets/mcp/voice/end-of-line.wav') as number,
 };
 
 function Control({

@@ -48,6 +48,8 @@ import type { GeographicCoordinate } from '../navigation/model/geo';
 /** First frame before the fit: central Harlem, so the map never opens on the globe. */
 const START_CAMERA = { center: { latitude: 40.8089, longitude: -73.9482 }, zoom: 14 };
 
+type MapAttachment = { map: NativeMapViewRef; disposed: boolean };
+
 /** Promises from a stale style or a map mid-teardown reject; nothing to do about it. */
 const quiet = (promise: Promise<unknown>) => {
   promise.catch(() => {});
@@ -89,7 +91,8 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
   const ready = useNativeMap((s) => s.status === 'ready');
 
   const styleRef = useRef<NativeMapStyle | null>(null);
-  const attachmentRef = useRef<{ map: NativeMapViewRef; disposed: boolean } | null>(null);
+  const attachmentRef = useRef<MapAttachment | null>(null);
+  const locationRequestRef = useRef<{ attachment: MapAttachment } | null>(null);
   const sizeRef = useRef({ width: 0, height: 0 });
   const latest = useRef({ onSelectPlace, insets, selectedPlaceId, reduceMotion, mapPoints, byId, placeBounds });
   useEffect(() => {
@@ -282,6 +285,7 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
 
       return () => {
         attachment.disposed = true;
+        if (locationRequestRef.current?.attachment === attachment) locationRequestRef.current = null;
         pendingStyle = null;
         subscriptions.forEach((s) => s.remove());
         unsubSession();
@@ -372,26 +376,48 @@ function NativeExploreMap({ native, onSelectPlace, insets }: ExploreMapProps & {
   };
 
   const toggleLocation = async () => {
-    const { setShowUserLocation, setLocationDenied } = useNativeMap.getState();
-    if (showUserLocation) {
-      setShowUserLocation(false);
+    const attachment = attachmentRef.current;
+    const state = useNativeMap.getState();
+    if (!attachment || attachment.disposed || state.status === 'off' || state.status === 'failed') return;
+    // Another press may arrive before React renders the last store update.
+    if (state.showUserLocation) {
+      locationRequestRef.current = null;
+      state.setShowUserLocation(false);
       return;
     }
-    // iOS: the Maps SDK shows the system prompt itself the first time the puck
-    // turns on (NSLocationWhenInUseUsageDescription is in Info.plist).
-    // Android has no such prompt, so the app asks here.
-    if (Platform.OS === 'android') {
-      // Android 12+ lets the person pick "Approximate", which grants only
-      // COARSE. The puck works with either.
-      const { ACCESS_FINE_LOCATION: FINE, ACCESS_COARSE_LOCATION: COARSE } = PermissionsAndroid.PERMISSIONS;
-      const result = await PermissionsAndroid.requestMultiple([FINE, COARSE]);
-      const granted = PermissionsAndroid.RESULTS.GRANTED;
-      if (result[FINE] !== granted && result[COARSE] !== granted) {
-        setLocationDenied(true);
-        return;
+    // Repeated taps share this attachment's pending OS prompt.
+    if (locationRequestRef.current?.attachment === attachment) return;
+    const request = { attachment };
+    locationRequestRef.current = request;
+    const isCurrent = () => {
+      const status = useNativeMap.getState().status;
+      return locationRequestRef.current === request && attachmentRef.current === attachment &&
+        !attachment.disposed && status !== 'off' && status !== 'failed';
+    };
+    try {
+      // iOS: the Maps SDK shows the system prompt itself the first time the puck
+      // turns on (NSLocationWhenInUseUsageDescription is in Info.plist).
+      // Android has no such prompt, so the app asks here.
+      if (Platform.OS === 'android') {
+        // Android 12+ lets the person pick "Approximate", which grants only
+        // COARSE. The puck works with either.
+        const { ACCESS_FINE_LOCATION: FINE, ACCESS_COARSE_LOCATION: COARSE } = PermissionsAndroid.PERMISSIONS;
+        const result = await PermissionsAndroid.requestMultiple([FINE, COARSE]);
+        if (!isCurrent()) return;
+        const granted = PermissionsAndroid.RESULTS.GRANTED;
+        if (result[FINE] !== granted && result[COARSE] !== granted) {
+          useNativeMap.getState().setLocationDenied(true);
+          return;
+        }
       }
+      if (isCurrent()) useNativeMap.getState().setShowUserLocation(true);
+    } catch {
+      // A bridge failure is not an OS denial. Keep the puck off and allow retry;
+      // the void button callback must never leak a rejected permission promise.
+    } finally {
+      // A stale completion must not unlock a replacement attachment's request.
+      if (locationRequestRef.current === request) locationRequestRef.current = null;
     }
-    setShowUserLocation(true);
   };
 
   return (

@@ -1,5 +1,5 @@
-import type { LightCyclePlayerId } from './lightcycle/tabletopCore.ts';
-import type { LightCycleLobbyPlayer } from './lightcycle/sessionProtocol.ts';
+import type { LightCyclePlayerId } from '../tabletopCore.ts';
+import type { LightCycleLobbyPlayer } from '../sessionProtocol.ts';
 
 /** Compare the exact projection we publish, so optimistic writes converge. */
 export function tabletopPresenceUpdate(

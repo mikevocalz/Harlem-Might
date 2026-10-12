@@ -7,8 +7,8 @@ import {
   createLightCycleMatch,
   type LightCycleMatchState,
   type LightCycleTurn,
-} from './lightcycle/tabletopCore';
-import { chooseTabletopAiInput } from './lightcycle/tabletopAi';
+} from '../tabletopCore';
+import { chooseTabletopAiInput } from '../tabletopAi';
 import { tabletopRace } from './tabletopRaceStore';
 import { tabletopSoloInput } from './tabletopSoloInputStore';
 

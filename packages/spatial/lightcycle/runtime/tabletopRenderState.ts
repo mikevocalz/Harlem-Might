@@ -1,6 +1,6 @@
 'use client';
 
-import type { LightCycleMatchState } from './lightcycle/tabletopCore';
+import type { LightCycleMatchState } from '../tabletopCore';
 import { useTabletopRaceStore } from './tabletopRaceStore';
 
 /**

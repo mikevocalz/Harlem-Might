@@ -35,7 +35,12 @@ Live progress, turn distance and ETA require fresh accepted GPS, permission stil
 `granted`, a matching current stop/route, precise matching confidence, no wrong-way
 or off-route state, an active session and no known offline state. Missing or stale
 sensor input never creates arrival or confirms a visit. A fresh position received
-*after* the directions action is required to plan the next stop.
+*after* the directions action is required to plan the next stop. An existing
+paused trip requires Resume or End, and an arrived trip requires End before
+requesting directions again. Those states are reported before acquiring GPS.
+A refused route/reroute command ends the pending intent immediately; it is not
+reported later as a missing GPS fix. Only the intent's own untransferred location
+watch is released, leaving a pre-existing trip feed and active route intact.
 
 A routed stop requires `locationAccuracy: verified`, a valid source URL and a
 non-future source review date no more than **365 days old**. That conservative gate

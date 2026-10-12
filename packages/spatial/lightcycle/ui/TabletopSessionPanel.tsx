@@ -2,7 +2,7 @@
 
 import { CircuitButton, GridCard, Text, TextField } from '@acme/ui';
 import { View } from '@acme/ui/tw';
-import { useTabletopSessionStore } from './tabletopSessionStore';
+import { useTabletopSessionStore } from '../runtime/tabletopSessionStore';
 
 export function TabletopSessionPanel({
   onLaunch,
@@ -28,7 +28,7 @@ export function TabletopSessionPanel({
   };
 
   return (
-    <GridCard eyebrow="Tabletop / Classic Grid Duel" title="Enter the Grid" tone="orange">
+    <GridCard label="Tabletop / Classic Grid Duel" title="Enter the Grid" tone="accent">
       <View className="gap-4">
         <Text className="text-sm leading-6 text-white/65">
           Enter your name before creating or joining a shared tabletop. The host scans a real
@@ -54,7 +54,7 @@ export function TabletopSessionPanel({
           <CircuitButton onPress={() => launch(beginHost)} variant="solid">
             Create Table
           </CircuitButton>
-          <CircuitButton tone="orange" onPress={() => launch(beginSolo)}>
+          <CircuitButton tone="accent" onPress={() => launch(beginSolo)}>
             Solo / AI
           </CircuitButton>
         </View>
@@ -67,7 +67,7 @@ export function TabletopSessionPanel({
             onChangeText={setJoinCode}
             hint="Enter the host's six-character Viro room code."
           />
-          <CircuitButton tone="orange" onPress={() => launch(beginGuest)} variant="solid">
+          <CircuitButton tone="accent" onPress={() => launch(beginGuest)} variant="solid">
             Join Table
           </CircuitButton>
         </View>

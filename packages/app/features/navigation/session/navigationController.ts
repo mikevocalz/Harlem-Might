@@ -234,7 +234,7 @@ export function createNavigationController(options: NavigationControllerOptions)
 
     beginSelection(origin) {
       const phase = get().session.phase;
-      if (phase !== 'idle' && phase !== 'routeReady' && phase !== 'error' && phase !== 'arrived') return false;
+      if (phase !== 'idle' && phase !== 'calculatingRoute' && phase !== 'routeReady' && phase !== 'error' && phase !== 'arrived') return false;
       teardown();
       store.setState({ session: { phase: 'selectingDestination', origin }, routeLoading: { kind: 'idle' }, progress: { kind: 'none' } });
       return true;

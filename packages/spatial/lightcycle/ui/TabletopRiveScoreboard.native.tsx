@@ -1,18 +1,18 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { readLightCycleMatchState } from './lightcycle/replicatedMatchState';
+import { readLightCycleMatchState } from '../replicatedMatchState';
 import {
   LIGHTCYCLE_SCOREBOARD_ARTBOARD,
   LIGHTCYCLE_SCOREBOARD_MACHINE,
   createLightCycleRiveBindings,
   createLightCycleScoreboardModel,
   type LightCycleLobbyPresence,
-} from './lightcycle/scoreboardModel';
+} from '../scoreboardModel';
 import {
   SpatialRivePanel,
   type SpatialRiveBindings,
-} from './SpatialRivePanel.native';
+} from '../../SpatialRivePanel.native';
 import { useTabletopRiveScoreboardAssetStore } from './tabletopRiveScoreboardAssetStore';
 
 const SCOREBOARD_URL =

@@ -17,7 +17,7 @@ type Props = {
   enabled?: boolean;
 };
 
-function speakFallback(text: string) {
+function speakFallback(text: string): (() => void) | undefined {
   if (
     typeof window === 'undefined' ||
     !('speechSynthesis' in window) ||
@@ -43,7 +43,21 @@ function speakFallback(text: string) {
     null;
 
   if (preferred) utterance.voice = preferred;
+  let speaking = true;
+  const finish = () => {
+    speaking = false;
+    utterance.onend = null;
+    utterance.onerror = null;
+  };
+  utterance.onend = finish;
+  utterance.onerror = finish;
   window.speechSynthesis.speak(utterance);
+
+  return () => {
+    if (!speaking) return;
+    finish();
+    window.speechSynthesis.cancel();
+  };
 }
 
 export function McpVoicePlaybackWeb({
@@ -52,42 +66,86 @@ export function McpVoicePlaybackWeb({
   baseUrl,
   enabled = true,
 }: Props) {
-  const playedEventKeys = useRef(new Set<string>());
-  const currentAudio = useRef<HTMLAudioElement | null>(null);
+  const handledEventKeys = useRef(new Set<string>());
+  const currentPlayback = useRef<{ stop: () => void } | null>(null);
+  const active = enabled && state !== null;
+  const cue = active && state ? deriveMcpVoiceCue(state, localPlayerId) : null;
+  const eventKey = cue?.eventKey;
+  const text = cue?.text;
+  const assetUrl = cue ? mcpVoiceAssetUrl(cue, baseUrl) : undefined;
 
   useEffect(() => {
-    if (!enabled || !state) return;
+    if (!active) {
+      currentPlayback.current?.stop();
+      currentPlayback.current = null;
+      return;
+    }
+    if (!eventKey || !text || !assetUrl || handledEventKeys.current.has(eventKey)) return;
 
-    const cue = deriveMcpVoiceCue(state, localPlayerId);
-    if (!cue || playedEventKeys.current.has(cue.eventKey)) return;
-
-    playedEventKeys.current.add(cue.eventKey);
-    currentAudio.current?.pause();
-
-    const audio = new Audio(mcpVoiceAssetUrl(cue, baseUrl));
-    currentAudio.current = audio;
+    currentPlayback.current?.stop();
+    const audio = new Audio(assetUrl);
     audio.preload = 'auto';
     audio.volume = 0.94;
+    let cancelled = false;
+    let started = false;
+    let fallbackUsed = false;
+    let audioStopped = false;
+    let cancelSpeech: (() => void) | undefined;
 
-    const fallback = () => {
-      if (currentAudio.current !== audio) return;
-      speakFallback(cue.text);
+    const removeListeners = () => {
+      audio.removeEventListener('playing', markPlayed);
+      audio.removeEventListener('error', fallback);
+      audio.removeEventListener('ended', finish);
     };
+    const stopAudio = () => {
+      removeListeners();
+      if (audioStopped) return;
+      audioStopped = true;
+      audio.pause();
+    };
+    const stop = () => {
+      if (cancelled) return;
+      // Revoke this attempt before pause/cancel can dispatch or reject anything.
+      cancelled = true;
+      stopAudio();
+      cancelSpeech?.();
+    };
+    const markPlayed = () => {
+      if (cancelled || fallbackUsed) return;
+      started = true;
+      handledEventKeys.current.add(eventKey);
+    };
+    const finish = () => {
+      cancelled = true;
+      removeListeners();
+    };
+    const fallback = () => {
+      if (cancelled || fallbackUsed) return;
+      // Both the error event and play rejection can report the same failure.
+      fallbackUsed = true;
+      handledEventKeys.current.add(eventKey);
+      stopAudio();
+      cancelSpeech = speakFallback(text);
+    };
+
+    currentPlayback.current = { stop };
+    audio.addEventListener('playing', markPlayed, { once: true });
     audio.addEventListener('error', fallback, { once: true });
-    void audio.play().catch(fallback);
+    audio.addEventListener('ended', finish, { once: true });
+    void audio.play().then(markPlayed, fallback);
 
     return () => {
-      audio.removeEventListener('error', fallback);
+      // A race tick or expiring cue window must not cut off a started line.
+      // Only pending work is cancelled here; disable, replacement and unmount
+      // stop the whole owned playback, including an active speech fallback.
+      if (!started && !fallbackUsed) stop();
     };
-  }, [baseUrl, enabled, localPlayerId, state]);
+  }, [active, assetUrl, eventKey, text]);
 
   useEffect(
     () => () => {
-      currentAudio.current?.pause();
-      currentAudio.current = null;
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
+      currentPlayback.current?.stop();
+      currentPlayback.current = null;
     },
     [],
   );

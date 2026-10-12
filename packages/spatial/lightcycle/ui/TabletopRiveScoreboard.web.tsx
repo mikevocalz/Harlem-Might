@@ -16,8 +16,8 @@ import {
   createLightCycleScoreboardModel,
   type LightCycleLobbyPresence,
   type LightCycleRiveBindings,
-} from './lightcycle/scoreboardModel';
-import type { LightCycleMatchState } from './lightcycle/tabletopCore';
+} from '../scoreboardModel';
+import type { LightCycleMatchState } from '../tabletopCore';
 
 const SCOREBOARD_URL =
   process.env.NEXT_PUBLIC_LIGHTCYCLE_SCOREBOARD_RIV_URL ?? '';

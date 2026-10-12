@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import { normalizePlayerName } from './lightcycle/tabletopCore.ts';
+import { normalizePlayerName } from '../tabletopCore.ts';
 import { tabletopRace } from './tabletopRaceStore.ts';
 
 export type TabletopSessionMode = 'idle' | 'host' | 'guest' | 'solo';

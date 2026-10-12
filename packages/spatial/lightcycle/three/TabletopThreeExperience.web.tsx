@@ -2,13 +2,13 @@
 
 import { useEffect } from 'react';
 import { Text, View } from '@acme/ui/tw';
-import { ThreeLightCycleCanvas } from './lightcycle/three/ThreeLightCycleCanvas.web';
-import { McpVoicePlaybackWeb } from './mcp/McpVoicePlayback.web';
-import { TabletopRiveScoreboardWeb } from './TabletopRiveScoreboard.web';
-import { tabletopSoloInput } from './tabletopSoloInputStore';
-import { useTabletopRaceStore } from './tabletopRaceStore';
-import { useTabletopSoloDriver } from './useTabletopSoloDriver';
-import { useTabletopSessionStore } from './tabletopSessionStore';
+import { ThreeLightCycleCanvas } from './ThreeLightCycleCanvas.web';
+import { McpVoicePlaybackWeb } from '../../mcp/McpVoicePlayback.web';
+import { TabletopRiveScoreboardWeb } from '../ui/TabletopRiveScoreboard.web';
+import { tabletopSoloInput } from '../runtime/tabletopSoloInputStore';
+import { useTabletopRaceStore } from '../runtime/tabletopRaceStore';
+import { useTabletopSoloDriver } from '../runtime/useTabletopSoloDriver';
+import { useTabletopSessionStore } from '../runtime/tabletopSessionStore';
 
 const LIGHTCYCLE_ASSET =
   process.env.NEXT_PUBLIC_LIGHTCYCLE_GLB_URL ??

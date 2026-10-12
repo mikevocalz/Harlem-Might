@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
-import { advanceLightCycleMatch, createLightCycleMatch, type LightCycleInputEvent } from './lightcycle/tabletopCore.ts';
+import { advanceLightCycleMatch, createLightCycleMatch, type LightCycleInputEvent } from '../tabletopCore.ts';
 import { tabletopPresenceUpdate } from './tabletopPresence.ts';
 import { tabletopRace } from './tabletopRaceStore.ts';
 import { tabletopSession } from './tabletopSessionStore.ts';

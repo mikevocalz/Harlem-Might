@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { afterEach, it } from 'node:test';
 import { JsxEmit, ModuleKind, transpileModule } from 'typescript';
-import * as core from './lightcycle/tabletopCore.ts';
-import * as protocol from './lightcycle/sessionProtocol.ts';
-import * as replicatedMatchState from './lightcycle/replicatedMatchState.ts';
-import * as scoreboardModel from './lightcycle/scoreboardModel.ts';
+import * as core from '../tabletopCore.ts';
+import * as protocol from '../sessionProtocol.ts';
+import * as replicatedMatchState from '../replicatedMatchState.ts';
+import * as scoreboardModel from '../scoreboardModel.ts';
 import { tabletopPresenceUpdate } from './tabletopPresence.ts';
 import { tabletopRace } from './tabletopRaceStore.ts';
 import { tabletopSession, useTabletopSessionStore } from './tabletopSessionStore.ts';
@@ -105,24 +105,24 @@ function nativeFixture(platform = { isQuest: true, isPico: false, isVisionOS: fa
       useRef: (value: unknown) => active.ref(value),
     },
     'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
-    './viro': viro,
-    './lightcycle/tabletopCore': core,
-    './lightcycle/sessionProtocol': protocol,
-    './lightcycle/replicatedMatchState': replicatedMatchState,
-    './lightcycle/scoreboardModel': scoreboardModel,
-    './SpatialRivePanel.native': { SpatialRivePanel: 'SpatialRivePanel' },
+    '../../viro': viro,
+    '../tabletopCore': core,
+    '../sessionProtocol': protocol,
+    '../replicatedMatchState': replicatedMatchState,
+    '../scoreboardModel': scoreboardModel,
+    '../../SpatialRivePanel.native': { SpatialRivePanel: 'SpatialRivePanel' },
     './tabletopRiveScoreboardAssetStore': {
       useTabletopRiveScoreboardAssetStore: (selector: (asset: typeof scoreboardAsset) => unknown) =>
         selector(scoreboardAsset),
     },
-    './lightcycle/assetContract': { LIGHTCYCLE_METERS_PER_FIXED_UNIT: 0.001 },
-    './tabletopPresence': { tabletopPresenceUpdate },
-    './tabletopRaceStore': {
+    '../assetContract': { LIGHTCYCLE_METERS_PER_FIXED_UNIT: 0.001 },
+    '../runtime/tabletopPresence': { tabletopPresenceUpdate },
+    '../runtime/tabletopRaceStore': {
       tabletopRace,
       useTabletopRaceStore: (selector: (state: ReturnType<typeof tabletopRace.getState>) => unknown) =>
         selector(tabletopRace.getState()),
     },
-    './tabletopSessionStore': {
+    '../runtime/tabletopSessionStore': {
       tabletopSession,
       useTabletopSessionStore: Object.assign(
         (selector: (state: ReturnType<typeof tabletopSession.getState>) => unknown) =>
@@ -130,11 +130,11 @@ function nativeFixture(platform = { isQuest: true, isPico: false, isVisionOS: fa
         { getState: tabletopSession.getState, subscribe: useTabletopSessionStore.subscribe },
       ),
     },
-    './rive-fx/store': { gridFx: { emit: (event: unknown) => effects.push(event) } },
-    './mcp/McpPresence.native': { McpPresence: 'McpPresence' },
-    './mcp/McpVoiceSound.native': { McpVoiceSoundNative: 'McpVoiceSoundNative' },
-    './arSurface': { acceptsGameSurface: () => true },
-    './TabletopRiveScoreboard.native': { TabletopRiveScoreboard: 'TabletopRiveScoreboard' },
+    '../../rive-fx/store': { gridFx: { emit: (event: unknown) => effects.push(event) } },
+    '../../mcp/McpPresence.native': { McpPresence: 'McpPresence' },
+    '../../mcp/McpVoiceSound.native': { McpVoiceSoundNative: 'McpVoiceSoundNative' },
+    '../../arSurface': { acceptsGameSurface: () => true },
+    '../ui/TabletopRiveScoreboard.native': { TabletopRiveScoreboard: 'TabletopRiveScoreboard' },
   };
   function load(name: string) {
     const source = readFileSync(new URL(name + '.tsx', import.meta.url), 'utf8');
@@ -144,7 +144,7 @@ function nativeFixture(platform = { isQuest: true, isPico: false, isVisionOS: fa
     const exports: Record<string, any> = {};
     new Function('require', 'exports', 'process', compiled)(
       (id: string) => {
-        if (id.startsWith('./assets/')) return 1;
+        if (id.startsWith('../../assets/')) return 1;
         assert.ok(id in modules, `Unexpected native import ${id}`);
         return modules[id];
       },
@@ -153,11 +153,11 @@ function nativeFixture(platform = { isQuest: true, isPico: false, isVisionOS: fa
     );
     return exports;
   }
-  const runtime = load('./TabletopRaceRuntime.native');
+  const runtime = load('../viro/TabletopRaceRuntime.native');
   modules['./TabletopRaceRuntime.native'] = runtime;
   return { mount, room, writes, effects, colocated, replication,
-    Scoreboard: load('./TabletopRiveScoreboard.native').TabletopRiveScoreboard,
-    Scene: load('./TabletopColocationScene.native').TabletopColocationScene,
+    Scoreboard: load('../ui/TabletopRiveScoreboard.native').TabletopRiveScoreboard,
+    Scene: load('../viro/TabletopColocationScene.native').TabletopColocationScene,
     Runtime: runtime.TabletopRaceRuntime };
 }
 

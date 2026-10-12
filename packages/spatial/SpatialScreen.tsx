@@ -5,9 +5,9 @@ import { ScrollView, Section, View } from '@acme/ui/tw';
 import { RiveStage } from './rive/RiveStage';
 import { ForkSpatialLayout, getSpatialForkCapabilities } from './ForkSpatialLayout';
 import { SpatialViroExperience } from './SpatialViroExperience';
-import { TabletopSessionPanel } from './TabletopSessionPanel';
+import { TabletopSessionPanel } from './lightcycle/ui/TabletopSessionPanel';
 import { gridRace } from './gridRaceStore';
-import { tabletopSession, useTabletopSessionStore } from './tabletopSessionStore';
+import { tabletopSession, useTabletopSessionStore } from './lightcycle/runtime/tabletopSessionStore';
 
 const RIVE_DEMO = require('./rive/assets/learning-question.riv') as number;
 
@@ -17,7 +17,7 @@ export function SpatialScreen() {
   const setShowRace = useTabletopSessionStore((state) => state.setSpatialViewOpen);
 
   const tools = (
-    <GridCard eyebrow="Runtime" title="Spatial backend">
+    <GridCard label="Runtime" title="Spatial backend">
       <Text className="text-sm text-white/70">
         {capabilities.metaSpatialWindows
           ? 'Meta spatial windows: available, used by Explore'
@@ -79,7 +79,7 @@ export function SpatialScreen() {
                 Enter VR Grid
               </CircuitButton>
               <CircuitButton
-                tone="orange"
+                tone="accent"
                 variant="solid"
                 onPress={() => {
                   if (showRace) {
@@ -99,13 +99,13 @@ export function SpatialScreen() {
           </Section>
 
           <View className="gap-4 lg:flex-row">
-            <GridCard className="flex-1" eyebrow="01 / Universal graphics" title="Skia scenes">
+            <GridCard className="flex-1" label="01 / Universal graphics" title="Skia scenes">
               <Text className="text-sm leading-6 text-white/60">Grid Floor, Grid Scene and Glyph City share one Skia renderer across Expo and web.</Text>
             </GridCard>
-            <GridCard className="flex-1" eyebrow="02 / Interface" title="Future controls">
+            <GridCard className="flex-1" label="02 / Interface" title="Future controls">
               <Text className="text-sm leading-6 text-white/60">Reusable grid cards and circuit buttons remain semantic, responsive and Uniwind-driven.</Text>
             </GridCard>
-            <GridCard className="flex-1" eyebrow="03 / Immersion" title="OpenXR race" tone="orange">
+            <GridCard className="flex-1" label="03 / Immersion" title="OpenXR race" tone="accent">
               <Text className="text-sm leading-6 text-white/60">Enter a black-vector arena for 90° light-cycle combat with persistent jetwalls, boost, AI rivals, rounds, and derez collisions.</Text>
             </GridCard>
           </View>
@@ -117,7 +117,7 @@ export function SpatialScreen() {
               <SpatialViroExperience />
             </View>
           ) : (
-            <GridCard eyebrow="XR Gateway" title="The portal is armed" tone="orange">
+            <GridCard label="XR Gateway" title="The portal is armed" tone="accent">
               <Text className="text-sm leading-6 text-white/60">
                 Choose Enter VR Grid to mount the shared Viro scene. Quest/Pico use the same scene module as the web preview.
               </Text>

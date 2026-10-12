@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import type { LightCycleTurn } from './lightcycle/tabletopCore';
+import type { LightCycleTurn } from '../tabletopCore';
 
 type TabletopSoloInputState = {
   turn: LightCycleTurn;

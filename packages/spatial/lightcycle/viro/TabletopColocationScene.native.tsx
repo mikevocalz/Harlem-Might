@@ -26,19 +26,19 @@ import {
   useViroColocationRoom,
   useViroReplicatedState,
   worldToLocation,
-} from './viro';
-import { acceptsGameSurface } from './arSurface';
-import { LIGHTCYCLE_REPLICATION_IDS } from './lightcycle/sessionProtocol';
+} from '../../viro';
+import { acceptsGameSurface } from '../../arSurface';
+import { LIGHTCYCLE_REPLICATION_IDS } from '../sessionProtocol';
 import { TabletopRaceRuntime } from './TabletopRaceRuntime.native';
-import { tabletopRace } from './tabletopRaceStore';
-import { tabletopPresenceUpdate } from './tabletopPresence';
-import { TabletopRiveScoreboard } from './TabletopRiveScoreboard.native';
-import { gridFx } from './rive-fx/store';
+import { tabletopRace } from '../runtime/tabletopRaceStore';
+import { tabletopPresenceUpdate } from '../runtime/tabletopPresence';
+import { TabletopRiveScoreboard } from '../ui/TabletopRiveScoreboard.native';
+import { gridFx } from '../../rive-fx/store';
 import {
   tabletopSession,
   useTabletopSessionStore,
   type PlacementCandidate,
-} from './tabletopSessionStore';
+} from '../runtime/tabletopSessionStore';
 
 const API_KEY = process.env.EXPO_PUBLIC_REACTVISION_API_KEY ?? '';
 const PROJECT_ID = process.env.EXPO_PUBLIC_REACTVISION_PROJECT_ID ?? '';
@@ -272,7 +272,7 @@ function SharedTabletopRoom({
   hostPlacement,
 }: {
   roomId: string;
-  hostPlacement: import('./tabletopSessionStore').SharedPlacement | null;
+  hostPlacement: import('../runtime/tabletopSessionStore').SharedPlacement | null;
 }) {
   const mode = useTabletopSessionStore((state) => state.mode);
   const name = useTabletopSessionStore((state) => state.playerName);
