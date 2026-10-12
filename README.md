@@ -74,3 +74,7 @@ See [docs/SPATIAL.md](docs/SPATIAL.md) for the renderer, XR, race and fork detai
 - Viro owns immersive world geometry; do not flatten XR scenes into Skia.
 - Scaffold ordinary work with `pnpm gen domain <name>`,
   `pnpm gen feature <name>`, or `pnpm gen component <Name>`.
+
+## Development
+
+Project structure and adaptive-layout conventions are documented in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
