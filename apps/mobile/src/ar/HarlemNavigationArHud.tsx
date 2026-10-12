@@ -26,6 +26,7 @@ import {
 } from './navAr';
 import { useNavAr } from './navAr.store';
 import { getNavigationController } from './navigationRuntime';
+import { finishArNavigation } from './navigationArVisit';
 
 const GOLD = palette.mights.gold;
 const PAPER = palette.mights.paper;
@@ -43,6 +44,7 @@ export interface HarlemNavigationArHudProps {
   readonly onExplorePlace: (placeId: string | undefined) => void;
 }
 
+/** Opaque-enough backing keeps guidance readable over a changing camera image. */
 function Card({ children }: { children: React.ReactNode }) {
   return (
     <View className="gap-2 rounded-2xl px-4 py-3" style={{ backgroundColor: CARD }}>
@@ -51,6 +53,7 @@ function Card({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Shared high-contrast guidance text using the existing semantic palette. */
 function Line({ children, tone = 'paper', size = 16 }: { children: React.ReactNode; tone?: 'paper' | 'gold' | 'muted' | 'amber'; size?: number }) {
   const color = tone === 'gold' ? GOLD : tone === 'amber' ? AMBER : tone === 'muted' ? LIMESTONE : PAPER;
   return <Text style={{ color, fontSize: size, lineHeight: Math.round(size * 1.3) }}>{children}</Text>;
@@ -84,6 +87,7 @@ const HEADING_COPY: Record<CalibrationChecklist['heading'], string> = {
   ready: 'Direction set',
 };
 
+/** Presents one calibration requirement with a visible readiness indicator. */
 function CheckRow({ ready, text }: { ready: boolean; text: string }) {
   return (
     <View className="flex-row items-center gap-3">
@@ -236,7 +240,7 @@ export function HarlemNavigationArHud({ onBackToMap, onExplorePlace, contentInse
                 onPress={() => {
                   // Cancel the shared trip, then close the AR route. Otherwise this
                   // same screen silently reopens the unrelated tabletop scene.
-                  controller.cancel();
+                  finishArNavigation();
                   onBackToMap();
                 }}
               >

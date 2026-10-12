@@ -12,8 +12,9 @@ import {
   resetNavigationRuntimeForTests,
   startGuidance,
 } from '@acme/app/features/navigation/view/runtime.ts';
-import { createNavigationArHost, navigationArHostPresentation } from './navigationArHost.ts';
+import { createNavigationArHost, navigationArHostPresentation, syncNavigationArHost } from './navigationArHost.ts';
 import { handoffArToExplore, prepareArMapReturn } from './navigationArVisit.ts';
+import { isArNavigationScreen } from './navAr.ts';
 import { useExploreLayoutStore } from '../spatial/exploreLayout.store.ts';
 import { resolveExploreLayout } from '../spatial/exploreLayout.ts';
 
@@ -209,5 +210,66 @@ describe('in-pane navigation AR presentation', () => {
     }
     assert.deepEqual(counts, { routes: 1, watches: 1, stops: 0 });
     host.getState().close();
+  });
+});
+
+describe('focused navigation AR host synchronization', () => {
+  const navigationInAr = () => {
+    const { session, arTracking } = useNavigationStore.getState();
+    return isArNavigationScreen(session, arTracking);
+  };
+
+  it('lets an already-mounted closed host adopt a later legacy AR session when focused', async () => {
+    const { controller, counts } = await startWalk();
+    assert.ok(controller.exitAR());
+    const host = createNavigationArHost(controller);
+    syncNavigationArHost(host, { focused: true, showMap: true, navigationInAr: navigationInAr() });
+    assert.equal(host.getState().visit, undefined);
+    assert.ok(controller.enterAR());
+    const transferred = useNavigationStore.getState().session;
+    syncNavigationArHost(host, { focused: true, showMap: true, navigationInAr: navigationInAr() });
+    const visit = host.getState().visit;
+    assert.equal(visit?.experience, 'navigation');
+    syncNavigationArHost(host, { focused: true, showMap: true, navigationInAr: navigationInAr() });
+    assert.equal(host.getState().visit, visit, 'repeated synchronization cannot recreate the visit');
+    assert.equal(useNavigationStore.getState().session, transferred);
+    assert.deepEqual(counts, { routes: 1, watches: 1, stops: 0 });
+    host.getState().close();
+  });
+
+  for (const hidden of [{ focused: false, showMap: true }, { focused: true, showMap: false }]) {
+    it(`does not adopt or exit another AR session while ${hidden.focused ? 'the map is hidden' : 'the tab is blurred'}`, async () => {
+      const { controller, counts } = await startWalk();
+      const foreignSession = useNavigationStore.getState().session;
+      const host = createNavigationArHost(controller);
+      syncNavigationArHost(host, { ...hidden, navigationInAr: navigationInAr() });
+      assert.equal(host.getState().visit, undefined);
+      assert.equal(useNavigationStore.getState().session, foreignSession);
+      assert.equal(navigationInAr(), true);
+      assert.deepEqual(counts, { routes: 1, watches: 1, stops: 0 });
+    });
+    it(`releases its own AR visit when ${hidden.focused ? 'the map becomes hidden' : 'the tab blurs'}`, async () => {
+      const { controller, counts } = await startWalk();
+      const host = createNavigationArHost(controller, true);
+      syncNavigationArHost(host, { ...hidden, navigationInAr: navigationInAr() });
+      assert.equal(host.getState().visit, undefined);
+      assert.equal(useNavigationStore.getState().session.phase, 'navigating');
+      assert.equal(navigationInAr(), false);
+      assert.ok(isLocationRunning());
+      assert.deepEqual(counts, { routes: 1, watches: 1, stops: 0 });
+    });
+  }
+
+  it('does not reopen after an explicit return to map guidance', async () => {
+    const { controller, counts } = await startWalk();
+    const host = createNavigationArHost(controller);
+    syncNavigationArHost(host, { focused: true, showMap: true, navigationInAr: navigationInAr() });
+    host.getState().close();
+    const mapSession = useNavigationStore.getState().session;
+    assert.equal(mapSession.phase, 'navigating');
+    syncNavigationArHost(host, { focused: true, showMap: true, navigationInAr: navigationInAr() });
+    assert.equal(host.getState().visit, undefined);
+    assert.equal(useNavigationStore.getState().session, mapSession);
+    assert.deepEqual(counts, { routes: 1, watches: 1, stops: 0 });
   });
 });
