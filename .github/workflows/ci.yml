@@ -72,6 +72,12 @@ jobs:
             mkdir -p "$(dirname "$link")"
             ln -sfn "$target" "$link"
           done
+          # Viro's compiled config plugin runs from the sibling checkout.
+          # Share Expo's own locked runtime; another SDK version may be hoisted.
+          expo_dir=$(node -p "require.resolve('expo/package.json', { paths: ['$GITHUB_WORKSPACE/apps/mobile'] })" | xargs dirname)
+          target=$(node -p "require.resolve('@expo/config-plugins/package.json', { paths: ['$expo_dir'] })" | xargs dirname)
+          mkdir -p ../viro/node_modules/@expo
+          ln -sfn "$target" ../viro/node_modules/@expo/config-plugins
       - run: pnpm spatial:verify-android
       - run: pnpm spatial:verify-typegpu
       - run: pnpm --filter @acme/spatial test
