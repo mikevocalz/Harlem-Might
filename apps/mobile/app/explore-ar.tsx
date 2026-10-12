@@ -1,3 +1,6 @@
+import { useCallback, useEffect, useRef } from 'react';
+import { useStore } from 'zustand';
+import { createStore, type StoreApi } from 'zustand/vanilla';
 import { Platform } from 'react-native';
 import { useRouter } from 'solito/navigation';
 import { ViroXRSceneNavigator, isMetaHorizonXR, isPico, isVisionOS } from '@reactvision/react-viro';
@@ -13,13 +16,13 @@ import { sceneModeFor, useArSession, type ArSceneMode } from '../src/ar/arSessio
 import { mapboxToken } from '../src/ar/mapboxToken';
 import { useStreetMapLoader } from '../src/ar/useStreetMapLoader';
 import { useTabletopRoute } from '../src/ar/useTabletopRoute';
-import { HarlemNavigationAr } from '../src/ar/HarlemNavigationAr';
 import { canUseArNavigation, chooseArExperience } from '../src/ar/arNavigationEntry';
 import { isArNavigationScreen } from '../src/ar/navAr';
 import { getNavigationController } from '../src/ar/navigationRuntime';
+import { createArVisit, handoffArToExplore } from '../src/ar/navigationArVisit';
 import { isHorizonBuild } from '../src/spatial/horizonBuild';
 
-/** Phone AR navigation is a property of the build and device, fixed for the app's lifetime. */
+/** Builds using the handheld walking renderer; native support is checked at explicit entry. */
 const AR_NAVIGATION_SUPPORTED = canUseArNavigation({
   isHorizonBuild,
   isMetaHorizonXR,
@@ -42,10 +45,6 @@ const STREET_SCENE = { scene: HarlemStreetScene };
  */
 export default function ExploreArRoute() {
   const router = useRouter();
-  // The root layout is a Slot, not a Stack, so this route replaced the tabs
-  // and back() has no history ("GO_BACK was not handled"). Return to Explore
-  // by replacing; the selected place lives in useExplore and stays open.
-  const exit = () => router.replace(routes.explore());
   const placeId = useArSession((s) => s.requested?.placeId);
   const sceneMode = useArSession((s) => sceneModeFor(s.requested));
   const selectedPlaceId = useExplore((s) => s.selectedPlaceId);
@@ -54,12 +53,32 @@ export default function ExploreArRoute() {
   const navigationSessionInAR = useNavigationStore(
     (s) => isArNavigationScreen(selectSession(s), selectArTracking(s)),
   );
-  const experience = chooseArExperience({
-    requestedScene: sceneMode,
-    navigationAvailable: AR_NAVIGATION_SUPPORTED,
-    navigationSessionInAR,
-  });
+  const visitRef = useRef<StoreApi<ReturnType<typeof createArVisit>> | null>(null);
+  if (visitRef.current === null) {
+    visitRef.current = createStore(() => createArVisit(chooseArExperience({
+      requestedScene: sceneMode,
+      navigationAvailable: AR_NAVIGATION_SUPPORTED,
+      navigationSessionInAR,
+    }), getNavigationController()));
+  }
+  // A per-visit external store keeps renderer identity across session changes.
+  // eslint-disable-next-line react-hooks/refs
+  const visit = useStore(visitRef.current);
+  const experience = visit.experience;
+  // This route replaces the tabs under a Slot, so there may be no back stack.
+  // A cancelled/unavailable navigation visit stays in its recovery screen;
+  // it must never mount the unrelated tabletop renderer or request its route.
+  const exit = useCallback(() => {
+    visit.leave();
+    router.replace(routes.explore());
+  }, [router, visit]);
+  // Legacy walking-AR URLs hand off to the existing Explore shell. Do not
+  // attach a navigation visit here: its cleanup must not exit the pane owner.
+  useEffect(() => visit.experience === 'navigation' ? undefined : visit.attach(), [visit]);
   const isNavigatingInAr = experience === 'navigation';
+  useEffect(() => {
+    if (isNavigatingInAr) handoffArToExplore(() => router.replace(routes.explore()));
+  }, [isNavigatingInAr, router]);
   // Only the phone navigation layer reads the shared trip. Existing table
   // and street worlds, their place routes, and their controls stay untouched.
   useTabletopRoute(isNavigatingInAr ? undefined : (placeId ?? selectedPlaceId ?? undefined));
@@ -69,24 +88,7 @@ export default function ExploreArRoute() {
   // NavigationSession (useStreetNavigation).
   useStreetMapLoader(street, placeId ?? selectedPlaceId ?? undefined);
 
-  if (isNavigatingInAr) {
-    return (
-      <HarlemNavigationAr
-        onBackToMap={() => {
-          // Leaves AR only; the walk keeps going on the map.
-          const controller = getNavigationController();
-          controller.exitAR();
-          controller.setArTracking({ kind: 'off' });
-          exit();
-        }}
-        onExplorePlace={(destinationPlaceId) => {
-          getNavigationController().cancel();
-          if (destinationPlaceId) useExplore.getState().selectPlace(destinationPlaceId);
-          exit();
-        }}
-      />
-    );
-  }
+  if (isNavigatingInAr) return null;
 
   return (
     <ViroXRSceneNavigator
@@ -124,6 +126,7 @@ const PANEL_COPY: Record<ArSceneMode, { title: (place: string) => string; body: 
   },
 };
 
+/** Existing headset entry panel for the requested tabletop or street experience. */
 function ArPanel({
   mode,
   placeName,

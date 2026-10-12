@@ -1,9 +1,11 @@
+import { useSafeAreaInsets, type EdgeInsets } from 'react-native-safe-area-context';
 import { useEffect, useMemo } from 'react';
 import { useStore } from 'zustand';
 import { MightsButton } from '@acme/ui/mights';
 import { Text, View } from '@acme/ui/tw';
 import { palette } from '@acme/theme';
 import { formatDistance } from '@acme/app/features/explore/explore.store.ts';
+import { resumeGuidance } from '@acme/app/features/navigation/view/runtime.ts';
 import { hasActiveTrip } from '@acme/app/features/navigation/model/session.ts';
 import {
   navigationFixStore,
@@ -24,6 +26,7 @@ import {
 } from './navAr';
 import { useNavAr } from './navAr.store';
 import { getNavigationController } from './navigationRuntime';
+import { finishArNavigation } from './navigationArVisit';
 
 const GOLD = palette.mights.gold;
 const PAPER = palette.mights.paper;
@@ -33,12 +36,15 @@ const AMBER = palette.mights['sodium-amber'];
 const CARD = 'rgba(11, 9, 6, 0.88)';
 
 export interface HarlemNavigationArHudProps {
+  /** Only safe areas and overlay space not already consumed by the containing shell. */
+  readonly contentInsets?: Readonly<EdgeInsets>;
   /** Leaves AR and returns to the map. The navigation session keeps running. */
   readonly onBackToMap: () => void;
   /** After arrival: open the destination's place page. */
   readonly onExplorePlace: (placeId: string | undefined) => void;
 }
 
+/** Opaque-enough backing keeps guidance readable over a changing camera image. */
 function Card({ children }: { children: React.ReactNode }) {
   return (
     <View className="gap-2 rounded-2xl px-4 py-3" style={{ backgroundColor: CARD }}>
@@ -47,6 +53,7 @@ function Card({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Shared high-contrast guidance text using the existing semantic palette. */
 function Line({ children, tone = 'paper', size = 16 }: { children: React.ReactNode; tone?: 'paper' | 'gold' | 'muted' | 'amber'; size?: number }) {
   const color = tone === 'gold' ? GOLD : tone === 'amber' ? AMBER : tone === 'muted' ? LIMESTONE : PAPER;
   return <Text style={{ color, fontSize: size, lineHeight: Math.round(size * 1.3) }}>{children}</Text>;
@@ -80,6 +87,7 @@ const HEADING_COPY: Record<CalibrationChecklist['heading'], string> = {
   ready: 'Direction set',
 };
 
+/** Presents one calibration requirement with a visible readiness indicator. */
 function CheckRow({ ready, text }: { ready: boolean; text: string }) {
   return (
     <View className="flex-row items-center gap-3">
@@ -97,7 +105,9 @@ function CheckRow({ ready, text }: { ready: boolean; text: string }) {
  * navigation session; the only commands it sends are the controller's
  * pause/resume/exit/cancel.
  */
-export function HarlemNavigationArHud({ onBackToMap, onExplorePlace }: HarlemNavigationArHudProps) {
+export function HarlemNavigationArHud({ onBackToMap, onExplorePlace, contentInsets }: HarlemNavigationArHudProps) {
+  const rootInsets = useSafeAreaInsets();
+  const insets = contentInsets ?? rootInsets;
   const controller = getNavigationController();
   const session = useNavigationStore(selectSession);
   const positioning = useNavigationStore(selectPositioning);
@@ -147,7 +157,7 @@ export function HarlemNavigationArHud({ onBackToMap, onExplorePlace }: HarlemNav
   const turnDeg = maneuverTurnDeg(progress?.nextManeuver);
 
   return (
-    <View pointerEvents="box-none" className="absolute inset-0 justify-between px-4 pb-8 pt-14">
+    <View pointerEvents="box-none" className="absolute inset-0 justify-between" style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16, paddingLeft: insets.left + 16, paddingRight: insets.right + 16 }}>
       {/* Top: what to do next. */}
       <View pointerEvents="box-none" className="gap-3">
         {presentation.kind === 'calibrating' ? (
@@ -203,7 +213,7 @@ export function HarlemNavigationArHud({ onBackToMap, onExplorePlace }: HarlemNav
                 : 'Resume when you’re ready to keep walking.'}
             </Line>
             <View className="flex-row gap-3">
-              <MightsButton variant="primary" disabled={presentation.kind === 'speed-paused'} onPress={() => controller.resume()}>
+              <MightsButton variant="primary" disabled={presentation.kind === 'speed-paused'} onPress={() => resumeGuidance()}>
                 Resume
               </MightsButton>
               <MightsButton variant="ghost" onPress={onBackToMap}>
@@ -230,7 +240,7 @@ export function HarlemNavigationArHud({ onBackToMap, onExplorePlace }: HarlemNav
                 onPress={() => {
                   // Cancel the shared trip, then close the AR route. Otherwise this
                   // same screen silently reopens the unrelated tabletop scene.
-                  controller.cancel();
+                  finishArNavigation();
                   onBackToMap();
                 }}
               >
