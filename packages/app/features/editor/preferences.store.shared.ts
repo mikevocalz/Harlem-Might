@@ -31,14 +31,24 @@ export interface PreferencesState {
 }
 
 export function readPreferences(storage: PreferencesStorage): ToolbarPreferences {
-  const raw = storage.getString(STORAGE_KEY);
+  let raw: string | undefined;
+  try {
+    raw = storage.getString(STORAGE_KEY);
+  } catch {
+    // Unavailable storage must not prevent the toolbar from mounting.
+    return DEFAULT_PREFERENCES;
+  }
   if (raw === undefined) return DEFAULT_PREFERENCES;
   try {
     // Reconciled on the way IN, never trusted as-is: the registry may have
     // changed since this was written.
     return reconcilePreferences(JSON.parse(raw) as Partial<ToolbarPreferences>);
   } catch {
-    storage.remove(STORAGE_KEY);
+    try {
+      storage.remove(STORAGE_KEY);
+    } catch {
+      // Removing a corrupt value is best-effort when storage is unavailable.
+    }
     return DEFAULT_PREFERENCES;
   }
 }
@@ -54,8 +64,12 @@ export function createPreferencesStore(
 ) {
   return createStore<PreferencesState>((set, get) => {
     const persist = (preferences: ToolbarPreferences) => {
-      storage.set(STORAGE_KEY, JSON.stringify(preferences));
       set({ preferences });
+      try {
+        storage.set(STORAGE_KEY, JSON.stringify(preferences));
+      } catch {
+        // Keep this session's choices usable; a later action retries persistence.
+      }
     };
 
     return {

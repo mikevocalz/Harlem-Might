@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import {
-  filterHarlemPlacePreviews,
+  filterPlaces,
   formatDistance,
-  nearbyPlaces,
-  type HarlemPlacePreview,
+  type ExplorePlace,
 } from './explore.store.ts';
+import { catalogueNearbyPlaces, type PlaceCatalogueState } from './place-catalogue.store.ts';
 
 /**
  * What the assistant is doing. `listening`, `thinking` and `speaking` need a
@@ -72,7 +72,7 @@ export const useMightsAssistant = create<MightsAssistantState>((set) => ({
 }));
 
 /** The collapsed bar's label (copy.md §4.1). */
-export function assistantBarLabel(place: HarlemPlacePreview | null): string {
+export function assistantBarLabel(place: ExplorePlace | null): string {
   return place ? `Ask about ${place.name}` : 'Ask Harlem Might';
 }
 
@@ -92,8 +92,9 @@ export type AssistantSuggestion =
  * An empty draft lists nothing, so the panel never suggests a canned query.
  */
 export function assistantSuggestions(
-  place: HarlemPlacePreview | null,
+  place: ExplorePlace | null,
   draft: string,
+  places: readonly ExplorePlace[],
 ): AssistantSuggestion[] {
   if (place) {
     const rows: AssistantSuggestion[] = [
@@ -104,7 +105,7 @@ export function assistantSuggestions(
     return rows;
   }
   if (draft.trim() === '') return [];
-  return filterHarlemPlacePreviews(draft, 'All')
+  return filterPlaces(places, draft, 'All')
     .slice(0, 3)
     .map((match) => ({ kind: 'open-place', label: match.name, placeId: match.id }));
 }
@@ -113,11 +114,21 @@ export function assistantSuggestions(
  * The "What's nearby" answer (copy.md §4.5). Unmapped places get the honest
  * "isn't on the map yet" line instead of a distance from an unverified point.
  */
-export function nearbyAnswer(place: HarlemPlacePreview, locale?: string): string {
-  const near = nearbyPlaces(place.id, 3);
-  if (near.length === 0) {
+export function nearbyAnswer(place: ExplorePlace, places: readonly ExplorePlace[], locale?: string): string {
+  if (!place.lngLat) {
     return `${place.name} isn't on the map yet, so I can't tell you what's nearby.`;
   }
+  const near = catalogueNearbyPlaces(place, places, 3);
+  if (near.length === 0) return 'There are no other mapped places in the loaded catalogue yet.';
   const list = near.map(({ place: p, meters }) => `${p.name} (${formatDistance(meters, locale)})`);
   return `Closest on the map: ${list.join(', ')}.`;
+}
+
+/** Tell the truth about loading and retained data without resetting the panel. */
+export function assistantCatalogueNotice(loadState: PlaceCatalogueState['loadState'], hasPlaces: boolean): string | null {
+  if (loadState.status === 'unavailable') {
+    return hasPlaces ? `${loadState.message} Showing the last loaded places.` : loadState.message;
+  }
+  if (loadState.status === 'idle' || loadState.status === 'loading') return 'Loading places…';
+  return null;
 }

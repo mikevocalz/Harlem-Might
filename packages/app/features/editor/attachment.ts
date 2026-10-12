@@ -31,7 +31,13 @@ const REMOTE = /^https?:\/\//i;
 /** Filename from a URI, falling back to something stable rather than empty. */
 export function fileNameFrom(uri: string): string {
   const last = uri.split('?')[0]?.split('/').pop();
-  return last !== undefined && last.length > 0 ? decodeURIComponent(last) : 'attachment';
+  if (last === undefined || last.length === 0) return 'attachment';
+  try {
+    return decodeURIComponent(last);
+  } catch {
+    // Local filenames and dropped URLs can contain a literal percent sign.
+    return last;
+  }
 }
 
 /**
@@ -90,6 +96,38 @@ export async function attach(
       ratio: 0,
       bytesTotal: null,
       name,
+      error: cause instanceof Error ? cause.message : 'Could not attach that file.',
+    });
+    return null;
+  }
+}
+
+/** Acquire and attach inside one UI error boundary, scoped to the open dialog. */
+export async function acquireAttachment(
+  acquire: () => Promise<{ uri: string; name?: string } | null>,
+  onProgress: (progress: AttachProgress) => void,
+  isCurrent: () => boolean = () => true,
+): Promise<Attachment | null> {
+  const report = (progress: AttachProgress) => {
+    if (isCurrent()) onProgress(progress);
+  };
+  try {
+    if (!isCurrent()) return null;
+    const source = await acquire();
+    // Closing/replacing the dialog must not start a transfer for an old picker.
+    if (!isCurrent()) return null;
+    if (source === null) {
+      report(IDLE_PROGRESS);
+      return null;
+    }
+    const attachment = await attach(source, report);
+    return isCurrent() ? attachment : null;
+  } catch (cause) {
+    report({
+      phase: 'error',
+      ratio: 0,
+      bytesTotal: null,
+      name: null,
       error: cause instanceof Error ? cause.message : 'Could not attach that file.',
     });
     return null;

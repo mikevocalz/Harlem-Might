@@ -47,7 +47,7 @@ function EventBody({ event, featured, now }: { event: EventRecord; featured: boo
         </MightsHeading>
         {venue ? (
           place ? (
-            <MightsLocationStamp name={venue} street={place.preview.street} href={place.href} className="self-start" />
+            <MightsLocationStamp name={venue} street={place.ref.address} href={place.href} className="self-start" />
           ) : venueUrl ? (
             <MightsText size="small">
               <Link href={venueUrl} className={link}>

@@ -14,9 +14,9 @@ import { routes } from './routes';
 export interface BentoPlace {
   id: string;
   name: string;
-  area: string;
+  area?: string;
   street?: string;
-  shortDescription: string;
+  shortDescription?: string;
   lngLat?: readonly [number, number];
 }
 
@@ -203,8 +203,8 @@ function PlaceBody({ place, level, dominant, dense }: { place: BentoPlace; level
       <MightsHeading level={level} size={dominant ? 'title' : 'card'}>
         {place.name}
       </MightsHeading>
-      <MightsText size="small">{place.street ?? place.area}</MightsText>
-      {dense ? null : (
+      {place.street || place.area ? <MightsText size="small">{place.street ?? place.area}</MightsText> : null}
+      {dense || !place.shortDescription ? null : (
         <MightsText size="small" tone="default" className="mt-2">
           {place.shortDescription}
         </MightsText>

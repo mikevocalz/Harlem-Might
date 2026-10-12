@@ -11,10 +11,9 @@ import { stopAnchor } from './walk-facts.ts';
 // a walk is an outing, not a checklist.
 
 function StopBody({ stop }: { stop: WalkStop }) {
-  const linked = linkPlace(stop.place);
   const image = stop.place?.images?.[0];
   const name = stop.place?.name ?? 'This stop is no longer in the catalogue';
-  const street = linked ? (linked.preview.street ?? linked.preview.area) : null;
+  const street = stop.place?.address ?? stop.place?.area;
   return (
     <View className="flex flex-col">
       {image ? (

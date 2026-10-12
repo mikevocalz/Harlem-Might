@@ -59,12 +59,16 @@ export function StoryRelated({ story, walks }: { story: StoryRecord; walks: read
           <MightsNotchCard href={only.place.href}>
             <View className="flex flex-col gap-1 p-5">
               <MightsHeading level={3} size="card">
-                {only.place.preview.name}
+                {only.place.ref.name}
               </MightsHeading>
-              <MightsText size="small">{only.place.preview.street ?? only.place.preview.area}</MightsText>
-              <MightsText size="small" tone="default" className="mt-2">
-                {only.place.preview.shortDescription}
-              </MightsText>
+              {only.place.ref.address || only.place.ref.area ? (
+                <MightsText size="small">{only.place.ref.address ?? only.place.ref.area}</MightsText>
+              ) : null}
+              {only.place.ref.summary ? (
+                <MightsText size="small" tone="default" className="mt-2">
+                  {only.place.ref.summary}
+                </MightsText>
+              ) : null}
             </View>
           </MightsNotchCard>
         ) : (
@@ -81,12 +85,12 @@ export function StoryRelated({ story, walks }: { story: StoryRecord; walks: read
       ? {
           kind: 'place',
           place: {
-            id: item.place.preview.id,
-            name: item.place.preview.name,
-            area: item.place.preview.area,
-            street: item.place.preview.street,
-            shortDescription: item.place.preview.shortDescription,
-            lngLat: item.place.preview.lngLat,
+            id: item.place.ref.slug,
+            name: item.place.ref.name,
+            area: item.place.ref.area,
+            street: item.place.ref.address,
+            shortDescription: item.place.ref.summary,
+            lngLat: item.place.ref.lngLat,
           },
         }
       : { kind: 'custom', id: `walk-${item.walk.id}`, href: routes.walk(item.walk.slug), content: <WalkBody walk={item.walk} /> },

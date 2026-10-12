@@ -199,6 +199,35 @@ describe('createMapboxDirectionsProvider', () => {
     assert.equal(url.searchParams.get('access_token'), FAKE_TOKEN);
   });
 
+  it('classifies invalid origin, destination and entrance coordinates without fetching', async () => {
+    const { impl, calls } = fakeFetch(() => json(200, loadFixture(NAME).response));
+    const provider = createMapboxDirectionsProvider({ accessToken: FAKE_TOKEN, fetchImpl: impl });
+    const request = requestFor(NAME);
+    const invalid = { latitude: 91, longitude: -73.944623 };
+    const requests: RouteRequest[] = [
+      { ...request, origin: invalid },
+      { ...request, origin: { latitude: 40.8, longitude: Number.NaN } },
+      { ...request, destination: { ...request.destination, coordinate: { latitude: 40.8, longitude: 181 } } },
+      { ...request, destination: { ...request.destination, entrance: { coordinate: invalid, source: 'cms-verified' } } },
+    ];
+    for (const badRequest of requests) {
+      await assert.rejects(provider.getRoutes(badRequest), (error: unknown) => {
+        assert.ok(error instanceof RouteProviderError);
+        assert.equal(error.kind, 'invalid-request');
+        assert.equal(error.provider, 'mapbox');
+        assert.equal(error.status, undefined);
+        assert.ok(!error.message.includes(FAKE_TOKEN));
+        assert.ok(!error.message.includes(String(invalid.longitude)));
+        return true;
+      });
+    }
+    assert.equal(calls.length, 0);
+    const abort = new AbortController();
+    abort.abort();
+    await assert.rejects(provider.getRoutes(requests[0]!, { signal: abort.signal }),
+      (error: unknown) => error instanceof RouteProviderError && error.kind === 'aborted');
+  });
+
   it('answers transit with an unsupported result and maps links, without calling Mapbox', async () => {
     const { impl, calls } = fakeFetch(() => json(500, {}));
     const provider = createMapboxDirectionsProvider({ accessToken: FAKE_TOKEN, fetchImpl: impl });

@@ -140,9 +140,10 @@ export const useMemberSession = create<MemberSessionState>((set, get) => {
         signal: controller.signal,
       });
       if (!current() || !response.ok) return;
-      const body = (await response.json().catch(() => null)) as { docs?: SavedPlaceEntry[] } | null;
-      // Parsing the body can also finish after the account or request changes.
-      if (current()) set({ savedPlaces: body?.docs ?? [] });
+      const body = (await response.json()) as { docs?: SavedPlaceEntry[] } | null;
+      // Only a valid list replaces last-good data. Parsing can also finish
+      // after the account or request changes. An empty array is a valid result.
+      if (current() && Array.isArray(body?.docs)) set({ savedPlaces: body.docs });
     } catch {
       // A failed list read keeps the session and its last successful list.
     } finally {

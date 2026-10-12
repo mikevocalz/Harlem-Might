@@ -20,7 +20,6 @@ import { ContentNotice } from '@acme/app/features/site/content/ContentNotice.tsx
 import { SourcesList } from '@acme/app/features/site/content/SourcesList.tsx';
 import { WalkStops } from '@acme/app/features/site/walks/WalkStops.tsx';
 import { cachedWalk as loadWalk } from '@/lib/cached-content';
-import { linkPlace, locatePlace } from '@acme/app/features/site/content/place-link.ts';
 import { walkFactModules, walkMapView } from '@acme/app/features/site/walks/walk-facts.ts';
 import { storyDate } from '@acme/app/features/site/stories/story-format.ts';
 import { safeHttpUrl } from '@acme/app/features/site/content/safe-url.ts';
@@ -83,10 +82,10 @@ async function WalkContent({ params }: Params) {
 
 function Walk({ walk }: { walk: WalkRecord }) {
   const facts = walkFactModules(walk);
-  const view = walkMapView(walk.stops, locatePlace);
+  const view = walkMapView(walk.stops);
   const first = walk.stops[0];
-  const firstPoint = first?.place ? locatePlace(first.place.slug) : undefined;
-  const firstName = linkPlace(first?.place)?.ref.name ?? first?.place?.name;
+  const firstPoint = first?.place?.lngLat;
+  const firstName = first?.place?.name;
   // The note only exists with a source (records.ts), so an unsafe source URL hides the whole note.
   const accessSource = safeHttpUrl(walk.accessibility?.sourceUrl);
 

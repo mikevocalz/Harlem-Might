@@ -95,9 +95,16 @@ export function createMapboxDirectionsProvider(options: MapboxDirectionsOptions)
         };
       }
       if (signal?.aborted) throw new RouteProviderError('aborted', 'mapbox', 'Route request was cancelled');
-      const query = buildMapboxDirectionsQuery(request);
-      query.set('access_token', token);
-      const url = `https://api.mapbox.com${buildMapboxDirectionsPath(request)}?${query}`;
+      let url: string;
+      try {
+        const query = buildMapboxDirectionsQuery(request);
+        query.set('access_token', token);
+        url = `https://api.mapbox.com${buildMapboxDirectionsPath(request)}?${query}`;
+      } catch {
+        // Pure builders may throw RangeError, but this provider promises a
+        // typed failure without echoing the token or precise coordinates.
+        throw new RouteProviderError('invalid-request', 'mapbox', 'Mapbox Directions request is invalid');
+      }
 
       let response: Response;
       try {

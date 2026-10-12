@@ -58,13 +58,11 @@ export function walkSummaryLine(walk: Pick<WalkRecord, 'distanceMeters' | 'durat
 /** In-page anchor for a stop. Stops have no route of their own (audit §11). */
 export const stopAnchor = (position: number) => `stop-${position}`;
 
-type Locate = (slug: string) => readonly [number, number] | undefined;
-
 export interface WalkMapView {
   center: readonly [number, number];
   zoom: number;
   pins: MapPin[];
-  /** How many of the walk's stops have a verified point on the map. */
+  /** How many of the walk's stops have a catalogue point on the map. */
   located: number;
 }
 
@@ -73,9 +71,9 @@ export interface WalkMapView {
  * no route geometry yet, so this shows where the stops are, not the path
  * between them. Null when no stop has a point.
  */
-export function walkMapView(stops: readonly WalkStop[], locate: Locate): WalkMapView | null {
+export function walkMapView(stops: readonly WalkStop[]): WalkMapView | null {
   const points = stops
-    .map((stop) => (stop.place ? locate(stop.place.slug) : undefined))
+    .map((stop) => stop.place?.lngLat)
     .filter((p): p is readonly [number, number] => p !== undefined);
   if (points.length === 0) return null;
   const lngs = points.map((p) => p[0]);

@@ -18,6 +18,7 @@
       "default": "./icons.web.ts"
     },
     "./native": "./native.ts",
+    "./mights/routes": "./mights/routes.ts",
     "./mights": {
       "react-native": "./mights/index.native.ts",
       "default": "./mights/index.ts"

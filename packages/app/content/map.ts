@@ -26,6 +26,9 @@ export const mapPlace = (doc: PlaceDoc): PlaceRef => {
     id: doc.id,
     slug: doc.slug,
     name: doc.name,
+    ...(doc.primaryArea ? { area: doc.primaryArea } : {}),
+    ...(doc.address?.formatted ? { address: doc.address.formatted } : {}),
+    ...(doc.summary ? { summary: doc.summary } : {}),
     ...(images.length ? { images } : {}),
     ...(doc.location ? { lngLat: doc.location } : {}),
   };

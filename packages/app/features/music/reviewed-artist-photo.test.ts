@@ -9,7 +9,7 @@ import { ARTIST_PHOTO_VERSION, artistPhotoFraming, shouldUseStoredArtistPhoto } 
 import { musicArtistOpenGraphPhoto } from './artist-photo-metadata.ts';
 import { musicKeys } from './music.keys.ts';
 
-const evidence = JSON.parse(readFileSync(new URL('../../../../docs/music-photo-audit-2026-10-12.json', import.meta.url), 'utf8'));
+const evidence = JSON.parse(readFileSync(new URL('./__fixtures__/reviewed-artist-catalogue.json', import.meta.url), 'utf8'));
 
 it('covers the exact 102 published artists, with no draft records or shared photo URLs', () => {
   assert.equal(evidence.artists.length, 102);

@@ -1,13 +1,17 @@
 'use client';
 
+import { useMemo } from 'react';
 import { IconButton, SearchBar, Text } from '@acme/ui';
 import { X } from '@acme/ui/icons';
 import { Pressable, View } from '@acme/ui/tw';
-import { getHarlemPlacePreview, useExplore } from './explore.store';
+import { useExplore } from './explore.store';
+import { usePlaceCatalogue } from './place-catalogue.store.ts';
+import { explorePlaceFromRecord } from './catalogue.ts';
 import { useExploreType } from './explore-type';
 import {
   ASSISTANT_STATUS,
   assistantBarLabel,
+  assistantCatalogueNotice,
   assistantSuggestions,
   nearbyAnswer,
   useMightsAssistant,
@@ -51,7 +55,12 @@ function AssistantMark() {
 export function MightsAssistant({ onOpenPlace, onShowDetails, onShowOnMap, layout }: MightsAssistantProps) {
   const type = useExploreType();
   const selectedPlaceId = useExplore((state) => state.selectedPlaceId);
-  const place = getHarlemPlacePreview(selectedPlaceId);
+  const catalogue = usePlaceCatalogue((state) => state.places);
+  const loadState = usePlaceCatalogue((state) => state.loadState);
+  const detail = usePlaceCatalogue((state) => selectedPlaceId ? state.details[selectedPlaceId] : undefined);
+  const place = useMemo(() => catalogue.find((item) => item.id === selectedPlaceId)
+    ?? (detail?.status === 'ok' ? explorePlaceFromRecord(detail.data) : null), [catalogue, selectedPlaceId, detail]);
+  const catalogueNotice = assistantCatalogueNotice(loadState, catalogue.length > 0);
   const open = useMightsAssistant((state) => state.open);
   const activity = useMightsAssistant((state) => state.activity);
   const answer = useMightsAssistant((state) => state.answer);
@@ -103,7 +112,7 @@ export function MightsAssistant({ onOpenPlace, onShowDetails, onShowOnMap, layou
     }
   };
 
-  const suggestions = assistantSuggestions(place, draft);
+  const suggestions = assistantSuggestions(place, draft, catalogue);
 
   return (
     <View
@@ -133,13 +142,13 @@ export function MightsAssistant({ onOpenPlace, onShowDetails, onShowOnMap, layou
 
       {place ? (
         <Text className={type.body + ' text-text'}>
-          {place.name}: {place.shortDescription}
+          {place.name}{place.shortDescription ? `: ${place.shortDescription}` : ''}
         </Text>
       ) : (
         <>
           <Text className={type.body + ' text-text'}>
             {
-              "I can find places on this map and show what our records say about them. I don't have hours or events yet."
+              "I can find places on this map and show what our records say about them."
             }
           </Text>
           <SearchBar
@@ -152,9 +161,15 @@ export function MightsAssistant({ onOpenPlace, onShowDetails, onShowOnMap, layou
         </>
       )}
 
+      {catalogueNotice ? (
+        <Text aria-live="polite" className={type.body + ' text-text-muted'}>
+          {catalogueNotice}
+        </Text>
+      ) : null}
+
       {answer.kind === 'nearby' && place && answer.placeId === place.id ? (
         <Text aria-live="polite" className={type.body + ' text-text'}>
-          {nearbyAnswer(place)}
+          {nearbyAnswer(place, catalogue)}
         </Text>
       ) : null}
 
@@ -170,7 +185,7 @@ export function MightsAssistant({ onOpenPlace, onShowDetails, onShowOnMap, layou
             </Pressable>
           ))}
         </View>
-      ) : draft.trim() ? (
+      ) : draft.trim() && loadState.status === 'ready' ? (
         <Text aria-live="polite" className={type.body + ' text-text-muted'}>
           {`No places match "${draft.trim()}".`}
         </Text>

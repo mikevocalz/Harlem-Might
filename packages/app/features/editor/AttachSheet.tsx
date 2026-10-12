@@ -5,10 +5,9 @@ import { Button, DropZone, Modal, MotionView } from "@acme/ui";
 import { Pressable, Text, View } from "@acme/ui/tw";
 import { CloudUpload, Paperclip, X } from "@acme/ui/icons";
 import {
-  attach,
+  acquireAttachment,
   IDLE_PROGRESS,
   type AttachProgress,
-  type Attachment,
 } from "./attachment.ts";
 import { pickFile } from "./pick-file";
 
@@ -43,7 +42,6 @@ export function AttachSheet() {
   const open = useAttachStore((state) => state.open);
   const resolve = useAttachStore((state) => state.resolve);
   const onClose = () => resolve(null);
-  const onAttached = (attachment: Attachment) => resolve(attachment);
 
   const store = useMemo(() => createProgressStore(), []);
   const progress = useStore(store, (state) => state.progress);
@@ -51,16 +49,14 @@ export function AttachSheet() {
 
   const report = (next: AttachProgress) => store?.getState().set(next);
 
-  const run = async (source: { uri: string; name?: string }) => {
-    const attachment = await attach(source, report);
-    if (attachment) onAttached(attachment);
+  const run = async (acquire: () => Promise<{ uri: string; name?: string } | null>) => {
+    const request = useAttachStore.getState().settle;
+    const isCurrent = () => request !== null && useAttachStore.getState().settle === request;
+    const attachment = await acquireAttachment(acquire, report, isCurrent);
+    if (attachment && isCurrent()) useAttachStore.getState().resolve(attachment);
   };
 
-  const choose = async () => {
-    const picked = await pickFile();
-    if (picked === null) return;
-    await run(picked);
-  };
+  const choose = () => run(pickFile);
 
   const percent = Math.round(progress.ratio * 100);
   const indeterminate =
@@ -118,7 +114,8 @@ export function AttachSheet() {
               const asset = assets[0];
               // A text-only drop carries no uri — there is nothing to attach.
               if (asset?.uri === undefined) return;
-              void run({ uri: asset.uri, name: asset.fileName });
+              const source = { uri: asset.uri, name: asset.fileName };
+              void run(async () => source);
             }}
           >
             <View className="h-full w-full items-center justify-center gap-3">

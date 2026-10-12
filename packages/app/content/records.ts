@@ -4,11 +4,14 @@ import type { EditorialImage } from '@acme/assets';
 // (`_status`, `_tz` siblings, unpopulated ids) so routes and client components
 // depend on this contract, not on the CMS schema.
 
-/** A link to a catalogue place. Place facts stay on the place record. */
+/** A populated catalogue relationship, with optional facts from that same place record. */
 export interface PlaceRef {
   id: number;
   slug: string;
   name: string;
+  area?: string;
+  address?: string;
+  summary?: string;
   /** Present only when populated media passed the rights/provenance gate. */
   images?: EditorialImage[];
   /** `[lng, lat]`, when the place has a map point; cards render it as a satellite image. */

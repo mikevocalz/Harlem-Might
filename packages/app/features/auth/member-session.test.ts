@@ -244,6 +244,28 @@ it('latest saved-place read wins within one session and can be retried after fai
   assertOwner(A);
 });
 
+for (const [label, malformed] of [
+  ['invalid JSON', () => new Response('{broken', { status: 200 })],
+  ['missing docs', () => response({})],
+  ['null body', () => response(null)],
+  ['null docs', () => response({ docs: null })],
+  ['object docs', () => response({ docs: { id: 'not-a-list' } })],
+  ['string docs', () => response({ docs: 'not-a-list' })],
+] as const) {
+  it(`preserves last-good saved places after ${label} and accepts a later empty list`, async () => {
+    const lastGood = members.getState().savedPlaces;
+    intercept = ({ url }) => url.includes('/saved-places') ? malformed() : undefined;
+    await members.getState().refreshSavedPlaces();
+    assertOwner(A);
+    assert.equal(members.getState().savedPlaces, lastGood);
+
+    intercept = ({ url }) => url.includes('/saved-places') ? response({ docs: [] }) : undefined;
+    await members.getState().refreshSavedPlaces();
+    assert.deepEqual(members.getState().savedPlaces, []);
+    assert.equal(members.getState().status, 'signed-in');
+  });
+}
+
 it('an ordinary refresh detecting B clears A places before B places arrive', async () => {
   const pending = deferred<Response>();
   const started = deferred<void>();
