@@ -3,7 +3,7 @@ import {
   type ArtistPhotoResult,
 } from './artist-photo.ts';
 
-const PHOTO_RESOLVER_VERSION = '5';
+import { ARTIST_PHOTO_VERSION } from './artist-photo-policy.ts';
 
 const photoServiceBase = (): string | undefined => {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
@@ -23,7 +23,7 @@ const photoServiceBase = (): string | undefined => {
 
 export const artistPhotoEndpoint = (names: readonly string[]): string => {
   const query = new URLSearchParams({
-    v: PHOTO_RESOLVER_VERSION,
+    v: ARTIST_PHOTO_VERSION,
     names: names.join('|'),
   });
   const path = `/api/music/artist-photo?${query.toString()}`;
