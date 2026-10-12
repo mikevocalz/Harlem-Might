@@ -7,7 +7,9 @@ const phone = { platform: 'android', hasHardwareColumn: false, androidCapabiliti
 describe('bounded ordinary-phone AR layout support', () => {
   it('accepts ordinary phones only with native capability evidence', () => {
     assert.equal(supportsPhoneArLayout(phone), true);
-    assert.equal(supportsPhoneArLayout({ platform: 'ios', isPad: false, hasHardwareColumn: false }), true);
+  });
+  it('does not infer ordinary iOS hardware from phone idiom or absent geometry', () => {
+    assert.equal(supportsPhoneArLayout({ platform: 'ios', isPad: false, hasHardwareColumn: false }), false);
   });
   it('keeps foldables on their map even on a cover with no active hinge', () => {
     assert.equal(supportsPhoneArLayout({ ...phone, androidCapabilities: { isFoldable: true, isTablet: false } }), false);

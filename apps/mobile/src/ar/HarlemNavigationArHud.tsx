@@ -4,6 +4,7 @@ import { MightsButton } from '@acme/ui/mights';
 import { Text, View } from '@acme/ui/tw';
 import { palette } from '@acme/theme';
 import { formatDistance } from '@acme/app/features/explore/explore.store.ts';
+import { resumeGuidance } from '@acme/app/features/navigation/view/runtime.ts';
 import { hasActiveTrip } from '@acme/app/features/navigation/model/session.ts';
 import {
   navigationFixStore,
@@ -203,7 +204,7 @@ export function HarlemNavigationArHud({ onBackToMap, onExplorePlace }: HarlemNav
                 : 'Resume when you’re ready to keep walking.'}
             </Line>
             <View className="flex-row gap-3">
-              <MightsButton variant="primary" disabled={presentation.kind === 'speed-paused'} onPress={() => controller.resume()}>
+              <MightsButton variant="primary" disabled={presentation.kind === 'speed-paused'} onPress={() => resumeGuidance()}>
                 Resume
               </MightsButton>
               <MightsButton variant="ghost" onPress={onBackToMap}>

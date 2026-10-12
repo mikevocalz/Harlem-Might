@@ -71,7 +71,7 @@ export function createArNavigationEntry(deps: {
 }) {
   let pending = false;
   return {
-    async open(onOpen: () => void, isCurrent: () => boolean): Promise<ArEntryResult> {
+    async open(onOpen: () => void, isCurrent: () => boolean, onStarted?: () => void): Promise<ArEntryResult> {
       if (pending) return 'busy';
       const route = arEntryRoute(deps.getSession());
       const current = () => isCurrent() && route !== undefined && arEntryRoute(deps.getSession()) === route;
@@ -89,6 +89,7 @@ export function createArNavigationEntry(deps: {
         if (deps.getSession().phase === 'routeReady' && !deps.startGuidance()) return 'cancelled';
         if (!deps.enterAR()) return 'cancelled';
         entered = true;
+        onStarted?.();
         onOpen();
         return 'opened';
       } catch {
