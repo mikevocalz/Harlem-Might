@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { Image } from 'react-native';
-import { AudioContext } from 'react-native-audio-api';
+import { useEffect, useId, useRef } from 'react';
+import { spatialAudio } from '../audio/SpatialAudioEngine.native';
 import type {
   LightCycleMatchState,
   LightCyclePlayerId,
@@ -21,12 +20,6 @@ type Props = {
   enabled?: boolean;
 };
 
-function sourceUri(source: NativeAudioSource) {
-  return typeof source === 'number'
-    ? Image.resolveAssetSource(source)?.uri
-    : source.uri;
-}
-
 export function McpVoicePlaybackNative({
   state,
   localPlayerId = 'p1',
@@ -34,10 +27,7 @@ export function McpVoicePlaybackNative({
   enabled = true,
 }: Props) {
   const playedEventKeys = useRef(new Set<string>());
-  const contextRef = useRef<AudioContext | null>(null);
-  const sourceRef = useRef<ReturnType<AudioContext['createBufferSource']> | null>(
-    null,
-  );
+  const playbackKey = `mcp-playback:${useId()}`;
 
   useEffect(() => {
     if (!enabled || !state) return;
@@ -47,54 +37,23 @@ export function McpVoicePlaybackNative({
 
     const source = sources[cue.name];
     if (!source) return;
-    const uri = sourceUri(source);
-    if (!uri) return;
 
     playedEventKeys.current.add(cue.eventKey);
 
-    let cancelled = false;
-    const play = async () => {
-      const context = contextRef.current ?? new AudioContext();
-      contextRef.current = context;
+    // A source that already ended throws on a second stop; safe to ignore.
+    void spatialAudio.playAmbient(playbackKey, source).catch((error) => {
+      console.warn('Unable to play MCP voice cue.', error);
+    });
 
-      try {
-        sourceRef.current?.stop();
-      } catch {
-        // A source that already ended throws on a second stop; safe to ignore.
-      }
-
-      const buffer = await fetch(uri)
-        .then((response) => response.arrayBuffer())
-        .then((data) => context.decodeAudioData(data));
-
-      if (cancelled) return;
-
-      const player = context.createBufferSource();
-      player.buffer = buffer;
-      player.connect(context.destination);
-      sourceRef.current = player;
-      player.start(context.currentTime);
-    };
-
-    void play();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled, localPlayerId, sources, state]);
+    return () => spatialAudio.cancelPending(playbackKey);
+  }, [enabled, localPlayerId, playbackKey, sources, state]);
 
   useEffect(
     () => () => {
-      try {
-        sourceRef.current?.stop();
-      } catch {
-        // Already stopped.
-      }
-      sourceRef.current = null;
-      void contextRef.current?.close();
-      contextRef.current = null;
+      // Already stopped.
+      spatialAudio.unload(playbackKey);
     },
-    [],
+    [playbackKey],
   );
 
   return null;

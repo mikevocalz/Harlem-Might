@@ -59,7 +59,7 @@ export const SPATIAL_STATUS: readonly SpatialStatus[] = [
     name: 'Sightline glasses',
     status: 'concept',
     detail: 'A render of hardware that does not exist.',
-    evidence: 'packages/spatial/sightline/README.md; procedural geometry only.',
+    evidence: 'apps/web/public/ar/sightline-concept.jpg shown on /ar; static render only.',
   },
 ];
 

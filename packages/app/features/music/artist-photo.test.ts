@@ -32,7 +32,7 @@ describe('resolveArtistPhoto', () => {
       return response({ query: { pages: {} } });
     };
 
-    const result = await resolveArtistPhoto('Black Rob', fetcher);
+    const result = await resolveArtistPhoto('Spoonie Gee', fetcher);
     assert.equal(result, undefined);
     assert.equal(calls.length, 1);
   });
@@ -181,7 +181,7 @@ describe('resolveArtistPhoto', () => {
       });
     };
 
-    const result = await resolveArtistPhoto('Big L', fetcher);
+    const result = await resolveArtistPhoto('Spoonie Gee', fetcher);
     assert.equal(result, undefined);
   });
 
@@ -281,14 +281,14 @@ it('resolveArtistPhotos preserves every requested artist key and leaves unverifi
   };
 
   const result = await resolveArtistPhotos(
-    ["Cam'ron", 'Big L', 'Ma$e'],
+    ["Cam'ron", 'Spoonie Gee', 'Ma$e'],
     fetcher,
     2,
   );
   assert.deepEqual(
     Object.keys(result).sort(),
-    ['Big L', "Cam'ron", 'Ma$e'].sort(),
+    ['Spoonie Gee', "Cam'ron", 'Ma$e'].sort(),
   );
-  assert.equal(result['Big L'], null);
+  assert.equal(result['Spoonie Gee'], null);
   assert.equal(result["Cam'ron"], null);
 });

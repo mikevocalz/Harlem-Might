@@ -37,7 +37,7 @@
   "scripts": {
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --test 'lightcycle/**/*.test.ts' 'mcp/**/*.test.ts'",
+    "test": "node --test 'lightcycle/**/*.test.ts' 'mcp/**/*.test.ts' 'audio/**/*.test.ts'",
     "rive-fx:verify": "cd rive-fx/rive && rive . --verify",
     "rive-fx:inspect": "cd rive-fx/rive && rive inspect . --summary",
     "rive-fx:spinner-shot": "cd rive-fx/rive && mkdir -p build && rive . --screenshot=build/grid-core-spinner.png --advance=30",

@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
 import { OUTWARD_FAR_EDGE_DP, RAIL_WINDOW, RAIL_WINDOW_DP, outwardWindowGapDp } from './railWindow.ts';
 import { PLACE_DETAIL_WINDOW } from './exploreWorkspace.ts';
+
+const require = createRequire(import.meta.url);
+const { resolveAnchor } = require(join(dirname(require.resolve('@metavr/layout-window-compat')), 'SpatialAnchor.js'));
 
 describe('outwardWindowGapDp (Horizon OS 207, measured on a Quest 3S; ADR 0005)', () => {
   it('leaves 20dp beside a 140dp window', () => {
@@ -27,14 +32,22 @@ describe('outwardWindowGapDp (Horizon OS 207, measured on a Quest 3S; ADR 0005)'
 });
 
 describe('RAIL_WINDOW', () => {
-  it('sits outside the main window end edge at the same depth', () => {
-    assert.deepEqual(RAIL_WINDOW.anchor, { parent: 'end', child: 'start' });
+  it('sits outside the physical left edge, including RTL, at the same depth', () => {
+    assert.deepEqual(RAIL_WINDOW.anchor, { parent: 'left', child: 'right' });
     assert.equal(RAIL_WINDOW.offset, undefined);
   });
 
-  it('is sized from tokens so the gap is 20dp', () => {
-    assert.equal(RAIL_WINDOW.windowWidth, 140);
-    assert.equal(outwardWindowGapDp(RAIL_WINDOW_DP.width), 20);
+  it('passes physical edges through the installed Meta SDK anchor adapter', () => {
+    assert.deepEqual(resolveAnchor(RAIL_WINDOW.anchor), {
+      parent: { horizontal: 'left', vertical: null },
+      child: { horizontal: 'right', vertical: null },
+    });
+  });
+
+  it('uses a compact spatial width while retaining the full touch-target minimum', () => {
+    assert.equal(RAIL_WINDOW.windowWidth, 96);
+    assert.equal(RAIL_WINDOW_DP.width - 2 * RAIL_WINDOW_DP.padding, 72);
+    assert.ok(RAIL_WINDOW_DP.width - 2 * RAIL_WINDOW_DP.padding >= RAIL_WINDOW_DP.item);
   });
 
   it('fits five 60dp items (no More, DECISIONS S20) with 8dp between them and 12dp padding', () => {

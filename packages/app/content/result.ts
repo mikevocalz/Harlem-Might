@@ -35,3 +35,30 @@ export const queryFailed = (cause: unknown): ContentUnavailable => ({
   reason: 'query-failed',
   error: cause instanceof Error ? cause : new Error(String(cause)),
 });
+
+export class ContentQueryError extends Error {
+  readonly result: ContentUnavailable;
+
+  constructor(result: ContentUnavailable) {
+    super(`Content unavailable: ${result.reason}`, result.reason === 'query-failed' ? { cause: result.error } : undefined);
+    this.name = 'ContentQueryError';
+    this.result = result;
+  }
+}
+
+export async function contentQuery<T extends { status: 'ok' } | { status: 'not-found' }>(
+  read: Promise<T | ContentUnavailable>,
+): Promise<T> {
+  const result = await read;
+  if (result.status === 'unavailable') throw new ContentQueryError(result);
+  return result;
+}
+
+export function contentQueryResult<T>({ data, error }: {
+  data: T | undefined;
+  error: Error | null;
+}): T | ContentUnavailable | undefined {
+  if (data !== undefined) return data;
+  if (error instanceof ContentQueryError) return error.result;
+  return error ? queryFailed(error) : undefined;
+}

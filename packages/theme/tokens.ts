@@ -283,10 +283,10 @@ export const contentWidths = {
   'pane-detail-xr': '400px',
   'pane-map-min-xr': '600px',
   // Horizon navigation rail as its own window beside the main one (DECISIONS
-  // S18, ADR 0005). Horizon OS 207 puts an outward-attached window's far edge
-  // 160dp past the main window's edge whatever its width, so 140 leaves the
-  // 20dp gap the user asked for.
-  'rail-window-xr': '140px',
+  // S18, ADR 0005). The compact spatial menu keeps its 60dp touch-target
+  // minimum inside 72dp-wide buttons, with 12dp padding on each side.
+  // Tablet and foldable rails use their separate navigation width.
+  'rail-window-xr': '96px',
   // Assistant (handoff §6): the collapsed bar caps at 560, the panel is 400.
   'assistant-bar': '560px',
   'assistant-panel': '400px',

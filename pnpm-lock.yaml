@@ -574,6 +574,7 @@ overrides:
 packageExtensionsChecksum: sha256-SonmmCdXM6JnkTHIbXf4celmybCgqDZedo/gGFPSVKE=
 
 patchedDependencies:
+  '@rive-app/react-native@0.5.2': 44efa0f2bc6f34715cb6aeb578c64a0122d22f6a10e6872372f01ec43063582a
   '@seshuk/payload-storage-bunny@3.0.0': b2486bf2173c458a23f93f68c5837447142958864d8b05c27534c00db5cb7d89
   react-native@0.88.0-rc.4: 9b8097993bafa9d3da80b53184072ceea1ac9a7a820732b29b9710bdbcac7ae6
 
@@ -643,7 +644,7 @@ importers:
         version: link:../../../viro
       '@rive-app/react-native':
         specifier: 'catalog:'
-        version: 0.5.2(react-native-nitro-modules@0.37.1(react-native@0.88.0-rc.4(patch_hash=9b8097993bafa9d3da80b53184072ceea1ac9a7a820732b29b9710bdbcac7ae6)(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.0-rc.4(patch_hash=9b8097993bafa9d3da80b53184072ceea1ac9a7a820732b29b9710bdbcac7ae6)(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+        version: 0.5.2(patch_hash=44efa0f2bc6f34715cb6aeb578c64a0122d22f6a10e6872372f01ec43063582a)(react-native-nitro-modules@0.37.1(react-native@0.88.0-rc.4(patch_hash=9b8097993bafa9d3da80b53184072ceea1ac9a7a820732b29b9710bdbcac7ae6)(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.0-rc.4(patch_hash=9b8097993bafa9d3da80b53184072ceea1ac9a7a820732b29b9710bdbcac7ae6)(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
       '@shopify/react-native-skia':
         specifier: 'catalog:'
         version: 2.13.0(7c1d1a0f6dd32ccea2fd1ed7bd7d6542)
@@ -1335,7 +1336,7 @@ importers:
         version: 1.0.1
       '@rive-app/react-native':
         specifier: 'catalog:'
-        version: 0.5.2(react-native-nitro-modules@0.37.1(react-native@0.88.0-rc.4(patch_hash=9b8097993bafa9d3da80b53184072ceea1ac9a7a820732b29b9710bdbcac7ae6)(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.0-rc.4(patch_hash=9b8097993bafa9d3da80b53184072ceea1ac9a7a820732b29b9710bdbcac7ae6)(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+        version: 0.5.2(patch_hash=44efa0f2bc6f34715cb6aeb578c64a0122d22f6a10e6872372f01ec43063582a)(react-native-nitro-modules@0.37.1(react-native@0.88.0-rc.4(patch_hash=9b8097993bafa9d3da80b53184072ceea1ac9a7a820732b29b9710bdbcac7ae6)(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.0-rc.4(patch_hash=9b8097993bafa9d3da80b53184072ceea1ac9a7a820732b29b9710bdbcac7ae6)(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
       '@rive-app/react-webgl2':
         specifier: 'catalog:'
         version: 4.36.0(react@19.3.0)
@@ -13881,7 +13882,7 @@ snapshots:
 
   '@reactvision/viro-web-renderer@1.0.1': {}
 
-  '@rive-app/react-native@0.5.2(react-native-nitro-modules@0.37.1(react-native@0.88.0-rc.4(patch_hash=9b8097993bafa9d3da80b53184072ceea1ac9a7a820732b29b9710bdbcac7ae6)(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.0-rc.4(patch_hash=9b8097993bafa9d3da80b53184072ceea1ac9a7a820732b29b9710bdbcac7ae6)(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)':
+  '@rive-app/react-native@0.5.2(patch_hash=44efa0f2bc6f34715cb6aeb578c64a0122d22f6a10e6872372f01ec43063582a)(react-native-nitro-modules@0.37.1(react-native@0.88.0-rc.4(patch_hash=9b8097993bafa9d3da80b53184072ceea1ac9a7a820732b29b9710bdbcac7ae6)(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.0-rc.4(patch_hash=9b8097993bafa9d3da80b53184072ceea1ac9a7a820732b29b9710bdbcac7ae6)(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)':
     dependencies:
       react: 19.3.0
       react-native: 0.88.0-rc.4(patch_hash=9b8097993bafa9d3da80b53184072ceea1ac9a7a820732b29b9710bdbcac7ae6)(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)

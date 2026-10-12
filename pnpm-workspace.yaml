@@ -221,5 +221,6 @@ catalog:
   turbo: 2.11.7
 
 patchedDependencies:
+  '@rive-app/react-native@0.5.2': patches/@rive-app__react-native@0.5.2.patch
   "@seshuk/payload-storage-bunny@3.0.0": patches/@seshuk__payload-storage-bunny@3.0.0.patch
   react-native@0.88.0-rc.4: patches/react-native@0.88.0-rc.4.patch

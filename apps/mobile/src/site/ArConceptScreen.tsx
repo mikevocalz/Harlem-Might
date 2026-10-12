@@ -1,11 +1,19 @@
+import { Image } from 'expo-image';
 import { Text, View } from '@acme/ui/tw';
 import { SitePage } from './SitePage';
+
+const LABEL =
+  'Concept render of Sightline: AR glasses over a street view, showing a walking route to the Apollo Theater, four minutes, and Sylvia’s Restaurant, seven minutes.';
+
+// Bundled asset — the concept render must paint offline, so it ships with the
+// app rather than coming over the wire.
+const SIGHTLINE_RENDER = require('../../assets/images/sightline-concept.jpg');
 
 /**
  * AR concept, ported from apps/web/app/(site)/ar/page.tsx. The copy says what
  * the site says: a design with no code behind it. No "Try AR" control and no
  * camera request until an AR runtime ships in the app. The site's block
- * walkthrough (static maps) and the Sightline render stay on the site.
+ * walkthrough (static maps) stays on the site.
  */
 export function ArConceptScreen() {
   return (
@@ -19,9 +27,18 @@ export function ArConceptScreen() {
           Sightline, a concept render
         </Text>
         <Text className="font-sans text-body text-text-muted">
-          We also sketched the same idea without a phone in your hand: Sightline, slim glasses with a separate compute
-          puck that would show the walking route and place markers ahead of you. It’s a render of hardware that doesn’t
-          exist.
+          We also sketched the same idea without a phone in your hand: Sightline, lightweight glasses paired with a
+          small compute puck, drawing a walking route across the street and floating place labels ahead of you —
+          Apollo Theater in four minutes, Sylvia’s Restaurant in seven. It’s a render of hardware that doesn’t exist.
+        </Text>
+        <Image
+          source={SIGHTLINE_RENDER}
+          accessibilityLabel={LABEL}
+          contentFit="cover"
+          style={{ aspectRatio: 3 / 2, width: '100%' }}
+        />
+        <Text className="font-sans text-label text-text-muted">
+          Concept render. The glasses and puck don’t exist; nobody can buy them and we haven’t built for them.
         </Text>
       </View>
     </SitePage>
