@@ -56,7 +56,7 @@ function fixture(synchronousFix = false) {
     if (phase === 'arrived') {
       const current = useNavigationStore.getState().session;
       assert.ok('activeRoute' in current);
-      useNavigationStore.setState({ session: { ...current, phase: 'arrived', arrival: { kind: 'arrived', confidence: 'confirmed', arrivedAtMs: Date.now() } } });
+      useNavigationStore.setState({ session: { ...current, phase: 'arrived', arrival: { kind: 'arrived', confidence: 'confirmed', target: current.destination.coordinate, distanceM: 0, arrivedAtMs: Date.now() } } });
     }
   }
   function intent(beforeRequest?: () => void) {
