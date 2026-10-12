@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { EnuPlacement } from '@mapbox/react-native-mapbox-ar-reactvision/src/enu.ts';
-import type { NavPlacement, NavRouteFrame } from './navAr';
+import type { NavArObservations, NavPlacement, NavRouteFrame } from './navAr';
 
 /**
  * The route frame and the world transform, always written together so a
@@ -23,6 +23,11 @@ export type GeospatialStatus = 'checking' | 'available' | 'unavailable';
  * itself (phase, progress, positioning) stays in the shared navigation store.
  */
 export interface NavArState {
+  readonly observations: NavArObservations;
+  readonly calibrationRevision: number;
+  setObservations(observations: NavArObservations): void;
+  /** Discard placement evidence while retaining route and the mounted renderer. */
+  requestRecalibration(): void;
   readonly world: NavArWorld | undefined;
   readonly geospatial: GeospatialStatus;
   /** Compass samples gathered toward the current calibration. */
@@ -41,6 +46,8 @@ export interface NavArState {
 }
 
 const INITIAL = {
+  observations: { nowMs: 0 } as NavArObservations,
+  calibrationRevision: 0,
   world: undefined,
   geospatial: 'checking' as GeospatialStatus,
   compassSamples: 0,
@@ -50,6 +57,13 @@ const INITIAL = {
 
 export const useNavAr = create<NavArState>()((set) => ({
   ...INITIAL,
+  setObservations: (observations) => set({ observations }),
+  requestRecalibration: () => set((state) => ({
+    calibrationRevision: state.calibrationRevision + 1,
+    compassSamples: 0,
+    observations: { nowMs: state.observations.nowMs },
+    world: state.world ? { ...state.world, target: undefined, displayed: undefined } : undefined,
+  })),
   setWorld: (world) => set({ world }),
   setGeospatial: (geospatial) => set({ geospatial }),
   setCompassSamples: (compassSamples) => set({ compassSamples }),

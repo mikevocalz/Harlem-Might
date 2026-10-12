@@ -24,7 +24,6 @@ import {
   type ReactVisionGeospatialNavigator,
 } from '@mapbox/react-native-mapbox-ar-reactvision';
 import { formatDistance } from '@acme/app/features/explore/explore.store.ts';
-import { radius68From95 } from '@acme/app/features/navigation/model/geo.ts';
 import { arrivalTarget } from '@acme/app/features/navigation/model/route.ts';
 import { hasActiveTrip } from '@acme/app/features/navigation/model/session.ts';
 import {
@@ -40,19 +39,26 @@ import { palette } from '@acme/theme';
 import {
   addYawSample,
   alongTrackOnFrame,
-  angle68From95,
   arTrackingFromViro,
   canCompleteCalibration,
   chevronStopAlongTrackM,
   compassYawAccuracyDeg,
   coordinateNorthOf,
+  freshYawSamples,
+  isFreshSample,
+  MAX_CAMERA_AGE_MS,
+  MAX_GEOSPATIAL_AGE_MS,
+  MAX_MATCH_AGE_MS,
+  MAX_YAW_PAIR_AGE_MS,
   isBetterPlacement,
   isCompassSettled,
+  isCurrentNavFrame,
   localPointOf,
   maneuverTurnDeg,
   navArPresentation,
   placementConfidence,
   pointOnFrame,
+  positioningRadius68M,
   projectNavRoute,
   rebasePlacement,
   shouldResolvePlacement,
@@ -62,6 +68,8 @@ import {
   type YawSample,
 } from './navAr';
 import { useNavAr } from './navAr.store';
+import { startGeospatialPolling, withGeospatialAnchors } from './navArGeospatial';
+import { NAVIGATION_AR_BUILD, canUseNavigationEarth } from './navArBuild';
 import { getNavigationController } from './navigationRuntime';
 
 type Vec3 = [number, number, number];
@@ -77,14 +85,13 @@ const TICK_MS = 250;
 const GEOSPATIAL_POLL_MS = 1000;
 /** Anchor creation costs battery and network; throttle attempts, not only accepted solutions. */
 const GEOSPATIAL_RESOLVE_MIN_INTERVAL_MS = 10000;
-/** Heading samples older than this are not paired with a camera pose. */
-const MAX_HEADING_AGE_MS = 400;
 /** Feed ARCore Earth fixes into the shared pipeline only when they beat typical GPS. */
 const MAX_GEOSPATIAL_FIX_R68_M = 10;
 /** Earth pose good enough to solve a placement from. */
 const MAX_GEOSPATIAL_SOLVE_YAW_DEG = 25;
 const MAX_GEOSPATIAL_SOLVE_R68_M = 25;
-const EYE_HEIGHT_M = 1.4;
+/** A visual offset only. This does not measure or track the road surface. */
+const ESTIMATED_EYE_HEIGHT_M = 1.4;
 /** Second anchor for the yaw solve, north of the first. */
 const REFERENCE_ANCHOR_M = 15;
 
@@ -111,6 +118,7 @@ const TURN_ARROW: [number, number][] = [
 interface CameraSample {
   readonly position: GeoWorldPosition;
   readonly forward: GeoWorldPosition;
+  readonly timestampMs: number;
 }
 
 function toVec3(p: readonly [number, number, number]): Vec3 {
@@ -142,10 +150,19 @@ export function HarlemNavigationArScene(props: { arSceneNavigator?: ReactVisionG
   const match = useStore(navigationFixStore, (s) => s.match);
   const world = useNavAr((s) => s.world);
   const alongM = useNavAr((s) => s.alongM);
+  const observations = useNavAr((s) => s.observations);
+  const calibrationRevision = useNavAr((s) => s.calibrationRevision);
 
   const camera = useRef<CameraSample | undefined>(undefined);
   const yawSamples = useRef<YawSample[]>([]);
   const lastTick = useRef<number | undefined>(undefined);
+  const lastSampledHeading = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    yawSamples.current = [];
+    camera.current = undefined;
+    lastTick.current = undefined;
+    lastSampledHeading.current = undefined;
+  }, [calibrationRevision]);
 
   // Project once per route generation, and carry the transform across a
   // reroute in the same store write (atomic swap of geometry + placement).
@@ -173,113 +190,106 @@ export function HarlemNavigationArScene(props: { arSceneNavigator?: ReactVisionG
   // ARCore Earth: feed precise fixes and solve placements from two anchors.
   useEffect(() => {
     const navigator = props.arSceneNavigator;
-    if (!navigator || typeof navigator.isGeospatialModeSupported !== 'function') {
+    if (!canUseNavigationEarth(NAVIGATION_AR_BUILD) || !navigator || typeof navigator.isGeospatialModeSupported !== 'function') {
       useNavAr.getState().setGeospatial('unavailable');
       return;
     }
     const bridge = createReactVisionSpatialBridge(navigator);
-    let cancelled = false;
-    let inFlight = false;
-    let interval: ReturnType<typeof setInterval> | undefined;
-    let lastGeospatialSolveAttempt: { routeKey: string; atMs: number } | undefined;
-
-    const solveFromAnchors = async (latitude: number, longitude: number, altitude: number, yaw68: number, r68: number) => {
-      const state = useNavAr.getState().world;
-      if (!state) return;
-      const anchorAltitude = altitude - EYE_HEIGHT_M;
-      const north = coordinateNorthOf({ latitude, longitude }, REFERENCE_ANCHOR_M);
-      const a = await bridge.createAnchor({ mode: 'wgs84', coordinate: { latitude, longitude, altitude: anchorAltitude } });
-      const b = await bridge.createAnchor({ mode: 'wgs84', coordinate: { ...north, altitude: anchorAltitude } });
-      try {
-        if (!a.success || !a.anchor || !b.success || !b.anchor) return;
-        const anchorOrigin: EnuOrigin = { frame: { kind: 'place', placeId: 'nav-anchor' }, latitude, longitude, altitude: 0 };
-        const reference = localPointOf(anchorOrigin, north);
-        const atAnchor = solveEnuPlacement({
-          originWorldPosition: a.anchor.position,
-          referenceWorldPosition: b.anchor.position,
-          reference: { frame: anchorOrigin.frame, eastM: reference[0], northM: -reference[2], upM: 0 },
-        });
-        const current = useNavAr.getState().world;
-        if (!current || cancelled) return;
-        const solved: NavPlacement = {
-          placement: rebasePlacement(atAnchor, anchorOrigin, current.frame.origin),
-          source: 'geospatial',
-          confidence: placementConfidence(yaw68, r68),
-          yawAccuracyDeg: yaw68,
-          solvedAtAlongM: useNavAr.getState().alongM ?? 0,
-          solvedAtMs: Date.now(),
-        };
-        if (!current.target || isBetterPlacement(current.target, solved)) {
-          useNavAr.getState().setWorld({ ...current, target: solved, displayed: current.displayed ?? solved.placement });
-        }
-      } finally {
-        if (a.anchor) bridge.removeAnchor(a.anchor.anchorId);
-        if (b.anchor) bridge.removeAnchor(b.anchor.anchorId);
-      }
+    let lastGeospatialSolveAttempt: { routeKey: string; revision: number; atMs: number } | undefined;
+    const observationUnavailable = () => {
+      const state = useNavAr.getState();
+      state.setObservations({ ...state.observations, geospatialTimestampMs: undefined, geospatialConfidence: undefined });
     };
-
-    const poll = async () => {
-      if (inFlight || cancelled) return;
-      inFlight = true;
-      try {
-        const pose = await bridge.getCameraPose();
-        const r68 = radius68From95(pose.horizontalAccuracy);
-        const yaw68 = angle68From95(pose.orientationYawAccuracy);
+    const lifecycle = startGeospatialPolling({
+      build: NAVIGATION_AR_BUILD,
+      navigator,
+      bridge,
+      getEarthTrackingState: () => navigator.getEarthTrackingState(),
+      now: Date.now,
+      getGeneration: () => {
+        const state = useNavAr.getState();
+        return `${state.calibrationRevision}:${state.world?.frame.routeId}#${state.world?.frame.generation}`;
+      },
+      canPoll: () => {
+        const nav = useNavigationStore.getState();
+        return isCurrentNavFrame(useNavAr.getState().world?.frame, selectActiveRoute(nav)) &&
+          nav.arTracking.kind === 'normal' && hasActiveTrip(nav.session) && nav.session.phase !== 'paused' &&
+          isFreshSample(camera.current?.timestampMs, Date.now(), MAX_CAMERA_AGE_MS);
+      },
+      onStatus: (status) => useNavAr.getState().setGeospatial(status),
+      onUnavailable: observationUnavailable,
+      schedule: (callback) => {
+        const interval = setInterval(callback, GEOSPATIAL_POLL_MS);
+        return () => clearInterval(interval);
+      },
+      onPose: async (pose, isCurrent) => {
+        const r68 = pose.horizontalAccuracy;
+        const yaw68 = pose.orientationYawAccuracy;
+        const state = useNavAr.getState();
+        state.setObservations({ ...state.observations, geospatialTimestampMs: pose.observedAtMs,
+          geospatialConfidence: placementConfidence(yaw68, r68) });
         if (r68 <= MAX_GEOSPATIAL_FIX_R68_M) {
           controller.ingestFix({
             coordinate: { latitude: pose.latitude, longitude: pose.longitude },
             accuracy: { horizontalM: r68 },
-            timestampMs: Date.now(),
+            timestampMs: pose.observedAtMs,
             source: 'ar-geospatial',
           });
         }
         const current = useNavAr.getState().world;
+        if (!current) return;
         const now = Date.now();
-        const due =
-          current !== undefined &&
-          (current.target === undefined ||
-            shouldResolvePlacement({ current: current.target, alongM: useNavAr.getState().alongM, nowMs: now }));
-        const routeKey = current ? `${current.frame.routeId}#${current.frame.generation}` : undefined;
-        const cooledDown = !lastGeospatialSolveAttempt ||
-          lastGeospatialSolveAttempt.routeKey !== routeKey ||
+        const revision = useNavAr.getState().calibrationRevision;
+        const routeKey = `${current.frame.routeId}#${current.frame.generation}`;
+        const due = current.target === undefined ||
+          shouldResolvePlacement({ current: current.target, alongM: useNavAr.getState().alongM, nowMs: now });
+        const cooledDown = !lastGeospatialSolveAttempt || lastGeospatialSolveAttempt.routeKey !== routeKey ||
+          lastGeospatialSolveAttempt.revision !== revision ||
           now - lastGeospatialSolveAttempt.atMs >= GEOSPATIAL_RESOLVE_MIN_INTERVAL_MS;
-        if (due && cooledDown && routeKey &&
-            yaw68 <= MAX_GEOSPATIAL_SOLVE_YAW_DEG && r68 <= MAX_GEOSPATIAL_SOLVE_R68_M) {
-          // Mark BEFORE awaiting anchors: rejected solves must not cause new anchors every second.
-          lastGeospatialSolveAttempt = { routeKey, atMs: now };
-          await solveFromAnchors(pose.latitude, pose.longitude, pose.altitude, yaw68, r68);
-        }
-      } catch {
-        // No Earth pose yet (still localising, or tracking lost). The compass
-        // path keeps working; the next poll tries again.
-      } finally {
-        inFlight = false;
-      }
-    };
-
-    void bridge.enableGeospatial().then(
-      (result) => {
-        if (cancelled) return;
-        if (result.kind !== 'enabled') {
-          useNavAr.getState().setGeospatial('unavailable');
-          return;
-        }
-        useNavAr.getState().setGeospatial('available');
-        interval = setInterval(() => void poll(), GEOSPATIAL_POLL_MS);
+        if (!due || !cooledDown || yaw68 > MAX_GEOSPATIAL_SOLVE_YAW_DEG || r68 > MAX_GEOSPATIAL_SOLVE_R68_M) return;
+        lastGeospatialSolveAttempt = { routeKey, revision, atMs: now };
+        const north = coordinateNorthOf(pose, REFERENCE_ANCHOR_M);
+        const altitude = pose.altitude - ESTIMATED_EYE_HEIGHT_M;
+        await withGeospatialAnchors({
+          bridge,
+          requests: [
+            { mode: 'wgs84', coordinate: { latitude: pose.latitude, longitude: pose.longitude, altitude } },
+            { mode: 'wgs84', coordinate: { ...north, altitude } },
+          ],
+          isCurrent: () => {
+            const latest = useNavAr.getState();
+            return isCurrent() && latest.calibrationRevision === revision &&
+              latest.world?.frame.routeId === current.frame.routeId && latest.world.frame.generation === current.frame.generation &&
+              isFreshSample(pose.observedAtMs, Date.now(), MAX_GEOSPATIAL_AGE_MS);
+          },
+          use: (a, b) => {
+            const anchorOrigin: EnuOrigin = { frame: { kind: 'place', placeId: 'nav-anchor' },
+              latitude: pose.latitude, longitude: pose.longitude, altitude: 0 };
+            const reference = localPointOf(anchorOrigin, north);
+            const atAnchor = solveEnuPlacement({
+              originWorldPosition: a.position,
+              referenceWorldPosition: b.position,
+              reference: { frame: anchorOrigin.frame, eastM: reference[0], northM: -reference[2], upM: 0 },
+            });
+            const latest = useNavAr.getState().world;
+            if (!latest) return;
+            const solved: NavPlacement = {
+              placement: rebasePlacement(atAnchor, anchorOrigin, latest.frame.origin),
+              source: 'geospatial',
+              confidence: placementConfidence(yaw68, r68),
+              heightReference: 'estimated-eye-height',
+              yawAccuracyDeg: yaw68,
+              solvedAtAlongM: useNavAr.getState().alongM ?? 0,
+              solvedAtMs: pose.observedAtMs,
+            };
+            if (!latest.target || isBetterPlacement(latest.target, solved)) {
+              useNavAr.getState().setWorld({ ...latest, target: solved, displayed: latest.displayed ?? solved.placement });
+            }
+          },
+        });
       },
-      () => {
-        if (!cancelled) useNavAr.getState().setGeospatial('unavailable');
-      },
-    );
-    return () => {
-      cancelled = true;
-      if (interval) clearInterval(interval);
-      try {
-        bridge.disableGeospatial();
-      } catch {
-        // The navigator may already be torn down with the scene.
-      }
-    };
+    });
+    return lifecycle.stop;
   }, [controller, props.arSceneNavigator]);
 
   // Compass sampling, re-anchoring, slewing and calibration hand-off.
@@ -291,31 +301,47 @@ export function HarlemNavigationArScene(props: { arSceneNavigator?: ReactVisionG
       const state = useNavAr.getState();
       const current = state.world;
       const cam = camera.current;
-      if (!current || !cam) return;
       const nav = useNavigationStore.getState();
       const fixes = navigationFixStore.getState();
       const heading = fixes.heading;
       const along = state.alongM;
+      // Publish the clock even when callbacks stop; stale evidence must disappear.
+      const nextObservations = { ...state.observations, nowMs: now, cameraTimestampMs: cam?.timestampMs,
+        headingTimestampMs: heading?.timestampMs, headingSource: heading?.source, matchTimestampMs: fixes.match?.timestampMs };
+      state.setObservations(nextObservations);
+      if (!current || !cam || !isCurrentNavFrame(current.frame, selectActiveRoute(nav))) return;
+      const cameraFresh = nav.arTracking.kind === 'normal' && isFreshSample(cam.timestampMs, now, MAX_CAMERA_AGE_MS);
+      const pairFresh = cameraFresh && heading !== undefined && heading.source !== 'course-over-ground' &&
+        heading.confidence !== 'low' && isFreshSample(heading.timestampMs, now, MAX_YAW_PAIR_AGE_MS) &&
+        Math.abs(cam.timestampMs - heading.timestampMs) <= MAX_YAW_PAIR_AGE_MS;
+      yawSamples.current = pairFresh ? freshYawSamples(yawSamples.current, now) : [];
+      if (!pairFresh) state.setCompassSamples(0);
+      if (!cameraFresh || nav.session.phase === 'paused' || nav.session.phase === 'arrived') return;
 
       // Sample cameraYaw + heading while calibrating or when a re-solve is due.
       const resolveDue =
         current.target === undefined || shouldResolvePlacement({ current: current.target, alongM: along, nowMs: now });
-      if (resolveDue && heading && now - heading.timestampMs <= MAX_HEADING_AGE_MS) {
+      if (resolveDue && pairFresh && heading && lastSampledHeading.current !== heading.timestampMs) {
         try {
+          lastSampledHeading.current = heading.timestampMs;
           yawSamples.current = addYawSample(yawSamples.current, {
             yawDeg: cameraYawDeg(cam.forward) + heading.headingDeg,
             timestampMs: now,
           });
           state.setCompassSamples(yawSamples.current.length);
         } catch {
-          // Phone pointed at the ground or sky: no usable yaw this tick.
+          // Phone pointed at the ground or sky: never solve from the old window.
+          yawSamples.current = [];
+          state.setCompassSamples(0);
         }
       }
 
       const summary = summarizeYawSamples(yawSamples.current);
-      if (resolveDue && isCompassSettled(summary) && fixes.match?.kind === 'matched' && summary) {
+      if (resolveDue && pairFresh && isCompassSettled(summary) && fixes.match?.kind === 'matched' && summary &&
+          nav.positioning.kind === 'tracking' && nav.positioning.confidence !== 'low' &&
+          isFreshSample(fixes.match.timestampMs, now, MAX_MATCH_AGE_MS)) {
         const yawAccuracyDeg = compassYawAccuracyDeg(summary, heading);
-        const horizontalAccuracyM = nav.positioning.kind === 'tracking' ? nav.positioning.sigmaM : undefined;
+        const horizontalAccuracyM = positioningRadius68M(nav.positioning);
         const solved = solveCompassPlacement({
           cameraWorldPosition: cam.position,
           cameraForward: cam.forward,
@@ -323,9 +349,8 @@ export function HarlemNavigationArScene(props: { arSceneNavigator?: ReactVisionG
           headingAccuracyDeg: yawAccuracyDeg,
           cameraEnuOffset: (() => {
             const p = localPointOf(current.frame.origin, fixes.match.coordinate);
-            // GPS is ground-projected; the tracked camera is above the road surface.
-            // Without this vertical offset the entire walking route floats at eye level.
-            return { eastM: p[0], northM: -p[2], upM: EYE_HEIGHT_M };
+            // Visual offset only. Ground graphics stay hidden without a measured surface.
+            return { eastM: p[0], northM: -p[2], upM: ESTIMATED_EYE_HEIGHT_M };
           })(),
           horizontalAccuracyM,
         });
@@ -333,6 +358,7 @@ export function HarlemNavigationArScene(props: { arSceneNavigator?: ReactVisionG
           placement: { position: solved.position, rotation: solved.rotation },
           source: 'compass',
           confidence: solved.confidence,
+          heightReference: 'estimated-eye-height',
           yawAccuracyDeg,
           solvedAtAlongM: along ?? 0,
           solvedAtMs: now,
@@ -343,8 +369,7 @@ export function HarlemNavigationArScene(props: { arSceneNavigator?: ReactVisionG
           state.setWorld({ ...current, target: next, displayed: current.displayed ?? next.placement });
           return;
         }
-        // Not better: keep the current one and start counting again from here.
-        state.setWorld({ ...current, target: { ...current.target, solvedAtAlongM: along ?? 0, solvedAtMs: now } });
+        // A rejected solve does not refresh the old placement's evidence.
         return;
       }
 
@@ -365,6 +390,7 @@ export function HarlemNavigationArScene(props: { arSceneNavigator?: ReactVisionG
           placement: useNavAr.getState().world?.target,
           isMatched: fixes.match?.kind === 'matched',
           headingConfidence: heading?.confidence,
+          observations: nextObservations,
         })
       ) {
         controller.completeARCalibration();
@@ -374,13 +400,15 @@ export function HarlemNavigationArScene(props: { arSceneNavigator?: ReactVisionG
     return () => clearInterval(interval);
   }, [controller]);
 
+  const frameCurrent = isCurrentNavFrame(world?.frame, activeRoute);
   const presentation = navArPresentation({
     session,
     positioning,
     arTracking,
     placement: world?.target,
-    isMatched: match?.kind === 'matched',
+    isMatched: frameCurrent && match?.kind === 'matched',
     headingConfidence: navigationFixStore.getState().heading?.confidence,
+    observations,
   });
   const show3d =
     (presentation.kind === 'guidance' && presentation.render === '3d') ||
@@ -405,14 +433,23 @@ export function HarlemNavigationArScene(props: { arSceneNavigator?: ReactVisionG
 
   return (
     <ViroARScene
-      onTrackingUpdated={(state, reason) => controller.setArTracking(arTrackingFromViro(state, reason))}
+      onTrackingUpdated={(state, reason) => {
+        const next = arTrackingFromViro(state, reason);
+        const previous = useNavigationStore.getState().arTracking;
+        controller.setArTracking(next);
+        // Relocalization may change the world origin. Re-solve after recovery;
+        // never re-authorize the pre-loss transform from a new camera callback.
+        if (previous.kind === 'normal' && next.kind !== 'normal') useNavAr.getState().requestRecalibration();
+      }}
       onCameraTransformUpdate={(t: ViroCameraTransform) => {
-        camera.current = { position: t.position, forward: t.forward };
+        if (t.position.every(Number.isFinite) && t.forward.every(Number.isFinite)) {
+          camera.current = { position: t.position, forward: t.forward, timestampMs: Date.now() };
+        } else camera.current = undefined;
       }}
     >
-      {show3d && world?.displayed && routeCoordinates ? (
+      {show3d && frameCurrent && world?.displayed && routeCoordinates ? (
         <>
-          {presentation.kind === 'guidance' ? (
+          {presentation.kind === 'guidance' && presentation.showGroundRoute ? (
             <>
               <MapboxViroRoute
                 route={routeCoordinates}

@@ -106,6 +106,7 @@ export function HarlemNavigationArHud({ onBackToMap, onExplorePlace }: HarlemNav
   const match = useStore(navigationFixStore, (s) => s.match);
   const heading = useStore(navigationFixStore, (s) => s.heading);
   const world = useNavAr((s) => s.world);
+  const observations = useNavAr((s) => s.observations);
   const alongM = useNavAr((s) => s.alongM);
   const geospatial = useNavAr((s) => s.geospatial);
   const acknowledged = useNavAr((s) => s.isAwarenessAcknowledged);
@@ -117,6 +118,7 @@ export function HarlemNavigationArHud({ onBackToMap, onExplorePlace }: HarlemNav
     placement: world?.target,
     isMatched: match?.kind === 'matched',
     headingConfidence: heading?.confidence,
+    observations,
   });
 
   // Driving-speed guard: pause guidance; the person resumes when walking again.

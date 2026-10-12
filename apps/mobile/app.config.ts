@@ -3,6 +3,7 @@ import { loadProjectEnv } from '@expo/env';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { palette } from '@acme/theme';
+import { NAVIGATION_AR_BUILD } from './src/ar/navArBuild.ts';
 
 const appDir = dirname(fileURLToPath(import.meta.url));
 loadProjectEnv(join(appDir, '../..'), { silent: true, force: true });
@@ -137,7 +138,7 @@ const config: ExpoConfig = {
     [
       '@reactvision/react-viro',
       {
-        provider: 'reactvision',
+        provider: NAVIGATION_AR_BUILD.provider,
         rvApiKey: process.env.EXPO_PUBLIC_REACTVISION_API_KEY,
         rvProjectId: process.env.EXPO_PUBLIC_REACTVISION_PROJECT_ID,
         rvEndpoint: process.env.EXPO_PUBLIC_REACTVISION_ENDPOINT,

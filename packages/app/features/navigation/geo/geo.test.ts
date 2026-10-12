@@ -92,7 +92,7 @@ describe('createLocalFrame', () => {
 });
 
 describe('radius68From95', () => {
-  it('converts ARCore 95% radii to 68% radii', () => {
+  it('converts explicitly 95%-confidence radii to 68% radii', () => {
     // 95% radius = 2.448σ, 68% radius = 1.510σ.
     assert.ok(Math.abs(radius68From95(10) - 6.168) < 0.01);
     assert.throws(() => radius68From95(0), RangeError);

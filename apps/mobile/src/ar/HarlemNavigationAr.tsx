@@ -4,6 +4,7 @@ import { View } from '@acme/ui/tw';
 import { HarlemNavigationArHud, type HarlemNavigationArHudProps } from './HarlemNavigationArHud';
 import { HarlemNavigationArScene } from './HarlemNavigationArScene';
 import { useNavAr } from './navAr.store';
+import { NAVIGATION_AR_BUILD } from './navArBuild';
 
 const SCENE = { scene: HarlemNavigationArScene as unknown as () => React.JSX.Element };
 
@@ -19,7 +20,7 @@ export function HarlemNavigationAr(props: HarlemNavigationArHudProps) {
   useEffect(() => () => useNavAr.getState().reset(), []);
   return (
     <View className="flex-1 bg-black">
-      <ViroARSceneNavigator initialScene={SCENE} worldAlignment="Gravity" autofocus style={{ flex: 1 }} />
+      <ViroARSceneNavigator initialScene={SCENE} worldAlignment="Gravity" provider={NAVIGATION_AR_BUILD.provider} autofocus style={{ flex: 1 }} />
       <HarlemNavigationArHud {...props} />
     </View>
   );

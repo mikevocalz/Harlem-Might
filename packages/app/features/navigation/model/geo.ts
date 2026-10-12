@@ -47,9 +47,9 @@ const K95 = Math.sqrt(-2 * Math.log(1 - 0.95));
 
 /**
  * Converts a 95%-confidence horizontal radius to the 68% radius
- * `PositionAccuracy.horizontalM` expects. ARCore Geospatial (and Viro's
- * `ViroGeospatialPose.horizontalAccuracy`) report 95% radii; feeding them in
- * unconverted would make those fixes look 1.6× worse than they are.
+ * `PositionAccuracy.horizontalM` expects. Use only for a source explicitly
+ * documented to report 95%. ARCore Geospatial reports 68% already; its
+ * horizontal accuracy must pass through unchanged.
  */
 export function radius68From95(radius95M: number): number {
   if (!(radius95M > 0) || !Number.isFinite(radius95M)) throw new RangeError('radius95M must be a positive finite number');
