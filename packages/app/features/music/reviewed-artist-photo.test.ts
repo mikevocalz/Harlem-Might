@@ -6,6 +6,7 @@ import { isFreeArtistPhotoLicense, isCommonsArtistPhotoUrl } from './artist-phot
 import { REVIEWED_ARTIST_PHOTOS } from './reviewed-artist-photo-data.ts';
 import { resolveReviewedArtistPhoto, resolveReviewedArtistPhotos } from './reviewed-artist-photo.ts';
 import { ARTIST_PHOTO_VERSION, artistPhotoFraming, shouldUseStoredArtistPhoto } from './artist-photo-policy.ts';
+import { musicArtistOpenGraphPhoto } from './artist-photo-metadata.ts';
 import { musicKeys } from './music.keys.ts';
 
 const evidence = JSON.parse(readFileSync(new URL('../../../../docs/music-photo-audit-2026-10-12.json', import.meta.url), 'utf8'));
@@ -79,4 +80,16 @@ it('keeps both public GET routes read-only and restricted to reviewed, published
   }
   assert.match(route, /allowedNames\.has\(name\)/);
   assert.match(imageRoute, /catalogue\.data\.some/);
+});
+
+
+it('social previews replace all quarantined photos, retain later uploads, and cover missing headshots', () => {
+  for (const artist of evidence.artists.filter((item: { storedAction: string }) => item.storedAction === 'replace-known-defect')) {
+    const old = { name: artist.name, headshot: { url: 'https://cms.example/old.jpg', sourceUrl: artist.storedSourceAtAudit, altText: 'Old image' } };
+    assert.equal(musicArtistOpenGraphPhoto(old)?.url, resolveReviewedArtistPhoto(artist.name)?.url);
+    const corrected = { ...old, headshot: { ...old.headshot, sourceUrl: 'https://example.org/new-upload' } };
+    assert.equal(musicArtistOpenGraphPhoto(corrected)?.url, old.headshot.url);
+  }
+  assert.equal(musicArtistOpenGraphPhoto({ name: 'Vado' })?.url, resolveReviewedArtistPhoto('Vado')?.url);
+  assert.equal(musicArtistOpenGraphPhoto({ name: 'Unknown' }), undefined);
 });

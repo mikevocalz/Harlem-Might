@@ -16,6 +16,8 @@ This is **not a production-completion certificate**. A working deployment/media 
 - Replace James P. Johnson's distant group-scene framing and Stuart Bascombe's three-person image with individual photographs.
 - Quarantine exactly five known stored source assignments: Black Ivory's sleeve, Dizzy Gillespie's distant orchestra scene, Frankie Cutlass and J. Rosamond Johnson's ambiguous two-person photos, and Harlem Gospel Choir's photo with conflicting embedded copyright metadata. Later curator replacements are preserved; quarantine is by source identity, not an unconditional artist override.
 - Preserve the entire photo and ensemble membership in artist cards/detail views. Existing non-music editorial framing stays unchanged by default.
+- Read every published catalogue page for photo allowlisting, including artists101 and102; fail closed rather than returning a partial allowlist if a later read fails.
+- Apply the same stored-source quarantine to artist-page Open Graph images.
 - Version both API and React Query image caches.
 - Make both public photo GET routes read-only. Displaying an image no longer uploads media or rewrites the live catalogue.
 
@@ -31,7 +33,7 @@ Charles Hamilton remains a low-quality but correctly attributed video-frame phot
 
 ## Verification
 
-- App tests: 601 passed, including 44 music/photo tests and six new registry/policy regressions.
+- App tests: 605 passed, including 45 music/photo tests, seven registry/policy/metadata regressions and three full-catalogue pagination regressions.
 - Payload tests: 22 passed, including bounded public-photo fetching and DNS/redirect safety.
 - Web tests: 24 passed.
 - UI tests: 18 passed.
