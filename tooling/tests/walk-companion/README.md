@@ -88,9 +88,66 @@ not Android instrumentation or SDK compatibility/build proof. The fakes do not
 model ART, Binder, Google Play services, real Task/Looper threading, Expo's
 runtime/autolinking, Compose recomposition, device pairing, OS process death,
 actual UI or hardware haptics. The success-feedback counter is asserted; no
-physical haptic is executed. The Swift run still covers **wire validation only**;
-Apple lifecycle and WatchConnectivity callbacks are not executed by this harness.
+physical haptic is executed. The Swift lifecycle harness described below is an additional host boundary;
+its initial local verification still needs real compiler execution on macOS CI.
 
 Keep the existing JS bridge behavior tests and static storage/API prohibitions.
 Real Android/Apple target builds and the paired-device release gates in
 `docs/PAIRED_WALK_TRANSPORT.md` remain outstanding.
+
+
+## Production Swift lifecycle and callback harness
+
+The Swift runner now builds host modules for `ExpoModulesCore`, `UIKit`,
+`WatchConnectivity`, `SwiftUI` and `WatchKit`, then passes the **complete production
+files** `ios/WalkCompanionModule.swift`, watch `WalkCompanion.swift` and the actual
+shared `CompanionWire.swift` directly to `swiftc`, together with the test harness.
+No production file is rewritten, extracted or replaced by a copied lifecycle
+model. The phone cases invoke the closures registered by the actual Expo
+`definition()`; watch cases call the actual store and delegate methods. A relay
+case exercises both stores through publication, command delivery, authoritative
+confirmation and background revocation. No app architecture, native dependency,
+wire schema or target configuration is replaced.
+
+`swift-platform-fakes/` provides only unavailable framework boundaries. Its Expo
+result builder stores callbacks/functions and captures events. WatchConnectivity
+records sends and permits explicit reply/error/delegate delivery. SwiftUI stores
+wrapped values and accepts view declarations but never renders, observes,
+recomposes or invokes view actions. WatchKit counts requests for success haptics;
+no physical haptic occurs. `CompanionHostScheduler.swift` shadows DispatchQueue
+and Timer **only in the host executable**, permitting deterministic callback
+ordering, explicit one-shot delivery and cancellation. Wire validation continues
+to use real Foundation dates/JSON/ISO8601 parsing. Tests create fresh payloads
+at execution time and manually deliver timer callbacks; they do not claim
+virtual-clock, exact wall-clock scheduling, or real threading evidence.
+
+The 39 scenarios are designed to cover:
+- Foreground, observation, support, activation and pairing requirements; actual
+  create/start/stop/background/destroy callbacks; expiry cancellation/revocation
+  and authority revoked before publication.
+- Handoff/revision/timestamp/session ownership, stale asynchronous send failures,
+  pairing/reachability changes, native command replay and its 128-entry cap, and
+  the exact expiry attached to JavaScript command events.
+- Watch background/disconnect revocation, old handoff tombstones, clear-before-
+  snapshot delivery, overlapping reconnects, same-handoff push supersession,
+  stale dialogs, command receipt versus authoritative confirmation, uncertainty
+  on timeout, pending cancellation and opt-in success-feedback requests.
+- Two executable regression controls: a phone command queued before unpairing
+  must not reach JavaScript afterward; an unseen watch handoff queued after
+  disconnect must not restore guidance. After the unchanged production suite,
+  the runner compiles temporary full-source copies with only the exact two new
+  transport guards reversed. It requires those two selected cases to fail with
+  their exact expected assertion messages, exit code 1 and no signal. Compiler
+  errors, crashes, absent tests, unrelated failures or unexpected passes cannot
+  satisfy a negative control. These deliberate mutations are never used for the
+  normal production-source pass and are removed with the temporary build folder.
+
+Initial verification boundary (2026-10-12): this Linux workspace has no `swiftc`
+and the Swift command stops with `spawnSync swiftc ENOENT`. The harness is
+**not yet compiler-verified** here; successful parsing/lint or passing Node
+source checks is not a substitute. Run the existing macOS native-companion CI
+lane on the completed follow-on chain to establish the fixed-source pass and
+both executable negative controls before calling these Swift cases passing. No compiler, SDK or device was installed.
+Even after that host execution, Apple SDK/Expo signature compatibility, actual
+WatchConnectivity routing/threading, run-loop timing, process death, pairing,
+SwiftUI interaction/accessibility and physical hardware remain release gates.

@@ -5,6 +5,7 @@ on:
     paths:
       - 'apps/mobile/modules/walk-companion/**'
       - 'apps/mobile/targets/harlem-watch/CompanionWire.swift'
+      - 'apps/mobile/targets/harlem-watch/WalkCompanion.swift'
       - 'apps/wearos/app/src/main/java/com/harlemmight/watch/WalkCompanion.kt'
       - 'tooling/tests/walk-companion/**'
       - '.github/workflows/native-companion-wire.yml'
@@ -12,6 +13,7 @@ on:
     paths:
       - 'apps/mobile/modules/walk-companion/**'
       - 'apps/mobile/targets/harlem-watch/CompanionWire.swift'
+      - 'apps/mobile/targets/harlem-watch/WalkCompanion.swift'
       - 'apps/wearos/app/src/main/java/com/harlemmight/watch/WalkCompanion.kt'
       - 'tooling/tests/walk-companion/**'
       - '.github/workflows/native-companion-wire.yml'

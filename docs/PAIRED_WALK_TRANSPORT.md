@@ -140,6 +140,23 @@ No Android SDK, Gradle, Expo runtime, Swift lifecycle, UI or device test is impl
 See `tooling/tests/walk-companion/README.md` for the exact boundary and commands.
 Wire schema, Payload 4 and Viro platform support are unchanged.
 
+## Swift callback harness follow-on (2026-10-12)
+
+The same native-companion runner now includes a 39-scenario Swift lifecycle
+harness designed to compile the complete production phone module and watch
+store against narrowly bounded host framework fakes. It exercises actual Expo
+callback registration and WatchConnectivity delegate/store methods, including
+queued delivery after unpairing or disconnect. Both bridges now recheck live
+transport state when consuming queued requests, commands or snapshots.
+
+This new Swift harness is **not yet compiler-verified in the local Linux
+workspace**: `swiftc` is absent. The completed follow-on chain needs the existing
+macOS CI compiler to establish the fixed-source pass and exact-guard negative
+controls; compiler/runtime failures cannot count as expected regression proof. Local Node
+source checks are not Swift execution. Apple SDK/build, runtime, threading,
+UI and device evidence remain outstanding. See the test README for the exact
+fake boundaries, timer semantics and pending verification.
+
 ## Explicitly outstanding issue 41 work
 
 - Independently authenticated watch HTTPS and revocable, narrowly scoped watch

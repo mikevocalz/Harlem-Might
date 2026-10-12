@@ -51,6 +51,63 @@ try {
     const binary = join(build, 'swift-wire-tests');
     run('swiftc', [phone, join(here, 'CompanionWireTests.swift'), '-o', binary]);
     run(binary, [await freshFixtures()]);
+    // Fake only unavailable Apple/Expo APIs; compile both complete production
+    // bridge files unchanged, including their registered lifecycle callbacks.
+    const modules = ['ExpoModulesCore', 'UIKit', 'WatchConnectivity', 'WatchKit', 'SwiftUI'];
+    const objects = [];
+    for (const name of modules) {
+      const object = join(build, `${name}.o`);
+      run('swiftc', ['-swift-version', '5', '-parse-as-library', '-emit-module', '-emit-object',
+        '-module-name', name, '-emit-module-path', join(build, `${name}.swiftmodule`),
+        join(here, 'swift-platform-fakes', `${name}.swift`), '-o', object]);
+      objects.push(object);
+    }
+    const lifecycle = join(build, 'swift-lifecycle-tests');
+    const phoneBridge = join(root, 'apps/mobile/modules/walk-companion/ios/WalkCompanionModule.swift');
+    const watchBridge = join(root, 'apps/mobile/targets/harlem-watch/WalkCompanion.swift');
+    function compileLifecycle(phoneSource, watchSource, output) {
+      run('swiftc', ['-swift-version', '5', '-I', build, phone, phoneSource, watchSource,
+        join(here, 'CompanionHostScheduler.swift'), join(here, 'CompanionLifecycleTests.swift'),
+        ...objects, '-o', output]);
+    }
+    compileLifecycle(phoneBridge, watchBridge, lifecycle);
+    run(lifecycle, []);
+
+    // Explicit negative controls only: reverse precisely the new live-transport
+    // guards in temporary copies, preserving every other production byte. The
+    // normal suite above always compiles the untouched production source paths.
+    const phoneGuard = `                  session.activationState == .activated, session.isPaired,
+                  session.isWatchAppInstalled, session.isReachable,
+`;
+    const watchGuard = `        guard WCSession.default.activationState == .activated, WCSession.default.isReachable,
+              message["kind"] as? String == "snapshot", let json = message["json"] as? String,`;
+    function reverseGuard(source, guard, previous, label) {
+      assert.equal(source.split(guard).length, 2, `${label}: expected one exact fixed guard`);
+      return source.replace(guard, previous);
+    }
+    const negative = join(build, 'negative-controls');
+    await mkdir(negative);
+    const negativePhone = join(negative, 'WalkCompanionModule.swift');
+    const negativeWatch = join(negative, 'WalkCompanion.swift');
+    await writeFile(negativePhone, reverseGuard(await readFile(phoneBridge, 'utf8'), phoneGuard, '', 'phone'));
+    await writeFile(negativeWatch, reverseGuard(await readFile(watchBridge, 'utf8'), watchGuard,
+      '        guard message["kind"] as? String == "snapshot", let json = message["json"] as? String,', 'watch'));
+    const negativeBinary = join(build, 'swift-lifecycle-negative-controls');
+    compileLifecycle(negativePhone, negativeWatch, negativeBinary);
+    const cases = [
+      ['phone queued command rechecks current pairing before delivery', 'Queued command was accepted after unpairing'],
+      ['watch disconnected delivery cannot install an unseen handoff', 'Queued snapshot restored guidance after disconnect'],
+    ];
+    const result = spawnSync(negativeBinary, cases.map(([name]) => name), { cwd: root, encoding: 'utf8' });
+    if (result.error) throw result.error;
+    // Compiler errors, crashes, missing tests and unrelated assertion failures
+    // must never be misreported as successful reproduction of the regressions.
+    assert.equal(result.signal, null, `Negative-control executable crashed: ${result.stderr}`);
+    assert.equal(result.status, 1, `Negative controls must fail their assertions: ${result.stdout} ${result.stderr}`);
+    assert.equal(result.stderr.trim(), 'FAIL: 2/2 Swift lifecycle cases');
+    assert.deepEqual(result.stdout.trim().split(/\r?\n/), cases.map(([name, reason]) => `FAIL: ${name}: ${reason}`));
+    console.log(result.stdout.trim());
+    console.log('PASS: Swift negative controls reproduced both queued-delivery regressions');
   } else {
     const artifacts = await mavenArtifacts();
     const compilerClasspath = artifacts.join(delimiter);
