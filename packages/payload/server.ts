@@ -2,6 +2,8 @@
 // (React Server Components, route handlers). The `server-only` marker turns
 // an import from a client bundle into a build error.
 import 'server-only';
+import { fetchPublicPhotoResource, MAX_COMMONS_PHOTO_BYTES } from './src/artist-photo-fetch.ts';
+import { isFreeArtistPhotoLicense, isCommonsArtistPhotoUrl } from '@acme/app/features/music/artist-photo-rights.ts';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -108,8 +110,6 @@ export type RightsClearedArtistPhoto = {
   height?: number;
 };
 
-const FREE_ARTIST_PHOTO_LICENSE = /^(public domain|cc0|cc by(?: |$)|cc by-sa|cc-by|cc-by-sa)/i;
-
 const imageExtension = (mime: string): 'jpg' | 'png' | 'webp' | undefined => {
   if (/^image\/jpe?g$/i.test(mime)) return 'jpg';
   if (/^image\/png$/i.test(mime)) return 'png';
@@ -137,11 +137,10 @@ export async function persistRightsClearedMusicArtistHeadshot(
     return false;
   }
   if (
-    imageUrl.protocol !== 'https:' ||
-    imageUrl.hostname !== 'upload.wikimedia.org' ||
+    !isCommonsArtistPhotoUrl(imageUrl.href) ||
     sourceUrl.protocol !== 'https:' ||
     sourceUrl.hostname !== 'commons.wikimedia.org' ||
-    !FREE_ARTIST_PHOTO_LICENSE.test(photo.license)
+    !isFreeArtistPhotoLicense(photo.license)
   ) {
     return false;
   }
@@ -167,17 +166,14 @@ export async function persistRightsClearedMusicArtistHeadshot(
 
   let mediaId: Media['id'] | undefined = existing.docs[0]?.id;
   if (!mediaId) {
-    const response = await fetch(photo.url, {
-      headers: { 'user-agent': 'HarlemMight/1.0 (+https://harlemmight.com)' },
-      signal: AbortSignal.timeout(120_000),
-    });
+    const response = await fetchPublicPhotoResource(photo.url, { kind: 'commons-image' });
     if (!response.ok) return false;
 
-    const mime = (response.headers.get('content-type') ?? '').split(';')[0]?.trim() ?? '';
+    const mime = response.contentType;
     const extension = imageExtension(mime);
     if (!extension) return false;
-    const bytes = Buffer.from(await response.arrayBuffer());
-    if (bytes.length === 0 || bytes.length > 20 * 1024 * 1024) return false;
+    const bytes = Buffer.from(response.bytes);
+    if (bytes.length === 0 || bytes.length > MAX_COMMONS_PHOTO_BYTES) return false;
 
     const dir = await mkdtemp(path.join(tmpdir(), 'harlem-music-headshot-'));
     const filePath = path.join(dir, `artist-${String(artistId)}.${extension}`);

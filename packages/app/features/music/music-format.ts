@@ -43,5 +43,3 @@ export const biographyParagraphs = (biography: string): string[] =>
     .split(/\n{2,}/)
     .map((paragraph) => paragraph.trim())
     .filter(Boolean);
-
-

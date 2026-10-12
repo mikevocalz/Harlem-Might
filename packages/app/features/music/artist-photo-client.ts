@@ -3,6 +3,8 @@ import {
   type ArtistPhotoResult,
 } from './artist-photo.ts';
 
+const PHOTO_RESOLVER_VERSION = '3';
+
 const photoServiceBase = (): string | undefined => {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
 
@@ -20,7 +22,11 @@ const photoServiceBase = (): string | undefined => {
 };
 
 export const artistPhotoEndpoint = (names: readonly string[]): string => {
-  const path = `/api/music/artist-photo?names=${encodeURIComponent(names.join('|'))}`;
+  const query = new URLSearchParams({
+    v: PHOTO_RESOLVER_VERSION,
+    names: names.join('|'),
+  });
+  const path = `/api/music/artist-photo?${query.toString()}`;
   const base = photoServiceBase();
   if (!base) return path;
   try {

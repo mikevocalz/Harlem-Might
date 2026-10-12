@@ -59,3 +59,9 @@ test('no apiUrl means not configured', () => {
   const source = createRestContentSource({ apiUrl: undefined, fetch: async () => assert.fail('no request') });
   assert.equal(source.isConfigured(), false);
 });
+
+
+test('serializes the stable music pagination tie-breaker for the REST path', () => {
+  const query = restQueryString({ collection: 'music-artists', where: {}, depth: 1, page: 2, limit: 24, sort: 'name,id' });
+  assert.equal(new URLSearchParams(query).get('sort'), 'name,id');
+});

@@ -20,6 +20,7 @@ import { ContentLoader } from '../site/content/ContentLoader.tsx';
 import { ContentNotice } from '../site/content/ContentNotice.tsx';
 import { musicKeys } from './music.keys.ts';
 import { MusicArtistGrid } from './MusicArtistGrid.tsx';
+import { requestNextMusicPage } from './music-pagination.ts';
 
 /** Reads one 1-based page of the directory — Local API on the web server, REST everywhere else. */
 export type MusicPageFetch = (page: number) => Promise<ContentResult<MusicArtistPage>>;
@@ -144,7 +145,7 @@ function MusicIndexBody({
         shown={artists.length}
         total={total}
         hasNextPage={query.hasNextPage}
-        isFetching={query.isFetchingNextPage}
+        isFetching={query.isFetching}
         failed={query.isFetchNextPageError}
         onMore={onMore}
       />
@@ -187,10 +188,13 @@ export function MusicIndexScreen({
   fetchPage: MusicPageFetch;
 }) {
   const query = useMusicArtists(firstPage, fetchPage);
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
+  const { hasNextPage, isFetching, isFetchNextPageError, fetchNextPage } = query;
   const loadMore = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+    requestNextMusicPage({ hasNextPage, isFetching, isFetchNextPageError, fetchNextPage });
+  }, [hasNextPage, isFetching, isFetchNextPageError, fetchNextPage]);
+  const loadMoreAutomatically = useCallback(() => {
+    requestNextMusicPage({ hasNextPage, isFetching, isFetchNextPageError, fetchNextPage }, true);
+  }, [hasNextPage, isFetching, isFetchNextPageError, fetchNextPage]);
 
   // Web: stream the next page once the directory's foot nears the viewport —
   // no press required. The native fork gets the same trigger through
@@ -198,17 +202,18 @@ export function MusicIndexScreen({
   useEffect(() => {
     if (typeof window === 'undefined' || !hasNextPage) return;
     const nearBottom = () => {
-      if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 700) loadMore();
+      if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 700) loadMoreAutomatically();
     };
     window.addEventListener('scroll', nearBottom, { passive: true });
     return () => window.removeEventListener('scroll', nearBottom);
-  }, [hasNextPage, loadMore]);
+  }, [hasNextPage, loadMoreAutomatically]);
 
   return (
     <MightsPage
       title="Harlem Music"
+      mediaLayout="leading"
       lead="The artists who made Harlem a stage and a sound. Every profile names its sources and rights."
-      onNearBottom={loadMore}
+      onNearBottom={loadMoreAutomatically}
     >
       <MusicIndexBody query={query} onMore={loadMore} />
     </MightsPage>

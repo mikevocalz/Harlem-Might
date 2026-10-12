@@ -1,4 +1,3 @@
-/** Query keys for the music domain — one factory, no inline arrays. */
 export const musicKeys = {
   all: ['music'] as const,
   artists: ['music-artists'] as const,
