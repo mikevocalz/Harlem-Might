@@ -9,13 +9,13 @@ The existing Place Details → Take Me There → DirectionsPanel flow now expose
 - Non-walking routes and manually selected starting points do not offer phone AR.
 - A route preview starts through the existing `startGuidance`; an active map walk retains its route and location watcher.
 - Both entry buttons share one pending native check. Repeated presses cannot create duplicate prompts or screens.
-- A late native result is discarded after cancellation, route replacement, host unmount, loss of location permission, or newly detected non-phone layout. Denied permission, unsupported devices, and native failures leave the map trip intact. Router failure returns an entered trip to map guidance.
+- A late native result is discarded after cancellation, route replacement, host unmount, app backgrounding, loss of location permission, or newly detected non-phone layout. Denied permission, unsupported devices, and native failures leave the map trip intact. Router failure returns an entered trip to map guidance.
 
 The shared foreground `resumeGuidance` action restarts a paused device-origin watch after backgrounding, only with existing location permission. Map and AR HUDs use the same action; manual origins and denied permission cannot start a new watch.
 
 ## Checks and platform limits
 
-The 19 entry tests include the real shared navigation runtime, controller, and stores, with only route-provider/native boundaries substituted. They cover selected-route identity, exactly one route request and location watcher, return-to-map, End cleanup, duplicate presses, denied camera, native failure, cancellation, unmount, newer routes, and unsupported travel modes/manual origins.
+The 20 entry tests include the real shared navigation runtime, controller, and stores, with only route-provider/native boundaries substituted. They cover selected-route identity, exactly one route request and location watcher, return-to-map, End cleanup, duplicate presses, denied camera, native failure, cancellation, unmount, newer routes, and unsupported travel modes/manual origins.
 
 Entry, hardware-capability and real-runtime resume regressions run alongside the full app/mobile suites. Mobile typing uses exact, blob-verified declarations/source from the CI-pinned Viro and Viro External forks, not the public stock package. The initial implemented head also passed hosted full CI; the PR reports results for the latest head. No phone, simulator, or headset was available here. Native camera prompts, visual layout, and physical walking accuracy are not device-verified.
 
