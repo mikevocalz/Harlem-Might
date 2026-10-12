@@ -26,7 +26,7 @@
   "scripts": {
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --test 'tv.test.ts' 'mights/geometry.native.test.ts' 'mights/editorialImage.store.test.ts' 'haptic-policy.test.ts' 'layout/masonry-layout.test.ts'"
+    "test": "node --test '**/*.test.ts'"
   },
   "dependencies": {
     "@acme/assets": "workspace:*",
