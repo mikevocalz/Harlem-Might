@@ -5,8 +5,8 @@ import { MightsButton } from '@acme/ui/mights';
 import { Text, View } from '@acme/ui/tw';
 import { palette } from '@acme/theme';
 import { formatDistance } from '@acme/app/features/explore/explore.store.ts';
-import { resumeGuidance } from '@acme/app/features/navigation/view/runtime.ts';
 import { hasActiveTrip } from '@acme/app/features/navigation/model/session.ts';
+import { resumeGuidance } from '@acme/app/features/navigation/view/runtime.ts';
 import {
   navigationFixStore,
   selectArTracking,
@@ -16,15 +16,18 @@ import {
   useNavigationStore,
 } from '@acme/app/features/navigation/session/navigationStore.ts';
 import {
-  arrowRotationDeg,
   guidanceBearingDeg,
   chevronStopAlongTrackM,
   maneuverTurnDeg,
   navArPresentation,
-  relativeDirection,
+  isCurrentNavFrame,
+  isFreshSample,
+  MAX_CAMERA_AGE_MS,
+  MAX_MATCH_AGE_MS,
   type CalibrationChecklist,
 } from './navAr';
 import { useNavAr } from './navAr.store';
+import { navigationArrow, navigationArRecovery } from './navArRecovery';
 import { getNavigationController } from './navigationRuntime';
 import { finishArNavigation } from './navigationArVisit';
 
@@ -116,17 +119,20 @@ export function HarlemNavigationArHud({ onBackToMap, onExplorePlace, contentInse
   const match = useStore(navigationFixStore, (s) => s.match);
   const heading = useStore(navigationFixStore, (s) => s.heading);
   const world = useNavAr((s) => s.world);
+  const observations = useNavAr((s) => s.observations);
   const alongM = useNavAr((s) => s.alongM);
   const geospatial = useNavAr((s) => s.geospatial);
   const acknowledged = useNavAr((s) => s.isAwarenessAcknowledged);
 
+  const frameCurrent = isCurrentNavFrame(world?.frame, hasActiveTrip(session) ? session.activeRoute : undefined);
   const presentation = navArPresentation({
     session,
     positioning,
     arTracking,
-    placement: world?.target,
-    isMatched: match?.kind === 'matched',
+    placement: frameCurrent ? world?.target : undefined,
+    isMatched: frameCurrent && match?.kind === 'matched',
     headingConfidence: heading?.confidence,
+    observations,
   });
 
   // Driving-speed guard: pause guidance; the person resumes when walking again.
@@ -136,21 +142,35 @@ export function HarlemNavigationArHud({ onBackToMap, onExplorePlace, contentInse
     }
   }, [controller, presentation.kind, session.phase]);
 
-  const arrowDeg = useMemo(() => {
-    if (!world || alongM === undefined) return undefined;
-    const bearing = guidanceBearingDeg(world.frame, alongM, chevronStopAlongTrackM(alongM, progress));
-    return arrowRotationDeg(bearing, heading);
-  }, [alongM, heading, progress, world]);
+  const arrow = useMemo(() => {
+    if (!world || !frameCurrent || alongM === undefined) return undefined;
+    return navigationArrow({
+      bearingDeg: guidanceBearingDeg(world.frame, alongM, chevronStopAlongTrackM(alongM, progress)),
+      heading,
+      positioning,
+      isMatched: match?.kind === 'matched',
+      matchTimestampMs: match?.timestampMs,
+      nowMs: observations.nowMs,
+    });
+  }, [alongM, frameCurrent, heading, match, observations.nowMs, positioning, progress, world]);
+  const cameraFresh = isFreshSample(observations.cameraTimestampMs, observations.nowMs, MAX_CAMERA_AGE_MS);
+  const recovery = navigationArRecovery({
+    positioning,
+    arTracking: arTracking.kind === 'normal' && !cameraFresh ? { kind: 'limited', reason: 'relocalizing' } : arTracking,
+    hasDirection: arrow !== undefined,
+  });
+  const freshProgress = frameCurrent && positioning.kind === 'tracking' && positioning.confidence !== 'low' &&
+    match?.kind === 'matched' && isFreshSample(match.timestampMs, observations.nowMs, MAX_MATCH_AGE_MS);
 
-  const source = world?.target?.source;
+  const source = frameCurrent ? world?.target?.source : undefined;
   const alignmentLine =
     source === 'geospatial'
-      ? 'Aligned with street-level positioning'
+      ? 'Street-level alignment is approximate. Height is estimated.'
       : source === 'compass'
-        ? 'Aligned by compass. Arrows may be off by a few metres.'
+        ? 'Compass alignment is approximate. Height is estimated.'
         : geospatial === 'checking'
-          ? 'Checking for street-level alignment'
-          : 'Aligning by compass (lower accuracy)';
+          ? 'Checking alignment. Use the map while it settles.'
+          : 'Aligning by compass. Use the map while it settles.';
 
   const destinationName = hasActiveTrip(session) ? session.destination.name : undefined;
   const placeId = hasActiveTrip(session) ? session.destination.placeId : undefined;
@@ -170,7 +190,7 @@ export function HarlemNavigationArHud({ onBackToMap, onExplorePlace, contentInse
           </Card>
         ) : null}
 
-        {(presentation.kind === 'guidance' || presentation.kind === 'rerouting') && progress ? (
+        {(presentation.kind === 'guidance' || presentation.kind === 'rerouting') && progress && freshProgress ? (
           <Card>
             <View className="flex-row items-center gap-3">
               {turnDeg !== undefined ? <Arrow deg={turnDeg} size={36} /> : null}
@@ -194,11 +214,12 @@ export function HarlemNavigationArHud({ onBackToMap, onExplorePlace, contentInse
         {presentation.kind === 'guidance' && presentation.render === 'arrow-2d' ? (
           <Card>
             <View className="items-center gap-2">
-              {arrowDeg !== undefined ? <Arrow deg={arrowDeg} size={96} /> : null}
-              <Line size={16}>
-                {arrowDeg !== undefined && relativeDirection(arrowDeg) === 'behind'
-                  ? 'Turn around'
-                  : 'AR can’t place the route precisely here. Follow the arrow.'}
+              {arrow ? <Arrow deg={arrow.rotationDeg} size={96} /> : null}
+              <Line size={16}>{arrow?.instruction ?? recovery?.title ?? 'Direction is uncertain'}</Line>
+              <Line tone="muted" size={14}>
+                {arrow
+                  ? 'Direction is approximate. Check street signs and the map before continuing.'
+                  : recovery?.body ?? 'No directional arrow is available. Stop somewhere safe and check the map.'}
               </Line>
             </View>
           </Card>
@@ -213,7 +234,7 @@ export function HarlemNavigationArHud({ onBackToMap, onExplorePlace, contentInse
                 : 'Resume when you’re ready to keep walking.'}
             </Line>
             <View className="flex-row gap-3">
-              <MightsButton variant="primary" disabled={presentation.kind === 'speed-paused'} onPress={() => resumeGuidance()}>
+              <MightsButton variant="primary" disabled={presentation.kind === 'speed-paused'} onPress={() => { resumeGuidance(); }}>
                 Resume
               </MightsButton>
               <MightsButton variant="ghost" onPress={onBackToMap}>
@@ -266,7 +287,7 @@ export function HarlemNavigationArHud({ onBackToMap, onExplorePlace, contentInse
       {/* Bottom: progress and the way out. */}
       <View className="flex-row items-center gap-3 rounded-2xl px-4 py-3" style={{ backgroundColor: CARD }}>
         <View className="flex-1">
-          {progress ? (
+          {progress && freshProgress ? (
             <>
               <Line size={16}>{`${formatDistance(progress.distanceRemainingM)} to ${destinationName ?? 'destination'}`}</Line>
               <Line tone="muted" size={13}>{`About ${Math.max(1, Math.round(progress.durationRemainingS / 60))} min walking`}</Line>

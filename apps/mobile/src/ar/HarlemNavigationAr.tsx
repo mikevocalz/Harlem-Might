@@ -5,6 +5,7 @@ import { useNavigationStore } from '@acme/app/features/navigation/session/naviga
 import { HarlemNavigationArHud, type HarlemNavigationArHudProps } from './HarlemNavigationArHud';
 import { HarlemNavigationArScene } from './HarlemNavigationArScene';
 import { isArNavigationScreen } from './navAr';
+import { NAVIGATION_AR_BUILD } from './navArBuild';
 import { attachNavigationArCamera } from './navArCameraLifetime';
 
 const SCENE = { scene: HarlemNavigationArScene as unknown as () => React.JSX.Element };
@@ -16,6 +17,9 @@ function NavigationArCamera() {
     <ViroARSceneNavigator
       initialScene={SCENE}
       worldAlignment="Gravity"
+      // Match the native plugin's configured provider. Earth is unavailable
+      // in the current build; the scene uses its compass/VIO fallback.
+      provider={NAVIGATION_AR_BUILD.provider}
       autofocus
       style={{ flex: 1 }}
     />

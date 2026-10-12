@@ -6,7 +6,7 @@ export type LocationSource =
   | 'companion-phone'
   /** A person picked the origin on a map (headsets have no GPS). Never filtered as if it moved. */
   | 'manual'
-  /** ARCore Geospatial / VPS pose. Convert its 95% accuracy with `radius68From95`. */
+  /** ARCore Geospatial / VPS pose. Its horizontal accuracy is already a 68% radius. */
   | 'ar-geospatial';
 
 /**
@@ -17,7 +17,8 @@ export type LocationSource =
 export interface LocationFix {
   readonly coordinate: GeographicCoordinate;
   readonly accuracy: PositionAccuracy;
-  /** Milliseconds since the Unix epoch, from the platform fix (not from when JS received it). */
+  /** Milliseconds since the Unix epoch, from the platform fix. If a bridge has no native timestamp,
+   * use the bounded request-start time, never refresh a delayed reply on receipt. */
   readonly timestampMs: number;
   readonly source: LocationSource;
   /** Course over ground in degrees from true north when the platform reports one. */

@@ -16,7 +16,7 @@ afterEach(() => {
 function calibrateCamera() {
   const frame = projectNavRoute({ route: fixtureRoute('apollo-theater--sylvias-restaurant'),
     generation: 1, receivedAtMs: 0, alternatives: [] });
-  const target: NavPlacement = { source: 'compass', confidence: 'high',
+  const target: NavPlacement = { source: 'compass', confidence: 'high', heightReference: 'estimated-eye-height',
     placement: { position: [3, 0, 5], rotation: [0, 90, 0] }, yawAccuracyDeg: 6, solvedAtMs: 1000, solvedAtAlongM: 20 };
   const state = useNavAr.getState();
   state.setWorld({ frame, target, displayed: target.placement });
@@ -24,6 +24,7 @@ function calibrateCamera() {
   state.setCompassSamples(12);
   state.setGeospatial('available');
   state.acknowledgeAwareness();
+  state.setObservations({ nowMs: 1000, cameraTimestampMs: 1000, headingTimestampMs: 1000, geospatialTimestampMs: 1000 });
   return useNavAr.getState();
 }
 
@@ -34,6 +35,7 @@ function assertUncalibrated() {
   assert.equal(state.compassSamples, 0);
   assert.equal(state.geospatial, 'checking');
   assert.equal(state.isAwarenessAcknowledged, false);
+  assert.deepEqual(state.observations, { nowMs: 0 });
 }
 
 it('discarding and restarting the native camera clears placement even while its HUD host stays mounted', () => {
