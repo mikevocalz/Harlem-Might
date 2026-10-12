@@ -4,6 +4,7 @@ import { InfiniteQueryObserver, QueryClient } from '@tanstack/react-query';
 import { createContentReaders } from '../../content/readers.ts';
 import { createRestContentSource } from '../../content/rest-source.ts';
 import { fetchMusicArtistsPage, requestNextMusicPage } from './music-pagination.ts';
+import { musicKeys } from './music.keys.ts';
 
 it('infinite pages keep initial data and next-page failures, and forward each query signal', async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: 2, retryDelay: 0, gcTime: Infinity } } });
@@ -21,7 +22,7 @@ it('infinite pages keep initial data and next-page failures, and forward each qu
   }));
   const initial = { artists: [], hasNextPage: true, totalDocs: 1, page: 1 };
   const observer = new InfiniteQueryObserver(client, {
-    queryKey: ['music-artists'],
+    queryKey: musicKeys.artists,
     initialPageParam: 1,
     initialData: { pages: [initial], pageParams: [1] },
     staleTime: 60_000,
