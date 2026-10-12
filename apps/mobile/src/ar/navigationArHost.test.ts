@@ -260,6 +260,22 @@ describe('focused navigation AR host synchronization', () => {
     });
   }
 
+  it('keeps unavailable recovery latched without a camera until explicit Back', async () => {
+    const { controller, counts } = await startWalk();
+    const host = createNavigationArHost(controller);
+    syncNavigationArHost(host, { focused: true, showMap: true, navigationInAr: navigationInAr() });
+    const visit = host.getState().visit;
+    controller.setArTracking({ kind: 'unavailable', reason: 'permission-denied' });
+    assert.equal(navigationInAr(), false, 'the camera renderer must be removed');
+    syncNavigationArHost(host, { focused: true, showMap: true, navigationInAr: navigationInAr() });
+    assert.equal(host.getState().visit, visit, 'keep the recovery message rather than silently dismissing it');
+    assert.equal(useNavigationStore.getState().session.phase, 'navigating');
+    assert.deepEqual(counts, { routes: 1, watches: 1, stops: 0 });
+    host.getState().close();
+    assert.equal(host.getState().visit, undefined);
+    assert.ok(isLocationRunning(), 'Back preserves the map walk');
+  });
+
   it('does not reopen after an explicit return to map guidance', async () => {
     const { controller, counts } = await startWalk();
     const host = createNavigationArHost(controller);

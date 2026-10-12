@@ -2,9 +2,9 @@
 
 Implemented on top of #69 and #70, using the shared trip, existing Explore shell and one Viro walking renderer.
 
-- Keep one experience per AR route visit. End, unavailable camera or arrival never accidentally open a tabletop renderer. Ownership guards protect a newer visit from old asynchronous cleanup; Strict Mode effect replay is safe.
+- Keep one experience per in-pane AR visit. End, unavailable camera or arrival never accidentally open a tabletop renderer. Ownership guards protect a newer visit from old asynchronous cleanup; Strict Mode effect replay is safe.
 - Back/hardware Back preserves the walk and restores compact map intent. Arrival ends the watch and opens destination Detail with map as the return pane.
-- Release the camera when navigation no longer requires it. Unsupported/non-phone direct entries suppress camera and return to the existing map shell.
+- Release the camera when navigation no longer requires it. Ended/unavailable feedback stays visible until explicit Back, so losing camera support never silently replaces the recovery HUD. Legacy direct entries transfer into the existing Explore shell.
 - Recalibrate without refetching the route; pause/resume through the shared runtime; offer reroute retry, End and map return. Speed, GPS, camera and heading recovery have actionable text.
 - A separate Check walking pace action resolves a speed-pause/background deadlock. It checks current native permission and revalidates foreground, mounted lifetime, exact session/source and newer denial events before restarting one watch. Guidance stays paused until an explicit Resume; fresh high-speed readings keep it paused.
 - Direction arrows require fresh matched position and actual phone heading, never course over ground. Text communicates left/right/ahead/behind independently of the decorative arrow.
@@ -17,4 +17,4 @@ Walking AR uses the existing Viro iOS/Android support check and stays inside Exp
 
 ## Checks
 
-Pure recovery and real-store visit/compact-pane regressions cover stale direction, camera/GPS recovery, pause, End watcher cleanup, exit intent, late cleanup, new visits, and Strict Mode replay. See the PR for exact isolated-branch test/type/lint and hosted CI results. No native device or emulator was available; camera lifecycle, screen-reader order, large text, outdoor walking and physical arrival remain acceptance items. CodeRabbit skips drafts; independent local review was performed. No merge, deployment, credential change, Payload change or live migration.
+Pure recovery and real-store visit/compact-pane regressions cover stale direction, camera/GPS recovery, pause, End watcher cleanup, exit intent, late cleanup, new visits, and Strict Mode replay. See the PR for exact isolated-branch test/type/lint and hosted CI results. No native device or emulator was available; camera lifecycle, screen-reader order, large text, outdoor walking and physical arrival remain acceptance items. Independent local and automatic review were performed; exact-head status is recorded in the PR. No deployment, credential change, Payload change or live migration is included.
