@@ -204,6 +204,8 @@ export class ThreeLightCycleRenderer {
   >();
   private lastFrameAt = 0;
   private disposed = false;
+  private initialized = false;
+  private readonly initialBackend: THREE.WebGPURenderer['backend'];
 
   constructor(options: ThreeLightCycleRendererOptions) {
     this.context = options.context;
@@ -224,6 +226,7 @@ export class ThreeLightCycleRenderer {
       device: options.device,
       antialias: true,
     });
+    this.initialBackend = this.renderer.backend;
     this.renderer.setSize(options.width, options.height, false);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.15;
@@ -241,10 +244,16 @@ export class ThreeLightCycleRenderer {
 
   async init(assetUri?: string, mcpAssetUri?: string) {
     await this.renderer.init();
-    await Promise.all([
+    this.initialized = true;
+    // Both loaders must settle before a rejected init permits disposal. A
+    // fail-fast Promise.all would let the other loader attach resources later.
+    const results = await Promise.allSettled([
       this.mountCycles(assetUri),
       this.mcpPresence.init(mcpAssetUri),
     ]);
+    for (const result of results) {
+      if (result.status === 'rejected') throw result.reason;
+    }
   }
 
   resize(width: number, height: number) {
@@ -582,6 +591,6 @@ export class ThreeLightCycleRenderer {
     this.trailMaterials.p2.material.dispose();
     this.mcpPresence.dispose();
     this.typegpu.destroy();
-    disposeLightCycleWebGPURenderer(this.renderer);
+    return disposeLightCycleWebGPURenderer(this.renderer, this.initialized, this.initialBackend);
   }
 }

@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { Text, View } from '@acme/ui/tw';
 import { ThreeLightCycleCanvas } from './ThreeLightCycleCanvas.web';
+import { handleTabletopCanvasUnavailable } from './tabletopCanvasFailure';
 import { McpVoicePlaybackWeb } from '../../mcp/McpVoicePlayback.web';
 import { TabletopRiveScoreboardWeb } from '../ui/TabletopRiveScoreboard.web';
 import { tabletopSoloInput } from '../runtime/tabletopSoloInputStore';
@@ -77,6 +78,7 @@ export function TabletopThreeExperience() {
 
       <ThreeLightCycleCanvas
         getState={getState}
+        onUnavailable={handleTabletopCanvasUnavailable}
         assetUri={LIGHTCYCLE_ASSET}
         mcpAssetUri={MCP_GNM_ASSET}
         style={{ flex: 1 }}

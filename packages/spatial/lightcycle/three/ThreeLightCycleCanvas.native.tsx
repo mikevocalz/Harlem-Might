@@ -6,6 +6,7 @@ import type { CanvasRef } from 'react-native-webgpu';
 import { Canvas, useDevice } from 'react-native-webgpu';
 import type { LightCycleMatchState } from '../tabletopCore';
 import { ThreeLightCycleRenderer } from './ThreeLightCycleRenderer';
+import { startCanvasSession } from '../../canvasSession';
 
 export type ThreeLightCycleCanvasProps = {
   state?: LightCycleMatchState;
@@ -13,6 +14,8 @@ export type ThreeLightCycleCanvasProps = {
   assetUri?: string;
   mcpAssetUri?: string;
   style?: object;
+  /** Lets the host close the failed view and present its existing fallback. */
+  onUnavailable?: (reason: string) => void;
 };
 
 export function ThreeLightCycleCanvas({
@@ -21,9 +24,12 @@ export function ThreeLightCycleCanvas({
   assetUri,
   mcpAssetUri,
   style,
+  onUnavailable,
 }: ThreeLightCycleCanvasProps) {
   const canvasRef = useRef<CanvasRef>(null);
-  const rendererRef = useRef<ThreeLightCycleRenderer | null>(null);
+  const previousClose = useRef<Promise<void> | undefined>(undefined);
+  const unavailableRef = useRef(onUnavailable);
+  useEffect(() => { unavailableRef.current = onUnavailable; }, [onUnavailable]);
   const stateRef = useRef<LightCycleMatchState | null>(state ?? null);
   const { device } = useDevice();
 
@@ -34,11 +40,13 @@ export function ThreeLightCycleCanvas({
   useEffect(() => {
     if (!device || !canvasRef.current) return;
 
-    let cancelled = false;
-
-    const start = async () => {
+    const session = startCanvasSession(previousClose.current, async (owner) => {
       const context = canvasRef.current?.getContext('webgpu');
-      if (!context || cancelled) return;
+      if (!context) return owner.fail('no-context');
+      // useDevice owns this device; only the renderer belongs to this effect.
+      void device.lost.then((info) => {
+        if (info.reason !== 'destroyed') owner.fail('device-lost');
+      });
 
       const canvas = context.canvas as unknown as {
         width: number;
@@ -63,30 +71,21 @@ export function ThreeLightCycleCanvas({
         height: canvas.height,
         assetUri,
       });
-      rendererRef.current = renderer;
+      owner.own(() => renderer.dispose());
       await renderer.init(assetUri, mcpAssetUri);
-      if (cancelled) {
-        renderer.dispose();
-        return;
-      }
+      if (!owner.active) return;
 
       // Match react-native-webgpu's current ThreeJS example: let Three own
       // the display-rate animation callback, then explicitly present the RN
       // WebGPU surface from ThreeLightCycleRenderer.render().
-      renderer.renderer.setAnimationLoop((now) => {
+      await renderer.renderer.setAnimationLoop((now) => {
+        if (!owner.active) return;
         const snapshot = getState?.() ?? stateRef.current;
         if (snapshot) renderer.render(snapshot, now);
       });
-    };
-
-    void start();
-
-    return () => {
-      cancelled = true;
-      rendererRef.current?.renderer.setAnimationLoop(null);
-      rendererRef.current?.dispose();
-      rendererRef.current = null;
-    };
+    }, (reason) => unavailableRef.current?.(reason));
+    previousClose.current = session.closed;
+    return session.close;
   }, [assetUri, device, getState, mcpAssetUri]);
 
   return (

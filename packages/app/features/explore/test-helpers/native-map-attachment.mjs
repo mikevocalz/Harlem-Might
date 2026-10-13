@@ -7,7 +7,7 @@ import { registerNativeMap } from '../native-map-module.ts';
 import { useExplore } from '../explore.store.ts';
 import { placeCatalogueStore } from '../place-catalogue.store.ts';
 import { navigationFixStore, useNavigationStore } from '../../navigation/session/navigationStore.ts';
-import { ROUTE_LAYERS, SELECTED_SOURCE } from '../explore-map-layers.ts';
+import { PLACES_SOURCE, ROUTE_AHEAD_SOURCE, ROUTE_ALTERNATIVES_SOURCE, ROUTE_LAYERS, ROUTE_WALKED_SOURCE, SELECTED_SOURCE } from '../explore-map-layers.ts';
 
 const [scenario, boundary, outcome, stage] = process.argv.slice(2);
 const permissionRequests = [];
@@ -118,9 +118,14 @@ function makeStyle(pendingStage) {
   const pending = deferred();
   const calls = [];
   const writes = [];
+  let held = false;
   function operation(stage, id) {
     calls.push({ stage, id });
-    return stage === pendingStage && (stage !== 'layer' || id === ROUTE_LAYERS.at(-1).id) ? pending.promise : Promise.resolve();
+    if (!held && stage === pendingStage && (stage !== 'layer' || id === ROUTE_LAYERS.at(-1).id)) {
+      held = true;
+      return pending.promise;
+    }
+    return Promise.resolve();
   }
   return {
     pending, calls, writes,
@@ -190,7 +195,7 @@ const oldMap = makeMap();
 let rendered = render(oldMap);
 assert.equal(sessionSubscribers, 1);
 assert.equal(fixSubscribers, 1);
-const oldStyle = makeStyle(scenario === 'style' || scenario === 'current-error' ? stage : undefined);
+const oldStyle = makeStyle(['style', 'current-error', 'setup-reuse', 'setup-latest'].includes(scenario) ? stage : undefined);
 if (scenario !== 'query') {
   oldMap.emit('style', oldStyle);
   await flush();
@@ -220,7 +225,7 @@ function crossBoundary() {
   else if (boundary === 'detached') receiveMap(null);
   else if (boundary === 'failed') useNativeMap.getState().setStatus('failed', 'map failed');
   else if (boundary === 'selection') useExplore.setState({ selectedPlaceId: otherPlace.id });
-  else assert.equal(boundary, 'style-reload');
+  else assert.ok(['style-reload', 'style-reuse'].includes(boundary));
 }
 function finishPermission(request, result) {
   if (result === 'reject') request.reject(new Error('permission bridge failed'));
@@ -236,8 +241,192 @@ function assertLocation(shown, denied = false) {
   assert.equal(rendered.button.props['aria-label'], shown ? 'Hide my location' : 'Show my location on the map');
   assert.equal(Boolean(rendered.message), denied, 'only explicit denial displays Settings guidance');
 }
+
+const sourceIds = {
+  catalogue: PLACES_SOURCE, selection: SELECTED_SOURCE,
+  'route-walked': ROUTE_WALKED_SOURCE, 'route-ahead': ROUTE_AHEAD_SOURCE, 'route-alternatives': ROUTE_ALTERNATIVES_SOURCE,
+  'fix-walked': ROUTE_WALKED_SOURCE, 'fix-ahead': ROUTE_AHEAD_SOURCE,
+};
+let updateNumber = 0;
+const coordinate = { latitude: 40.81, longitude: -73.95 };
+const route = { id: 'walk', geometry: { coordinates: [coordinate, { latitude: 40.82, longitude: -73.94 }] } };
+function prepareSource() {
+  render(); // Commit the effects subscribed to the now-ready style.
+  if (stage.startsWith('fix-')) {
+    useNavigationStore.setState({ session: { phase: 'navigating', activeRoute: { route, generation: 1 } } });
+  }
+}
+function updateSource() {
+  updateNumber++;
+  if (stage === 'catalogue') {
+    placeCatalogueStore.setState({ places: [{ ...place, name: `Apollo ${updateNumber}` }, otherPlace] });
+    render();
+  } else if (stage === 'selection') {
+    useExplore.setState({ selectedPlaceId: updateNumber % 2 ? place.id : otherPlace.id });
+    render();
+  } else if (stage.startsWith('route-')) {
+    useNavigationStore.setState({ session: { phase: 'routeReady', routes: [{ ...route, id: `walk-${updateNumber}` }, route], selectedRouteIndex: 0 } });
+  } else if (stage.startsWith('fix-')) {
+    navigationFixStore.setState({ match: { kind: 'matched', segmentIndex: 0, coordinate: { ...coordinate, latitude: 40.81 + updateNumber / 10000 } } });
+  } else throw new Error(`Unknown source: ${stage}`);
+}
+function holdWrite(style, mode = 'reject') {
+  const pending = deferred();
+  const original = style.setGeoJsonSourceData;
+  let used = false;
+  style.setGeoJsonSourceData = (id, data) => {
+    const result = original(id, data);
+    if (used || id !== sourceIds[stage]) return result;
+    used = true;
+    if (mode === 'throw') throw new Error('current source failed');
+    return pending.promise;
+  };
+  return { ...pending, assertUsed: () => assert.equal(used, true, 'the targeted production source writer ran') };
+}
+function assertFallback() {
+  assert.equal(useNativeMap.getState().status, 'failed');
+  assert.equal(useNativeMap.getState().error, 'current source failed');
+  assert.equal(ExploreMap(props).type.name, 'ExploreSchematicMap');
+}
+
 try {
-  if (scenario === 'permission-stale') {
+  if (scenario === 'source-current') {
+    prepareSource();
+    const pending = holdWrite(oldStyle, outcome);
+    updateSource();
+    pending.assertUsed();
+    if (outcome !== 'throw') pending.reject(new Error('current source failed'));
+    await flush();
+    assertFallback();
+    const writes = oldStyle.writes.length;
+    // Failed owners must stop immediately, even before React unmounts them.
+    useNavigationStore.setState({ session: { phase: 'routeReady', routes: [route], selectedRouteIndex: 0 } });
+    navigationFixStore.setState({ match: { kind: 'matched', segmentIndex: 0, coordinate } });
+    const replacement = makeStyle();
+    oldMap.emit('style', replacement);
+    await flush();
+    assert.equal(oldStyle.writes.length, writes, 'failure stops subsequent source writes');
+    assert.equal(replacement.calls.length, 0, 'queued style reload cannot resurrect the failed map');
+    currentMap = makeMap();
+    receiveMap(currentMap);
+    currentMap.emit('style', replacement);
+    for (const camera of oldMap.cameras) camera.resolve({ zoom: 14 });
+    await flush();
+    assert.equal(currentMap.listeners.style.length, 0, 'a queued native ref cannot reconnect after failure');
+    assert.equal(oldMap.flights.length, 0, 'pending camera reads stop on failure');
+    assertFallback();
+  } else if (scenario === 'source-stale') {
+    prepareSource();
+    const pending = holdWrite(oldStyle);
+    updateSource();
+    pending.assertUsed();
+    crossBoundary();
+    if (!['unmount', 'detached'].includes(boundary)) {
+      currentStyle = boundary === 'style-reuse' ? oldStyle : makeStyle();
+      currentMap.emit('style', currentStyle);
+      await flush();
+      render();
+    }
+    const state = useNativeMap.getState();
+    const writes = oldStyle.writes.length;
+    pending.reject(new Error('obsolete source failed'));
+    await flush();
+    assert.equal(useNativeMap.getState(), state, 'obsolete writes cannot fail the current attachment or style load');
+    assert.equal(oldStyle.writes.length, writes, 'obsolete rejection starts no native writes');
+    if (!['unmount', 'detached'].includes(boundary)) {
+      assert.equal(useNativeMap.getState().status, 'ready');
+      updateSource();
+      assert.ok(currentStyle.writes.some(write => write.id === sourceIds[stage]));
+    }
+  } else if (scenario === 'source-superseded') {
+    prepareSource();
+    const pending = holdWrite(oldStyle);
+    updateSource();
+    pending.assertUsed();
+    updateSource();
+    const state = useNativeMap.getState();
+    pending.reject(new Error('superseded update failed'));
+    await flush();
+    assert.equal(useNativeMap.getState(), state, 'newer updates supersede older failures on the same source');
+    assert.equal(useNativeMap.getState().status, 'ready');
+    // Supersession cannot disable error reporting for the next current write.
+    const current = holdWrite(oldStyle);
+    updateSource();
+    current.assertUsed();
+    current.reject(new Error('current source failed'));
+    await flush();
+    assertFallback();
+  } else if (scenario === 'source-independent') {
+    prepareSource();
+    const pending = holdWrite(oldStyle);
+    updateSource();
+    pending.assertUsed();
+    useExplore.setState({ selectedPlaceId: place.id });
+    render();
+    pending.reject(new Error('current source failed'));
+    await flush();
+    assertFallback();
+  } else if (scenario === 'setup-reuse') {
+    assert.equal(useNativeMap.getState().status, 'loading');
+    oldMap.emit('style', oldStyle);
+    await flush();
+    assert.equal(useNativeMap.getState().status, 'ready');
+    const state = useNativeMap.getState();
+    const calls = oldStyle.calls.length;
+    const writes = oldStyle.writes.length;
+    oldStyle.pending[outcome](outcome === 'reject' ? new Error('old setup failed') : undefined);
+    await flush();
+    assert.equal(useNativeMap.getState(), state, 'a reused style object does not revive an obsolete setup');
+    assert.equal(oldStyle.calls.length, calls);
+    assert.equal(oldStyle.writes.length, writes);
+  } else if (scenario === 'setup-latest') {
+    placeCatalogueStore.setState({ places: [{ ...otherPlace, name: 'Latest name' }] });
+    useExplore.setState({ selectedPlaceId: otherPlace.id });
+    render();
+    oldStyle.pending.resolve();
+    await flush();
+    assert.equal(useNativeMap.getState().status, 'ready');
+    const places = JSON.parse(oldStyle.writes.filter(write => write.id === PLACES_SOURCE).at(-1).data);
+    const selected = JSON.parse(oldStyle.writes.filter(write => write.id === SELECTED_SOURCE).at(-1).data);
+    assert.deepEqual(places.features.map(feature => feature.properties.id), [otherPlace.id]);
+    assert.equal(places.features[0].properties.name, 'Latest name');
+    assert.equal(selected.features[0].properties.id, otherPlace.id);
+  } else if (scenario === 'setup-current') {
+    const style = makeStyle();
+    style[stage] = () => {
+      if (outcome === 'throw') throw new Error('current source failed');
+      return Promise.reject(new Error('current source failed'));
+    };
+    oldMap.emit('style', style);
+    await flush();
+    assertFallback();
+  } else if (scenario === 'optional-error') {
+    render();
+    const fail = () => {
+      if (outcome === 'throw') throw new Error('optional operation failed');
+      return Promise.reject(new Error('optional operation failed'));
+    };
+    if (stage === 'setStandardConfig') {
+      oldStyle.setStandardConfig = fail;
+      oldMap.emit('style', oldStyle);
+    } else {
+      oldMap[stage] = fail;
+      if (stage === 'queryRenderedFeatures') oldMap.emit('tap', tap);
+      else if (stage === 'fitBounds') {
+        placeCatalogueStore.setState({ places: [otherPlace] });
+        render();
+      } else {
+        if (stage === 'flyTo') oldMap.getCameraState = () => Promise.resolve({ zoom: 14 });
+        useExplore.setState({ selectedPlaceId: place.id });
+        render();
+      }
+    }
+    await flush();
+    assert.equal(useNativeMap.getState().status, 'ready', 'optional native failures preserve the street map');
+    assert.equal(useNativeMap.getState().error, null);
+    oldMap.emit('error', new Error('missing tile'));
+    assert.equal(useNativeMap.getState().status, 'ready', 'post-load tile errors stay nonfatal');
+  } else if (scenario === 'permission-stale') {
     const oldPress = rendered.button.props.onPress;
     oldPress();
     assert.equal(permissionRequests.length, 1);
@@ -435,6 +624,7 @@ try {
     assert.equal(ExploreMap(props).type.name, 'ExploreSchematicMap');
   } else throw new Error(`Unknown scenario: ${scenario}`);
 } finally {
+  const wasFailed = useNativeMap.getState().status === 'failed';
   unmount();
   assert.equal(sessionSubscribers, 0, 'final unmount releases route subscriptions');
   assert.equal(fixSubscribers, 0, 'final unmount releases fix subscriptions');
@@ -443,6 +633,6 @@ try {
       for (const listener of listeners) assert.equal(listener.removed, 1, 'every native listener is removed exactly once');
     }
   }
-  assert.equal(useNativeMap.getState().status, scenario === 'current-error' || boundary === 'failed' ? 'failed' : 'off');
+  assert.equal(useNativeMap.getState().status, wasFailed ? 'failed' : 'off');
   delete globalThis.nativeMapHarness;
 }

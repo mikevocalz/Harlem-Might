@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { tgpu, type TgpuRoot } from 'typegpu';
 import { createSightlineLensMaterial } from './sightlineMaterial';
+import { disposeWebGPURenderer } from '../disposeWebGPURenderer';
 
 export type SightlineGPUCanvasContext = GPUCanvasContext & {
   present?: () => void;
@@ -42,6 +43,8 @@ export class SightlineHeroRenderer {
   private targetProgress = 0;
   private progress = 0;
   private disposed = false;
+  private initialized = false;
+  private readonly initialBackend: THREE.WebGPURenderer['backend'];
 
   constructor(options: SightlineHeroRendererOptions) {
     this.context = options.context;
@@ -63,6 +66,7 @@ export class SightlineHeroRenderer {
       context: options.context,
       device: options.device,
     });
+    this.initialBackend = this.renderer.backend;
     this.renderer.setSize(options.width, options.height, false);
     this.renderer.setPixelRatio(1);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -89,6 +93,7 @@ export class SightlineHeroRenderer {
 
   async init() {
     await this.renderer.init();
+    this.initialized = true;
   }
 
   resize(width: number, height: number) {
@@ -309,7 +314,6 @@ export class SightlineHeroRenderer {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
-    this.renderer.setAnimationLoop(null);
 
     this.scene.traverse((object) => {
       if (!(object instanceof THREE.Mesh)) return;
@@ -322,6 +326,6 @@ export class SightlineHeroRenderer {
 
     this.lens.material.dispose();
     this.typegpu.destroy();
-    this.renderer.dispose();
+    return disposeWebGPURenderer(this.renderer, this.initialized, this.initialBackend);
   }
 }

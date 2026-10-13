@@ -3,6 +3,7 @@
 import { Pressable, Text, View } from '@acme/ui/tw';
 import { Image } from 'react-native';
 import { ThreeLightCycleCanvas } from './ThreeLightCycleCanvas.native';
+import { handleTabletopCanvasUnavailable } from './tabletopCanvasFailure';
 import { McpVoicePlaybackNative } from '../../mcp/McpVoicePlayback.native';
 import type { McpVoiceCueName } from '../../mcp/mcpVoice';
 import { tabletopSoloInput } from '../runtime/tabletopSoloInputStore';
@@ -69,6 +70,7 @@ export function TabletopThreeExperience() {
 
       <ThreeLightCycleCanvas
         getState={getState}
+        onUnavailable={handleTabletopCanvasUnavailable}
         assetUri={LIGHTCYCLE_ASSET}
         mcpAssetUri={MCP_GNM_ASSET}
         style={{ flex: 1 }}

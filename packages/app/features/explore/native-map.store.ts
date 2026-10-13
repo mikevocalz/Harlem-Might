@@ -4,7 +4,7 @@ import { create } from 'zustand';
  * - `off`: no native map on this build; Explore draws the schematic.
  * - `loading`: the native map is mounted and its style is loading.
  * - `ready`: the style loaded and Explore's layers are on it.
- * - `failed`: the style or the map could not load; `error` says why.
+ * - `failed`: required map style/data could not load or update; `error` says why.
  */
 export type NativeMapStatus = 'off' | 'loading' | 'ready' | 'failed';
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import {
   LIGHTCYCLE_FIXED_STEP_MS,
   advanceLightCycleMatch,
@@ -75,7 +75,8 @@ export function useTabletopSoloDriver(playerName: string) {
     };
   }, [playerName]);
 
-  return {
-    getState: () => stateRef.current,
-  };
+  // The canvas depends on this getter. Simulation-store updates re-render its
+  // parent every tick and must not restart GPU initialization.
+  const getState = useCallback(() => stateRef.current, []);
+  return { getState };
 }

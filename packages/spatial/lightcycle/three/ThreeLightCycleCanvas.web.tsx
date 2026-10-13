@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import type { LightCycleMatchState } from '../tabletopCore';
 import { ThreeLightCycleRenderer } from './ThreeLightCycleRenderer';
+import { startCanvasSession } from '../../canvasSession';
 
 export type ThreeLightCycleCanvasProps = {
   state?: LightCycleMatchState;
@@ -11,6 +12,8 @@ export type ThreeLightCycleCanvasProps = {
   assetUri?: string;
   mcpAssetUri?: string;
   style?: object;
+  /** Lets the host close the failed view and present its existing fallback. */
+  onUnavailable?: (reason: string) => void;
 };
 
 export function ThreeLightCycleCanvas({
@@ -19,8 +22,12 @@ export function ThreeLightCycleCanvas({
   assetUri,
   mcpAssetUri,
   style,
+  onUnavailable,
 }: ThreeLightCycleCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const previousClose = useRef<Promise<void> | undefined>(undefined);
+  const unavailableRef = useRef(onUnavailable);
+  useEffect(() => { unavailableRef.current = onUnavailable; }, [onUnavailable]);
   const stateRef = useRef<LightCycleMatchState | null>(state ?? null);
 
   useEffect(() => {
@@ -29,31 +36,31 @@ export function ThreeLightCycleCanvas({
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const gpu = navigator.gpu;
-    if (!canvas || !gpu) return;
+    const gpu = globalThis.navigator?.gpu;
+    if (!canvas) return;
+    if (!gpu) {
+      unavailableRef.current?.('no-webgpu');
+      return;
+    }
 
-    let disposed = false;
-    let renderer: ThreeLightCycleRenderer | null = null;
-    let resizeObserver: ResizeObserver | null = null;
-    let device: GPUDevice | null = null;
-
-    void (async () => {
+    const session = startCanvasSession(previousClose.current, async (owner) => {
+      let renderer: ThreeLightCycleRenderer | null = null;
       const adapter = await gpu.requestAdapter();
-      if (!adapter || disposed) return;
+      if (!owner.active) return;
+      if (!adapter) return owner.fail('no-adapter');
 
-      device = await adapter.requestDevice();
-      if (disposed) {
-        device.destroy();
-        return;
-      }
+      const device = await adapter.requestDevice();
+      owner.own(() => device.destroy());
+      if (!owner.active) return;
+      void device.lost.then((info) => {
+        if (info.reason !== 'destroyed') owner.fail('device-lost');
+      });
 
       const context = canvas.getContext('webgpu');
-      if (!context) {
-        device.destroy();
-        return;
-      }
+      if (!context) return owner.fail('no-context');
 
       const resize = () => {
+        if (!owner.active) return;
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
         const width = Math.max(1, Math.round(rect.width * dpr));
@@ -79,30 +86,23 @@ export function ThreeLightCycleCanvas({
         height: canvas.height,
         assetUri,
       });
+      const ownedRenderer = renderer;
+      owner.own(() => ownedRenderer.dispose());
       await renderer.init(assetUri, mcpAssetUri);
+      if (!owner.active) return;
 
-      if (disposed) {
-        renderer.dispose();
-        device.destroy();
-        return;
-      }
-
-      resizeObserver = new ResizeObserver(resize);
+      const resizeObserver = new ResizeObserver(resize);
+      owner.own(() => resizeObserver.disconnect());
       resizeObserver.observe(canvas);
 
-      renderer.renderer.setAnimationLoop((now) => {
+      await renderer.renderer.setAnimationLoop((now) => {
+        if (!owner.active) return;
         const snapshot = getState?.() ?? stateRef.current;
         if (snapshot) renderer?.render(snapshot, now);
       });
-    })();
-
-    return () => {
-      disposed = true;
-      resizeObserver?.disconnect();
-      renderer?.renderer.setAnimationLoop(null);
-      renderer?.dispose();
-      device?.destroy();
-    };
+    }, (reason) => unavailableRef.current?.(reason));
+    previousClose.current = session.closed;
+    return session.close;
   }, [assetUri, getState, mcpAssetUri]);
 
   return (
