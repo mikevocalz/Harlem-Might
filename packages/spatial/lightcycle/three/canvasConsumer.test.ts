@@ -118,11 +118,13 @@ test('solo production driver keeps one getter across tick-driven re-renders and 
     './tabletopRaceStore': { tabletopRace },
     './tabletopSoloInputStore': { tabletopSoloInput },
   });
-  const useDriver = module.useTabletopSoloDriver as (name: string) => { getState: () => core.LightCycleMatchState | null };
+  // This executes the exported hook inside the controlled hook host above,
+  // rather than calling a React hook from this test runner's render function.
+  const runDriver = module.useTabletopSoloDriver as (name: string) => { getState: () => core.LightCycleMatchState | null };
   const render = (name = 'PLAYER') => {
     cursor = 0;
     setup = undefined;
-    const driver = useDriver(name);
+    const driver = runDriver(name);
     if (setup) { cleanup?.(); cleanup = (setup as () => () => void)(); }
     return driver;
   };
