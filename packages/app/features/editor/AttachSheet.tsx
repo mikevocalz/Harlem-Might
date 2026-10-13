@@ -8,6 +8,7 @@ import {
   acquireAttachment,
   IDLE_PROGRESS,
   type AttachProgress,
+  type AttachmentSource,
 } from "./attachment.ts";
 import { pickFile } from "./pick-file";
 
@@ -49,11 +50,14 @@ export function AttachSheet() {
 
   const report = (next: AttachProgress) => store?.getState().set(next);
 
-  const acquireAndResolveAttachment = async (acquire: () => Promise<{ uri: string; name?: string } | null>) => {
+  const acquireAndResolveAttachment = async (acquire: () => Promise<AttachmentSource | null>) => {
     const request = useAttachStore.getState().settle;
     const isCurrent = () => request !== null && useAttachStore.getState().settle === request;
     const attachment = await acquireAttachment(acquire, report, isCurrent);
-    if (attachment && isCurrent()) useAttachStore.getState().resolve(attachment);
+    if (attachment) {
+      if (isCurrent()) useAttachStore.getState().resolve(attachment);
+      else attachment.release?.();
+    }
   };
 
   const choose = () => acquireAndResolveAttachment(pickFile);
@@ -111,10 +115,15 @@ export function AttachSheet() {
             className="h-64 p-4"
             onDrop={({ assets }) => {
               store?.getState().setHovering(false);
-              const asset = assets[0];
-              // A text-only drop carries no uri — there is nothing to attach.
-              if (asset?.uri === undefined) return;
-              const source = { uri: asset.uri, name: asset.fileName };
+              const [asset, ...unused] = assets;
+              // This single-file dialog owns the whole batch, including assets
+              // it cannot adopt. A text-only first asset still means no file.
+              unused.forEach((entry) => entry.release?.());
+              if (asset?.uri === undefined || useAttachStore.getState().settle === null) {
+                asset?.release?.();
+                return;
+              }
+              const source = { uri: asset.uri, name: asset.fileName, release: asset.release };
               void acquireAndResolveAttachment(async () => source);
             }}
           >

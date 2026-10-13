@@ -1,10 +1,19 @@
 import { downloadAttachment } from './download';
 
 export interface Attachment {
-  /** URI to store in the document. */
+  /** URI to use while this attachment is owned; browser blob URLs are session-local. */
   uri: string;
   name: string;
+  /**
+   * Release a transient resource after the recipient no longer needs the URI.
+   * Safe to repeat. Native durable file URIs do not supply browser cleanup.
+   * Keep this callback with the attachment; do not release just because its
+   * picker/dialog closes or its URI has been inserted into an editor.
+   */
+  release?: () => void;
 }
+
+export type AttachmentSource = Omit<Attachment, 'name'> & { name?: string };
 
 export type AttachPhase = 'idle' | 'attaching' | 'done' | 'error';
 
@@ -42,6 +51,8 @@ export function fileNameFrom(uri: string): string {
 
 /**
  * Bring a dropped or picked file into the app and report progress.
+ * Takes ownership of `source`: failure releases it, while success transfers
+ * the returned attachment's release callback to the caller.
  *
  * WHAT THE PERCENTAGE MEANS, honestly:
  *
@@ -59,19 +70,22 @@ export function fileNameFrom(uri: string): string {
  * ratio is clamped to 0–1; completion still waits for the actual transfer.
  */
 export async function attach(
-  source: { uri: string; name?: string },
+  source: AttachmentSource,
   onProgress: (progress: AttachProgress) => void,
 ): Promise<Attachment | null> {
   const name = source.name ?? fileNameFrom(source.uri);
-
-  if (!REMOTE.test(source.uri)) {
-    onProgress({ phase: 'done', ratio: 1, bytesTotal: null, name, error: null });
-    return { uri: source.uri, name };
-  }
-
-  onProgress({ phase: 'attaching', ratio: 0, bytesTotal: null, name, error: null });
+  const local = !REMOTE.test(source.uri);
+  let downloadedRelease: (() => void) | undefined;
+  let transferred = false;
 
   try {
+    if (local) {
+      onProgress({ phase: 'done', ratio: 1, bytesTotal: null, name, error: null });
+      transferred = true;
+      return { uri: source.uri, name, ...(source.release ? { release: source.release } : {}) };
+    }
+
+    onProgress({ phase: 'attaching', ratio: 0, bytesTotal: null, name, error: null });
     const uri = await downloadAttachment(source.uri, name, ({ bytesWritten, totalBytes }) => {
       const bytesTotal = Number.isFinite(totalBytes) && totalBytes > 0 ? totalBytes : null;
       onProgress({
@@ -82,7 +96,7 @@ export async function attach(
         name,
         error: null,
       });
-    });
+    }, (release) => { downloadedRelease = release; });
 
     // A cancelled transfer resolves null, and must not be reported as a
     // completed one.
@@ -91,7 +105,8 @@ export async function attach(
       return null;
     }
     onProgress({ phase: 'done', ratio: 1, bytesTotal: null, name, error: null });
-    return { uri, name };
+    transferred = true;
+    return { uri, name, ...(downloadedRelease ? { release: downloadedRelease } : {}) };
   } catch (cause) {
     onProgress({
       phase: 'error',
@@ -101,12 +116,20 @@ export async function attach(
       error: cause instanceof Error ? cause.message : 'Could not attach that file.',
     });
     return null;
+  } finally {
+    // Remote acquisition replaces the source resource; local success keeps it.
+    if (!local || !transferred) source.release?.();
+    if (!transferred) downloadedRelease?.();
   }
 }
 
-/** Acquire and attach inside one UI error boundary, scoped to the open dialog. */
+/**
+ * Acquire and attach inside one UI error boundary, scoped to the open dialog.
+ * Obsolete results are released here. A current result transfers ownership to
+ * the caller, who must also release it if its own handoff becomes obsolete.
+ */
 export async function acquireAttachment(
-  acquire: () => Promise<{ uri: string; name?: string } | null>,
+  acquire: () => Promise<AttachmentSource | null>,
   onProgress: (progress: AttachProgress) => void,
   isCurrent: () => boolean = () => true,
 ): Promise<Attachment | null> {
@@ -117,13 +140,20 @@ export async function acquireAttachment(
     if (!isCurrent()) return null;
     const source = await acquire();
     // Closing/replacing the dialog must not start a transfer for an old picker.
-    if (!isCurrent()) return null;
+    if (!isCurrent()) {
+      source?.release?.();
+      return null;
+    }
     if (source === null) {
       report(IDLE_PROGRESS);
       return null;
     }
     const attachment = await attach(source, report);
-    return isCurrent() ? attachment : null;
+    if (!isCurrent()) {
+      attachment?.release?.();
+      return null;
+    }
+    return attachment;
   } catch (cause) {
     report({
       phase: 'error',

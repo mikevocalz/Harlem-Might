@@ -1,4 +1,5 @@
 import type { DownloadAttachment } from './download.types.ts';
+import { createAttachmentObjectUrl } from './object-url.web.ts';
 
 /**
  * Pull a remote file into an object URL.
@@ -11,7 +12,17 @@ import type { DownloadAttachment } from './download.types.ts';
  * would hide the transfer entirely: the bar in AttachSheet is only worth
  * drawing if the bytes behind it are real (see attachment.ts).
  */
-export const downloadAttachment: DownloadAttachment = async (url, _name, onProgress) => {
+export const downloadAttachment: DownloadAttachment = async (url, _name, onProgress, onRelease) => {
+  const publish = (blob: Blob) => {
+    const resource = createAttachmentObjectUrl(blob);
+    try {
+      onRelease?.(resource.release);
+      return resource.uri;
+    } catch (cause) {
+      resource.release();
+      throw cause;
+    }
+  };
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Could not fetch that file (${response.status}).`);
 
@@ -24,7 +35,7 @@ export const downloadAttachment: DownloadAttachment = async (url, _name, onProgr
   if (body === null) {
     const whole = await response.blob();
     onProgress({ bytesWritten: whole.size, totalBytes: whole.size });
-    return URL.createObjectURL(whole);
+    return publish(whole);
   }
 
   const reader = body.getReader();
@@ -39,5 +50,5 @@ export const downloadAttachment: DownloadAttachment = async (url, _name, onProgr
     onProgress({ bytesWritten, totalBytes });
   }
 
-  return URL.createObjectURL(new Blob(chunks));
+  return publish(new Blob(chunks));
 };
