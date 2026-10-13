@@ -39,6 +39,16 @@ All original SQL, datasets, provenance, rights requirements and apply/preview
 policies remain with their owning tools. See the [image policy](../../../../docs/IMAGE_POLICY.md)
 and [maintenance reporting contract](../../../../docs/DEVELOPMENT.md#place-maintenance-reporting).
 
+## Story lead-image outcomes
+
+`seed:story-images` previews by default; only `--apply` downloads and attaches
+images. HTTP, transport, timeout and response-body download failures identify the
+story, count toward the final summary and produce a nonzero exit status while
+independent stories continue. Deliberate source/licensing/image skips and images
+already in the lead position are not failures. Metadata, database, file-write
+and cleanup errors remain fatal; temporary files are cleaned up before returning
+an outcome. Existing metadata retries and image admission rules are unchanged.
+
 ## Offline verification
 
 From the repository root:

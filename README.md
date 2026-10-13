@@ -7,14 +7,15 @@ surfaces, and **Viro/OpenXR** for immersive 3D.
 
 The included visual sandbox is a neon Grid world: procedural Skia Grid Scene +
 Glyph City on web/native, futuristic semantic controls, and a Viro light-cycle
-race that becomes the headset entry experience.
+race available through the exported `SpatialScreen` demonstration. See the
+[current entry points](docs/SPATIAL.md#routes) for the product routes and demos.
 
 ## Layout
 
 ```
 apps/
   mobile      Expo Router app; Meta Horizon/PICO configuration lives here
-  web         Next.js app + Payload CMS; /spatial mounts the shared Grid experience
+  web         Next.js app + Payload CMS; /spatial redirects to the /ar concept page
   web-vite    Curator workspace with supported public, Today and profile routes
   storybook   Storybook 10 + Vite; includes Spatial / Grid World showcases
 packages/

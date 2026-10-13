@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// §13 generators: `pnpm gen domain <name>` / `pnpm gen component <Name>`
+// §13 generators: `pnpm gen domain <name>` / `pnpm gen feature <name>` / `pnpm gen component <Name>`
 // ponytail: plain node script, no generator framework — templates live inline.
 import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -7,6 +7,12 @@ import { join } from 'node:path';
 const [kind, rawName] = process.argv.slice(2);
 if (!kind || !rawName) {
   console.error('Usage: pnpm gen domain <kebab-name> | pnpm gen feature <kebab-name> | pnpm gen component <PascalName>');
+  process.exit(1);
+}
+
+// Validate before writing: names become both paths and TypeScript identifiers.
+if ((kind === 'domain' || kind === 'feature') && !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/i.test(rawName)) {
+  console.error(`${kind} name must be kebab-case, starting with a letter`);
   process.exit(1);
 }
 
@@ -22,23 +28,24 @@ const write = (path, content) => {
 
 if (kind === 'domain') {
   const name = rawName.toLowerCase();
-  const root = join('packages/app', name);
-  // §3.1 domain anatomy — omit folders it genuinely doesn't need, never invent alternatives.
+  const root = join('packages/app/features', name);
+  const keys = `${name.replace(/-./g, (m) => m[1].toUpperCase())}Keys`;
+  // Shared domain logic lives beside its feature's screens, under the app compiler boundary.
   write(join(root, `repository/${name}.repository.ts`),
-    `// The ONLY code in this domain that touches @acme/payload.\nexport {};\n`);
+    `// Platform-neutral adapters use @acme/app/content contracts or an injected source.\n// Payload bindings belong in packages/payload; server hosts use @acme/payload/server.\nexport {};\n`);
   write(join(root, `services/${name}.service.ts`),
     `// Orchestration, cross-repo composition, business rules.\nexport {};\n`);
   write(join(root, `queries/${name}.keys.ts`),
-    `// Query-key factory — single source of truth for keys.\nexport const ${name.replace(/-./g, (m) => m[1].toUpperCase())}Keys = {\n  all: ['${name}'] as const,\n};\n`);
+    `// Query-key factory — single source of truth for keys.\nexport const ${keys} = {\n  all: ['${name}'] as const,\n};\n`);
   write(join(root, `queries/${name}.queries.ts`), `export {};\n`);
   write(join(root, `schemas/${name}.schema.ts`), `export {};\n`);
   write(join(root, `types/${name}.types.ts`), `export {};\n`);
   write(join(root, `permissions/${name}.permissions.ts`),
-    `// Uses packages/app/permissions core; no inline role checks.\nexport {};\n`);
+    `// Client capability checks are for presentation, not authorization.\n// Reuse session state from packages/app/features/auth/member-session.ts when needed.\n// Enforce access in packages/payload/src/access and the owning collection or server service.\nexport {};\n`);
   write(join(root, `hooks/use-${name}.ts`), `export {};\n`);
   write(join(root, 'index.ts'),
-    `// Public API — nothing deep-imported from outside (§3.1).\nexport {};\n`);
-  console.log(`\nDomain '${name}' scaffolded. Add mutations/ components/ __tests__/ as they earn their place.`);
+    `// Public feature API — expose only contracts needed by other features or hosts.\nexport { ${keys} } from './queries/${name}.keys.ts';\n`);
+  console.log(`\nDomain '${name}' scaffolded in ${root}. Import its public API from '@acme/app/features/${name}/index.ts'. Add mutations/ components/ __tests__/ as they earn their place.`);
 } else if (kind === 'feature') {
   const name = rawName.toLowerCase();
   const dir = join('packages/app/features', name);
@@ -51,7 +58,7 @@ if (kind === 'domain') {
   console.log(`\nExport ${pascal}Screen from packages/app/index.ts and add thin route wrappers in apps/web and apps/mobile.`);
 } else if (kind === 'component') {
   const name = rawName;
-  if (!/^[A-Z]/.test(name)) {
+  if (!/^[A-Z][A-Za-z0-9]*$/.test(name)) {
     console.error('component name must be PascalCase');
     process.exit(1);
   }

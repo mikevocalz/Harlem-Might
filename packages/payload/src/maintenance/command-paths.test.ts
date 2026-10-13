@@ -106,7 +106,7 @@ test('Payload resolves every maintenance command and forwards arguments without 
 test('every moved module and its imports resolve through Payload’s TypeScript loader without evaluation', () => {
   const files = readdirSync(maintenanceDirectory, { recursive: true, encoding: 'utf8' })
     .filter((name) => name.endsWith('.ts') && !name.endsWith('.test.ts'));
-  assert.equal(files.length, 25, 'all 16 tools, eight helpers and the catalogue remain discoverable');
+  assert.equal(files.length, 26, 'all 16 tools, nine helpers and the catalogue remain discoverable');
   for (const filename of files) {
     const absolutePath = path.join(maintenanceDirectory, filename);
     assert.equal(physicalPath(resolveModule(`./${filename}`, fileURLToPath(import.meta.url))), absolutePath);

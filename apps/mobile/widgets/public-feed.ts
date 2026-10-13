@@ -39,7 +39,12 @@ export function loadPublicSnapshot(): WidgetSnapshot | null {
 
 export function storePublicSnapshot(snapshot: WidgetSnapshot): void {
   if (!isSnapshot(snapshot)) throw new Error('Invalid widget snapshot');
-  local().set(SNAPSHOT_KEY, JSON.stringify(snapshot));
+  try {
+    local().set(SNAPSHOT_KEY, JSON.stringify(snapshot));
+  } catch {
+    // Persistence is optional. A valid in-memory snapshot remains usable when
+    // native storage cannot open or write; invalid input must still throw above.
+  }
 }
 
 /**

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   DEFAULT_SHEET_DETENT,
   useExplore,
@@ -55,6 +55,10 @@ export function SheetRegion({ catalogue }: { catalogue: readonly ExplorePlace[] 
   const guiding = useIsGuiding();
   const stepsOpen = useNavigationUi((s) => s.stepsOpen);
   const view = parseExploreParams(params, [], 'All').view;
+  const showDirections = selected !== null && directionsPlaceId === selected.id;
+  const sheetVisible = !!selected && (!guiding || docked || stepsOpen);
+  const [detailsFocusRequest, requestDetailsFocus] = useState<{ placeId: string } | null>(null);
+  const handledDetailsFocusRequest = useRef<typeof detailsFocusRequest>(null);
 
   const mapped = useMemo(
     () => (places ?? []).flatMap((p) => (p.lngLat ? [{ id: p.id, name: p.name, lngLat: p.lngLat }] : [])),
@@ -92,6 +96,19 @@ export function SheetRegion({ catalogue }: { catalogue: readonly ExplorePlace[] 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.id]);
 
+  // Back clears navigation state before calling onDismiss. Request focus here
+  // and let the committed details branch own it; the heading does not exist
+  // yet in the button handler. Consume even superseded requests so a later
+  // selection or guidance reveal cannot replay an old Back action.
+  useEffect(() => {
+    if (!detailsFocusRequest || handledDetailsFocusRequest.current === detailsFocusRequest) return;
+    handledDetailsFocusRequest.current = detailsFocusRequest;
+    if (detailsFocusRequest.placeId !== selected?.id || showDirections || !sheetVisible || guiding) return;
+    const heading = document.getElementById(SHEET_TITLE_ID);
+    heading?.setAttribute('tabindex', '-1');
+    heading?.focus();
+  }, [detailsFocusRequest, selected?.id, showDirections, sheetVisible, guiding]);
+
   useEffect(() => {
     if (!selected) return;
     const onKey = (e: KeyboardEvent) => {
@@ -126,7 +143,7 @@ export function SheetRegion({ catalogue }: { catalogue: readonly ExplorePlace[] 
   }, [modal]);
 
   // Guidance below lg: the map and HUD own the screen; Steps brings the sheet back.
-  if (!selected || (guiding && !docked && !stepsOpen)) return null;
+  if (!selected || !sheetVisible) return null;
 
   const step = (dir: 1 | -1) => DETENTS[DETENTS.indexOf(detent) + dir];
   const lower = step(-1);
@@ -140,7 +157,6 @@ export function SheetRegion({ catalogue }: { catalogue: readonly ExplorePlace[] 
     half: 'max-h-1/2',
     full: 'top-0',
   }[detent];
-  const showDirections = directionsPlaceId === selected.id;
 
   return (
     <View
@@ -160,7 +176,7 @@ export function SheetRegion({ catalogue }: { catalogue: readonly ExplorePlace[] 
               ? docked
                 ? undefined
                 : () => useNavigationUi.getState().setStepsOpen(false)
-              : () => document.getElementById(SHEET_TITLE_ID)?.focus()
+              : () => requestDetailsFocus({ placeId: selected.id })
           }
           onStarted={() => {
             useNavigationUi.getState().setStepsOpen(false);

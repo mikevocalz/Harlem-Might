@@ -5,7 +5,7 @@ import type { WidgetSnapshot } from '@acme/widgets';
 
 const feedUrl = new URL('../widgets/public-feed.ts', import.meta.url).href;
 const harnessKey = '__harlemWidgetStorageTest';
-type Harness = { opens: number; unavailable: boolean; saved?: string };
+type Harness = { opens: number; unavailable: boolean; readFailure?: boolean; writeFailure?: boolean; saved?: string };
 registerHooks({
   resolve(specifier, context, next) {
     if (context.parentURL?.startsWith(feedUrl) && specifier === 'react-native-mmkv') {
@@ -21,7 +21,16 @@ registerHooks({
         state.opens++;
         if (id !== 'harlem-might-public-widgets-v1') throw new Error('Unexpected store');
         if (state.unavailable) throw new Error('Storage unavailable');
-        return { getString: () => state.saved, set: (_, value) => { state.saved = value; } };
+        return {
+          getString: () => {
+            if (state.readFailure) throw new Error('Read unavailable');
+            return state.saved;
+          },
+          set: (_, value) => {
+            if (state.writeFailure) throw new Error('Write unavailable');
+            state.saved = value;
+          },
+        };
       }`,
     };
     return next(url, context);
@@ -85,7 +94,7 @@ test('stored cards require every text field and a string source URL when present
   }
 });
 
-test('widget refresh contains storage construction failures and retries on the next refresh', async (t) => {
+test('widget refresh returns fresh data despite storage construction failure and retries persistence', async (t) => {
   const previous = process.env.EXPO_PUBLIC_WIDGET_FEED_URL;
   process.env.EXPO_PUBLIC_WIDGET_FEED_URL = 'https://example.test/widgets';
   t.after(() => {
@@ -95,7 +104,8 @@ test('widget refresh contains storage construction failures and retries on the n
   t.mock.method(globalThis, 'fetch', async () => Response.json(snapshot));
   const state: Harness = { opens: 0, unavailable: true };
   const feed = await loadFeed('refresh', state);
-  assert.equal(await feed.refreshPublicSnapshot(), null);
+  assert.deepEqual(await feed.refreshPublicSnapshot(), snapshot);
+  assert.equal(state.saved, undefined, 'fresh return does not claim persistence');
   state.unavailable = false;
   assert.deepEqual(await feed.refreshPublicSnapshot(), snapshot);
   assert.deepEqual(feed.loadPublicSnapshot(), snapshot);
@@ -118,4 +128,25 @@ test('malformed fetched card text cannot replace a valid cached snapshot', async
   payload = valid;
   assert.deepEqual(await feed.refreshPublicSnapshot(), valid);
   assert.deepEqual(feed.loadPublicSnapshot(), valid);
+});
+
+
+test('valid explicit snapshots tolerate optional storage writes, including an acquired store failure', async () => {
+  const state: Harness = { opens: 0, unavailable: true };
+  const feed = await loadFeed('write-recovery', state);
+  assert.doesNotThrow(() => feed.storePublicSnapshot(snapshot));
+  assert.equal(state.saved, undefined);
+  state.unavailable = false;
+  feed.storePublicSnapshot(snapshot);
+  const fresh = { ...snapshot, generatedAt: '2026-10-12T12:00:00Z' };
+  state.writeFailure = true;
+  assert.doesNotThrow(() => feed.storePublicSnapshot(fresh));
+  assert.deepEqual(feed.loadPublicSnapshot(), snapshot, 'failed writes leave the saved value alone');
+  assert.throws(() => feed.storePublicSnapshot({ ...fresh, story: {} } as WidgetSnapshot), /Invalid widget snapshot/);
+  state.writeFailure = false;
+  feed.storePublicSnapshot(fresh);
+  assert.deepEqual(feed.loadPublicSnapshot(), fresh);
+  assert.equal(state.opens, 2, 'an acquired store is reused after a transient write failure');
+  state.readFailure = true;
+  assert.equal(feed.loadPublicSnapshot(), null);
 });

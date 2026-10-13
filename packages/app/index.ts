@@ -1,5 +1,5 @@
 // @acme/app — universal business/domain logic and shared screens.
-// Screens live in features/* (Solito pattern); add domains alongside them.
+// Screens and shared domain logic live together in features/* (Solito pattern).
 export { ErrorScreen } from './features/error/screen';
 export { MemberAuthScreen, type MemberAuthIntent } from './features/auth/MemberAuthScreen';
 export { AppQueryProvider, createQueryClient } from './providers/query-provider';

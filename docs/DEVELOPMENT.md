@@ -16,6 +16,13 @@ Harlem Might is one cross-platform product. Web, mobile, foldables, tablets, and
 
 Before adding a screen to an app directory, check whether another platform needs it. If it does, put the screen in the shared feature package.
 
+`pnpm gen domain <kebab-name>` scaffolds shared domain logic in
+`packages/app/features/<name>/`, including its query-key factory and public
+`index.ts`. `pnpm gen feature <kebab-name>` can add screen forks to the same
+feature. Domain repositories consume platform-neutral content contracts or
+injected sources; Payload bindings and authoritative access checks stay in
+`packages/payload`. Client permission helpers only control presentation.
+
 ## Adaptive layout
 
 Navigation is chosen by hardware family, while pane composition is chosen by usable space.

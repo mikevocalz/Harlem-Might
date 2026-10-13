@@ -2,15 +2,10 @@
 // (React Server Components, route handlers). The `server-only` marker turns
 // an import from a client bundle into a build error.
 import 'server-only';
-import { fetchPublicPhotoResource, MAX_COMMONS_PHOTO_BYTES } from './src/artist-photo-fetch.ts';
-import { isFreeArtistPhotoLicense, isCommonsArtistPhotoUrl } from '@acme/app/features/music/artist-photo-rights.ts';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
 import { createContentReaders, type ContentDocs, type ContentPage, type ContentQuery, type ContentSource } from '@acme/app/content';
 import { getPayload, type Where } from 'payload';
 import config from './src/payload.config';
-import type { Event, Media, MusicArtist, Place, Story, Walk } from './src/payload-types';
+import type { Event, MusicArtist, Place, Story, Walk } from './src/payload-types';
 
 // Compile-time drift check: the generated CMS documents must satisfy the
 // reader contract in packages/app/content/docs.ts.
@@ -97,122 +92,6 @@ async function findPageOnce<TSlug extends keyof ContentDocs>(
     overrideAccess: false,
   });
   return { docs: docs as ContentDocs[TSlug][], hasNextPage, totalDocs };
-}
-
-export type RightsClearedArtistPhoto = {
-  name: string;
-  url: string;
-  sourceUrl: string;
-  credit: string;
-  license: string;
-  licenseUrl?: string;
-  width?: number;
-  height?: number;
-};
-
-const imageExtension = (mime: string): 'jpg' | 'png' | 'webp' | undefined => {
-  if (/^image\/jpe?g$/i.test(mime)) return 'jpg';
-  if (/^image\/png$/i.test(mime)) return 'png';
-  if (/^image\/webp$/i.test(mime)) return 'webp';
-  return undefined;
-};
-
-/**
- * Persist a verified Commons artist photo into Payload Media and attach it to
- * the artist. This is deliberately stricter than the runtime display resolver:
- * provider-reference images (Deezer/editorial pages) are never copied into CMS.
- */
-export async function persistRightsClearedMusicArtistHeadshot(
-  artistId: number | string,
-  photo: RightsClearedArtistPhoto,
-): Promise<boolean> {
-  if (!isContentDatabaseConfigured()) return false;
-
-  let imageUrl: URL;
-  let sourceUrl: URL;
-  try {
-    imageUrl = new URL(photo.url);
-    sourceUrl = new URL(photo.sourceUrl);
-  } catch {
-    return false;
-  }
-  if (
-    !isCommonsArtistPhotoUrl(imageUrl.href) ||
-    sourceUrl.protocol !== 'https:' ||
-    sourceUrl.hostname !== 'commons.wikimedia.org' ||
-    !isFreeArtistPhotoLicense(photo.license)
-  ) {
-    return false;
-  }
-
-  const payload = await getPayload({ config });
-  const artist = await payload.findByID({
-    collection: 'music-artists',
-    id: artistId,
-    depth: 0,
-    draft: false,
-    overrideAccess: true,
-  });
-  if (artist.headshot) return true;
-
-  const existing = await payload.find({
-    collection: 'media',
-    where: { sourceUrl: { equals: photo.sourceUrl } },
-    depth: 0,
-    limit: 1,
-    pagination: false,
-    overrideAccess: true,
-  });
-
-  let mediaId: Media['id'] | undefined = existing.docs[0]?.id;
-  if (!mediaId) {
-    const response = await fetchPublicPhotoResource(photo.url, { kind: 'commons-image' });
-    if (!response.ok) return false;
-
-    const mime = response.contentType;
-    const extension = imageExtension(mime);
-    if (!extension) return false;
-    const bytes = Buffer.from(response.bytes);
-    if (bytes.length === 0 || bytes.length > MAX_COMMONS_PHOTO_BYTES) return false;
-
-    const dir = await mkdtemp(path.join(tmpdir(), 'harlem-music-headshot-'));
-    const filePath = path.join(dir, `artist-${String(artistId)}.${extension}`);
-    try {
-      await writeFile(filePath, bytes);
-      const created = await payload.create({
-        collection: 'media',
-        overrideAccess: true,
-        data: {
-          alt: `${photo.name} artist portrait`,
-          role: 'thumbnail',
-          source: 'wikimedia_commons',
-          sourceUrl: photo.sourceUrl,
-          license: photo.license,
-          licenseUrl: photo.licenseUrl,
-          creator: photo.credit,
-          credit: photo.credit,
-          attributionText: `${photo.name} — ${photo.credit}, ${photo.license}, via Wikimedia Commons`,
-          ingestedAt: new Date().toISOString(),
-          shareAlike: /by-sa/i.test(photo.license),
-          noDerivatives: false,
-        },
-        filePath,
-      });
-      mediaId = created.id;
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  }
-
-  if (!mediaId) return false;
-  await payload.update({
-    collection: 'music-artists',
-    id: artistId,
-    overrideAccess: true,
-    draft: false,
-    data: { headshot: mediaId },
-  });
-  return true;
 }
 
 export const {

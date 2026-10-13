@@ -54,7 +54,11 @@ Public compatibility remains supported:
 
 ## XR entryway and light-cycle race
 
-The `/spatial` route and Expo Spatial drawer screen act as a gateway rather than dropping directly into a game.
+The exported [`SpatialScreen`](../packages/spatial/SpatialScreen.tsx) provides a
+Grid gateway demonstration rather than dropping directly into a game. It is not
+mounted by the current Next or Expo product routes; see [Routes](#routes) for
+the active entry points. The shared gateway and race remain available as package
+exports, alongside the Storybook Grid World demonstrations.
 
 The Viro world uses an early-1980s computer-world visual grammar without shipping film logos, characters, audio, models or copied production assets: black void, cyan vector floor grid, warm orange geometry, light walls/trails, sparse skyline outlines and minimal HUD typography.
 
@@ -238,10 +242,31 @@ The Expo app declares `@metavr/layout-compat` and `@metavr/layout-window-compat`
 
 ## Routes
 
-- Next: `/spatial`
-- Expo: drawer → **Spatial**
+- **Next:** `/spatial` permanently redirects to `/ar` in
+  [the Next configuration](../apps/web/next.config.ts). `/ar` is the public concept
+  page; it does not mount `SpatialScreen` or request the camera.
+- **Expo:** tabs and adaptive navigation replace the old Spatial drawer entry.
+  **More → AR concept** opens the concept screen. Walking AR is embedded in Explore's map
+  pane through [ExploreNavigationAr](../apps/mobile/src/ar/ExploreNavigationAr.tsx).
+  **Walk in AR** is offered for eligible iOS/Android walking routes from device
+  location; headset builds are excluded, and entry checks native AR support and
+  camera permission.
+- **Expo headset worlds:** Place Detail's
+  [ViewInArButton](../apps/mobile/src/ar/ViewInArButton.tsx) opens
+  [`/explore-ar`](../apps/mobile/app/explore-ar.tsx) for **View on a table**
+  (passthrough) or **Stand on the street** (full-scale VR). These controls require
+  a Horizon build, the Meta Horizon runtime and place coordinates. Legacy walking
+  AR visits to `/explore-ar` hand back to Explore's embedded navigation host.
+- **Grid demonstrations:** Storybook → **Spatial / Grid World** shows the
+  [Grid gateway composition and UI primitives](../packages/ui/GridWorld.stories.tsx).
+  `SpatialScreen`, `SpatialViroExperience` and `GridRaceScene` remain
+  [exported by `@acme/spatial`](../packages/spatial/index.ts) for demo hosts;
+  the current Next and Expo routes do not mount `SpatialScreen`.
 
-Both mount the same `SpatialScreen`.
+The concept pages' status does not describe the native Explore implementations.
+These entries document checked-in routing, not device validation; the runtime,
+permission and platform capability qualifications elsewhere in this guide still
+apply.
 
 ## Design and interaction references
 
