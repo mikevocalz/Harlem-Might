@@ -8,6 +8,16 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 export const defaultSource = path.resolve(here, '../../..');
 export const mutations = ['focus-before-commit', 'ignore-guidance', 'old-modal-policy'];
+export const browserDefines = Object.freeze({
+  // RNW 0.21.3's real Animated teardown calls global.cancelAnimationFrame.
+  // Match the global-object mapping in apps/web-vite/vite.config.ts; esbuild
+  // does not supply it automatically. Do not replace Animated or its timers.
+  global: 'globalThis',
+  'process.env.NODE_ENV': '"development"',
+  'process.env.NEXT_PUBLIC_MAPBOX_TOKEN': 'undefined',
+  'process.env.EXPO_PUBLIC_MAPBOX_TOKEN': 'undefined',
+  __DEV__: 'true',
+});
 
 export async function buildFixture({ source = defaultSource, output, mutation } = {}) {
   if (mutation && !mutations.includes(mutation)) throw new Error(`Unknown mutation: ${mutation}`);
@@ -36,7 +46,7 @@ export async function buildFixture({ source = defaultSource, output, mutation } 
     tsconfigRaw: { compilerOptions: { jsx: 'react-jsx', target: 'ES2022' } },
     nodePaths: [deps], preserveSymlinks: true, metafile: true,
     resolveExtensions: ['.web.tsx', '.web.ts', '.web.js', '.tsx', '.ts', '.jsx', '.js', '.json'],
-    define: { 'process.env.NODE_ENV': '"development"', 'process.env.NEXT_PUBLIC_MAPBOX_TOKEN': 'undefined', 'process.env.EXPO_PUBLIC_MAPBOX_TOKEN': 'undefined', __DEV__: 'true' },
+    define: browserDefines,
     plugins: [{ name: 'bounded-production-browser-fixture', setup(api) {
       api.onResolve({ filter: /^(react|actual-react|solito\/.*|@acme\/.*|react-native)$/ }, (args) => {
         if (args.path === 'react') {

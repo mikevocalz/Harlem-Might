@@ -1,5 +1,6 @@
 import React, { act, StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { Animated } from 'react-native';
 import { names, ownership } from './observe-react';
 import { MapRegion } from 'harlem-source/apps/web/components/explore/MapRegion.tsx';
 import { SheetRegion } from 'harlem-source/apps/web/components/explore/SheetRegion.tsx';
@@ -112,6 +113,31 @@ function guide() {
 }
 
 const cases: Array<[string, () => Promise<void>]> = [
+  ['real RNW timing animation cancels its browser frame on stop', async () => {
+    const requestFrame = window.requestAnimationFrame;
+    const cancelFrame = window.cancelAnimationFrame;
+    const requested: number[] = [];
+    const cancelled: number[] = [];
+    const ended: boolean[] = [];
+    // Observe and forward the actual browser primitives. Neither the RNW
+    // animation nor its scheduler is replaced with a fake/no-op implementation.
+    window.requestAnimationFrame = (callback) => {
+      const id = requestFrame.call(window, callback); requested.push(id); return id;
+    };
+    window.cancelAnimationFrame = (id) => { cancelled.push(id); cancelFrame.call(window, id); };
+    const animation = Animated.timing(new Animated.Value(0), { toValue: 1, duration: 1_000, useNativeDriver: false });
+    try {
+      animation.start(({ finished }) => ended.push(finished));
+      assert(requested.length === 1, 'Real RNW timing must request a browser animation frame');
+      animation.stop();
+      assert(cancelled.length === 1 && cancelled[0] === requested[0], 'Real RNW stop must cancel its own browser frame');
+      assert(ended.length === 1 && ended[0] === false, 'Stopped RNW animation must report an interrupted completion');
+    } finally {
+      // Release the real frame even if an assertion fails; keep the failure.
+      try { animation.stop(); }
+      finally { window.requestAnimationFrame = requestFrame; window.cancelAnimationFrame = cancelFrame; }
+    }
+  }],
   ['real browser, responsive media and React ref ownership', async () => {
     assert(/(?:Chrome|Chromium)\//.test(navigator.userAgent), 'This gate must run in real Chrome/Chromium');
     assert(window.matchMedia(PHONE).matches === expectedPhone, `Incorrect viewport: innerWidth=${innerWidth}`);

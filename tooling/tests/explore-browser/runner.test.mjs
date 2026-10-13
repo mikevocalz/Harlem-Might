@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { createRequire } from 'node:module';
+import { runInNewContext } from 'node:vm';
+import { build } from 'esbuild';
+import { browserDefines } from './build.mjs';
 import { chromeArgs, parseReport, requireMutationFailure } from './run.mjs';
 const names = [
   'real browser, responsive media and React ref ownership',
@@ -9,6 +13,7 @@ const names = [
   'full phone modal releases and reacquires inert when guidance hides/reveals it',
   'native History Back/Forward, Escape guards and focus return',
   'actual useSyncExternalStore owns updates, selectors, StrictMode cleanup and shared clock',
+  'real RNW timing animation cancels its browser frame on stop',
 ];
 const report = () => ({ viewport: 'phone', reactVersion: '19.3.0', userAgent: 'HeadlessChrome/154.0', results: names.map((name) => ({ name, passed: true })) });
 const html = (data, status = data.results.every((item) => item.passed) ? 'passed' : 'failed') => `<pre id="browser-results" data-status="${status}">${Buffer.from(JSON.stringify(data)).toString('base64')}</pre>`;
@@ -38,4 +43,26 @@ test('mutants must fail their targeted contract; unrelated crashes are insuffici
   const guidance = report(); guidance.results[3].passed = false; requireMutationFailure(guidance, 'ignore-guidance');
   const modal = report(); modal.results[4].passed = false; requireMutationFailure(modal, 'old-modal-policy');
   assert.throws(() => requireMutationFailure(modal, 'unknown'), /Unknown mutation/);
+});
+test('fixture global mapping lets the pinned RNW dependency resolve its teardown host', async () => {
+  const require = createRequire(import.meta.url);
+  const timing = require.resolve('react-native-web/dist/cjs/vendor/react-native/Animated/animations/TimingAnimation');
+  assert.equal(require('react-native-web/package.json').version, '0.21.3');
+  for (const mapped of [false, true]) {
+    const define = { ...browserDefines };
+    if (!mapped) delete define.global;
+    const result = await build({
+      stdin: { contents: `export { default as TimingAnimation } from ${JSON.stringify(timing)};`, resolveDir: process.cwd() },
+      bundle: true, write: false, platform: 'browser', format: 'iife',
+      globalName: 'dependency', define,
+    });
+    let cancellations = 0;
+    // Isolated JS realm deliberately lacks Node's `global`. This is only a
+    // dependency/define regression: a host spy records stop's cancellation,
+    // without creating frames, simulating a DOM, or claiming browser evidence.
+    const context = { clearTimeout, cancelAnimationFrame: () => { cancellations++; } };
+    const code = `${result.outputFiles[0].text}\nnew dependency.TimingAnimation({ toValue: 1, useNativeDriver: false }).stop();`;
+    if (mapped) { runInNewContext(code, context); assert.equal(cancellations, 1); }
+    else { assert.throws(() => runInNewContext(code, context), /global is not defined/); assert.equal(cancellations, 0); }
+  }
 });

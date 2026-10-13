@@ -21,6 +21,12 @@ download. All application runtime versions are exact pins, checked against
 runtimes; actual browser-side dependencies are listed directly. esbuild's installed
 platform package supplies its binary without installation scripts.
 
+The esbuild fixture maps `global` to `globalThis`, matching the repository's
+Vite global-object contract. RNW 0.21.3's actual `TimingAnimation.stop()` uses
+`global.cancelAnimationFrame`; this mapping supplies its host object without
+changing animation behavior. The browser gate starts and stops real RNW timing,
+observing and forwarding native frame request/cancellation calls.
+
 The CI workflow uses the [Ubuntu 24.04 hosted image's preinstalled Chrome](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md).
 The [official headless CLI](https://developer.chrome.com/docs/automation-and-testing/headless-cli)
 runs two viewport widths, an isolated temporary profile, a 15-second virtual time
@@ -101,8 +107,11 @@ specific regression, not merely any assertion or a browser crash. The production
 files stay untouched. `--no-mutations` is an explicit local diagnostic option;
 CI always runs all three negative controls.
 
-Node runner tests verify parsing and failure handling only. Their synthetic result
-records are never called browser evidence. A zero exit code requires both real
+Node runner tests verify parsing/failure handling and the real pinned RNW
+dependency's teardown lookup in an isolated JavaScript realm with a host spy.
+Removing the global mapping must reproduce `ReferenceError: global is not defined`.
+These unit tests and their synthetic result records are never browser evidence.
+A zero exit code requires both real
 Chrome baseline viewports to complete every named case and all three mutants to be
 rejected. A blank page, missing browser, skipped contract, runtime error, wrong
 viewport/runtime, incomplete report or failure remains a failure.

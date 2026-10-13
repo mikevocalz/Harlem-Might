@@ -15,6 +15,7 @@ const caseNames = [
   'full phone modal releases and reacquires inert when guidance hides/reveals it',
   'native History Back/Forward, Escape guards and focus return',
   'actual useSyncExternalStore owns updates, selectors, StrictMode cleanup and shared clock',
+  'real RNW timing animation cancels its browser frame on stop',
 ];
 export function chromeArgs({ profile, viewport, url }) {
   if (!['phone', 'desktop'].includes(viewport)) throw new Error(`Unknown viewport: ${viewport}`);
