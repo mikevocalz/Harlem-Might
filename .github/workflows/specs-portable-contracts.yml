@@ -1,0 +1,27 @@
+name: Specs portable contracts
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  specs:
+    name: Native Lens scene projections (no private deps)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Test pure TypeScript scene and handoff contracts
+        run: |
+          node --experimental-strip-types --test packages/app/features/specs/*.test.ts
+      - name: Clarify verification boundary
+        if: always()
+        run: |
+          echo "These are source-level data/state contract tests only." >> "$GITHUB_STEP_SUMMARY"
+          echo "No Expo native builds, SPECS CLAD/LEAF Preview, Mobile Kit BLE or physical hardware are exercised." >> "$GITHUB_STEP_SUMMARY"
