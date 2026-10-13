@@ -19,6 +19,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
   private presentation: ViroSpecsPresentationHost | null = null;
   private unsubscribe: (() => void) | null = null;
   private readonly commandListeners = new Set<(command: string) => void>();
+  private readonly allowedLiveActions = new Set<string>();
   private previewPlace: string | null = null;
   private usingLiveFrame = false;
 
@@ -36,13 +37,18 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       this.unsubscribe?.();
       this.unsubscribe = null;
       this.commandListeners.clear();
+      this.allowedLiveActions.clear();
     });
   }
 
   /** Called by a permissioned app transport once real state becomes available. */
   acceptFrame(frame: ViroSpecsPresentationSnapshot): void {
     if (!this.presentation) throw new Error("Harlem Specs scene is not ready.");
+    // The Viro host validates/installs the scene first. Only then can these
+    // semantic actions become eligible for forwarding to the phone.
     this.presentation.present(frame);
+    this.allowedLiveActions.clear();
+    for (const target of frame.targets) this.allowedLiveActions.add(target.action);
     this.usingLiveFrame = true;
   }
 
@@ -54,6 +60,9 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
 
   private onAction(command: string): void {
     if (this.usingLiveFrame) {
+      // Drop any delayed callback from an earlier frame. The companion app
+      // must still authorize the user's active session and permissions.
+      if (!this.allowedLiveActions.has(command)) return;
       for (const listener of this.commandListeners) listener(command);
       return;
     }

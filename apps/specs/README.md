@@ -31,6 +31,8 @@ renderer.
    via `projectHarlemSpecs` in `packages/app/features/specs/experience.ts`.
    The Lens forwards action strings to a registered `subscribeCommand`
    listener; it never writes to the app navigation store or CMS itself.
+   The entrypoint rejects commands not present in the most recently accepted
+   frame; the phone must still authenticate/authorize the command and session.
 
 `acceptFrame` consumes only `{scene, targets}`. The separate
 `navigation` projection goes to `ViroSpecsNavigationHost` *after* a live
