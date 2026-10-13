@@ -102,7 +102,30 @@ export function confirmStop(session: WalkSession, stopId: string, now: string): 
   };
 }
 
-/** Only reconcile linear histories. A divergent snapshot needs authoritative refresh. */
+/** Whether public commands can reach the newer snapshot in exactly its revision gap. */
+function canAdvanceTo(older: WalkSession, newer: WalkSession): boolean {
+  // Terminal commands are no-ops and cannot produce another revision.
+  if (older.status === 'stopped' || older.status === 'completed') return false;
+  const confirmations = newer.completedStopIds.length - older.completedStopIds.length;
+  const revisions = newer.revision - older.revision;
+  if (confirmations < 0) return false;
+  if (newer.status === 'stopped') {
+    // Stopping may happen while active or paused, so either parity is reachable.
+    const resume = older.status === 'paused' && confirmations > 0 ? 1 : 0;
+    return revisions >= confirmations + resume + 1;
+  }
+  const resume = older.status === 'paused' ? 1 : 0;
+  const pause = newer.status === 'paused' ? 1 : 0;
+  const required = confirmations + resume + pause;
+  // All additional state changes must be complete pause/resume pairs.
+  return revisions >= required && (revisions - required) % 2 === 0;
+}
+
+/**
+ * Accept only snapshots consistent with a linear public-command history.
+ * Two snapshots cannot prove common ancestry; this is not a conflict-free merge.
+ * An inconsistent snapshot needs authoritative refresh.
+ */
 export function reconcileWalkSessions(a: WalkSession, b: WalkSession): WalkSession {
   validateWalkSession(a);
   validateWalkSession(b);
@@ -120,9 +143,7 @@ export function reconcileWalkSessions(a: WalkSession, b: WalkSession): WalkSessi
   }
   const older = a.revision < b.revision ? a : b;
   const newer = older === a ? b : a;
-  if (newer.completedStopIds.length < older.completedStopIds.length
-    || Date.parse(newer.updatedAt) < Date.parse(older.updatedAt)
-    || (['stopped', 'completed'].includes(older.status) && newer.status !== older.status)) {
+  if (Date.parse(newer.updatedAt) < Date.parse(older.updatedAt) || !canAdvanceTo(older, newer)) {
     throw new Error('Conflicting walk history; refresh the authoritative session');
   }
   return newer;

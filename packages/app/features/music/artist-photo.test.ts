@@ -94,6 +94,30 @@ it('rejects unknown or absent provider and rights-status values', () => {
   }
 });
 
+it('rejects padded provider discriminants rather than narrowing the unchanged value unsafely', () => {
+  for (const provider of [' wikimedia_commons', 'wikimedia_commons ', '\tcurated_web\n']) {
+    const value = Object.freeze({ ...commonsPhoto, provider });
+    assert.equal(isArtistPhotoResult(value), false);
+    assert.equal(value.provider, provider, 'Validation must not mutate provenance');
+  }
+});
+
+it('validates every present optional photo field before exposing the result type', () => {
+  for (const field of ['license', 'licenseUrl']) {
+    for (const value of [null, 42, true, {}, []]) {
+      assert.equal(isArtistPhotoResult({ ...commonsPhoto, [field]: value }), false, field);
+    }
+  }
+  for (const field of ['width', 'height']) {
+    for (const value of [null, '800', true, {}, [], 0, -1, NaN, Infinity]) {
+      assert.equal(isArtistPhotoResult({ ...commonsPhoto, [field]: value }), false, field);
+    }
+  }
+  assert.equal(isArtistPhotoResult({ ...referencePhoto, license: undefined, licenseUrl: undefined,
+    width: undefined, height: undefined }), true);
+  assert.equal(isArtistPhotoResult({ ...referencePhoto, license: '', licenseUrl: '', width: 1, height: 1 }), true);
+});
+
 it('preserves exact image URLs and selects optimizer behavior for each supported provider', () => {
   for (const photo of [commonsPhoto, referencePhoto]) {
     const frozen = Object.freeze({ ...photo });

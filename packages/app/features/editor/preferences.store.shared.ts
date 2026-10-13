@@ -42,7 +42,7 @@ export function readPreferences(storage: PreferencesStorage): ToolbarPreferences
   try {
     // Reconciled on the way IN, never trusted as-is: the registry may have
     // changed since this was written.
-    return reconcilePreferences(JSON.parse(raw) as Partial<ToolbarPreferences>);
+    return reconcilePreferences(JSON.parse(raw));
   } catch {
     try {
       storage.remove(STORAGE_KEY);

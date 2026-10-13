@@ -33,11 +33,15 @@ const asObject = (value: unknown): Record<string, unknown> | undefined =>
 const asString = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim() ? value.trim() : undefined;
 
+const optionalString = (value: unknown): boolean => value === undefined || typeof value === 'string';
+const optionalDimension = (value: unknown): boolean => value === undefined ||
+  (typeof value === 'number' && Number.isFinite(value) && value > 0);
+
 export const isArtistPhotoResult = (
   value: unknown,
 ): value is ArtistPhotoResult => {
   const object = asObject(value);
-  const provider = asString(object?.provider);
+  const provider = object?.provider;
   return Boolean(
     asString(object?.name) &&
       asString(object?.url) &&
@@ -45,7 +49,9 @@ export const isArtistPhotoResult = (
       asString(object?.credit) &&
       (object?.rightsStatus === 'rights-cleared' ||
         object?.rightsStatus === 'provider-reference') &&
-      (provider === 'wikimedia_commons' || provider === 'curated_web'),
+      (provider === 'wikimedia_commons' || provider === 'curated_web') &&
+      optionalString(object?.license) && optionalString(object?.licenseUrl) &&
+      optionalDimension(object?.width) && optionalDimension(object?.height),
   );
 };
 
