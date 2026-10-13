@@ -1,0 +1,37 @@
+name: Explore browser contracts
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  browser:
+    name: Real React and Chrome ownership
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      # Public, pinned test-only closure. No pnpm install, native siblings,
+      # private dependency token, Mapbox token, database or browser download.
+      - name: Install bounded browser fixture dependencies
+        run: npm ci --prefix tooling/tests/explore-browser --ignore-scripts --legacy-peer-deps --no-audit --no-fund
+      - name: Validate fail-closed runner
+        run: node --test tooling/tests/explore-browser/runner.test.mjs
+      # The Ubuntu 24.04 hosted image includes Google Chrome. The runner uses
+      # its normal sandbox and fails if Chrome is missing or cannot execute.
+      - name: Execute production browser contracts and negative controls
+        run: node tooling/tests/explore-browser/run.mjs
+      - name: Preserve exact browser acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: explore-browser-evidence
+          path: tooling/tests/explore-browser/dist
+          if-no-files-found: warn
+          retention-days: 7

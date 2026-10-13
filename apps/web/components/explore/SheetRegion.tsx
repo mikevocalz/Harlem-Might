@@ -126,7 +126,7 @@ export function SheetRegion({ catalogue }: { catalogue: readonly ExplorePlace[] 
   // Only the phone's full-height sheet is modal: everything outside it goes
   // inert so Tab can't reach the hidden map. Docked or partial, the map and
   // list stay usable beside it.
-  const modal = !!selected && phone && detent === 'full';
+  const modal = sheetVisible && phone && detent === 'full';
   useEffect(() => {
     const sheet = sheetElementRef.current;
     if (!modal || !sheet) return;

@@ -327,6 +327,28 @@ describe('SheetRegion directions focus ownership', () => {
     assert.equal(useNavigationStore.getState().session.phase, 'navigating');
   });
 
+  it('releases phone modal ownership when full Steps hides, and reacquires it on reopening', () => {
+    const f = fixture({ phone: true, docked: false, search: `?place=${sylvias.id}` });
+    guide();
+    for (let repeat = 0; repeat < 2; repeat++) {
+      // Match the production HUD Steps callback: reveal and expand the sheet.
+      useNavigationUi.getState().setStepsOpen(true);
+      useExplore.getState().setSheetDetent('full');
+      f.flush();
+      assert.equal(f.map.hasAttribute('inert'), true);
+      assert.equal(f.header.hasAttribute('inert'), true);
+      f.press('Show the map'); f.flush();
+      assert.equal(useNavigationUi.getState().stepsOpen, false);
+      assert.equal(useNavigationStore.getState().session.phase, 'navigating');
+      assert.equal(f.find('Show the map'), undefined);
+      assert.equal(f.map.hasAttribute('inert'), false, 'the hidden modal must release its map/HUD sibling');
+      assert.equal(f.header.hasAttribute('inert'), false);
+      assert.equal(f.preservedInert.hasAttribute('inert'), true);
+      f.openers.get(sylvias.id)!.focus();
+      assert.equal(f.document.activeElement, f.openers.get(sylvias.id));
+    }
+  });
+
   it('discards a Back request superseded by guidance before commit', () => {
     const f = fixture({ docked: false, search: `?place=${sylvias.id}` });
     f.press('Directions'); f.flush(); f.press(`Back to ${sylvias.name}`);
