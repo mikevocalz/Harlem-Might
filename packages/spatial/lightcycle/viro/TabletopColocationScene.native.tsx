@@ -434,51 +434,6 @@ function SharedTabletopRoom({
     replication,
   ]);
 
-  useEffect(() => {
-    if (mode !== 'host' || replication.state !== 'synced') return;
-    const matchId = LIGHTCYCLE_REPLICATION_IDS.match;
-    const match = replication.byId(matchId);
-    if (!match) {
-      replication.claim(matchId);
-      return;
-    }
-    if (!replication.isMine(matchId)) return;
-
-    const activePhase =
-      match.fields.phase === 'countdown' ||
-      match.fields.phase === 'running' ||
-      match.fields.phase === 'round-over' ||
-      match.fields.phase === 'match-over';
-    if (activePhase) return;
-
-    const nextPhase = bothReady ? 'ready' : 'lobby';
-    if (
-      match.fields.phase !== nextPhase ||
-      match.fields.placementReady !== placementReady ||
-      match.fields.p1Ready !== p1Ready ||
-      match.fields.p2Ready !== p2Ready
-    ) {
-      replication.set(
-        matchId,
-        {
-          phase: nextPhase,
-          hostPeerId: replication.localPeerId,
-          placementReady,
-          p1Ready,
-          p2Ready,
-        },
-        { optimistic: true },
-      );
-    }
-  }, [
-    bothReady,
-    mode,
-    p1Ready,
-    p2Ready,
-    placementReady,
-    replication,
-  ]);
-
   const localCanReady =
     localFrameLocalized &&
     colocated.state === 'joined' &&
@@ -534,9 +489,25 @@ function SharedTabletopRoom({
     });
   }, [colocated.publishPose, colocated.state]);
 
+  // Match authority remains mounted while the host mat is still being synced.
+  const raceRuntime = (
+    <TabletopRaceRuntime
+      roomId={roomId}
+      replication={replication}
+      localPlayerId={localPlayerId}
+      placementReady={placementReady}
+      frameLocalized={localFrameLocalized}
+      p1Ready={p1Ready}
+      p2Ready={p2Ready}
+      playerNames={playerNames}
+      bothReady={bothReady}
+    />
+  );
+
   if (!placementPosition) {
     return (
       <ViroNode>
+        {raceRuntime}
         <ViroText
           text="SYNCING HOST MAT POSE…"
           position={[0, 0.08, -0.7]}
@@ -550,16 +521,8 @@ function SharedTabletopRoom({
 
   return (
     <ViroNode position={placementPosition}>
+      {raceRuntime}
       <GridMatVisual />
-      <TabletopRaceRuntime
-        roomId={roomId}
-        replication={replication}
-        localPlayerId={localPlayerId}
-        placementReady={placementReady && localFrameLocalized}
-        playerNames={playerNames}
-        bothReady={bothReady}
-      />
-
       <TabletopRiveScoreboard
         replicatedState={snapshotEntity?.fields.state}
         joinCode={roomDisplayCode}

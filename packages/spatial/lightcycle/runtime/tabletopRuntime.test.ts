@@ -49,23 +49,36 @@ function nativeFixture(platform = { isQuest: true, isPico: false, isVisionOS: fa
       unmount() { effects.forEach((effect) => effect.cleanup?.()); },
     };
   }
-  const entities = new Map<string, { id: string; fields: Record<string, unknown> }>();
+  const entities = new Map<string, {
+    id: string; fields: Record<string, unknown>; owner: string | null; version: number;
+  }>();
+  const claims: string[] = [];
+  const transport = { acknowledgeClaims: true };
   const writes: { id: string; fields: Record<string, unknown> }[] = [];
   const effects: unknown[] = [];
   const scoreboardAsset = { bytes: undefined, error: null, load: async () => {} };
   const replication = {
     state: 'synced', localPeerId: 'host-peer',
     byId: (id: string) => entities.get(id),
-    isMine: () => true,
-    claim: (id: string) => entities.set(id, { id, fields: {} }),
+    isMine: (id: string) => entities.get(id)?.owner === replication.localPeerId,
+    claim: (id: string) => {
+      claims.push(id);
+      if (transport.acknowledgeClaims) {
+        entities.set(id, { id, fields: {}, owner: replication.localPeerId, version: 1 });
+      }
+    },
     set: (id: string, fields: Record<string, unknown>) => {
       writes.push({ id, fields });
-      entities.set(id, { id, fields: { ...entities.get(id)?.fields, ...fields } });
+      entities.set(id, {
+        id, owner: entities.get(id)?.owner ?? replication.localPeerId,
+        version: entities.get(id)?.version ?? 1,
+        fields: { ...entities.get(id)?.fields, ...fields },
+      });
     },
   };
   for (const id of ['p1', 'p2'] as const) {
     entities.set(protocol.LIGHTCYCLE_REPLICATION_IDS.player(id), {
-      id,
+      id, owner: id === 'p1' ? 'host-peer' : 'guest-peer', version: 1,
       fields: { playerId: id, peerId: id === 'p1' ? 'host-peer' : 'guest-peer',
         name: id === 'p1' ? 'HOST' : 'GUEST', ready: true, localized: true,
         connected: true, cycleColor: id === 'p1' ? 'cyan' : 'orange' },
@@ -94,7 +107,8 @@ function nativeFixture(platform = { isQuest: true, isPico: false, isVisionOS: fa
       };
     },
     useViroColocation: () => colocated,
-    useViroReplicatedState: () => replication,
+    // The real hook returns a fresh facade each render over the same client.
+    useViroReplicatedState: () => ({ ...replication }),
     parseLocationTransform: () => null,
   }, { get: (target, key) => target[key as keyof typeof target] ?? key });
   const modules: Record<string, unknown> = {
@@ -155,7 +169,7 @@ function nativeFixture(platform = { isQuest: true, isPico: false, isVisionOS: fa
   }
   const runtime = load('../viro/TabletopRaceRuntime.native');
   modules['./TabletopRaceRuntime.native'] = runtime;
-  return { mount, room, writes, effects, colocated, replication,
+  return { mount, room, writes, effects, colocated, replication, entities, claims, transport,
     Scoreboard: load('../ui/TabletopRiveScoreboard.native').TabletopRiveScoreboard,
     Scene: load('../viro/TabletopColocationScene.native').TabletopColocationScene,
     Runtime: runtime.TabletopRaceRuntime };
@@ -238,7 +252,7 @@ function crashEffectFixture(localPlayerId: core.LightCyclePlayerId) {
   const room = tabletopRace.enterRoom('crash-room');
   const props = {
     roomId: room.roomId, replication: fixture.replication, localPlayerId,
-    placementReady: true, playerNames: { p1: 'HOST', p2: 'GUEST' }, bothReady: true,
+    placementReady: true, frameLocalized: true, p1Ready: true, p2Ready: true, playerNames: { p1: 'HOST', p2: 'GUEST' }, bothReady: true,
   };
   let renderer = fixture.mount(fixture.Runtime);
   return {
@@ -352,7 +366,8 @@ it('native room ownership survives frame loss/remount, pauses play, and tears do
   assert.equal(frame.props.children.key, roomElement.key);
   runtimeElement = find(shared.render(frame.props.children.props), fixture.Runtime);
   assert.equal(runtimeElement.props.bothReady, false);
-  assert.equal(runtimeElement.props.placementReady, false);
+  assert.equal(runtimeElement.props.placementReady, true);
+  assert.equal(runtimeElement.props.frameLocalized, false);
   assert.equal(renderer.render(runtimeElement.props), null);
   assert.equal(tabletopRace.getState().roomRuntime, lifetime);
   // ViroSharedFrame may remove its children while reacquiring. Their unmount
@@ -423,7 +438,7 @@ it('native guest runtime and scoreboard reject malformed snapshots and recover o
   const scoreboard = fixture.mount(fixture.Scoreboard);
   const props = {
     roomId: 'guest-room', replication: fixture.replication, localPlayerId: 'p2',
-    placementReady: true, playerNames: { p1: 'HOST', p2: 'GUEST' }, bothReady: true,
+    placementReady: true, frameLocalized: true, p1Ready: true, p2Ready: true, playerNames: { p1: 'HOST', p2: 'GUEST' }, bothReady: true,
   };
   const valid = core.createLightCycleMatch({ names: props.playerNames });
   const malformed = [
@@ -458,6 +473,312 @@ it('native guest runtime and scoreboard reject malformed snapshots and recover o
   tabletopRace.leaveRoom(room);
 });
 
+
+// Mount the real scene, SharedTabletopRoom and runtime together. Only Viro,
+// transport acknowledgements and React scheduling are controlled by this host.
+function matchPublicationFixture(mode: 'host' | 'guest' = 'host') {
+  const fixture = nativeFixture();
+  if (mode === 'host') prepareHost();
+  else {
+    fixture.replication.localPeerId = fixture.colocated.localPeerId = 'guest-peer';
+    fixture.colocated.peers = [{ peerId: 'host-peer', localized: true }];
+    fixture.room.frameSource = { key: 'host-frame' };
+    const session = tabletopSession.getState();
+    session.setPlayerName('GUEST');
+    session.setJoinCode('GRID1234');
+    session.beginGuest();
+    session.setLocalized(true);
+    session.setReady(true);
+    fixture.entities.set(protocol.LIGHTCYCLE_REPLICATION_IDS.placement, {
+      id: protocol.LIGHTCYCLE_REPLICATION_IDS.placement, owner: 'host-peer', version: 1,
+      fields: { position: [0, 0, 0], surface: 'table', confirmed: true },
+    });
+  }
+  let scene = fixture.mount(fixture.Scene);
+  let shared: ReturnType<typeof fixture.mount> | undefined;
+  let runtime: ReturnType<typeof fixture.mount> | undefined;
+  let roomKey: string | undefined;
+  let sharedTree: Element | null = null;
+  let runtimeTree: Element | null = null;
+  function render() {
+    const frame = find(scene.render({ arSceneNavigator: {} }), 'ViroSharedFrame');
+    const room = frame.props.children as Element;
+    if (!shared || room.key !== roomKey) {
+      runtime?.unmount();
+      shared?.unmount();
+      shared = fixture.mount(room.type);
+      runtime = undefined;
+      roomKey = room.key;
+    }
+    sharedTree = shared.render(room.props);
+    const element = nodes(sharedTree).find((node) => node.type === fixture.Runtime);
+    if (element) {
+      runtime ??= fixture.mount(fixture.Runtime);
+      runtimeTree = runtime.render(element.props);
+    } else {
+      runtime?.unmount();
+      runtime = undefined;
+      runtimeTree = null;
+    }
+    return { frame, sharedTree, runtimeTree };
+  }
+  function settle() { render(); render(); return render(); }
+  return {
+    ...fixture, render, settle,
+    matchWrites: () => fixture.writes.filter(({ id }) => id === protocol.LIGHTCYCLE_REPLICATION_IDS.match),
+    matchClaims: () => fixture.claims.filter((id) => id === protocol.LIGHTCYCLE_REPLICATION_IDS.match),
+    fixedUpdate: () => find(runtimeTree, 'ViroGameLoop').props.onFixedUpdate,
+    toggleReady: () => nodes(sharedTree).find((node) =>
+      node.type === 'ViroBox' && node.props.onClick)?.props.onClick(),
+    remountScene() {
+      runtime?.unmount(); shared?.unmount(); scene.unmount();
+      runtime = shared = undefined;
+      scene = fixture.mount(fixture.Scene);
+    },
+    remountFrame() { runtime?.unmount(); shared?.unmount(); runtime = shared = undefined; },
+    unmount() { runtime?.unmount(); shared?.unmount(); scene.unmount(); },
+  };
+}
+
+function nodes(tree: Element | null): Element[] {
+  if (!tree) return [];
+  return [tree, ...[tree.props?.children].flat().flatMap((child) =>
+    child && typeof child === 'object' ? nodes(child) : [])];
+}
+
+const matchId = protocol.LIGHTCYCLE_REPLICATION_IDS.match;
+const snapshotId = protocol.LIGHTCYCLE_REPLICATION_IDS.snapshot;
+
+it('native host match publication waits for sync, claim acknowledgement and actual authority', () => {
+  const fixture = matchPublicationFixture();
+  fixture.transport.acknowledgeClaims = false;
+  fixture.replication.state = 'connecting';
+  fixture.settle();
+  assert.deepEqual(fixture.matchClaims(), []);
+  assert.deepEqual(fixture.matchWrites(), []);
+  fixture.replication.state = 'synced';
+  fixture.render();
+  assert.deepEqual(fixture.matchClaims(), [matchId]);
+  assert.deepEqual(fixture.matchWrites(), [], 'claim must not imply ownership before acknowledgement');
+  fixture.entities.set(matchId, { id: matchId, owner: 'other-peer', version: 3, fields: {} });
+  fixture.settle();
+  assert.deepEqual(fixture.matchWrites(), []);
+  fixture.entities.set(matchId, { ...fixture.entities.get(matchId)!, owner: 'host-peer' });
+  fixture.settle();
+  assert.deepEqual(fixture.matchWrites(), [{ id: matchId, fields: {
+    phase: 'ready', hostPeerId: 'host-peer', placementReady: true, p1Ready: true, p2Ready: true,
+  } }]);
+  fixture.remountFrame();
+  fixture.settle();
+  assert.equal(fixture.matchWrites().length, 1, 'fresh facades and frame remounts must not repeat optimistic writes');
+  fixture.unmount();
+});
+
+it('native host publishes lobby without a mat and keeps placement separate from frame localization', () => {
+  const fixture = matchPublicationFixture();
+  tabletopSession.getState().setHostPlacement(null);
+  fixture.settle();
+  assert.equal(find(fixture.render().sharedTree, 'ViroText').props.text, 'SYNCING HOST MAT POSE…');
+  assert.equal(fixture.claims.includes(snapshotId), false);
+  assert.equal(fixture.claims.includes(protocol.LIGHTCYCLE_REPLICATION_IDS.input('p1')), false);
+  assert.deepEqual(fixture.matchWrites().at(-1)?.fields, {
+    phase: 'lobby', hostPeerId: 'host-peer', placementReady: false, p1Ready: false, p2Ready: true,
+  });
+  tabletopSession.getState().setHostPlacement({ position: [0, 0, 0], surface: 'table' });
+  tabletopSession.getState().setLocalized(false);
+  fixture.settle();
+  assert.deepEqual(fixture.matchWrites().at(-1)?.fields, {
+    phase: 'lobby', hostPeerId: 'host-peer', placementReady: true, p1Ready: false, p2Ready: true,
+  });
+  const count = fixture.matchWrites().length;
+  fixture.remountFrame();
+  fixture.settle();
+  assert.equal(fixture.matchWrites().length, count);
+  assert.equal(tabletopRace.getState().roomRuntime?.hostState, null);
+  fixture.unmount();
+});
+
+it('native guest waits for the mat before claiming inputs or playing replicated crash effects', () => {
+  const fixture = matchPublicationFixture('guest');
+  const placementId = protocol.LIGHTCYCLE_REPLICATION_IDS.placement;
+  const placement = fixture.entities.get(placementId)!;
+  fixture.entities.delete(placementId);
+  let state = core.startLightCycleRoundImmediately(core.createLightCycleMatch());
+  setCrashRider(state, 'p1', core.LIGHTCYCLE_ARENA_HALF - 1, 1);
+  state = core.advanceLightCycleMatch(state);
+  assert.equal(state.derezEvents.length, 1);
+  fixture.entities.set(snapshotId, { id: snapshotId, owner: 'host-peer', version: 1, fields: { state } });
+  fixture.settle();
+  assert.deepEqual(fixture.effects, []);
+  assert.equal(fixture.claims.includes(protocol.LIGHTCYCLE_REPLICATION_IDS.input('p2')), false);
+  fixture.entities.set(placementId, placement);
+  fixture.settle();
+  assert.equal(fixture.claims.includes(protocol.LIGHTCYCLE_REPLICATION_IDS.input('p2')), true);
+  assert.equal(fixture.effects.filter((event: any) => event.type === 'derez').length, 1);
+  fixture.remountFrame();
+  fixture.settle();
+  assert.equal(fixture.effects.filter((event: any) => event.type === 'derez').length, 1);
+  fixture.unmount();
+});
+
+it('native Ready callback drives lobby, readiness and authoritative start without repeated publication', () => {
+  const fixture = matchPublicationFixture();
+  tabletopSession.getState().setReady(false);
+  fixture.settle();
+  assert.equal(fixture.entities.get(matchId)?.fields.phase, 'lobby');
+  const idleLoop = fixture.fixedUpdate();
+  idleLoop();
+  assert.equal(tabletopRace.getState().roomRuntime?.hostState, null);
+  fixture.toggleReady();
+  fixture.settle();
+  assert.deepEqual(fixture.matchWrites().at(-1)?.fields, {
+    phase: 'ready', hostPeerId: 'host-peer', placementReady: true, p1Ready: true, p2Ready: true,
+  });
+  const readyCount = fixture.matchWrites().length;
+  fixture.settle();
+  assert.equal(fixture.matchWrites().length, readyCount);
+  const loop = fixture.fixedUpdate();
+  for (let i = 0; i < 6; i++) loop();
+  const state = tabletopRace.getState().roomRuntime!.hostState!;
+  assert.equal(state.phase, 'countdown');
+  assert.equal(state.tick, 6);
+  assert.deepEqual(fixture.entities.get(snapshotId)?.fields.state, state);
+  assert.deepEqual(fixture.matchWrites().at(-1)?.fields, {
+    phase: state.phase, tick: state.tick, round: state.round, score: state.scores, winner: state.matchWinner,
+  });
+  assert.equal(fixture.entities.get(matchId)?.fields.hostPeerId, 'host-peer', 'active patches preserve lobby fields');
+  fixture.settle();
+  const activeCount = fixture.matchWrites().length;
+  fixture.toggleReady();
+  fixture.settle();
+  fixture.fixedUpdate()();
+  assert.equal(tabletopRace.getState().roomRuntime!.hostState, state, 'readiness loss pauses rather than resets');
+  assert.equal(fixture.matchWrites().length, activeCount, 'readiness must not downgrade an active match');
+  fixture.toggleReady();
+  fixture.settle();
+  for (let i = 0; i < 6; i++) fixture.fixedUpdate()();
+  assert.equal(tabletopRace.getState().roomRuntime!.hostState!.tick, 12);
+  assert.equal(fixture.entities.get(matchId)?.fields.tick, 12);
+  fixture.unmount();
+});
+
+for (const loss of ['ready', 'frame', 'peer'] as const) {
+  it(`native ${loss} loss before the first snapshot cannot republish a started match as lobby`, () => {
+    const fixture = matchPublicationFixture();
+    fixture.settle();
+    fixture.fixedUpdate()();
+    const runtime = tabletopRace.getState().roomRuntime!;
+    assert.equal(runtime.hostState!.tick, 1);
+    assert.equal(runtime.hostState!.phase, 'countdown');
+    assert.equal(fixture.entities.get(snapshotId)?.fields.state, undefined, 'snapshots retain their six-tick cadence');
+    const writes = fixture.matchWrites().length;
+    if (loss === 'ready') fixture.toggleReady();
+    if (loss === 'frame') fixture.render().frame.props.onLocalizeError('tracking temporarily lost');
+    if (loss === 'peer') fixture.colocated.peers[0]!.localized = false;
+    fixture.settle();
+    fixture.remountFrame();
+    fixture.settle();
+    assert.equal(fixture.matchWrites().length, writes, 'a started countdown must not regress to lobby');
+    assert.equal(runtime.hostState!.tick, 1);
+    tabletopSession.getState().setLocalized(true);
+    tabletopSession.getState().setReady(true);
+    fixture.colocated.peers[0]!.localized = true;
+    fixture.settle();
+    for (let i = 0; i < 5; i++) fixture.fixedUpdate()();
+    assert.equal(runtime.hostState!.tick, 6);
+    assert.equal(fixture.entities.get(matchId)?.fields.phase, 'countdown');
+    assert.equal(fixture.entities.get(snapshotId)?.fields.state, runtime.hostState);
+    fixture.unmount();
+  });
+}
+
+for (const phase of ['countdown', 'running', 'round-over', 'match-over'] as const) {
+  it(`native ${phase} metadata survives loss of remote readiness and frame remount`, () => {
+    const fixture = matchPublicationFixture();
+    const fields = { phase, tick: 42, round: 2, score: { p1: 1, p2: 0 }, winner: null };
+    fixture.entities.set(matchId, { id: matchId, owner: 'host-peer', version: 7, fields });
+    fixture.settle();
+    fixture.colocated.peers[0]!.localized = false;
+    fixture.settle();
+    fixture.remountFrame();
+    fixture.settle();
+    fixture.fixedUpdate()();
+    assert.deepEqual(fixture.matchWrites(), []);
+    assert.deepEqual(fixture.entities.get(matchId)?.fields, fields);
+    assert.equal(tabletopRace.getState().roomRuntime!.hostState, null);
+    fixture.unmount();
+  });
+}
+
+it('native guest never claims or publishes authoritative entities even when their ownership is misassigned', () => {
+  const fixture = matchPublicationFixture('guest');
+  fixture.settle();
+  assert.deepEqual(fixture.matchClaims(), []);
+  assert.equal(fixture.claims.includes(snapshotId), false);
+  const state = core.createLightCycleMatch({ names: { p1: 'HOST', p2: 'GUEST' } });
+  fixture.entities.set(matchId, { id: matchId, owner: 'guest-peer', version: 1, fields: { phase: 'countdown' } });
+  fixture.entities.set(snapshotId, { id: snapshotId, owner: 'guest-peer', version: 1, fields: { state } });
+  fixture.settle();
+  fixture.fixedUpdate()();
+  fixture.toggleReady();
+  fixture.settle();
+  assert.deepEqual(fixture.matchClaims(), []);
+  assert.deepEqual(fixture.matchWrites(), []);
+  assert.equal(fixture.claims.includes(snapshotId), false);
+  assert.equal(fixture.writes.some(({ id }) => id === snapshotId), false);
+  assert.equal(tabletopRace.getState().roomRuntime!.hostState, null);
+  const { sharedTree, runtimeTree } = fixture.render();
+  assert.equal(find(runtimeTree, 'McpPresence').props.state, state);
+  assert.equal(find(sharedTree, 'TabletopRiveScoreboard').props.replicatedState, state);
+  fixture.unmount();
+});
+
+it('native active updates check match and snapshot ownership independently', () => {
+  const fixture = matchPublicationFixture();
+  fixture.settle();
+  fixture.entities.set(matchId, { ...fixture.entities.get(matchId)!, owner: 'other-peer' });
+  const matchCount = fixture.matchWrites().length;
+  const snapshotCount = () => fixture.writes.filter(({ id }) => id === snapshotId).length;
+  for (let i = 0; i < 6; i++) fixture.fixedUpdate()();
+  assert.equal(tabletopRace.getState().roomRuntime!.hostState!.tick, 6);
+  assert.equal(fixture.matchWrites().length, matchCount);
+  assert.equal(snapshotCount(), 1);
+  fixture.entities.set(matchId, { ...fixture.entities.get(matchId)!, owner: 'host-peer' });
+  fixture.entities.set(snapshotId, { ...fixture.entities.get(snapshotId)!, owner: 'other-peer' });
+  for (let i = 0; i < 6; i++) fixture.fixedUpdate()();
+  assert.equal(fixture.matchWrites().length, matchCount + 1);
+  assert.equal(fixture.entities.get(matchId)?.fields.tick, 12);
+  assert.equal(snapshotCount(), 1);
+  fixture.unmount();
+});
+
+for (const replacementRoomId of ['room-b', 'room-a']) {
+  it(`native replacement ${replacementRoomId} starts fresh and rejects the previous generation callback`, () => {
+    const fixture = matchPublicationFixture();
+    fixture.settle();
+    const oldLoop = fixture.fixedUpdate();
+    for (let i = 0; i < 6; i++) oldLoop();
+    const oldRuntime = tabletopRace.getState().roomRuntime!;
+    fixture.room.roomId = replacementRoomId;
+    if (replacementRoomId === 'room-a') fixture.remountScene();
+    fixture.entities.delete(matchId);
+    fixture.entities.delete(snapshotId);
+    fixture.settle();
+    const replacement = tabletopRace.getState().roomRuntime!;
+    assert.notEqual(replacement, oldRuntime);
+    assert.equal(replacement.roomId, replacementRoomId);
+    assert.equal(replacement.hostState, null);
+    assert.equal(fixture.entities.get(matchId)?.fields.phase, 'ready');
+    const writes = fixture.writes.length;
+    oldLoop();
+    assert.equal(fixture.writes.length, writes);
+    assert.equal(oldRuntime.hostState!.tick, 6);
+    assert.equal(replacement.hostState, null);
+    fixture.fixedUpdate()();
+    assert.equal(replacement.hostState!.tick, 1);
+    fixture.unmount();
+  });
+}
 
 type HostedAnchor = { success: boolean; cloudAnchorId?: string; error?: string };
 

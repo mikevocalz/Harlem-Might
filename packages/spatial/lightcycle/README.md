@@ -8,6 +8,10 @@ Zustand, Viro, Rive, or the runtime/UI layers.
   solo simulation driver. Its colocated tests exercise session ownership and
   native component callbacks without loading device renderers or real services.
 - `viro/` owns the tabletop co-location scene and native replicated race runtime.
+  The runtime owns match claims and publication from lobby readiness through
+  active round results. The scene supplies placement, localization and player
+  readiness; it does not interpret or publish match phases. Match publication
+  stays mounted while the mat pose is syncing, without starting simulation.
   It uses the shared spatial Viro bridge and shared MCP/Rive effects.
 - `ui/` owns the tabletop session panel, native/web Rive scoreboards and native
   scoreboard asset state. Generic `SpatialRivePanel` remains outside this feature.

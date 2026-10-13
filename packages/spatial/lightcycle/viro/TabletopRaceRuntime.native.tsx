@@ -53,6 +53,9 @@ type Props = {
   replication: ReplicationSurface;
   localPlayerId: LightCyclePlayerId;
   placementReady: boolean;
+  frameLocalized: boolean;
+  p1Ready: boolean;
+  p2Ready: boolean;
   playerNames: Record<LightCyclePlayerId, string>;
   bothReady: boolean;
 };
@@ -285,10 +288,14 @@ export function TabletopRaceRuntime({
   replication,
   localPlayerId,
   placementReady,
+  frameLocalized,
+  p1Ready,
+  p2Ready,
   playerNames,
   bothReady,
 }: Props) {
   const isHost = localPlayerId === 'p1';
+  const canPlay = placementReady && frameLocalized;
   const inputId = LIGHTCYCLE_REPLICATION_IDS.input(localPlayerId);
   const snapshotId = LIGHTCYCLE_REPLICATION_IDS.snapshot;
   const matchId = LIGHTCYCLE_REPLICATION_IDS.match;
@@ -304,7 +311,7 @@ export function TabletopRaceRuntime({
   );
 
   useEffect(() => {
-    if (replication.state !== 'synced') return;
+    if (!placementReady || replication.state !== 'synced') return;
     if (!inputEntity) {
       replication.claim(inputId);
     }
@@ -315,9 +322,59 @@ export function TabletopRaceRuntime({
     inputEntity,
     inputId,
     isHost,
+    placementReady,
     replication,
     snapshotEntity,
     snapshotId,
+  ]);
+
+  // The native runtime owns the entire match entity, from lobby through results.
+  useEffect(() => {
+    if (!isHost || replication.state !== 'synced') return;
+    const match = replication.byId(matchId);
+    if (!match) {
+      replication.claim(matchId);
+      return;
+    }
+    if (!replication.isMine(matchId)) return;
+
+    const activePhase =
+      match.fields.phase === 'countdown' ||
+      match.fields.phase === 'running' ||
+      match.fields.phase === 'round-over' ||
+      match.fields.phase === 'match-over';
+    // Simulation starts before the first periodic snapshot. Once this room
+    // has a match, readiness loss only pauses it; it must not reopen the lobby.
+    if (roomRuntime?.hostState || activePhase) return;
+
+    const nextPhase = bothReady ? 'ready' : 'lobby';
+    if (
+      match.fields.phase !== nextPhase ||
+      match.fields.placementReady !== placementReady ||
+      match.fields.p1Ready !== p1Ready ||
+      match.fields.p2Ready !== p2Ready
+    ) {
+      replication.set(
+        matchId,
+        {
+          phase: nextPhase,
+          hostPeerId: replication.localPeerId,
+          placementReady,
+          p1Ready,
+          p2Ready,
+        },
+        { optimistic: true },
+      );
+    }
+  }, [
+    bothReady,
+    isHost,
+    matchId,
+    p1Ready,
+    p2Ready,
+    placementReady,
+    replication,
+    roomRuntime,
   ]);
 
   const guestState = readLightCycleMatchState(snapshotEntity?.fields.state);
@@ -329,7 +386,7 @@ export function TabletopRaceRuntime({
       if (
         !runtime ||
         runtime !== roomRuntime ||
-        !placementReady ||
+        !canPlay ||
         !bothReady ||
         replication.state !== 'synced'
       ) {
@@ -388,7 +445,7 @@ export function TabletopRaceRuntime({
       inputId,
       isHost,
       localPlayerId,
-      placementReady,
+      canPlay,
       replication,
       roomRuntime,
     ],
@@ -398,7 +455,7 @@ export function TabletopRaceRuntime({
     if (
       !roomRuntime ||
       tabletopRace.getState().roomRuntime !== roomRuntime ||
-      !placementReady ||
+      !canPlay ||
       !bothReady ||
       replication.state !== 'synced'
     ) {
@@ -418,7 +475,7 @@ export function TabletopRaceRuntime({
     bothReady,
     displayState,
     localPlayerId,
-    placementReady,
+    canPlay,
     replication.state,
     roomRuntime,
     sendCommand,
@@ -429,6 +486,7 @@ export function TabletopRaceRuntime({
     if (
       !runtime ||
       runtime !== roomRuntime ||
+      !placementReady ||
       !displayState?.derezEvents.length
     ) return;
 
@@ -468,7 +526,7 @@ export function TabletopRaceRuntime({
         },
       });
     }
-  }, [displayState, localPlayerId, roomRuntime]);
+  }, [displayState, localPlayerId, placementReady, roomRuntime]);
 
   const onFixedUpdate = useCallback(() => {
     const runtime = tabletopRace.getState().roomRuntime;
@@ -476,7 +534,7 @@ export function TabletopRaceRuntime({
       !runtime ||
       runtime !== roomRuntime ||
       !isHost ||
-      !placementReady ||
+      !canPlay ||
       !bothReady ||
       replication.state !== 'synced'
     ) {
@@ -577,7 +635,7 @@ export function TabletopRaceRuntime({
     bothReady,
     isHost,
     matchId,
-    placementReady,
+    canPlay,
     playerNames,
     replication,
     roomId,
@@ -585,7 +643,7 @@ export function TabletopRaceRuntime({
     snapshotId,
   ]);
 
-  if (!roomRuntime || !placementReady) return null;
+  if (!roomRuntime || !canPlay) return null;
 
   return (
     <ViroNode>
