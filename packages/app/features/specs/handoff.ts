@@ -72,7 +72,7 @@ function vec(value: unknown, length: number): boolean {
 
 function validNode(value: unknown, seen: Set<string>): value is SpecsSceneNode {
   if (!object(value) || Object.keys(value).some(key => !NODE_KEYS.has(key)) ||
-      !text(value.id, 80) || !KINDS.has(value.kind)) return false;
+      !text(value.id, 80) || typeof value.kind !== 'string' || !KINDS.has(value.kind)) return false;
   if (value.parentId !== undefined && (!text(value.parentId, 80) || !seen.has(value.parentId))) return false;
   if (value.position !== undefined && !vec(value.position, 3)) return false;
   if (value.scale !== undefined && !vec(value.scale, 3)) return false;
