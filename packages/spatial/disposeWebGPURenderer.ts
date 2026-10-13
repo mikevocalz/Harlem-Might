@@ -1,5 +1,14 @@
 import type * as THREE from 'three/webgpu';
 
+async function disposeBackend(backend: THREE.WebGPURenderer['backend']) {
+  // Pinned Three implements this on both backends, but @types/three's base
+  // Backend omits it. Check the runtime boundary rather than erase that type.
+  if (!('dispose' in backend) || typeof backend.dispose !== 'function') {
+    throw new Error('Three backend does not provide disposal');
+  }
+  await backend.dispose();
+}
+
 /** Call only after init has settled, and await before reusing the canvas. */
 export async function disposeWebGPURenderer(
   renderer: THREE.WebGPURenderer,
@@ -8,7 +17,7 @@ export async function disposeWebGPURenderer(
 ) {
   try {
     // Three can replace the WebGPU backend during init without disposing it.
-    if (initialBackend !== renderer.backend) await initialBackend.dispose();
+    if (initialBackend !== renderer.backend) await disposeBackend(initialBackend);
   } finally {
     if (initialized) {
       await renderer.setAnimationLoop(null);
@@ -32,7 +41,7 @@ export async function disposeWebGPURenderer(
       } else {
         // WebGPUBackend only destroys devices it created, never our supplied
         // device (owned by the web canvas or react-native-webgpu's useDevice).
-        await backend.dispose();
+        await disposeBackend(backend);
       }
     }
   }

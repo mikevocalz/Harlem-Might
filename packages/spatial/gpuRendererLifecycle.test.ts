@@ -199,3 +199,19 @@ test('successful Three fallback releases the replaced GPU backend and keeps norm
   await loadDisposer()(renderer, true, original);
   assert.deepEqual(calls, ['gpu', 'stop', 'renderer']);
 });
+
+test('backend disposal preserves its receiver at the declared/runtime boundary', async () => {
+  const backend = { calls: 0, dispose() { this.calls++; } };
+  await loadDisposer()({ backend }, false, backend);
+  assert.equal(backend.calls, 1);
+});
+
+test('unsupported replaced backend still cleans the current renderer before reporting failure', async () => {
+  const calls: string[] = [];
+  await assert.rejects(loadDisposer()({
+    backend: {},
+    setAnimationLoop: async () => { calls.push('stop'); },
+    dispose: async () => { calls.push('renderer'); },
+  }, true, {}), /Three backend does not provide disposal/);
+  assert.deepEqual(calls, ['stop', 'renderer']);
+});

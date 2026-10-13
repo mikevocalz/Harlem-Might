@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JsxEmit, ModuleKind, transpileModule } from 'typescript';
