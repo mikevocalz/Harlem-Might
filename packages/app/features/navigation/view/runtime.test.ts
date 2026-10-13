@@ -266,3 +266,50 @@ describe('foreground guidance resume', () => {
     assert.equal(fake.started(), 0);
   });
 });
+
+
+describe('terminal arrival location ownership', () => {
+  for (const confirms of [false, true]) {
+    it(`keeps ${confirms ? 'confirmed' : 'estimated'} arrival terminal without acquiring location after a host restart`, async (t) => {
+      let now = 1_760_000_000_000;
+      t.mock.method(Date, 'now', () => now);
+      const fake = fakeSource();
+      const { provider, requests } = recordingProvider();
+      configureNavigationRuntime({ provider, locationSource: fake.source });
+      const controller = navigationController();
+      await controller.planRoute({ origin: { kind: 'device-location' }, originCoordinate: ORIGIN, destination: DESTINATION, mode: 'walking' });
+      useNavigationUi.getState().setLocation('granted');
+      assert.ok(startGuidance());
+      const lifecycle = createNavigationHostLifecycle({
+        running: isLocationRunning, start: startLocation, stop: stopLocation,
+        mayResume: () => !['idle', 'paused', 'arrived', 'error'].includes(useNavigationStore.getState().session.phase),
+      });
+      const release = lifecycle.mount(true);
+      const emit = (accuracy: number) => {
+        now += 1000;
+        fake.emit({ coordinate: DESTINATION.coordinate, accuracy: { horizontalM: accuracy }, timestampMs: now, source: 'device-gps' });
+      };
+      emit(18);
+      emit(18);
+      const estimated = useNavigationStore.getState().session;
+      assert.ok(estimated.phase === 'arrived' && estimated.arrival.kind === 'arrived' && estimated.arrival.confidence === 'estimated');
+      assert.equal(fake.started(), 1);
+      if (confirms) emit(5);
+      const arrival = useNavigationStore.getState().session;
+      assert.ok(arrival.phase === 'arrived' && arrival.arrival.kind === 'arrived');
+      assert.equal(arrival.arrival.confidence, confirms ? 'confirmed' : 'estimated');
+      assert.equal(arrival.activeRoute, estimated.activeRoute);
+      assert.equal(fake.started(), 1, 'an existing foreground feed supplies any confirmation');
+      lifecycle.setActive(false);
+      lifecycle.setActive(true);
+      release();
+      const releaseAgain = lifecycle.mount(true);
+      assert.equal(fake.stopped(), 1);
+      assert.equal(isLocationRunning(), false);
+      assert.equal(fake.started(), 1, 'neither foregrounding nor remounting restarts an arrived trip');
+      assert.equal(useNavigationStore.getState().session, arrival, 'without another fix the arrival is unchanged');
+      assert.equal(requests.length, 1);
+      releaseAgain();
+    });
+  }
+});

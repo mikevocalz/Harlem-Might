@@ -65,10 +65,11 @@ UI events and GPS events race, so a stale tap must not throw.
 High-frequency values (the last fix result, the route match, the heading)
 live in a separate vanilla store, `navigationFixStore`. Only components that
 draw them (the AR scene, the map puck) subscribe. The session is written only
-when a phase, deviation kind or arrival kind changes. In the recorded
-Apollo → Sylvia's walk, 385 fixes produce fewer than 15 session writes.
-`progress` is written only when the active step or the whole-metre distance
-remaining changes.
+when a phase, deviation kind, arrival kind or arrival confidence changes. In
+the recorded Apollo → Sylvia's walk, 385 fixes produce fewer than 15 session writes.
+`progress` is written for every accepted matched fix: its timestamp and ETA
+must stay fresh even when a stationary person's step and rounded distance do
+not change. This does not rewrite the session.
 
 `createNavigationController()` is the only writer. Screens read through the
 selectors (`selectPhase`, `selectProgress`, `selectActiveRoute`, …).
@@ -165,7 +166,12 @@ from the CMS point. Standing behind the building puts you 16 m from the CMS
 point but 26 m from the door. A
 centroid-based detector calls that "arrived"; this one doesn't, and a test
 pins it. An arrival from a fix with r68 above 10 m is `estimated`, and a later
-precise fix upgrades it to `confirmed`.
+precise fix already delivered to the controller upgrades it to `confirmed`.
+This only changes arrival confidence and distance, preserving the original
+arrival time, trip and route. It does not resume guidance, match progress,
+reroute, or acquire/restart location. A stopped feed stays stopped; in
+particular, backgrounding or releasing the last host does not restart an
+arrived trip on return. With no later fix, an estimate remains estimated.
 
 ## Safety and privacy
 

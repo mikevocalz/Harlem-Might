@@ -59,6 +59,7 @@ const NAV_THEME = {
 export default function RootLayout() {
   useWalkJourneyHost();
   useEffect(() => {
+    placeCatalogueStore.getState().hydrate();
     void placeCatalogueStore.getState().refresh();
     haptics.setForeground(AppState.currentState === 'active');
     const listener = AppState.addEventListener('change', state => {
@@ -79,6 +80,7 @@ export default function RootLayout() {
     const subscription = AppState.addEventListener('change', state => {
       if (state === 'active') {
         void refresh();
+        placeCatalogueStore.getState().hydrate();
         void placeCatalogueStore.getState().refresh();
       }
     });

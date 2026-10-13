@@ -31,6 +31,8 @@ export interface PlaceCatalogueState {
   loadState: LoadState;
   details: Readonly<Record<string, DetailResult<PlaceRecord>>>;
   connect: (readers: Readers) => void;
+  /** Restore last-good data at native startup/foreground; failed reads remain retryable. */
+  hydrate: () => void;
   refresh: () => Promise<void>;
   loadPlace: (slug: string) => Promise<void>;
 }
@@ -45,27 +47,21 @@ export interface PlaceCatalogueStoreOptions {
   retryDelaysMs?: readonly number[];
 }
 
-/** Creates an isolated catalogue; failed reads retain the last successful list. */
+/** Creates an import-safe catalogue; hydrate explicitly before its first native refresh. */
 export function createPlaceCatalogueStore(options: PlaceCatalogueStoreOptions = {}) {
-  const restored = options.persistence?.load();
-  const restoredDetails = Object.fromEntries(Object.entries(restored?.details ?? {}).map(([slug, detail]) => [
-    slug,
-    detail.status === 'ok' && detail.data.locationAccuracy === 'pending'
-      ? { ...detail, data: { ...detail.data, location: undefined } }
-      : detail,
-  ]));
+  // Construction is import-safe. Native startup owns the first storage read,
+  // and foreground can retry a cache that was unavailable before the bridge
+  // was ready. Once restored (or superseded by a live list), never replay it.
+  let hydrated = false;
+  let hydrating = false;
   // Cached detail remains useful offline. Request order decides whether a
   // revalidated detail or a successful catalogue is the fresher authority.
   const detailGenerations = new Map<string, number>();
+  // Failed detail reads are retryable, not authority over recovered cache.
+  // Before hydration, remember confirmed results even after a later failure.
+  const liveDetailSlugs = new Set<string>();
   let requestGeneration = 0;
   let catalogueGeneration = 0;
-  const restoredPlaces = restored?.places.map((place) => {
-    const detail = restoredDetails[place.id];
-    if (detail?.status === 'ok') return projectPlace(detail.data);
-    // Legacy rows did not retain accuracy and could contain pending points.
-    // Keep their display facts, but require a new read before mapping them.
-    return restored.schemaVersion === 2 ? place : { ...place, lngLat: undefined };
-  }) ?? [];
   const retryDelays = options.retryDelaysMs ?? [];
   let readers: Readers | undefined;
   let pending: Promise<void> | undefined;
@@ -95,10 +91,58 @@ export function createPlaceCatalogueStore(options: PlaceCatalogueStoreOptions = 
       scheduleRetry();
     };
     return {
-      places: restoredPlaces,
+      places: [],
       loadState: { status: 'idle' },
-      details: restoredDetails,
+      details: {},
       connect: (value) => { readers = value; },
+      hydrate: () => {
+        if (hydrated || hydrating || catalogueGeneration > 0 || !options.persistence) return;
+        hydrating = true;
+        try {
+          const restored = options.persistence.load();
+          // The adapter returns no snapshot for absent, invalid or unavailable
+          // storage. A later explicit foreground hydration may try it again.
+          if (!restored || catalogueGeneration > 0) return;
+          const restoredDetails = Object.fromEntries(Object.entries(restored.details).map(([slug, detail]) => [
+            slug,
+            detail.status === 'ok' && detail.data.locationAccuracy === 'pending'
+              ? { ...detail, data: { ...detail.data, location: undefined } }
+              : detail,
+          ]));
+          const restoredPlaces = restored.places.map((place) => {
+            const detail = restoredDetails[place.id];
+            if (detail?.status === 'ok') return projectPlace(detail.data);
+            // Legacy list-only rows cannot prove their coordinate accuracy.
+            return restored.schemaVersion === 2 ? place : { ...place, lngLat: undefined };
+          });
+          hydrated = true;
+          set((state) => {
+            const details = { ...state.details };
+            for (const [slug, detail] of Object.entries(restoredDetails)) {
+              if (liveDetailSlugs.has(slug)) continue;
+              details[slug] = detail;
+              // An earlier offline miss must not promote restored detail into
+              // live authority or short-circuit its next revalidation.
+              detailGenerations.delete(slug);
+            }
+            const currentPlaces = new Map(state.places.map((place) => [place.id, place]));
+            const places = restoredPlaces.flatMap((place) => {
+              const current = currentPlaces.get(place.id);
+              currentPlaces.delete(place.id);
+              if (current) return [current];
+              return liveDetailSlugs.has(place.id) ? [] : [place];
+            });
+            places.push(...currentPlaces.values());
+            return { details, places };
+          });
+          liveDetailSlugs.clear();
+        } catch {
+          // An injected persistence adapter may throw too. Leave hydration
+          // retryable without disrupting a mounted view or an in-flight read.
+        } finally {
+          hydrating = false;
+        }
+      },
       refresh: () => {
         if (pending) return pending;
         if (!readers) {
@@ -115,6 +159,7 @@ export function createPlaceCatalogueStore(options: PlaceCatalogueStoreOptions = 
               retryAttempt = 0;
               if (retryTimer !== undefined) { clearTimeout(retryTimer); retryTimer = undefined; }
               catalogueGeneration = generation;
+              liveDetailSlugs.clear();
               for (const [slug, request] of detailRequests) {
                 if (request.generation < generation) detailRequests.delete(slug);
               }
@@ -171,6 +216,7 @@ export function createPlaceCatalogueStore(options: PlaceCatalogueStoreOptions = 
           const keepOfflineCache = result.status === 'unavailable'
             && !detailGenerations.has(slug) && get().details[slug]?.status === 'ok';
           if (!keepOfflineCache) detailGenerations.set(slug, generation);
+          if (!hydrated && catalogueGeneration === 0 && result.status !== 'unavailable') liveDetailSlugs.add(slug);
           set((state) => ({
             // A failed offline revalidation keeps the last good cached detail
             // visible, but does not promote it to live authority or stop retry.

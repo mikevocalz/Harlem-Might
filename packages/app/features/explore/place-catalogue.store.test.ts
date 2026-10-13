@@ -2,12 +2,13 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { PlaceRecord } from '../../content/records.ts';
 import type { ContentResult, DetailResult } from '../../content/result.ts';
-import { createPlaceCatalogueStore, catalogueNearbyPlaces, getCataloguePlace, placeCatalogueStore } from './place-catalogue.store.ts';
+import { catalogueNearbyPlaces, getCataloguePlace, placeCatalogueStore } from './place-catalogue.store.ts';
 import { explorePlaceFromRecord } from './catalogue.ts';
 import { verifiedDestination } from '../journey/model.ts';
 import { filterPlaces } from './place-model.ts';
 import type { PlaceCatalogueSnapshot } from './catalogue-persistence.ts';
 import { placesGeoJson } from './explore-map-layers.ts';
+import { createHydratedCatalogueStore } from './test-helpers/hydrated-catalogue.ts';
 
 const place = (slug: string, longitude = -73.94): PlaceRecord => ({
   id: 101, slug, name: slug, kind: 'business', lifecycle: 'open',
@@ -22,7 +23,7 @@ function deferred<T>() {
 }
 
 test('API places outside the preview fixture reach search, map points and nearby selection', async () => {
-  const store = createPlaceCatalogueStore();
+  const store = createHydratedCatalogueStore();
   store.getState().connect({
     listExploreCatalogue: async () => ({ status: 'ok', data: [place('new-cafe'), place('new-bookshop', -73.941)] }),
     getPlace: async (slug) => ({ status: 'ok', data: place(slug) }),
@@ -37,7 +38,7 @@ test('API places outside the preview fixture reach search, map points and nearby
 });
 
 test('failed reads keep the last catalogue and expose an error; a successful empty read clears it', async () => {
-  const store = createPlaceCatalogueStore();
+  const store = createHydratedCatalogueStore();
   let result: ContentResult<PlaceRecord[]> = { status: 'ok', data: [place('new-cafe')] };
   store.getState().connect({ listExploreCatalogue: async () => result, getPlace: async () => ({ status: 'not-found' }) });
   await store.getState().refresh();
@@ -52,7 +53,7 @@ test('failed reads keep the last catalogue and expose an error; a successful emp
 });
 
 test('concurrent windows share one catalogue read', async () => {
-  const store = createPlaceCatalogueStore();
+  const store = createHydratedCatalogueStore();
   let resolve!: (value: ContentResult<PlaceRecord[]>) => void;
   let reads = 0;
   store.getState().connect({
@@ -70,7 +71,7 @@ test('concurrent windows share one catalogue read', async () => {
 });
 
 test('a deep-linked detail loads its real record, preserving photos and making it selectable', async () => {
-  const store = createPlaceCatalogueStore();
+  const store = createHydratedCatalogueStore();
   const record = { ...place('direct-link'), summary: 'Published description', website: 'https://example.com' };
   let reads = 0;
   store.getState().connect({
@@ -84,7 +85,7 @@ test('a deep-linked detail loads its real record, preserving photos and making i
 });
 
 test('unavailable detail can retry and is distinct from not found', async () => {
-  const store = createPlaceCatalogueStore();
+  const store = createHydratedCatalogueStore();
   let offline = true;
   store.getState().connect({
     listExploreCatalogue: async () => ({ status: 'ok', data: [] }),
@@ -102,7 +103,7 @@ test('unavailable detail can retry and is distinct from not found', async () => 
 
 
 test('a synchronous reader failure releases the request so retry can recover', async () => {
-  const store = createPlaceCatalogueStore();
+  const store = createHydratedCatalogueStore();
   let fail = true;
   store.getState().connect({
     listExploreCatalogue: () => {
@@ -121,7 +122,7 @@ test('a synchronous reader failure releases the request so retry can recover', a
 
 test('a persisted snapshot hydrates the catalogue before the first refresh', () => {
   const cached = place('cached-cafe');
-  const store = createPlaceCatalogueStore({
+  const store = createHydratedCatalogueStore({
     persistence: {
       load: () => ({
         places: [explorePlaceFromRecord(cached)],
@@ -137,7 +138,7 @@ test('a persisted snapshot hydrates the catalogue before the first refresh', () 
 
 test('successful catalogue and detail reads persist for the next launch', async () => {
   const saved: { places: readonly unknown[]; details: Record<string, unknown> }[] = [];
-  const store = createPlaceCatalogueStore({
+  const store = createHydratedCatalogueStore({
     persistence: { load: () => undefined, save: (snapshot) => saved.push(snapshot) },
   });
   store.getState().connect({
@@ -156,7 +157,7 @@ test('a failed refresh retries on the configured backoff and recovers without a 
   t.mock.timers.enable({ apis: ['setTimeout'] });
   let fail = true;
   let reads = 0;
-  const store = createPlaceCatalogueStore({ retryDelaysMs: [50] });
+  const store = createHydratedCatalogueStore({ retryDelaysMs: [50] });
   store.getState().connect({
     listExploreCatalogue: async () => {
       reads++;
@@ -183,7 +184,7 @@ test('a failed refresh retries on the configured backoff and recovers without a 
 test('retries stop after the configured delays are exhausted', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   let reads = 0;
-  const store = createPlaceCatalogueStore({ retryDelaysMs: [50, 100] });
+  const store = createHydratedCatalogueStore({ retryDelaysMs: [50, 100] });
   store.getState().connect({
     listExploreCatalogue: async () => { reads++; throw new Error('offline'); },
     getPlace: async () => ({ status: 'not-found' }),
@@ -206,7 +207,7 @@ test('retries stop after the configured delays are exhausted', async (t) => {
 
 for (const hadCoordinates of [true, false]) {
   test(`a verified detail ${hadCoordinates ? 'corrects' : 'adds'} the catalogue destination before directions opens`, async () => {
-    const store = createPlaceCatalogueStore();
+    const store = createHydratedCatalogueStore();
     const old = { ...place('destination'), ...(hadCoordinates ? {} : { location: undefined }) };
     const corrected: PlaceRecord = {
       ...place('destination', -73.955), name: 'Corrected destination', locationAccuracy: 'verified',
@@ -249,7 +250,7 @@ test('the common lookup prefers successful detail even if the catalogue still co
 
 for (const detailFirst of [true, false]) {
   test(`detail and catalogue requests reconcile when ${detailFirst ? 'detail' : 'catalogue'} settles first`, async () => {
-    const store = createPlaceCatalogueStore();
+    const store = createHydratedCatalogueStore();
     const catalogue = deferred<ContentResult<PlaceRecord[]>>();
     const detail = deferred<{ status: 'ok'; data: PlaceRecord }>();
     const corrected = { ...place('destination', -73.955), name: 'Corrected destination' };
@@ -276,7 +277,7 @@ for (const detailFirst of [true, false]) {
 }
 
 test('an unavailable detail preserves the previous catalogue projection and remains retryable', async () => {
-  const store = createPlaceCatalogueStore();
+  const store = createHydratedCatalogueStore();
   let unavailable = true;
   const corrected = place('destination', -73.955);
   store.getState().connect({
@@ -294,7 +295,7 @@ test('an unavailable detail preserves the previous catalogue projection and rema
 
 test('an older list response persists newer detail-authoritative coordinates for the next launch', async () => {
   const saved: PlaceCatalogueSnapshot[] = [];
-  const store = createPlaceCatalogueStore({
+  const store = createHydratedCatalogueStore({
     persistence: { load: () => undefined, save: (snapshot) => saved.push(structuredClone(snapshot)) },
   });
   const catalogue = deferred<ContentResult<PlaceRecord[]>>();
@@ -323,7 +324,7 @@ test('an older list response persists newer detail-authoritative coordinates for
   assert.deepEqual(last.places[0], explorePlaceFromRecord(corrected));
   assert.deepEqual(last.details.destination, { status: 'ok', data: corrected });
 
-  const relaunched = createPlaceCatalogueStore({ persistence: { load: () => last, save: () => {} } });
+  const relaunched = createHydratedCatalogueStore({ persistence: { load: () => last, save: () => {} } });
   assert.deepEqual(relaunched.getState().places[0]?.lngLat, corrected.location);
   let revalidations = 0;
   const current: PlaceRecord = { ...corrected, location: undefined, locationAccuracy: 'pending' };
@@ -341,7 +342,7 @@ test('a successful refresh cancels its pending retry and resets the next backoff
   t.mock.timers.enable({ apis: ['setTimeout'] });
   let fail = true;
   let reads = 0;
-  const store = createPlaceCatalogueStore({ retryDelaysMs: [50, 100] });
+  const store = createHydratedCatalogueStore({ retryDelaysMs: [50, 100] });
   store.getState().connect({
     listExploreCatalogue: async () => {
       reads++;
@@ -383,7 +384,7 @@ const cachedSnapshot = (record = cachedVerified()): PlaceCatalogueSnapshot => ({
 for (const accuracy of ['pending', 'verified'] as const) {
   test(`a fresh ${accuracy} list without coordinates supersedes hydrated verified detail`, async (t) => {
     const saved: PlaceCatalogueSnapshot[] = [];
-    const store = createPlaceCatalogueStore({
+    const store = createHydratedCatalogueStore({
       persistence: { load: () => cachedSnapshot(), save: (snapshot) => saved.push(structuredClone(snapshot)) },
     });
     const current: PlaceRecord = { ...cachedVerified(), name: 'Current destination', location: undefined, locationAccuracy: accuracy };
@@ -410,7 +411,7 @@ for (const accuracy of ['pending', 'verified'] as const) {
 }
 
 test('an empty fresh catalogue removes hydrated details and their old mapped destinations', async () => {
-  const store = createPlaceCatalogueStore({ persistence: { load: () => cachedSnapshot(), save: () => {} } });
+  const store = createHydratedCatalogueStore({ persistence: { load: () => cachedSnapshot(), save: () => {} } });
   store.getState().connect({
     listExploreCatalogue: async () => ({ status: 'ok', data: [] }),
     getPlace: async () => ({ status: 'not-found' }),
@@ -422,7 +423,7 @@ test('an empty fresh catalogue removes hydrated details and their old mapped des
 
 test('hydrated detail revalidates once and its live correction wins an older in-flight catalogue', async () => {
   const saved: PlaceCatalogueSnapshot[] = [];
-  const store = createPlaceCatalogueStore({
+  const store = createHydratedCatalogueStore({
     persistence: { load: () => cachedSnapshot(), save: (snapshot) => saved.push(structuredClone(snapshot)) },
   });
   const catalogue = deferred<ContentResult<PlaceRecord[]>>();
@@ -451,7 +452,7 @@ test('hydrated detail revalidates once and its live correction wins an older in-
 
 for (const failure of ['throw', 'unavailable'] as const) {
   test(`offline ${failure} retains cached display but cannot restore it after a fresh unmapped list`, async () => {
-    const store = createPlaceCatalogueStore({ persistence: { load: () => cachedSnapshot(), save: () => {} } });
+    const store = createHydratedCatalogueStore({ persistence: { load: () => cachedSnapshot(), save: () => {} } });
     let offline = true;
     let reads = 0;
     const current: PlaceRecord = { ...cachedVerified(), name: 'Current destination', location: undefined, locationAccuracy: 'pending' };
@@ -481,7 +482,7 @@ for (const failure of ['throw', 'unavailable'] as const) {
 
 test('a revalidated missing detail removes cached coordinates and an older list cannot resurrect them', async () => {
   const saved: PlaceCatalogueSnapshot[] = [];
-  const store = createPlaceCatalogueStore({
+  const store = createHydratedCatalogueStore({
     persistence: { load: () => cachedSnapshot(), save: (snapshot) => saved.push(structuredClone(snapshot)) },
   });
   const catalogue = deferred<ContentResult<PlaceRecord[]>>();
@@ -501,7 +502,7 @@ for (const schemaVersion of [undefined, 2] as const) {
     const pending: PlaceRecord = { ...cachedVerified(), slug: 'pending', locationAccuracy: 'pending' };
     const known = cachedVerified();
     const unproven = place('list-only');
-    const store = createPlaceCatalogueStore({ persistence: {
+    const store = createHydratedCatalogueStore({ persistence: {
       load: () => ({
         schemaVersion,
         places: [explorePlaceFromRecord(pending), explorePlaceFromRecord(known), explorePlaceFromRecord(unproven)],
@@ -521,7 +522,7 @@ for (const schemaVersion of [undefined, 2] as const) {
 
 test('a newer foreground catalogue invalidates completed live detail and removes its old CTA coordinates', async () => {
   const saved: PlaceCatalogueSnapshot[] = [];
-  const store = createPlaceCatalogueStore({ persistence: { load: () => undefined, save: (snapshot) => saved.push(snapshot) } });
+  const store = createHydratedCatalogueStore({ persistence: { load: () => undefined, save: (snapshot) => saved.push(snapshot) } });
   let current = cachedVerified();
   store.getState().connect({
     listExploreCatalogue: async () => ({ status: 'ok', data: [current] }),
@@ -547,7 +548,7 @@ for (const result of [
   { status: 'unavailable', reason: 'not-configured' },
 ] satisfies DetailResult<PlaceRecord>[]) {
   test(`a superseded ${result.status} detail cannot overwrite a newer list or clear its replacement request`, async () => {
-    const store = createPlaceCatalogueStore();
+    const store = createHydratedCatalogueStore();
     const old = deferred<DetailResult<PlaceRecord>>();
     const replacement = deferred<DetailResult<PlaceRecord>>();
     let reads = 0;
@@ -573,7 +574,7 @@ for (const result of [
 }
 
 test('a failed newer refresh leaves last-good live detail authoritative and displayable', async () => {
-  const store = createPlaceCatalogueStore();
+  const store = createHydratedCatalogueStore();
   store.getState().connect({
     listExploreCatalogue: async () => ({ status: 'unavailable', reason: 'not-configured' }),
     getPlace: async () => ({ status: 'ok', data: cachedVerified() }),
@@ -588,7 +589,7 @@ test('a failed newer refresh leaves last-good live detail authoritative and disp
 
 test('an older empty catalogue retains a newer deep-link detail, while a newer empty refresh clears it', async () => {
   const saved: PlaceCatalogueSnapshot[] = [];
-  const store = createPlaceCatalogueStore({ persistence: { load: () => undefined, save: (snapshot) => saved.push(snapshot) } });
+  const store = createHydratedCatalogueStore({ persistence: { load: () => undefined, save: (snapshot) => saved.push(snapshot) } });
   const older = deferred<ContentResult<PlaceRecord[]>>();
   const record = cachedVerified();
   store.getState().connect({ listExploreCatalogue: () => older.promise, getPlace: async () => ({ status: 'ok', data: record }) });

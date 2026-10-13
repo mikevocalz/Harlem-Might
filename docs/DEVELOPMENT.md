@@ -49,6 +49,16 @@ Keep state and continuity in the existing Zustand/ref architecture. Preserve Kin
 
 Changes should run the relevant type checks, lint checks, and tests for the packages touched. Device-specific claims require device validation; browser or simulator checks should be described as such.
 
+### Native catalogue startup
+
+Creating or importing the shared place catalogue does not acquire native storage.
+The mobile root calls `hydrate()` in its mount and foreground effects before
+refreshing content. A failed/absent cache read can be retried at that boundary;
+successful hydration is idempotent, and a successful live catalogue permanently
+supersedes startup cache. Delayed hydration can fill offline gaps but cannot
+replace confirmed live detail corrections or removals. Isolated stores that
+need cached data must also call `hydrate()` explicitly.
+
 ### Place maintenance reporting
 
 Menu enrichment and coordinate repair preview by default; only `--apply` writes.

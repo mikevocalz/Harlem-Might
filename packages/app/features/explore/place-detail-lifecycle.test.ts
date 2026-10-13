@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { JsxEmit, ModuleKind, transpileModule } from 'typescript';
+import ts from 'typescript';
 import type { PlaceRecord } from '../../content/records.ts';
 import type { DetailResult } from '../../content/result.ts';
 import * as journey from '../journey/model.ts';
@@ -10,9 +10,10 @@ import * as catalogueProjection from './catalogue.ts';
 import * as exploreCopy from './explore-copy.ts';
 import * as placeModel from './place-model.ts';
 import { createPlaceCatalogueStore, catalogueNearbyPlaces, type PlaceCatalogueState } from './place-catalogue.store.ts';
+import { createHydratedCatalogueStore } from './test-helpers/hydrated-catalogue.ts';
 
-const compiled = transpileModule(readFileSync(new URL('./ExplorePlaceDetail.tsx', import.meta.url), 'utf8'), {
-  compilerOptions: { module: ModuleKind.CommonJS, jsx: JsxEmit.ReactJSX },
+const compiled = ts.transpileModule(readFileSync(new URL('./ExplorePlaceDetail.tsx', import.meta.url), 'utf8'), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
 }).outputText;
 type Tree = { type: unknown; props: { children?: unknown; [name: string]: unknown } };
 function nodes(value: unknown): Tree[] {
@@ -29,7 +30,7 @@ function text(value: unknown): string {
 }
 
 /** Actual panel and real store, with deterministic React effect scheduling and inert view leaves. */
-function mountPanel(store: ReturnType<typeof createPlaceCatalogueStore>) {
+function mountPanel(store: ReturnType<typeof createHydratedCatalogueStore>) {
   let effectIndex = 0;
   const previous: (readonly unknown[])[] = [];
   let effects: (() => void)[] = [];
@@ -108,7 +109,7 @@ const place = (slug = 'destination'): PlaceRecord => ({
 test('an already-mounted cached panel revalidates after foreground invalidation and waits for explicit failure retry', async (t) => {
   const cached = place();
   const other = place('unopened');
-  const store = createPlaceCatalogueStore({ persistence: {
+  const store = createHydratedCatalogueStore({ persistence: {
     load: () => ({ schemaVersion: 2, places: [cached, other].map(catalogueProjection.explorePlaceFromRecord), details: {
       destination: { status: 'ok', data: cached }, unopened: { status: 'ok', data: other },
     } }),
@@ -151,7 +152,7 @@ test('an already-mounted cached panel revalidates after foreground invalidation 
 });
 
 test('a mounted panel replaces a superseded pending detail and never re-enables its stale directions CTA', async (t) => {
-  const store = createPlaceCatalogueStore();
+  const store = createHydratedCatalogueStore();
   const old = deferred<DetailResult<PlaceRecord>>();
   const replacement = deferred<DetailResult<PlaceRecord>>();
   let reads = 0;
@@ -180,4 +181,48 @@ test('a mounted panel replaces a superseded pending detail and never re-enables 
   assert.match(panel.text(), /Revalidated detail/);
   assert.equal(panel.button('Take Me There'), undefined);
   assert.equal(reads, 2);
+});
+
+test('a mounted offline panel recovers delayed storage without remounting or restoring pending directions', async (t) => {
+  const cached: PlaceRecord = { ...place(), locationAccuracy: 'pending' };
+  const current: PlaceRecord = { ...cached, location: undefined };
+  let storageReady = false;
+  let online = false;
+  let reads = 0;
+  const store = createPlaceCatalogueStore({ persistence: {
+    load: () => storageReady ? {
+      places: [{ ...catalogueProjection.explorePlaceFromRecord(cached), lngLat: cached.location }],
+      details: { destination: { status: 'ok', data: cached } },
+    } : undefined,
+    save: () => {},
+  } });
+  store.getState().connect({
+    listExploreCatalogue: async () => online ? { status: 'ok', data: [current] } : { status: 'unavailable', reason: 'not-configured' },
+    getPlace: async () => {
+      reads++;
+      return online ? { status: 'ok', data: { ...current, summary: 'Current full detail' } } : { status: 'unavailable', reason: 'not-configured' };
+    },
+  });
+  store.getState().hydrate();
+  const panel = mountPanel(store);
+  t.after(panel.dispose);
+  await panel.flush();
+  assert.equal(reads, 1);
+  assert.ok(panel.button('Try again'));
+  storageReady = true;
+  store.getState().hydrate();
+  await store.getState().refresh();
+  await panel.flush();
+  assert.match(panel.text(), /Cached menu/);
+  assert.equal(reads, 1, 'recovered cache does not trigger an automatic detail retry loop');
+  assert.equal(panel.button('Take Me There'), undefined);
+  assert.equal(panel.button('Get directions'), undefined);
+  assert.equal(store.getState().places[0]?.lngLat, undefined);
+  online = true;
+  await store.getState().refresh();
+  await panel.flush();
+  assert.equal(reads, 2, 'fresh catalogue invalidation still revalidates the mounted panel');
+  assert.match(panel.text(), /Current full detail/);
+  assert.equal(panel.button('Take Me There'), undefined);
+  assert.equal(panel.button('Get directions'), undefined);
 });

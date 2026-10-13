@@ -5,8 +5,8 @@ import type { EditorialImage } from '@acme/assets';
 import type { PlaceRecord } from '../../content/records.ts';
 import type { PlaceCataloguePersistence } from './catalogue-persistence.ts';
 import { explorePlaceFromRecord } from './catalogue.ts';
-import { createPlaceCatalogueStore } from './place-catalogue.store.ts';
 import { filterPlaces } from './place-model.ts';
+import { createHydratedCatalogueStore } from './test-helpers/hydrated-catalogue.ts';
 
 const nativeUrl = new URL('./catalogue-persistence.native.ts', import.meta.url).href;
 const harnessKey = '__harlemCataloguePersistenceTest';
@@ -78,16 +78,16 @@ const completePlace = (): PlaceRecord => ({
 
 test('a null persisted row cannot crash native catalogue startup', async () => {
   const persistence = await loadNative('null-row', { saved: JSON.stringify({ places: [null], details: {} }) });
-  assert.doesNotThrow(() => createPlaceCatalogueStore({ persistence }));
+  assert.doesNotThrow(() => createHydratedCatalogueStore({ persistence }));
   assert.equal(persistence.load(), undefined);
-  assert.deepEqual(createPlaceCatalogueStore({ persistence }).getState().places, []);
+  assert.deepEqual(createHydratedCatalogueStore({ persistence }).getState().places, []);
 });
 
 test('a null successful detail cannot crash native catalogue startup', async () => {
   const persistence = await loadNative('null-detail', { saved: JSON.stringify({ places: [], details: { broken: { status: 'ok', data: null } } }) });
-  assert.doesNotThrow(() => createPlaceCatalogueStore({ persistence }));
+  assert.doesNotThrow(() => createHydratedCatalogueStore({ persistence }));
   assert.equal(persistence.load(), undefined);
-  assert.deepEqual(createPlaceCatalogueStore({ persistence }).getState().details, {});
+  assert.deepEqual(createHydratedCatalogueStore({ persistence }).getState().details, {});
 });
 
 test('malformed persisted envelopes, rows, details and nested fields are rejected as one snapshot', async (t) => {
@@ -163,7 +163,7 @@ test('malformed persisted envelopes, rows, details and nested fields are rejecte
     await t.test(label, async () => {
       const persistence = await loadNative(`malformed-${i}`, { saved: JSON.stringify(value) });
       assert.equal(persistence.load(), undefined);
-      const store = createPlaceCatalogueStore({ persistence });
+      const store = createHydratedCatalogueStore({ persistence });
       assert.deepEqual(store.getState().places, []);
       assert.deepEqual(store.getState().details, {});
     });
@@ -177,10 +177,10 @@ test('malformed JSON and non-finite JSON numbers are rejected without preventing
     JSON.stringify({ places: [{ ...explorePlaceFromRecord(place('finite')), lngLat: ['overflow', 40] }] }).replace('"overflow"', '1e999')]) {
     harness.saved = saved;
     assert.equal(persistence.load(), undefined);
-    assert.doesNotThrow(() => createPlaceCatalogueStore({ persistence }));
+    assert.doesNotThrow(() => createHydratedCatalogueStore({ persistence }));
   }
   persistence.save({ schemaVersion: 2, places: [explorePlaceFromRecord(place('recovered'))], details: {} });
-  assert.equal(createPlaceCatalogueStore({ persistence }).getState().places[0]?.id, 'recovered');
+  assert.equal(createHydratedCatalogueStore({ persistence }).getState().places[0]?.id, 'recovered');
 });
 
 test('complete durable facts round-trip, preserve offline last-good detail, and recover after storage failures', async () => {
@@ -193,7 +193,7 @@ test('complete durable facts round-trip, preserve offline last-good detail, and 
   };
   persistence.save(snapshot);
   assert.deepEqual(persistence.load(), JSON.parse(JSON.stringify(snapshot)));
-  const store = createPlaceCatalogueStore({ persistence });
+  const store = createHydratedCatalogueStore({ persistence });
   assert.equal(filterPlaces(store.getState().places, 'neighbourhood', 'All').length, 1);
   store.getState().connect({
     listExploreCatalogue: async () => ({ status: 'unavailable', reason: 'query-failed', error: new Error('Offline') }),
@@ -202,7 +202,7 @@ test('complete durable facts round-trip, preserve offline last-good detail, and 
   await store.getState().refresh();
   await store.getState().loadPlace('complete');
   assert.deepEqual(store.getState().details, snapshot.details);
-  assert.deepEqual(createPlaceCatalogueStore({ persistence }).getState().details, snapshot.details);
+  assert.deepEqual(createHydratedCatalogueStore({ persistence }).getState().details, snapshot.details);
   harness.failWrite = true;
   persistence.save({ schemaVersion: 2, places: [], details: {} });
   assert.deepEqual(persistence.load()?.details, snapshot.details, 'a failed save leaves last-good durable facts intact');
@@ -221,7 +221,7 @@ test('successful native writes persist only confirmed details', async () => {
   } });
   assert.ok(harness.saved);
   assert.deepEqual(JSON.parse(harness.saved).details, { confirmed: { status: 'ok', data: record } });
-  assert.deepEqual(createPlaceCatalogueStore({ persistence }).getState().details, { confirmed: { status: 'ok', data: record } });
+  assert.deepEqual(createHydratedCatalogueStore({ persistence }).getState().details, { confirmed: { status: 'ok', data: record } });
 });
 
 test('unversioned, explicit v1 and v2 snapshots retain their coordinate authority across a second restart', async (t) => {
@@ -237,7 +237,7 @@ test('unversioned, explicit v1 and v2 snapshots retain their coordinate authorit
       }) };
       const persistence = await loadNative(`coordinate-version-${schemaVersion}`, harness);
       assert.equal(persistence.load()?.schemaVersion, schemaVersion === 2 ? 2 : undefined);
-      const store = createPlaceCatalogueStore({ persistence });
+      const store = createHydratedCatalogueStore({ persistence });
       const expectedPoints = [undefined, known.location, schemaVersion === 2 ? listOnly.location : undefined];
       assert.deepEqual(store.getState().places.map((row) => row.lngLat), expectedPoints);
       const detail = store.getState().details.pending;
@@ -245,7 +245,7 @@ test('unversioned, explicit v1 and v2 snapshots retain their coordinate authorit
       assert.equal(store.getState().details.missing, undefined);
       assert.equal(store.getState().details.transient, undefined);
       persistence.save({ schemaVersion: 2, places: store.getState().places, details: store.getState().details });
-      assert.deepEqual(createPlaceCatalogueStore({ persistence }).getState().places.map((row) => row.lngLat), expectedPoints);
+      assert.deepEqual(createHydratedCatalogueStore({ persistence }).getState().places.map((row) => row.lngLat), expectedPoints);
     });
   }
 });
@@ -269,7 +269,7 @@ test('valid optional omissions and all supported record and image variants remai
     const snapshot = { schemaVersion: 2 as const, places: [explorePlaceFromRecord(record)], details: { [record.slug]: { status: 'ok' as const, data: record } } };
     persistence.save(snapshot);
     assert.deepEqual(persistence.load(), JSON.parse(JSON.stringify(snapshot)));
-    assert.equal(createPlaceCatalogueStore({ persistence }).getState().places[0]?.id, record.slug);
+    assert.equal(createHydratedCatalogueStore({ persistence }).getState().places[0]?.id, record.slug);
   }
   harness.saved = JSON.stringify({ places: [{ id: '', name: '', category: '', area: '', tags: [] }] });
   assert.deepEqual(persistence.load(), { places: [{ id: '', name: '', category: '', area: '', tags: [] }], details: {} });
@@ -278,7 +278,7 @@ test('valid optional omissions and all supported record and image variants remai
 test('the production store survives failed native construction and persists after recovery', async () => {
   const harness: Harness = { failCreate: true };
   const persistence = await loadNative('store-construction-recovery', harness);
-  const store = createPlaceCatalogueStore({ persistence });
+  const store = createHydratedCatalogueStore({ persistence });
   const current = completePlace();
   store.getState().connect({
     listExploreCatalogue: async () => ({ status: 'ok', data: [current] }),
@@ -289,7 +289,7 @@ test('the production store survives failed native construction and persists afte
   assert.equal(harness.saved, undefined);
   harness.failCreate = false;
   await store.getState().loadPlace(current.slug);
-  const relaunched = createPlaceCatalogueStore({ persistence });
+  const relaunched = createHydratedCatalogueStore({ persistence });
   assert.deepEqual(relaunched.getState().details[current.slug], { status: 'ok', data: current });
   assert.deepEqual(relaunched.getState().places[0]?.lngLat, current.location);
   assert.equal(harness.createCalls, 3);
@@ -314,7 +314,7 @@ test('native storage construction is lazy, guarded and retried after an unavaila
 test('native storage read and write errors leave the working in-memory catalogue usable', async () => {
   const harness: Harness = { failRead: true, failWrite: true };
   const persistence = await loadNative('io-failure', harness);
-  const store = createPlaceCatalogueStore({ persistence });
+  const store = createHydratedCatalogueStore({ persistence });
   const current = place('fresh');
   store.getState().connect({
     listExploreCatalogue: async () => ({ status: 'ok', data: [current] }),
@@ -343,7 +343,7 @@ test('the native v1 adapter preserves legacy facts while hydration withholds pen
   const loaded = persistence.load();
   assert.equal(loaded?.schemaVersion, undefined, 'legacy data must not be promoted to the new coordinate contract');
   assert.equal(loaded?.details.missing, undefined);
-  const store = createPlaceCatalogueStore({ persistence });
+  const store = createHydratedCatalogueStore({ persistence });
   assert.equal(store.getState().places[0]?.lngLat, undefined);
   assert.deepEqual(store.getState().places[1]?.lngLat, known.location);
   assert.equal(store.getState().places[2]?.lngLat, undefined);
@@ -353,7 +353,7 @@ test('the native v1 adapter preserves legacy facts while hydration withholds pen
 test('native successful writes round-trip the current coordinate contract for offline list-only places', async () => {
   const harness: Harness = {};
   const persistence = await loadNative('current', harness);
-  const store = createPlaceCatalogueStore({ persistence });
+  const store = createHydratedCatalogueStore({ persistence });
   const current = place('current');
   store.getState().connect({
     listExploreCatalogue: async () => ({ status: 'ok', data: [current] }),
@@ -363,7 +363,7 @@ test('native successful writes round-trip the current coordinate contract for of
   assert.ok(harness.saved);
   assert.equal(JSON.parse(harness.saved).schemaVersion, 2);
   assert.equal(persistence.load()?.schemaVersion, 2);
-  const relaunched = createPlaceCatalogueStore({ persistence });
+  const relaunched = createHydratedCatalogueStore({ persistence });
   assert.deepEqual(relaunched.getState().places[0]?.lngLat, current.location);
   assert.deepEqual(relaunched.getState().details, {});
 });
