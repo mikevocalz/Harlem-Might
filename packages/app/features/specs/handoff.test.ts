@@ -80,6 +80,31 @@ describe('Specs paired handoff contract', () => {
     } }, 1000), false);
   });
 
+  it('rejects unsupported payload fields and protects the accepted targets from mutation', () => {
+    const snap = make();
+    assert.equal(isSpecsHandoffSnapshot({
+      ...snap, presentation: { ...snap.presentation, scene: {
+        ...snap.presentation.scene, unexpected: 'not-allowed',
+      } },
+    }, 1000), false);
+    assert.equal(isSpecsHandoffSnapshot({
+      ...snap, presentation: { ...snap.presentation, scene: {
+        ...snap.presentation.scene, nodes: [
+          { id: 'fake', kind: 'group', text: 'Wrong primitive' },
+        ],
+      } },
+    }, 1000), false);
+    const gate = new SpecsHandoffGate();
+    assert.equal(gate.offer(snap, 1000), true);
+    snap.presentation.targets[0]!.action = 'directions:apollo-theater';
+    assert.equal(gate.authorize({
+      ...command(snap, 'mutated'), action: 'directions:apollo-theater',
+    }, 2000), null);
+    assert.equal(gate.authorize({
+      ...command(snap, 'good'), action: 'place:apollo-theater',
+    }, 2000), 'place:apollo-theater');
+  });
+
   it('fails closed on unrecognized fields and destructive commands without confirmation', () => {
     assert.equal(isSpecsHandoffCommand({ ...command(), token: 'not-allowed' }), false);
     assert.equal(isSpecsHandoffCommand({ ...command(), action: 'end-navigation' }), false);

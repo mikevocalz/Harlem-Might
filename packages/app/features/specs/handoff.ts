@@ -81,6 +81,8 @@ function validNode(value: unknown, seen: Set<string>): value is SpecsSceneNode {
   // Sources are logical registered asset IDs; external URLs cannot enter Lens assets.
   if (value.source !== undefined && (!text(value.source, 128) || (value.source as string).includes('://'))) return false;
   if (value.kind === 'model' && !text(value.source, 128)) return false;
+  if (value.source !== undefined && value.kind !== 'image' && value.kind !== 'model') return false;
+  if (value.text !== undefined && value.kind !== 'text') return false;
   if (value.visible !== undefined && typeof value.visible !== 'boolean') return false;
   return true;
 }
@@ -102,8 +104,8 @@ function validAction(action: unknown): action is string {
 
 function validPresentation(value: unknown): value is SpecsPresentation {
   if (!object(value) || Object.keys(value).some(key => !['scene', 'targets'].includes(key)) ||
-      !object(value.scene) || value.scene.version !== 1 ||
-      !Array.isArray(value.scene.nodes) || value.scene.nodes.length < 1 ||
+      !object(value.scene) || Object.keys(value.scene).some(key => !['version', 'nodes'].includes(key)) ||
+      value.scene.version !== 1 || !Array.isArray(value.scene.nodes) || value.scene.nodes.length < 1 ||
       value.scene.nodes.length > 32 || !Array.isArray(value.targets) ||
       value.targets.length > 4) return false;
   const seen = new Set<string>();
@@ -194,7 +196,9 @@ export class SpecsHandoffGate {
     } else {
       this.seen.clear();
     }
-    this.current = snapshot;
+    // Defensive copy: callers must not mutate targets after this gate accepts
+    // the scene. The validator already proved the JSON shape and size.
+    this.current = JSON.parse(JSON.stringify(snapshot)) as SpecsHandoffSnapshot;
     return true;
   }
 

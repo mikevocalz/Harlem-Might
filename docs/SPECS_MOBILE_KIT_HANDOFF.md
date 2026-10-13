@@ -63,7 +63,7 @@ real app action. The gate is defense in depth, not the auth provider.
 
 ## Real-world test ladder
 
-Run app Node tests and typecheck; follow with Snap Mobile Kit simulator,
+Run app Node tests and typecheck; follow with Specs Mobile Kit simulator,
 CLAD LEAF interaction and actual iOS/Android phone ↔ Specs hardware tests.
 BLE radio range, device bonding and physical sensor behavior are **not**
 validated by this pure TypeScript contract.
