@@ -464,12 +464,20 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
         setStatus('unavailable');
         return;
       }
+      let ready = false;
+      let webglFailed = false;
       map.on('error', (e) => {
         if (cancelled) return;
-        if (/webgl/i.test(e.error?.message ?? '')) setStatus('unavailable');
+        webglFailed ||= /webgl/i.test(e.error?.message ?? '');
+        // Style/token/network failures need a usable list fallback before
+        // readiness too. Keep the map alive: a transient resource failure
+        // may recover and reach idle. Later tile errors do not hide a map
+        // that is already usable; WebGL failure remains terminal here.
+        if (!ready || webglFailed) setStatus('unavailable');
       });
       map.once('idle', () => {
-        if (cancelled) return;
+        if (cancelled || webglFailed) return;
+        ready = true;
         performance.mark('hm:map-idle');
         performance.measure('hm:map-ready', 'hm:map-create', 'hm:map-idle');
         setStatus('ready');

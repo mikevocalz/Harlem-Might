@@ -441,6 +441,55 @@ describe('ExploreMap import lifetime', () => {
   });
 });
 
+describe('ExploreMap startup failure and recovery', () => {
+  for (const message of ['Style request returned 401 Unauthorized', 'Failed to fetch style', 'Failed to load imports']) {
+    it(`shows the list fallback instead of waiting indefinitely: ${message}`, async () => {
+      const f = fixture();
+      f.mount();
+      await flush(); f.imports[0]!.resolve({ default: f.mapboxgl }); await flush();
+      f.maps[0]!.emit('error', { error: new Error(message) });
+      assert.equal(f.statuses.at(-1), 'unavailable');
+    });
+  }
+
+  it('recovers from an initial resource error when the same map actually reaches idle', async () => {
+    const f = fixture();
+    f.mount();
+    await flush(); f.imports[0]!.resolve({ default: f.mapboxgl }); await flush();
+    const map = f.maps[0]!;
+    map.emit('error', { error: new Error('Temporary tile failure'), sourceId: 'basemap' });
+    assert.equal(f.statuses.at(-1), 'unavailable');
+    map.emit('load'); map.emit('idle');
+    assert.deepEqual(f.statuses, ['loading', 'unavailable', 'ready']);
+    assert.equal(map.removed, 0, 'A recoverable request failure must not destroy the map');
+    map.emit('error', { error: new Error('Another optional tile failed'), sourceId: 'basemap' });
+    assert.equal(f.statuses.at(-1), 'ready', 'A working map remains usable after a non-WebGL resource error');
+  });
+
+  it('does not let a queued idle callback overwrite a fatal WebGL failure', async () => {
+    const f = fixture();
+    f.mount();
+    await flush(); f.imports[0]!.resolve({ default: f.mapboxgl }); await flush();
+    const map = f.maps[0]!;
+    const idle = map.capture('idle');
+    map.emit('error', { error: new Error('WebGL context lost') });
+    idle();
+    assert.deepEqual(f.statuses, ['loading', 'unavailable']);
+  });
+
+  it('reports a WebGL failure after readiness and ignores an abandoned non-WebGL error', async () => {
+    const f = fixture();
+    const mounted = f.mount();
+    const map = await loadMap(f);
+    const error = map.capture('error');
+    map.emit('error', { error: new Error('WebGL context lost') });
+    assert.deepEqual(f.statuses, ['loading', 'ready', 'unavailable']);
+    mounted.unmount();
+    error({ error: new Error('Failed to fetch old style') });
+    assert.deepEqual(f.statuses, ['loading', 'ready', 'unavailable']);
+  });
+});
+
 describe('ExploreMap loaded catalogue and controls', () => {
   it('loads verified places into canvas layers and accessible markers, and selects from real handlers', async () => {
     const f = fixture();
