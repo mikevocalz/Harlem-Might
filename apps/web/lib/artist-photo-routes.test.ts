@@ -3,6 +3,7 @@ import { createRequire, registerHooks } from 'node:module';
 import { after, afterEach, beforeEach, mock, test, type Mock } from 'node:test';
 import type { ContentResult } from '@acme/app/content';
 import { ARTIST_PHOTO_VERSION } from '@acme/app/features/music/artist-photo-policy.ts';
+import { REVIEWED_ARTIST_PHOTOS } from '@acme/app/features/music/reviewed-artist-photo-data.ts';
 import { resolveReviewedArtistPhoto } from '@acme/app/features/music/reviewed-artist-photo.ts';
 import { PhotoFetchError, type fetchPublicPhotoResource } from '@acme/payload/artist-photo-fetch';
 
@@ -249,3 +250,25 @@ for (const [label, error, status] of [
     assert.equal(fetchPhoto.mock.callCount(), 1);
   });
 }
+
+
+test('metadata GET retains all 102 reviewed choices and their provenance without discovery', async () => {
+  const reviewed = Object.values(REVIEWED_ARTIST_PHOTOS);
+  assert.equal(reviewed.length, 102);
+  listMusicArtists.mock.mockImplementation(async () => ({
+    status: 'ok', data: reviewed.map(({ name }) => ({ name })),
+  }));
+  const origin = 'https://harlem.example';
+  const response = await getPhotos(request('', { names: reviewed.map(({ name }) => name).join('|') }, origin));
+  assert.equal(response.status, 200);
+  const { photos } = await response.json();
+  assert.deepEqual(Object.keys(photos), reviewed.map(({ name }) => name).sort());
+  for (const photo of reviewed) {
+    assert.deepEqual(photos[photo.name], photo.provider === 'curated_web' ? {
+      ...photo,
+      url: `${origin}/api/music/artist-photo/image?name=${encodeURIComponent(photo.name)}&v=${ARTIST_PHOTO_VERSION}`,
+    } : photo, photo.name);
+  }
+  assert.equal(listMusicArtists.mock.callCount(), 1);
+  assert.equal(fetchPhoto.mock.callCount(), 0);
+});

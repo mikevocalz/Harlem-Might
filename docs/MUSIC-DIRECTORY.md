@@ -2,6 +2,12 @@
 
 This feature is an editorial catalog in Payload's Postgres schema, not a second database. A profile is **draft-only until biography, Harlem relationship, photo provenance and YouTube video ID have been verified**. Rights-cleared Payload/Commons portraits are preferred. When a rights-cleared portrait is not available, the public UI may display a pre-approved **external artist-profile reference image** with visible source attribution; that image is not copied into Payload, is never described as licensed, and must disappear rather than fall back to unrelated/generic imagery if its source cannot be verified.
 
+## Photo selection boundary
+
+Public photo metadata comes from `reviewed-artist-photo.ts` and its deterministic reviewed catalogue. Both public GET routes first restrict requests to published artists; unknown names do not trigger fuzzy search or changing upstream profile discovery. The image proxy retrieves only the selected external reference through Payload's bounded, DNS-validated photo fetcher. Neither GET writes media or changes artist records.
+
+`artist-photo.ts` retains the shared result contract, name normalization, response validation, provider labels and image props used by web and native UI. Rights checks and proxy fetching remain separate live boundaries. The old Wikipedia/Commons/profile discovery engines and their uncalled Next metadata cache were retired after [the public route migration](https://github.com/mikevocalz/Harlem-Might/commit/cc8df13fdf926fc0bc2d75bb2ea1c2916e91f259). New source choices require explicit editorial review and preserved attribution; a page view must not rediscover or ingest them.
+
 ## Cross-platform requirements
 - Put **Music** in the existing mobile navigation rail and desktop header, linking to /music; retain overflow behavior on narrow screens.
 - List cards show a real photo of the artist, name, genre and short bio. Prefer a rights-cleared Payload/Commons portrait; otherwise an approved external reference photo must show its provenance and rights status. Full profile route /music/[slug] shows the same real artist photo, full biography, credited sources and featured song. Video thumbnails, album art and generic Harlem photos are never portrait fallbacks.

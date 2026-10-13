@@ -100,3 +100,32 @@ it('returns null for inherited table keys and retains every requested batch key'
     assert.equal(results[name], null, name);
   }
 });
+
+it('resolves reviewed aliases and unknown names without performing network discovery', (t) => {
+  const fetch = t.mock.method(globalThis, 'fetch', async () => {
+    throw new Error('Reviewed selection must not discover upstream photos');
+  });
+  const results = resolveReviewedArtistPhotos([
+    '  A$AP Ant  ', 'Frankie Lymon & the Teenagers', 'Unknown Artist',
+  ]);
+  assert.equal(results['  A$AP Ant  ']?.url, REVIEWED_ARTIST_PHOTOS['asap ant']?.url);
+  assert.equal(results['  A$AP Ant  ']?.name, '  A$AP Ant  ');
+  assert.equal(results['Frankie Lymon & the Teenagers']?.url,
+    REVIEWED_ARTIST_PHOTOS['frankie lymon and the teenagers']?.url);
+  assert.equal(results['Unknown Artist'], null);
+  assert.equal(fetch.mock.callCount(), 0);
+});
+
+it('returns independent photo copies so callers cannot change later reviewed selections', () => {
+  const original = { ...REVIEWED_ARTIST_PHOTOS.cameo! };
+  const first = resolveReviewedArtistPhoto('Cameo')!;
+  const batch = resolveReviewedArtistPhotos(['Cameo', 'CAMEO']);
+  assert.notEqual(first, batch.Cameo);
+  assert.notEqual(batch.Cameo, batch.CAMEO);
+  first.url = 'https://unreviewed.example/replacement.jpg';
+  first.credit = 'Changed attribution';
+  batch.Cameo!.sourceUrl = 'https://unreviewed.example/source';
+  assert.deepEqual(REVIEWED_ARTIST_PHOTOS.cameo, original);
+  assert.deepEqual(resolveReviewedArtistPhoto('Cameo'), original);
+  assert.deepEqual(batch.CAMEO, { ...original, name: 'CAMEO' });
+});

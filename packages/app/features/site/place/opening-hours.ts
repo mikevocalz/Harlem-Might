@@ -27,7 +27,9 @@ const toMinutes = (hhmm: string): number | null => {
 function parseDays(selector: string): number[] | null {
   const days = new Set<number>();
   for (const part of selector.split(',')) {
-    const [from, to] = part.split('-');
+    const endpoints = part.split('-');
+    if (endpoints.length > 2) return null;
+    const [from, to] = endpoints;
     const a = OSM_DAYS.indexOf(from as (typeof OSM_DAYS)[number]);
     if (a < 0) return null;
     if (to === undefined) {
@@ -48,7 +50,9 @@ function parseDays(selector: string): number[] | null {
 function parseTimes(spec: string): HoursRange[] | null {
   const ranges: HoursRange[] = [];
   for (const part of spec.split(',')) {
-    const [from, to] = part.split('-');
+    const endpoints = part.split('-');
+    if (endpoints.length !== 2) return null;
+    const [from, to] = endpoints;
     if (from === undefined || to === undefined) return null;
     const start = toMinutes(from);
     let end = toMinutes(to);

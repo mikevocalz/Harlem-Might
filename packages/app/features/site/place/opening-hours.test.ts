@@ -38,3 +38,25 @@ test('harlemClock reads New York time', () => {
   // 2026-10-09T16:30Z is Friday 12:30 PM EDT.
   assert.deepEqual(harlemClock(new Date('2026-10-09T16:30:00Z')), { day: 4, minute: 12 * 60 + 30 });
 });
+
+test('rejects malformed day ranges instead of silently ignoring extra endpoints', () => {
+  for (const value of [
+    'Mo-Fr-Su 09:00-17:00', 'Mo-Fr- 09:00-17:00', 'Mo-Fr-Tu-We 09:00-17:00',
+    'Mo-Fr,Sa-Su-Mo 09:00-17:00', 'Mo-Fr 09:00-17:00; Sa-Su-Mo off',
+  ]) assert.equal(parseOpeningHours(value), null, value);
+});
+
+test('rejects malformed time ranges instead of publishing a truncated schedule', () => {
+  for (const value of [
+    'Mo 09:00-17:00-18:00', 'Mo 09:00-17:00-', '09:00-17:00-18:00',
+    'Mo 09:00-12:00,13:00-17:00-18:00', 'Mo 09:00-17:00; Tu 10:00-12:00-14:00',
+  ]) assert.equal(parseOpeningHours(value), null, value);
+});
+
+test('retains valid wrapping days and complete split/overnight endpoints', () => {
+  const week = parseOpeningHours('Fr-Mo 18:00-02:00; We 09:00-12:00,13:00-17:00');
+  assert.ok(week);
+  for (const day of [4, 5, 6, 0]) assert.deepEqual(week[day], [{ start: 1080, end: 1560 }]);
+  assert.deepEqual(week[1], []);
+  assert.deepEqual(week[2], [{ start: 540, end: 720 }, { start: 780, end: 1020 }]);
+});
