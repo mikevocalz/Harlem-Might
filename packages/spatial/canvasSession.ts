@@ -62,7 +62,10 @@ export function startCanvasSession(
     try {
       await previousClose;
       if (active) await start(session);
-    } catch {
+    } catch (error) {
+      // Preserve the renderer/loader cause for diagnostics without exposing
+      // SDK details through the stable user-facing fallback reason.
+      if (active) console.warn('GPU canvas initialization failed', error);
       session.fail('init-failed');
     } finally {
       settled = true;

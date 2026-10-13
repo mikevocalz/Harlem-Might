@@ -190,6 +190,10 @@ export class ThreeLightCycleRenderer {
 
   private readonly context: LightCycleGPUCanvasContext;
   private readonly device: GPUDevice;
+  private readonly arena: {
+    floor: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>;
+    grid: THREE.GridHelper;
+  };
   private readonly cycles = new Map<LightCyclePlayerId, CycleNodes>();
   private readonly mcpPresence = new McpThreePresence();
   private readonly trailPool: TrailMesh[] = [];
@@ -238,7 +242,7 @@ export class ThreeLightCycleRenderer {
     key.position.set(1.5, 2.2, 1.2);
     this.scene.add(key);
 
-    this.createArena();
+    this.arena = this.createArena();
     this.scene.add(this.mcpPresence.root);
   }
 
@@ -278,6 +282,8 @@ export class ThreeLightCycleRenderer {
     grid.scale.z = 0.66;
     grid.position.y = -0.006;
     this.scene.add(grid);
+
+    return { floor, grid };
   }
 
   private async mountCycles(assetUri?: string) {
@@ -565,6 +571,13 @@ export class ThreeLightCycleRenderer {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+
+    // Scene membership does not transfer ownership to Three's renderer. Keep
+    // arena cleanup explicit so cycle, trail and MCP resources keep one owner.
+    this.scene.remove(this.arena.floor, this.arena.grid);
+    this.arena.floor.geometry.dispose();
+    this.arena.floor.material.dispose();
+    this.arena.grid.dispose();
 
     for (const cycle of this.cycles.values()) {
       cycle.mixer.stopAllAction();

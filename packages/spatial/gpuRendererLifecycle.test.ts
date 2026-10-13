@@ -77,6 +77,10 @@ function rendererLifecycle(kind: 'lightcycle' | 'sightline') {
     initialized: false,
     disposed: false,
     cycles: new Map(),
+    arena: {
+      floor: { geometry: { dispose() {} }, material: { dispose() {} } },
+      grid: { dispose() {} },
+    },
     trailPool: [],
     crashPresentations: new Map(),
     trailMaterials: { p1: { material: { dispose() {} } }, p2: { material: { dispose() {} } } },
