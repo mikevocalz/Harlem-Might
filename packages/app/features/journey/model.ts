@@ -59,14 +59,24 @@ export function synopsisFromRoute(route: Route, stopId: string, now = Date.now()
     instructions: routeSteps(route).map(step => step.maneuver.instruction).filter(Boolean).slice(0, 200) };
 }
 
+/** The same named evidence feeds progress and arrival gates. */
+export interface JourneyNavigationEvidence {
+  readonly state: NavigationState;
+  readonly fixes: NavigationFixState;
+  readonly now: number;
+  readonly online: boolean | undefined;
+  readonly stopSlug: string;
+  readonly location: LocationAvailability;
+}
+
 /** Fail closed when a feed is stale, coarse, offline, paused or no longer matched. */
-export function liveProgress(state: NavigationState, fixes: NavigationFixState, now: number, online: boolean | undefined, destinationSlug: string, location: LocationAvailability) {
+export function liveProgress({ state, fixes, now, online, stopSlug, location }: JourneyNavigationEvidence) {
   const { session, progress, positioning } = state;
   const last = fixes.lastFix;
   if (location !== 'granted' || online === false || !['navigating', 'navigatingAR', 'calibratingAR'].includes(session.phase) ||
       positioning.kind !== 'tracking' || positioning.confidence === 'low' || positioning.isMovingTooFast ||
       progress.kind !== 'tracking' || last?.kind !== 'accepted' || last.fix.source !== 'device-gps' ||
-      !('activeRoute' in session) || session.destination.placeId !== destinationSlug || session.origin.kind !== 'device-location' || session.deviation.kind !== 'on-route' || session.reroute.kind !== 'idle' ||
+      !('activeRoute' in session) || session.destination.placeId !== stopSlug || session.origin.kind !== 'device-location' || session.deviation.kind !== 'on-route' || session.reroute.kind !== 'idle' ||
       progress.progress.routeId !== session.activeRoute.route.id || fixes.match?.kind !== 'matched') return undefined;
   const maxAge = DEFAULT_NAVIGATION_CONFIG.location.maxFixAgeMs;
   const age = now - last.fix.timestampMs;

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { ModuleKind, transpileModule } from 'typescript';
+import ts from 'typescript';
 import * as content from '@acme/app/content';
 
 type FindResult = { docs: never[]; hasNextPage: boolean; totalDocs: number };
@@ -31,17 +31,23 @@ function loadReaders(configured: boolean, answer?: (query: Record<string, unknow
       },
     },
   };
-  const source = readFileSync(new URL('../server.ts', import.meta.url), 'utf8');
-  const compiled = transpileModule(source, { compilerOptions: { module: ModuleKind.CommonJS } }).outputText;
-  const exports = {} as typeof import('../server.ts');
-  // Only the fixed local reader entry is evaluated. Config/Payload/network and
-  // filesystem operations are replaced or forbidden before module evaluation.
-  new Function('require', 'exports', 'process', 'setTimeout', 'console', compiled)((specifier: string) => {
-    assert.ok(Object.hasOwn(modules, specifier), `Unexpected reader runtime dependency: ${specifier}`);
-    return modules[specifier];
-  }, exports, { env: { DATABASE_URL: configured ? 'test-configured' : undefined } },
-  (callback: () => void, delay: number) => { delays.push(delay); callback(); },
-  { warn: (message: string) => warnings.push(message) });
+  // Evaluate the fixed production entry and adapter together. Config/Payload,
+  // network and filesystem operations remain replaced or forbidden; both
+  // modules receive the same deterministic retry clock and warning capture.
+  const evaluate = (url: URL) => {
+    const source = readFileSync(url, 'utf8');
+    const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+    const exports: Record<string, unknown> = {};
+    new Function('require', 'exports', 'process', 'setTimeout', 'console', compiled)((specifier: string) => {
+      assert.ok(Object.hasOwn(modules, specifier), `Unexpected reader runtime dependency: ${specifier}`);
+      return modules[specifier];
+    }, exports, { env: { DATABASE_URL: configured ? 'test-configured' : undefined } },
+    (callback: () => void, delay: number) => { delays.push(delay); callback(); },
+    { warn: (message: string) => warnings.push(message) });
+    return exports;
+  };
+  modules['./src/content-source.ts'] = evaluate(new URL('./content-source.ts', import.meta.url));
+  const exports = evaluate(new URL('../server.ts', import.meta.url)) as typeof import('../server.ts');
   return { readers: exports, reads, delays, warnings, initializations: () => initializations };
 }
 

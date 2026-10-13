@@ -70,9 +70,10 @@ export function pushLevel(levels: readonly number[], level: number, size = BAR_C
 }
 
 /**
- * Resample a finished recording to exactly `count` bars.
+ * Resample a non-empty finished recording to exactly `count` bars (a positive integer).
+ * An empty recording returns `[]`; it has no waveform to display.
  *
- * ALWAYS `count`, never fewer. Returning a short array made the player pad it —
+ * Non-empty recordings fill the track. Returning a short array made the player pad it —
  * and the padding goes on the LEFT, because that is what makes a live recording
  * scroll in from the right. On a finished take that reads as a recording that
  * starts halfway along the track: a two-second note drew silence for the first

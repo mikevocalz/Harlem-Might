@@ -8,7 +8,7 @@ const nowMs = 10_000;
 const heading: HeadingEstimate = {
   headingDeg: 0, confidence: 'high', source: 'compass', consistency: 1, timestampMs: nowMs,
 };
-const positioning: PositioningState = { kind: 'tracking', confidence: 'high', sigmaM: 3, isMovingTooFast: false };
+const positioning: PositioningState = { kind: 'tracking', confidence: 'high', horizontalRadius68M: 3, isMovingTooFast: false };
 const arrow = { bearingDeg: 90, heading, positioning, isMatched: true, matchTimestampMs: nowMs, nowMs };
 
 describe('phone AR fallback direction', () => {

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, it, type TestContext } from 'node:test';
 import { ModuleKind, transpileModule } from 'typescript';
 import * as audioCore from '../audio/SpatialAudioEngineCore.ts';
+import * as audioGraph from '../audio/createAudioPlayback.ts';
 import type { AudioContextLifecycle } from '../audio/SpatialAudioEngineCore.ts';
 import { createLightCycleMatch, type LightCycleMatchState } from '../lightcycle/tabletopCore.ts';
 import { deriveMcpVoiceCue, type McpVoiceCueName } from './mcpVoice.ts';
@@ -113,6 +114,7 @@ function harness(t: TestContext, failures: string[] = []) {
   const native = loadModule(new URL('../audio/SpatialAudioEngine.native.ts', import.meta.url), {
     'react-native-audio-api': { AudioContext: MockContext },
     './SpatialAudioEngineCore.ts': audioCore,
+    './createAudioPlayback.ts': audioGraph,
   });
   const engine = native.spatialAudio as audioCore.SpatialAudioEngineCore<typeof buffer, MockContext>;
   t.after(() => { fail.clear(); return engine.close(); });

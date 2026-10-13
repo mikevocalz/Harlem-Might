@@ -355,7 +355,7 @@ describe('HUD', () => {
     const h = harness(async () => routes());
     await h.plan();
     h.controller.start();
-    h.store.setState({ positioning: { kind: 'tracking', confidence: 'high', sigmaM: 3, isMovingTooFast: true } });
+    h.store.setState({ positioning: { kind: 'tracking', confidence: 'high', horizontalRadius68M: 3, isMovingTooFast: true } });
     const view = hudView(h.store.getState(), { ...HUD, awarenessAcknowledged: false });
     assert.ok(view.kind === 'guiding');
     if (view.kind === 'guiding') assert.equal(view.notices[0]!.id, 'too-fast');

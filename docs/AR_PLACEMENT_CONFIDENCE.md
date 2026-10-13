@@ -50,7 +50,7 @@ comments saying 95% conflict with this contract; the audited native bridges
 contain no conversion. Horizontal radius and yaw pass through unchanged.
 For example, 15 m / 19.6° is medium, not high. The location pipeline's
 `FilteredPosition.sigmaM` is per-axis uncertainty, but the controller already
-converts it to a rounded 68% radius in the legacy `positioning.sigmaM` display
+converts it to a rounded 68% radius in the `positioning.horizontalRadius68M` display
 field. `positioningRadius68M` names that boundary explicitly and does not convert
 it a second time. The runtime regression sends an 18 m fix through the actual
 controller/matcher and compass solver: it remains medium confidence, rather

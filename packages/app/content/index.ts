@@ -18,10 +18,12 @@ export {
 export type { EditorialImage } from './editorial-images.ts';
 export type {
   ContentDocs,
+  ContentDocument,
   ContentPage,
   ContentQuery,
   ContentReaders,
   ContentRequestOptions,
+  ContentSelect,
   ContentSource,
   ContentWhere,
   EventPage,

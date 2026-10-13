@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import { create } from 'zustand';
 import { liveProgress } from '../../journey/model.ts';
 import { createStore } from 'zustand/vanilla';
+import { DEFAULT_NAVIGATION_CONFIG } from '../config.ts';
 import type { LocationFix } from '../model/location.ts';
 import type { RouteRequest, RouteResponse } from '../model/route.ts';
 import { RouteProviderError, type RouteProvider } from '../providers/routeProvider.ts';
@@ -359,13 +360,13 @@ describe('navigation controller: fresh stationary progress', () => {
     assert.ok(current);
     assert.equal(current.activeStepIndex, initial.activeStepIndex);
     assert.equal(Math.round(current.distanceRemainingM), Math.round(initial.distanceRemainingM));
-    assert.ok(liveProgress(h.store.getState(), h.fixStore.getState(), h.clock.now(), true, h.destination.placeId!, 'granted'),
+    assert.ok(liveProgress({ state: h.store.getState(), fixes: h.fixStore.getState(), now: h.clock.now(), online: true, stopSlug: h.destination.placeId!, location: 'granted' }),
       'a stationary walker still has fresh, matched GPS after twenty seconds');
     assert.equal(current.timestampMs, T0 + 20_000);
     assert.equal(current.etaMs, current.timestampMs + current.durationRemainingS * 1000);
     assert.equal(sessionWrites, 0, 'fresh progress never rewrites an unchanged session');
     h.clock.advance(10_001);
-    assert.equal(liveProgress(h.store.getState(), h.fixStore.getState(), h.clock.now(), true, h.destination.placeId!, 'granted'), undefined,
+    assert.equal(liveProgress({ state: h.store.getState(), fixes: h.fixStore.getState(), now: h.clock.now(), online: true, stopSlug: h.destination.placeId!, location: 'granted' }), undefined,
       'silence must still expire live progress');
   });
 
@@ -513,5 +514,20 @@ describe('navigation controller: terminal arrival confidence', () => {
     const paused = h.store.getState().session;
     h.feed({ ...h.fix, accuracy: { horizontalM: 5 }, timestampMs: T0 + 4000 });
     assert.equal(h.store.getState().session, paused);
+  });
+});
+
+
+describe('positioning uncertainty contract', () => {
+  it('names the display r68 independently from the unchanged filter sigma', async () => {
+    const h = harness();
+    await h.startNavigating();
+    h.feed(h.trace({ seed: 77, accuracyM: 12 })[0]!);
+    const position = h.store.getState().positioning;
+    const fix = h.fixStore.getState().lastFix;
+    assert.ok(position.kind === 'tracking' && fix?.kind === 'accepted');
+    assert.equal(position.horizontalRadius68M, Math.round(fix.filtered.sigmaM / DEFAULT_NAVIGATION_CONFIG.location.radiusToSigma));
+    assert.equal(Object.hasOwn(position, 'sigmaM'), false);
+    assert.equal(typeof fix.filtered.sigmaM, 'number');
   });
 });

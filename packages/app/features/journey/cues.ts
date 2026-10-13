@@ -1,11 +1,9 @@
-import type { NavigationFixState, NavigationState } from '../navigation/session/navigationStore.ts';
-import type { LocationAvailability } from '../navigation/view/locationSource.ts';
 import { distanceM } from '../navigation/geo/localFrame.ts';
 import { arrivalTarget } from '../navigation/model/route.ts';
 import { DEFAULT_NAVIGATION_CONFIG } from '../navigation/config.ts';
-import { liveProgress } from './model.ts';
+import { liveProgress, type JourneyNavigationEvidence } from './model.ts';
 
-export function verifiedArrival(state: NavigationState, fixes: NavigationFixState, now: number, stopSlug: string, location: LocationAvailability, online: boolean | undefined): boolean {
+export function verifiedArrival({ state, fixes, now, stopSlug, location, online }: JourneyNavigationEvidence): boolean {
   const session = state.session;
   const last = fixes.lastFix;
   if (online === false || location !== 'granted' || session.phase !== 'arrived' || session.destination.placeId !== stopSlug || session.origin.kind !== 'device-location' ||
@@ -21,13 +19,13 @@ export function createJourneyCueTracker() {
   let sessionId = '';
   let generation: number | undefined;
   const emitted = new Set<string>();
-  return (input: { sessionId: string; stopSlug: string; active: boolean; enabled: boolean; foreground: boolean; state: NavigationState; fixes: NavigationFixState; location: LocationAvailability; online: boolean | undefined; now: number }): JourneyCue[] => {
+  return (input: JourneyNavigationEvidence & { sessionId: string; active: boolean; enabled: boolean; foreground: boolean }): JourneyCue[] => {
     const context = `${input.sessionId}:${input.stopSlug}`;
     if (context !== sessionId) { sessionId = context; generation = undefined; emitted.clear(); }
     const cues: JourneyCue[] = [];
     const emit = (cue: JourneyCue, key: string) => { if (emitted.has(key)) return; emitted.add(key); if (input.enabled && input.foreground && input.active) cues.push(cue); };
     const { session } = input.state;
-    const live = input.active ? liveProgress(input.state, input.fixes, input.now, input.online, input.stopSlug, input.location) : undefined;
+    const live = input.active ? liveProgress(input) : undefined;
     if ('activeRoute' in session && session.destination.placeId === input.stopSlug) {
       const current = session.activeRoute.generation;
       if (generation === undefined) generation = current;
@@ -35,7 +33,7 @@ export function createJourneyCueTracker() {
       if (live?.nextManeuver && live.nextManeuver.type !== 'arrive' && live.distanceToNextManeuverM > 0 && live.distanceToNextManeuverM <= 30) {
         emit('approachingTurn', `turn:${session.activeRoute.route.id}:${live.activeStepIndex}`);
       }
-      if (verifiedArrival(input.state, input.fixes, input.now, input.stopSlug, input.location, input.online)) {
+      if (verifiedArrival(input)) {
         emit('arrived', `arrival:${session.activeRoute.route.id}`);
       }
     }

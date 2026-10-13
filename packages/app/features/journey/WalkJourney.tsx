@@ -31,9 +31,10 @@ export function WalkJourney({ slug, platformActions }: { slug: string; platformA
   const { session, plan } = state;
   const belongs = plan?.slug === slug;
   const stop = belongs ? currentJourneyStop() : undefined;
-  const progress = stop && belongs && session?.status === 'active' ? liveProgress(navigation, fixes, now, online, stop.slug, location) : undefined;
+  const evidence = stop ? { state: navigation, fixes, now, online, stopSlug: stop.slug, location } : undefined;
+  const progress = evidence && belongs && session?.status === 'active' ? liveProgress(evidence) : undefined;
   const matchingRoute = stop && selectDestination(navigation)?.placeId === stop.slug;
-  const arrived = stop && session?.status === 'active' && verifiedArrival(navigation, fixes, now, stop.slug, location, online);
+  const arrived = evidence && session?.status === 'active' && verifiedArrival(evidence);
   const routeReady = matchingRoute && navigation.session.phase === 'routeReady';
   const routeError = matchingRoute && navigation.routeLoading.kind === 'failed' ? navigation.routeLoading : null;
   const synopsis = belongs && state.synopsis?.stopId === stop?.id ? state.synopsis : null;

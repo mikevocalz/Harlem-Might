@@ -25,8 +25,38 @@ export interface ContentDocs {
   'music-artists': MusicArtistDoc;
 }
 
+/** The existing include-list syntax; unknown/dynamic field names remain supported. */
+export type ContentSelect = readonly string[] | undefined;
+
+// Only a literal, guaranteed tuple entry proves a field is present. A widened
+// array (or a union-valued entry) might not contain any particular field.
+type IncludesField<TSelect extends readonly string[], TField extends string> =
+  TSelect extends readonly [infer First, ...infer Rest extends readonly string[]]
+    ? [First] extends [TField] ? TField : IncludesField<Rest, TField>
+    : never;
+
+type GuaranteedFields<TDoc, TSelect extends readonly string[]> = {
+  [K in keyof TDoc & string]-?: IncludesField<TSelect, K>;
+}[keyof TDoc & string];
+
+type ProjectedDoc<TDoc extends { id: number }, TSelect extends readonly string[]> =
+  TDoc extends { id: number }
+    ? Pick<TDoc, 'id' | GuaranteedFields<TDoc, TSelect>> &
+      Partial<Pick<TDoc, Exclude<keyof TDoc & TSelect[number], 'id' | GuaranteedFields<TDoc, TSelect>>>>
+    : never;
+
+/**
+ * A selection promises only selected contract fields and Payload's implicit id.
+ * Dynamic include-lists expose possible fields as optional. Fields outside the
+ * reader contract still pass through to Payload, but have no invented type.
+ * An empty selection guarantees only id: Local API select={} is an include
+ * projection, whereas REST emits no select parameters and may return more.
+ */
+export type ContentDocument<TSlug extends keyof ContentDocs, TSelect extends ContentSelect = undefined> =
+  TSelect extends readonly string[] ? ProjectedDoc<ContentDocs[TSlug], TSelect> : ContentDocs[TSlug];
+
 /** The subset of a Payload Local API `find` call the readers use. */
-export interface ContentQuery<TSlug extends keyof ContentDocs> {
+export interface ContentQuery<TSlug extends keyof ContentDocs, TSelect extends ContentSelect = ContentSelect> {
   collection: TSlug;
   where: ContentWhere;
   depth: number;
@@ -38,7 +68,7 @@ export interface ContentQuery<TSlug extends keyof ContentDocs> {
    * Field include-list (Payload `select`). Omit to return whole documents.
    * Slim reads exist so a listing never pays for columns it cannot render.
    */
-  select?: readonly string[];
+  select?: TSelect;
 }
 
 /** One page of a paginated read. */
@@ -58,12 +88,23 @@ export interface ContentSource {
   /** False when this process has no content database. */
   isConfigured(): boolean;
   /** Runs a published-only query. Rejects when the database cannot answer. */
-  find<TSlug extends keyof ContentDocs>(query: ContentQuery<TSlug>, options?: ContentRequestOptions): Promise<ContentDocs[TSlug][]>;
+  find<TSlug extends keyof ContentDocs>(
+    query: ContentQuery<TSlug, undefined>,
+    options?: ContentRequestOptions,
+  ): Promise<ContentDocs[TSlug][]>;
+  find<TSlug extends keyof ContentDocs, const TSelect extends ContentSelect = ContentSelect>(
+    query: ContentQuery<TSlug, TSelect>,
+    options?: ContentRequestOptions,
+  ): Promise<ContentDocument<TSlug, TSelect>[]>;
   /** Runs a published-only query one page at a time (`query.page`, 1-based). */
   findPage<TSlug extends keyof ContentDocs>(
-    query: ContentQuery<TSlug>,
+    query: ContentQuery<TSlug, undefined>,
     options?: ContentRequestOptions,
   ): Promise<ContentPage<ContentDocs[TSlug]>>;
+  findPage<TSlug extends keyof ContentDocs, const TSelect extends ContentSelect = ContentSelect>(
+    query: ContentQuery<TSlug, TSelect>,
+    options?: ContentRequestOptions,
+  ): Promise<ContentPage<ContentDocument<TSlug, TSelect>>>;
 }
 
 export interface ContentRequestOptions {
@@ -205,9 +246,9 @@ const eventOverlapWhere = (start: Date, end: Date): ContentWhere => ({
 });
 
 export const createContentReaders = (source: ContentSource): ContentReaders => {
-  const list = async <TSlug extends keyof ContentDocs, TRecord>(
-    query: ContentQuery<TSlug>,
-    map: (doc: ContentDocs[TSlug]) => TRecord,
+  const list = async <TSlug extends keyof ContentDocs, TRecord, const TSelect extends ContentSelect = undefined>(
+    query: ContentQuery<TSlug, TSelect>,
+    map: (doc: ContentDocument<TSlug, NoInfer<TSelect>>) => TRecord,
     options?: ContentRequestOptions,
   ): Promise<ContentResult<TRecord[]>> => {
     if (!source.isConfigured()) return notConfigured();

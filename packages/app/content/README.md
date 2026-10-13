@@ -25,6 +25,37 @@ The readers are bound to Payload in `packages/payload/server.ts` because `packag
 
 Every query filters on `_status = published` and runs with `overrideAccess: false`, so the anonymous read rule applies as well. Drafts never come back. Non-paginated editorial lists cap at 100 (`LIST_LIMIT`); the paginated event reader returns `events`, `hasNextPage`, and `totalDocs`.
 
+## Source queries and projections
+
+`ContentSource.find` and `findPage` return collection-specific documents when
+`select` is omitted. An include-list returns `ContentDocument<Collection,
+Selection>`: the implicit `id` plus only the contract fields known to be
+selected. A literal `select: ['title']` on walks exposes `id` and `title`, not
+`summary`, and cannot be passed to a mapper that needs a whole `WalkDoc`.
+Selected optional fields keep their original nullability/optionality.
+
+Keep a reusable selection as a readonly tuple (`as const`) for precise fields.
+A runtime string array, an optional selection, or a broadly annotated
+`ContentQuery` remains supported, but its result cannot promise fields the query
+might omit. Supplying just the collection generic explicitly also uses that
+conservative result for selected queries. The Explore include-lists select all
+required `PlaceDoc` fields, so the existing mapper remains valid while optional
+detail facts stay absent.
+
+Field strings still pass through unchanged, including names outside the minimal
+reader document contract; these do not acquire invented field types. An empty
+include-list guarantees only `id` across transports: the Local API receives
+`select: {}` and returns id-only, while REST emits no selection parameters and
+can return more. No selection behavior or CMS schema is changed by the types.
+
+The Payload binding lives in `packages/payload/src/content-source.ts` and is
+wired to `getPayload` only by the server-only entry point. Its generated-document
+drift check and compiler fixtures protect the collection contract; offline tests
+run the installed Payload Local API and real Places schema over an in-memory
+adapter to verify projection, paging and reader mapping. The REST boundary
+checks the response envelope, but does not validate every field of trusted CMS
+JSON at runtime.
+
 ## Failure semantics
 
 ```ts
@@ -68,3 +99,11 @@ cd packages/app && node --test 'content/**/*.test.ts'
 ```
 
 `harlem-time.test.ts` covers DST, rollover and validation. `readers.test.ts` drives the factory with an in-memory source: unavailable versus empty, published-only filters, the event window, and the record mapping.
+
+`selection-types.test.ts` runs the TypeScript compiler on accepted consumers and
+`@ts-expect-error` rejection cases. The Payload binding's corresponding compiler
+and offline Local API checks run with:
+
+```sh
+cd packages/payload && node --test src/content-source.test.ts
+```

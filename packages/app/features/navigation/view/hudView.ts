@@ -94,7 +94,7 @@ function notices(state: NavigationState, session: ActiveSession, input: HudInput
     list.push({
       id: 'gps-low',
       tone: 'info',
-      text: `Weak location signal, accurate to about ${formatRouteDistance(positioning.sigmaM, input.locale)}.`,
+      text: `Weak location signal, accurate to about ${formatRouteDistance(positioning.horizontalRadius68M, input.locale)}.`,
       dismissible: false,
     });
   }

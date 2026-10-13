@@ -240,12 +240,12 @@ export function compassYawAccuracyDeg(summary: YawSummary, heading: HeadingEstim
 // Geospatial (ARCore Earth / VPS)
 
 /**
- * The controller's legacy `positioning.sigmaM` display field already contains
- * rounded r68, converted from filtered sigma in ingestFix. Never convert it again.
+ * The positioning field is already rounded r68, converted once from the
+ * filter's per-axis sigma in ingestFix. Never convert it again.
  */
 export function positioningRadius68M(positioning: PositioningState): number | undefined {
-  return positioning.kind === 'tracking' && Number.isFinite(positioning.sigmaM) && positioning.sigmaM > 0
-    ? positioning.sigmaM : undefined;
+  return positioning.kind === 'tracking' && Number.isFinite(positioning.horizontalRadius68M) && positioning.horizontalRadius68M > 0
+    ? positioning.horizontalRadius68M : undefined;
 }
 
 /**

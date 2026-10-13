@@ -9,6 +9,7 @@ import type {
   WalkDoc as Walk,
 } from './docs.ts';
 import { addHarlemDays } from './harlem-time.ts';
+import { createRestContentSource } from './rest-source.ts';
 import { explorePlaceFromRecord } from '../features/explore/catalogue.ts';
 import {
   createContentReaders,
@@ -17,6 +18,7 @@ import {
   MUSIC_PAGE_SIZE,
   type ContentDocs,
   type ContentQuery,
+  type ContentSelect,
   type ContentSource,
   type ContentWhere,
 } from './readers.ts';
@@ -109,21 +111,32 @@ interface FakeOptions {
   fail?: Error;
 }
 
+const projectDocs = (docs: ContentDocs[keyof ContentDocs][], select?: readonly string[]) =>
+  select ? docs.map(doc => Object.fromEntries(Object.entries(doc).filter(([key]) => key === 'id' || select.includes(key)))) : docs;
+
+const responseSource = (body: unknown) => createRestContentSource({
+  apiUrl: 'https://content-fixture.test/payload-api',
+  fetch: async () => ({ ok: true, status: 200, json: async () => body }),
+});
+
 const fakeSource = (options: FakeOptions = {}) => {
   const queries: ContentQuery<keyof ContentDocs>[] = [];
   const source: ContentSource = {
     isConfigured: () => options.configured ?? true,
-    async find(query) {
+    async find<TSlug extends keyof ContentDocs, const TSelect extends ContentSelect>(query: ContentQuery<TSlug, TSelect>) {
       queries.push(query);
       if (options.fail) throw options.fail;
-      return (options.docs?.[query.collection] ?? []) as ContentDocs[typeof query.collection][];
+      const docs = projectDocs(options.docs?.[query.collection] ?? [], query.select);
+      return responseSource({ docs }).find(query);
     },
-    async findPage(query) {
+    async findPage<TSlug extends keyof ContentDocs, const TSelect extends ContentSelect>(query: ContentQuery<TSlug, TSelect>) {
       queries.push(query);
       if (options.fail) throw options.fail;
-      const all = (options.docs?.[query.collection] ?? []) as ContentDocs[typeof query.collection][];
+      const all = projectDocs(options.docs?.[query.collection] ?? [], query.select);
       const start = ((query.page ?? 1) - 1) * query.limit;
-      return { docs: all.slice(start, start + query.limit), hasNextPage: start + query.limit < all.length, totalDocs: all.length };
+      return responseSource({
+        docs: all.slice(start, start + query.limit), hasNextPage: start + query.limit < all.length, totalDocs: all.length,
+      }).findPage(query);
     },
   };
   return { source, queries };
@@ -149,7 +162,7 @@ const matchesEventWhere = (doc: VersionedEvent, where: ContentWhere): boolean =>
 
 const eventQuerySource = (docs: VersionedEvent[]) => {
   const { source, queries } = fakeSource();
-  source.findPage = async (query) => {
+  source.findPage = async <TSlug extends keyof ContentDocs, const TSelect extends ContentSelect>(query: ContentQuery<TSlug, TSelect>) => {
     assert.equal(query.collection, 'events');
     queries.push(query);
     const matches = docs.filter((doc) => matchesEventWhere(doc, query.where));
@@ -162,11 +175,11 @@ const eventQuerySource = (docs: VersionedEvent[]) => {
       return 0;
     });
     const start = ((query.page ?? 1) - 1) * query.limit;
-    return {
-      docs: matches.slice(start, start + query.limit) as ContentDocs[typeof query.collection][],
+    return responseSource({
+      docs: projectDocs(matches.slice(start, start + query.limit), query.select),
       hasNextPage: start + query.limit < matches.length,
       totalDocs: matches.length,
-    };
+    }).findPage(query);
   };
   return { source, queries };
 };
@@ -554,7 +567,7 @@ test('listMusicArtists reads every published page, including artists 101 and 102
 test('listMusicArtists never exposes a partial catalogue when a later page fails', async () => {
   const { source } = fakeSource({ docs: { 'music-artists': Array.from({ length: 102 }, (_, i) => artist(i, `artist-${i}`)) } });
   const findPage = source.findPage;
-  source.findPage = async (query) => {
+  source.findPage = async <TSlug extends keyof ContentDocs, const TSelect extends ContentSelect>(query: ContentQuery<TSlug, TSelect>) => {
     if (query.page === 2) throw new Error('Second-page read failed');
     return findPage(query);
   };
@@ -566,7 +579,7 @@ test('listMusicArtists never exposes a partial catalogue when a later page fails
 test('listMusicArtists fails closed when a paginated source repeats records', async () => {
   const { source } = fakeSource({ docs: { 'music-artists': [artist(1, 'one')] } });
   const findPage = source.findPage;
-  source.findPage = async (query) => ({ ...await findPage({ ...query, page: 1 }), hasNextPage: true });
+  source.findPage = async <TSlug extends keyof ContentDocs, const TSelect extends ContentSelect>(query: ContentQuery<TSlug, TSelect>) => ({ ...await findPage({ ...query, page: 1 }), hasNextPage: true });
   assert.equal((await createContentReaders(source).listMusicArtists()).status, 'unavailable');
 });
 

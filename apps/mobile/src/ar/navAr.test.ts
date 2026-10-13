@@ -29,6 +29,7 @@ import {
   maneuverTurnDeg,
   navArPresentation,
   placementConfidence,
+  positioningRadius68M,
   pointOnFrame,
   projectNavRoute,
   rebasePlacement,
@@ -273,7 +274,7 @@ describe('navArPresentation', () => {
   const tracking = (confidence: 'high' | 'medium' | 'low', isMovingTooFast = false): PositioningState => ({
     kind: 'tracking',
     confidence,
-    sigmaM: 4,
+    horizontalRadius68M: 4,
     isMovingTooFast,
   });
   const solved = (confidence: NavPlacement['confidence']): NavPlacement => ({
@@ -459,5 +460,18 @@ describe('2D guidance', () => {
     assert.deepEqual(arTrackingFromViro(2, 2), { kind: 'limited', reason: 'excessive-motion' });
     assert.deepEqual(arTrackingFromViro(2, 3), { kind: 'limited', reason: 'insufficient-features' });
     assert.deepEqual(arTrackingFromViro(1, 1), { kind: 'initializing' });
+  });
+});
+
+
+describe('positioning display radius', () => {
+  it('passes the named horizontal r68 through without a second conversion', () => {
+    const tracking: PositioningState = { kind: 'tracking', confidence: 'medium', horizontalRadius68M: 18, isMovingTooFast: false };
+    assert.equal(positioningRadius68M(tracking), 18);
+    for (const horizontalRadius68M of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      assert.equal(positioningRadius68M({ ...tracking, horizontalRadius68M }), undefined);
+    }
+    assert.equal(positioningRadius68M({ kind: 'acquiring' }), undefined);
+    assert.equal(positioningRadius68M({ kind: 'lost', sinceMs: 100 }), undefined);
   });
 });

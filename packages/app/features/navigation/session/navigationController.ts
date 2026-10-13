@@ -201,7 +201,7 @@ export function createNavigationController(options: NavigationControllerOptions)
       (current.kind !== 'tracking' ||
         (next.kind === 'tracking' &&
           current.confidence === next.confidence &&
-          current.sigmaM === next.sigmaM &&
+          current.horizontalRadius68M === next.horizontalRadius68M &&
           current.isMovingTooFast === next.isMovingTooFast));
     if (!same) store.setState({ positioning: next });
   }
@@ -394,7 +394,7 @@ export function createNavigationController(options: NavigationControllerOptions)
       updatePositioning({
         kind: 'tracking',
         confidence: filtered.confidence,
-        sigmaM: Math.round(filtered.sigmaM / config.location.radiusToSigma),
+        horizontalRadius68M: Math.round(filtered.sigmaM / config.location.radiusToSigma),
         isMovingTooFast: tooFastSince !== undefined && filtered.timestampMs - tooFastSince >= config.location.tooFastDurationMs,
       });
 
