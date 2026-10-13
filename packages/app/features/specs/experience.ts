@@ -156,10 +156,10 @@ export function projectHarlemSpecs(input: HarlemSpecsInput): HarlemSpecsFrame {
       ? input.nowMs - progress.timestampMs : Number.POSITIVE_INFINITY;
     const accurate = position.kind === 'tracking' &&
       position.confidence !== 'low' && !position.isMovingTooFast;
-    const fresh = progress && ageMs >= 0 && ageMs <= 20_000;
+    const fresh = Boolean(progress && ageMs >= 0 && ageMs <= 20_000);
     const label = position.kind === 'tracking' && position.isMovingTooFast
       ? 'Stop walking to use controls'
-      : !accurate || !fresh
+      : !accurate || !fresh || !progress
         ? 'Locating your next turn'
         : progress.nextManeuver?.instruction ??
           progress.activeStep.maneuver.instruction;
@@ -172,11 +172,14 @@ export function projectHarlemSpecs(input: HarlemSpecsInput): HarlemSpecsFrame {
     const points = route.geometry.coordinates;
     const geometryValid = points.length >= 2 &&
       points.every(p => validPoint(p.latitude, p.longitude));
+    const routeTarget = destination?.entrance?.coordinate ?? destination?.coordinate;
+    const destinationValid = routeTarget !== undefined &&
+      validPoint(routeTarget.latitude, routeTarget.longitude);
     const canAnchorRoute = session.phase === 'navigatingAR' &&
       input.navigation.arTracking.kind === 'normal' &&
-      accurate && fresh &&
+      accurate && fresh && progress !== undefined &&
       progress.routeId === route.id &&
-      route.mode === 'walking' && geometryValid;
+      route.mode === 'walking' && geometryValid && destinationValid;
 
     if (canAnchorRoute) {
       frame.navigation = {
@@ -189,8 +192,8 @@ export function projectHarlemSpecs(input: HarlemSpecsInput): HarlemSpecsFrame {
               id: destination?.placeId ?? 'destination',
               name: destination?.name ?? 'Destination',
               coordinate: {
-                latitude: destination!.entrance?.coordinate.latitude ?? destination!.coordinate.latitude,
-                longitude: destination!.entrance?.coordinate.longitude ?? destination!.coordinate.longitude,
+                latitude: routeTarget!.latitude,
+                longitude: routeTarget!.longitude,
               },
             },
           },

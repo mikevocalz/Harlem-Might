@@ -118,12 +118,14 @@ describe('Harlem Might Specs scene projections', () => {
     assert.equal(projectHarlemSpecs({ places: [], navigation: {
       ...navigation, positioning: { kind: 'tracking', confidence: 'low', sigmaM: 200, isMovingTooFast: false },
     }, nowMs: 2000 }).navigation, undefined);
+    const activeSession = navigation.session;
+    if (!('activeRoute' in activeSession)) throw new Error('Expected active test session.');
     assert.equal(projectHarlemSpecs({ places: [], navigation: {
-      ...navigation, session: { ...navigation.session, phase: 'calibratingAR' },
+      ...navigation, session: { ...activeSession, phase: 'calibratingAR' },
     }, nowMs: 2000 }).navigation, undefined);
     assert.equal(projectHarlemSpecs({ places: [], navigation: {
-      ...navigation, session: { ...navigation.session, activeRoute: {
-        ...navigation.session.activeRoute, generation: 3,
+      ...navigation, session: { ...activeSession, activeRoute: {
+        ...activeSession.activeRoute, generation: 3,
       } },
     }, nowMs: 2000 }).navigation?.plan.route.id, 'walk-a#3');
   });
@@ -151,9 +153,11 @@ describe('Harlem Might Specs scene projections', () => {
     assert.equal(frame.view, 'arrival');
     assert.match(frame.scene.nodes.find(node => node.id === 'hm-subtitle')?.text ?? '', /may be near/);
     assert.deepEqual(frame.targets.map(target => target.action), ['place:apollo-theater', 'end-navigation']);
+    const arrivedSession = arriving.session;
+    if (arrivedSession.phase !== 'arrived') throw new Error('Expected arrived test session.');
     const confirmed = projectHarlemSpecs({ places: [], navigation: {
-      ...arriving, session: { ...arriving.session, arrival: {
-        ...arriving.session.arrival, confidence: 'confirmed',
+      ...arriving, session: { ...arrivedSession, arrival: {
+        ...arrivedSession.arrival, confidence: 'confirmed',
       } },
     } });
     assert.match(confirmed.scene.nodes.find(node => node.id === 'hm-subtitle')?.text ?? '', /arrived/);
