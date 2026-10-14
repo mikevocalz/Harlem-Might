@@ -46,6 +46,7 @@ A world-space route is only projected when ALL hold:
 4. progress belongs to the same route and is at most 20 seconds old;
 5. actual route geometry has at least two finite WGS84 points;
 6. navigation mode is walking.
+7. entrance or destination coordinate is a valid finite WGS84 point.
 
 The Specs Lens then still needs its own trusted location permission/position
 before presenting the line. No endpoint is inferred from the current heading;
