@@ -154,7 +154,9 @@ describe('Harlem Might Specs scene projections', () => {
     assert.match(frame.scene.nodes.find(node => node.id === 'hm-subtitle')?.text ?? '', /may be near/);
     assert.deepEqual(frame.targets.map(target => target.action), ['place:apollo-theater', 'end-navigation']);
     const arrivedSession = arriving.session;
-    if (arrivedSession.phase !== 'arrived') throw new Error('Expected arrived test session.');
+    if (arrivedSession.phase !== 'arrived' || arrivedSession.arrival.kind !== 'arrived') {
+      throw new Error('Expected an arrived test session with arrival details.');
+    }
     const confirmed = projectHarlemSpecs({ places: [], navigation: {
       ...arriving, session: { ...arrivedSession, arrival: {
         ...arrivedSession.arrival, confidence: 'confirmed',
