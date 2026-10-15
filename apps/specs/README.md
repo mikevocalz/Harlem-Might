@@ -35,7 +35,17 @@ renderer.
    Material, create an Unlit material with Blend Mode Normal, Depth Write off
    and Base Texture enabled. Don't use the lab's two image materials: neither
    renders the image correctly.
-7. Set up the Music video screen. Turn on Project Settings > Experimental
+7. Connect the catalogue. Create an Internet Module asset and set it as the
+   entrypoint's `internetModule`. Set `apiBase` to the Payload REST base the
+   mobile app uses (`EXPO_PUBLIC_PAYLOAD_API_BASE`, ending in
+   `/payload-api`). Every tab then reads the same collections, filters and
+   sort orders as the mobile screens: featured places, published walks,
+   stories and music artists, and today's events in New York time. Lens only
+   fetches `https://` URLs. A local `http://localhost:3000/payload-api` works
+   in Preview only with Experimental APIs on, and Spectacles need a public
+   https host. When a read fails, the tab shows its offline preview and
+   retries the next time it opens.
+8. Set up the Music video screen. Turn on Project Settings > Experimental
    APIs; WebView refuses to start without it. Create an Internet Module asset,
    add a scene object with an Image (the header logo's material works, the
    script clones it) and `HarlemMightVideoScreen`, wire both inputs, and set it
@@ -43,21 +53,22 @@ renderer.
    the tabs: 32 x 18 cm at about 16 cm below eye level. WebView only runs on
    Spectacles; in Preview the Music card shows the song and "Video plays on
    Spectacles".
-8. Optional map: copy `MapComponentModified` from Snap's Navigation Kit sample
+9. Optional map: copy `MapComponentModified` from Snap's Navigation Kit sample
    (Spectacles-Sample, cloned with Git LFS), add `[MapComponent].prefab`, and
    point its `navigationComponent` inputs at the Navigation Kit object. Put
    Harlem places (Apollo Theater, Schomburg Center) in the scene's
    `ManualPlaceList`; the entrypoint walks to those entries so the map shows
    one pin per place.
-9. Run CLAD `/verify-preview` and LEAF interaction tests. Offline, the
+10. Run CLAD `/verify-preview` and LEAF interaction tests. Offline, the
    entrypoint shows the logo header and the app's tabs (Explore, Walks,
    Stories, Music, Today). Explore lists two preview places and can start a
    Navigation Kit walk to either one. The arrow is a straight-line bearing to
    the entrance, not a street route. Today shows the next cited history fact;
-   Music lists four featured songs from the Payload artist seed and plays one
-   on the video screen. Walks and Stories say they load once the phone is
-   connected.
-10. A future authenticated Mobile Kit transport will call
+   Each tab lists its Payload records four at a time with More/Previous, and
+   pinching one opens a detail view with the mobile screen's fields. Explore
+   and Walks can start a Navigation Kit walk, and a Music artist plays their
+   featured song on the video screen.
+11. A future authenticated Mobile Kit transport will call
    `HarlemMightSpecsEntry.acceptFrame(frame)`. The app produces that frame
    via `projectHarlemSpecs` in `packages/app/features/specs/experience.ts`.
    The Lens forwards action strings to a registered `subscribeCommand`

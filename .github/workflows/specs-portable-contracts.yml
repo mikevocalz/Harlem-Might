@@ -21,7 +21,7 @@ jobs:
           node-version: '24'
       - name: Test pure TypeScript scene and handoff contracts
         run: |
-          node --experimental-strip-types --test packages/app/features/specs/*.test.ts
+          node --experimental-strip-types --test packages/app/features/specs/*.test.ts apps/specs/tests/*.test.ts
       - name: Clarify verification boundary
         if: always()
         run: |

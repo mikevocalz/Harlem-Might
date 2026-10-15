@@ -3,16 +3,20 @@ import {
   type ViroSpecsPresentationSnapshot,
 } from "../../ViroSpecs/lens/ViroSpecsPresentationHost";
 import { HarlemMightVideoScreen } from "./HarlemMightVideoScreen";
+import {
+  HarlemMightContent, formatEventTime,
+  type ContentArtist, type ContentEvent, type ContentPlace, type ContentStory, type ContentWalk,
+} from "./HarlemMightContent";
 import { Place } from "SpecsNavigationKit.lspkg/NavigationDataComponent/Place";
 import { ARNavigation } from "SpecsNavigationKit.lspkg/ARNavigationComponent/Scripts/ARNavigation";
 import { GeoLocationPlace } from "SpecsNavigationKit.lspkg/NavigationDataComponent/GeoLocationPlace";
 import { NavigationDataComponent } from "SpecsNavigationKit.lspkg/NavigationDataComponent/NavigationDataComponent";
 
 /**
- * Native Lens Studio entrypoint. Offline it shows a small Preview story and
- * walks to a place with Snap's Navigation Kit arrow; acceptFrame() replaces
- * it with the projection produced from the real Harlem Might catalogue and
- * navigation session.
+ * Native Lens Studio entrypoint. Each tab reads the same Payload REST API as
+ * the mobile app and walks to places with Snap's Navigation Kit arrow. When
+ * the API can't be reached it falls back to a small built-in preview.
+ * acceptFrame() replaces all of it with a frame from the connected phone.
  */
 @component
 export class HarlemMightSpecsEntry extends BaseScriptComponent {
@@ -40,17 +44,37 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
   @hint("Object with HarlemMightVideoScreen; the Music tab plays songs on it")
   videoScreenObject: SceneObject;
 
+  @input
+  @allowUndefined
+  @hint("Internet Module asset used to read the Payload API")
+  internetModule: InternetModule;
+
+  @input
+  @hint("Payload REST base the mobile app uses (EXPO_PUBLIC_PAYLOAD_API_BASE). Spectacles need a public https host.")
+  apiBase: string = "http://localhost:3200/payload-api";
+
   private presentation: ViroSpecsPresentationHost | null = null;
   private video: HarlemMightVideoScreen | null = null;
-  private playing: (typeof MUSIC_SONGS)[number] | null = null;
+  private playing: { artist: string; title: string; youtubeUrl: string } | null = null;
+  private content: HarlemMightContent | null = null;
+  private readonly status = new Map<TabId, "loading" | "ready" | "offline">();
+  private places: ContentPlace[] = [];
+  private walks: ContentWalk[] = [];
+  private stories: ContentStory[] = [];
+  private artists: ContentArtist[] = [];
+  private artistPage = 1;
+  private moreArtists = false;
+  private events: ContentEvent[] = [];
+  private eventsUpcoming = false;
+  private readonly page = new Map<TabId, number>();
+  private selected: string | null = null;
   private navigation: NavigationDataComponent | null = null;
   private arrow: ARNavigation | null = null;
   private unsubscribe: (() => void) | null = null;
   private readonly commandListeners = new Set<(command: string) => void>();
   private readonly allowedLiveActions = new Set<string>();
   private tab: TabId = "explore";
-  private previewPlace: PreviewPlace | null = null;
-  private walk: { place: PreviewPlace; target: Place; owned: boolean; arrived: boolean } | null = null;
+  private walk: { place: WalkTarget; target: Place; owned: boolean; arrived: boolean } | null = null;
   private usingLiveFrame = false;
 
   onAwake(): void {
@@ -71,6 +95,9 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       throw new Error("Harlem Might requires Navigation Kit's NavigationDataComponent and ARNavigation.");
     }
 
+    if (this.internetModule && this.apiBase) {
+      this.content = new HarlemMightContent(this.apiBase, (url) => this.fetchJson(url));
+    }
     this.raiseArrowIntoView();
     this.createEvent("OnStartEvent").bind(() => {
       this.unsubscribe = this.presentation!.subscribeAction((command) => this.onAction(command));
@@ -79,6 +106,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
         this.walk.arrived = true;
         this.showPreview();
       });
+      this.load(this.tab);
       this.showPreview();
     });
     this.createEvent("OnDestroyEvent").bind(() => {
@@ -120,20 +148,32 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       const id = command.slice("preview:tab:".length) as TabId;
       if (!TABS.some((t) => t.id === id)) return;
       this.tab = id;
-      this.previewPlace = null;
+      this.selected = null;
       this.stopSong();
+      this.load(id);
     } else if (command === "preview:back") {
-      this.previewPlace = null;
-    } else if (command.startsWith("preview:place:")) {
-      const id = command.slice("preview:place:".length);
-      this.previewPlace = PREVIEW_PLACES.find((place) => place.id === id) ?? null;
-    } else if (command === "preview:walk" && this.previewPlace) {
-      this.startWalk(this.previewPlace);
-    } else if (command.startsWith("preview:song:")) {
-      const song = MUSIC_SONGS.find((s) => s.id === command.slice("preview:song:".length));
-      if (!song) return;
-      this.playing = song;
-      this.video?.play(song.youtubeUrl);
+      this.selected = null;
+      this.stopSong();
+    } else if (command.startsWith("preview:open:")) {
+      this.selected = command.slice("preview:open:".length);
+    } else if (command === "preview:page:next") {
+      const items = this.listItems();
+      const page = this.page.get(this.tab) ?? 0;
+      if ((page + 1) * PAGE_SIZE < items.length) this.page.set(this.tab, page + 1);
+      else if (this.tab === "music" && this.moreArtists) {
+        this.page.set(this.tab, page + 1);
+        this.loadArtists(this.artistPage + 1);
+      }
+    } else if (command === "preview:page:prev") {
+      this.page.set(this.tab, Math.max(0, (this.page.get(this.tab) ?? 0) - 1));
+    } else if (command === "preview:walk") {
+      const target = this.walkTarget();
+      if (target) this.startWalk(target);
+    } else if (command === "preview:play") {
+      const artist = this.currentArtists().find((a) => a.id === this.selected);
+      if (!artist?.youtubeUrl) return;
+      this.playing = { artist: artist.name, title: artist.songTitle, youtubeUrl: artist.youtubeUrl };
+      this.video?.play(artist.youtubeUrl);
     } else if (command === "preview:stop-song") {
       this.stopSong();
     } else if (command === "preview:end-walk") {
@@ -145,7 +185,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
   // The Navigation Kit arrow points in a straight line to the entrance using
   // the Lens's own location. It is a bearing, not a street route; route
   // geometry still waits for the phone's route provider and its safety gates.
-  private startWalk(place: PreviewPlace): void {
+  private startWalk(place: WalkTarget): void {
     this.endWalk();
     // Reuse the scene's ManualPlaceList entry so the map shows one pin per
     // place; create a temporary place only when the list doesn't have it.
@@ -156,7 +196,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       geo.latitude = place.latitude;
       geo.longitude = place.longitude;
       target = new GeoLocationPlace(geo, ARRIVAL_RADIUS_METERS, place.name, this.placeIcon,
-        place.address, this.navigation!.getUserPosition());
+        place.street, this.navigation!.getUserPosition());
     }
     this.walk = { place, target, owned, arrived: false };
     this.navigation!.navigateToPlace(target);
@@ -206,6 +246,85 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       const tilt = quat.angleAxis(ARROW_TILT_DEGREES * MathUtils.DegToRad, head.right);
       displayTransform.setWorldRotation(tilt.multiply(pivotTransform.getWorldRotation()));
     });
+  }
+
+  private async fetchJson(url: string): Promise<any> {
+    const response = await this.internetModule.fetch(new Request(url, {
+      method: "GET", headers: { accept: "application/json" },
+    }));
+    if (response.status !== 200) throw new Error("HTTP " + response.status + " for " + url);
+    return response.json();
+  }
+
+  // Each tab loads the first time it opens and redraws when its data arrives.
+  // A failed read shows the offline content and retries the next time the tab opens.
+  private load(tab: TabId): void {
+    const current = this.status.get(tab);
+    if (current === "loading" || current === "ready") return;
+    if (!this.content) {
+      this.status.set(tab, "offline");
+      return;
+    }
+    this.status.set(tab, "loading");
+    const content = this.content;
+    const task: Promise<void> =
+      tab === "explore" ? content.featuredPlaces().then((v) => { this.places = v; })
+      : tab === "walks" ? content.walks().then((v) => { this.walks = v; })
+      : tab === "stories" ? content.stories().then((v) => { this.stories = v; })
+      : tab === "music" ? content.musicArtists(1).then((v) => { this.artists = v.artists; this.moreArtists = v.hasNextPage; })
+      : content.todayEvents(new Date()).then((v) => { this.events = v.events; this.eventsUpcoming = v.upcoming; });
+    task.then(
+      () => { this.status.set(tab, "ready"); this.showPreview(); },
+      (error) => {
+        print("[HarlemMightSpecsEntry] " + tab + " offline: " + error);
+        this.status.set(tab, "offline");
+        this.showPreview();
+      },
+    );
+  }
+
+  private loadArtists(page: number): void {
+    if (!this.content) return;
+    this.content.musicArtists(page).then((v) => {
+      this.artists = this.artists.concat(v.artists);
+      this.artistPage = page;
+      this.moreArtists = v.hasNextPage;
+      this.showPreview();
+    }, (error) => print("[HarlemMightSpecsEntry] music page " + page + ": " + error));
+  }
+
+  // The current tab's list, live when loaded, otherwise the offline preview.
+  private listItems(): { id: string; label: string }[] {
+    const live = this.status.get(this.tab) === "ready";
+    switch (this.tab) {
+      case "explore":
+        return (live ? this.places : OFFLINE_PLACES).map((p) => ({ id: p.id, label: p.name }));
+      case "walks":
+        return live ? this.walks.map((w) => ({ id: w.id, label: w.title })) : [];
+      case "stories":
+        return live ? this.stories.map((st) => ({ id: st.id, label: st.title })) : [];
+      case "music":
+        return (live ? this.artists : OFFLINE_ARTISTS).map((a) => ({ id: a.id, label: a.name }));
+      case "today":
+        return live ? this.events.map((e) => ({ id: e.id, label: e.title })) : [];
+    }
+  }
+
+  private walkTarget(): WalkTarget | null {
+    const located = (p: ContentPlace | null | undefined): WalkTarget | null =>
+      p && p.latitude !== null && p.longitude !== null
+        ? { name: p.name, street: p.street, latitude: p.latitude, longitude: p.longitude } : null;
+    if (this.tab === "explore") return located(this.currentPlaces().find((p) => p.id === this.selected));
+    if (this.tab === "walks") return located(this.walks.find((w) => w.id === this.selected)?.firstStop);
+    return null;
+  }
+
+  private currentPlaces(): ContentPlace[] {
+    return this.status.get("explore") === "ready" ? this.places : OFFLINE_PLACES;
+  }
+
+  private currentArtists(): ContentArtist[] {
+    return this.status.get("music") === "ready" ? this.artists : OFFLINE_ARTISTS;
   }
 
   private stopSong(): void {
@@ -261,7 +380,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
     // 1.1 m sits in the comfortable focus band; a little below eye level keeps
     // the street ahead visible above the card.
     nodes.push({ id: "hm-root", kind: "group", position: [0, -0.06, -1.1] });
-    nodes.push({ id: "hm-frame", kind: "panel", parentId: "hm-root", position: [0, 0.05, -0.03], scale: FRAME_SCALE });
+    nodes.push({ id: "hm-frame", kind: "panel", parentId: "hm-root", position: [0, 0.04, -0.03], scale: FRAME_SCALE });
     // The app header: the landscape logo, as on mobile, never a text stand-in.
     nodes.push({ id: "hm-logo", kind: "image", parentId: "hm-root", source: LOGO_IMAGE_ID,
       position: [0, 0.225, 0.01], scale: LOGO_SCALE });
@@ -272,42 +391,127 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
         (index - (TABS.length - 1) / 2) * TAB_SPACING, 0.135, TAB_SCALE, 48, active ? GOLD : MUTED);
     });
 
-    const place = this.previewPlace;
-    if (this.tab === "explore" && place) {
-      text("hm-title", place.name, 0, 0.065, 104, GOLD);
-      text("hm-subtitle", place.address, 0, 0.02, 60, IVORY);
-      button(0, "Start walking", "preview:walk", -0.05);
-      button(1, "Back to places", "preview:back", -0.135);
-    } else if (this.tab === "explore") {
-      text("hm-title", "Explore", 0, 0.065, 104, GOLD);
-      text("hm-subtitle", "Offline preview", 0, 0.02, 52, MUTED);
-      PREVIEW_PLACES.forEach((p, index) => button(index, p.name, "preview:place:" + p.id, -0.05 - index * 0.085));
-    } else if (this.tab === "music" && this.playing) {
-      text("hm-title", this.playing.title, 0, 0.075, 64, GOLD);
-      button(0, "Stop", "preview:stop-song", 0.02);
-      // The video screen covers this line on Spectacles; Preview has no WebView.
-      text("hm-note", this.playing.artist + "\nVideo plays on Spectacles", 0, -0.105, 52, MUTED);
-    } else if (this.tab === "music") {
-      text("hm-title", "Music", 0, 0.065, 104, GOLD);
-      text("hm-subtitle", "Featured songs from Harlem artists", 0, 0.02, 52, MUTED);
-      MUSIC_SONGS.forEach((song, index) => pinchable("hm-song-" + index, song.artist, "preview:song:" + song.id,
-        (index % 2 === 0 ? -1 : 1) * SONG_COLUMN_X, -0.05 - Math.floor(index / 2) * 0.085, SONG_BUTTON_SCALE, 60, IVORY));
-    } else if (this.tab === "today") {
-      const fact = nearestHistoryFact(new Date());
-      text("hm-title", "From Harlem\u2019s past", 0, 0.065, 80, GOLD);
-      text("hm-date", formatFactDate(fact.date), 0, 0.02, 56, MUTED);
-      text("hm-body", wrap(fact.text, 40), 0, -0.06, 60, IVORY);
-      text("hm-source", "Source: " + fact.sourceLabel, 0, -0.145, 44, MUTED);
+    const half = (index: number, label: string, action: string, x: number, y: number): void =>
+      pinchable("hm-item-" + index, clip(label, 22), action, x, y, HALF_BUTTON_SCALE, 52, IVORY);
+    const header = (title: string, subtitle: string): void => {
+      text("hm-title", clip(title, 26), 0, 0.07, 88, GOLD);
+      if (subtitle) text("hm-subtitle", clip(subtitle, 52), 0, 0.03, 46, MUTED);
+    };
+    const paragraph = (value: string): void => {
+      if (value) text("hm-body", wrap(clip(value, 150), 44), 0, -0.05, 46, IVORY);
+    };
+    // Bottom row of a detail view: the tab's main action on the left, Back on the right.
+    const actions = (primary: { label: string; action: string } | null): void => {
+      if (primary) half(10, primary.label, primary.action, -COLUMN_X, ROW_Y[2]);
+      half(11, "Back", "preview:back", primary ? COLUMN_X : 0, ROW_Y[2]);
+    };
+    const status = this.status.get(this.tab);
+    const tabInfo = TABS.find((t) => t.id === this.tab)!;
+
+    if (status === "loading") {
+      header(tabInfo.label, "Loading from Harlem Might\u2026");
+    } else if (this.selected) {
+      this.renderDetail(header, paragraph, actions, text);
     } else {
-      // Walks and Stories are catalogue content; offline there is none
-      // to show, so the tab says where it comes from instead of faking it.
-      const tab = TABS.find((t) => t.id === this.tab)!;
-      text("hm-title", tab.label, 0, 0.065, 116, GOLD);
-      text("hm-body", wrap(tab.offline, 40), 0, -0.01, 60, IVORY);
-      button(0, "Explore places", "preview:tab:explore", -0.11);
+      const items = this.listItems();
+      const page = this.page.get(this.tab) ?? 0;
+      const shown = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+      header(tabInfo.label, this.listSubtitle(items.length, page));
+      if (items.length === 0) {
+        if (this.tab === "today") {
+          // No listings: the app's Today screen still has its history fact.
+          const fact = nearestHistoryFact(new Date());
+          text("hm-date", "From Harlem\u2019s past \u00b7 " + formatFactDate(fact.date), 0, -0.01, 46, GOLD);
+          text("hm-body", wrap(fact.text, 44), 0, -0.07, 46, IVORY);
+          text("hm-source", "Source: " + fact.sourceLabel, 0, -0.13, 40, MUTED);
+        } else {
+          text("hm-body", wrap(tabInfo.offline, 40), 0, -0.04, 52, IVORY);
+        }
+      }
+      shown.forEach((item, index) =>
+        half(index, item.label, "preview:open:" + item.id,
+          (index % 2 === 0 ? -1 : 1) * COLUMN_X, ROW_Y[Math.floor(index / 2)]));
+      if (page > 0) half(10, "Previous", "preview:page:prev", -COLUMN_X, ROW_Y[2]);
+      const more = (page + 1) * PAGE_SIZE < items.length || (this.tab === "music" && this.moreArtists && status === "ready");
+      if (more) half(11, "More", "preview:page:next", COLUMN_X, ROW_Y[2]);
     }
     this.presentation.present({ scene: { version: 1, nodes }, targets });
   }
+
+  private listSubtitle(count: number, page: number): string {
+    const live = this.status.get(this.tab) === "ready";
+    const range = count > PAGE_SIZE
+      ? (page * PAGE_SIZE + 1) + "\u2013" + Math.min(count, (page + 1) * PAGE_SIZE) + " of " + count : String(count);
+    switch (this.tab) {
+      case "explore": return live ? "Featured places \u00b7 " + range : "Offline preview";
+      case "walks": return live ? range + " guided walks" : "";
+      case "stories": return live ? range + " stories" : "";
+      case "music": return live ? "Harlem artists \u00b7 " + range : "Offline preview";
+      case "today":
+        if (!live) return "Offline";
+        if (count === 0) return "No listings today";
+        return (this.eventsUpcoming ? "Upcoming \u00b7 " : "Today \u00b7 ") + range + " listings";
+    }
+  }
+
+  // Detail view for the selected item, with the same fields as the item's
+  // mobile screen (Place Detail, walk, story, artist and event pages).
+  private renderDetail(
+    header: (title: string, subtitle: string) => void,
+    paragraph: (value: string) => void,
+    actions: (primary: { label: string; action: string } | null) => void,
+    text: (id: string, value: string, x: number, y: number, size: number, color: Color) => void,
+  ): void {
+    const id = this.selected;
+    if (this.tab === "explore") {
+      const place = this.currentPlaces().find((p) => p.id === id);
+      if (!place) return actions(null);
+      header(place.name, [place.category, place.street].filter(Boolean).join(", "));
+      paragraph(place.summary);
+      actions(this.walkTarget() ? { label: "Start walking", action: "preview:walk" } : null);
+    } else if (this.tab === "walks") {
+      const walk = this.walks.find((w) => w.id === id);
+      if (!walk) return actions(null);
+      header(walk.title, walk.facts);
+      paragraph(walk.summary);
+      actions(this.walkTarget() ? { label: "Walk to first stop", action: "preview:walk" } : null);
+    } else if (this.tab === "stories") {
+      const story = this.stories.find((st) => st.id === id);
+      if (!story) return actions(null);
+      header(story.title, story.author ? "By " + story.author : "");
+      paragraph(story.dek);
+      actions(null);
+    } else if (this.tab === "music") {
+      const artist = this.currentArtists().find((a) => a.id === id);
+      if (!artist) return actions(null);
+      if (this.playing) {
+        header(this.playing.title, this.playing.artist);
+        // The video screen covers the card body on Spectacles; Preview has no WebView.
+        text("hm-note", "Video plays on Spectacles", 0, -0.05, 46, MUTED);
+        actions({ label: "Stop", action: "preview:stop-song" });
+        return;
+      }
+      header(artist.name, [artist.genre, artist.era].filter(Boolean).join(" \u00b7 "));
+      paragraph(artist.shortBio);
+      actions(artist.youtubeUrl ? { label: "Play " + (artist.songTitle || "song"), action: "preview:play" } : null);
+    } else {
+      const event = this.events.find((e) => e.id === id);
+      if (!event) return actions(null);
+      const time = formatEventTime(event.startsAt);
+      const state = event.lifecycle === "scheduled" ? "" : event.lifecycle === "cancelled" ? "Cancelled" : "Postponed";
+      header(event.title, [state, time].filter(Boolean).join(" \u00b7 "));
+      if (event.venue) text("hm-body", wrap(event.venue, 44), 0, -0.05, 52, IVORY);
+      actions(null);
+    }
+  }
+}
+
+// Shorten to fit a label, on a word boundary when one is close.
+function clip(value: string, max: number): string {
+  if (value.length <= max) return value;
+  const cut = value.slice(0, max - 1);
+  const space = cut.lastIndexOf(" ");
+  return (space > max * 0.6 ? cut.slice(0, space) : cut) + "\u2026";
 }
 
 // Lens Text doesn't wrap inside the frame, so break long copy on word
@@ -344,7 +548,7 @@ function formatFactDate(iso: string): string {
 }
 
 type Color = [number, number, number, number];
-type PreviewPlace = (typeof PREVIEW_PLACES)[number];
+type WalkTarget = { name: string; street: string; latitude: number; longitude: number };
 type TabId = (typeof TABS)[number]["id"];
 type HistoryFact = (typeof HISTORY_FACTS)[number];
 
@@ -352,8 +556,8 @@ type HistoryFact = (typeof HISTORY_FACTS)[number];
 // on the phone.
 const TABS = [
   { id: "explore", label: "Explore", offline: "" },
-  { id: "walks", label: "Walks", offline: "Guided walks load from the Harlem Might app once your phone is connected." },
-  { id: "stories", label: "Stories", offline: "Stories load from the Harlem Might app once your phone is connected." },
+  { id: "walks", label: "Walks", offline: "Walks couldn\u2019t load. Check the Lens is online and try the tab again." },
+  { id: "stories", label: "Stories", offline: "Stories couldn\u2019t load. Check the Lens is online and try the tab again." },
   { id: "music", label: "Music", offline: "" },
   { id: "today", label: "Today", offline: "" },
 ] as const;
@@ -367,14 +571,19 @@ const GOLD: Color = [0.973, 0.776, 0.149, 1];
 // Off-white avoids the glare of pure white on an additive display.
 const IVORY: Color = [0.96, 0.94, 0.89, 1];
 const MUTED: Color = [0.74, 0.7, 0.62, 1];
-// UI Kit BackPlate is 24 x 12 cm at scale 1: frame 50 x 48 cm, walking card
-// 40 x 16 cm, buttons 32 x 7 cm, tabs 9 x 6.5 cm. Every pinch target clears
+// UI Kit BackPlate is 24 x 12 cm at scale 1: frame 50 x 50 cm, walking card
+// 40 x 16 cm, buttons 32 x 7 cm, half buttons 23 x 7 cm, tabs 9 x 6.5 cm. Every pinch target clears
 // the 64 mm minimum for hands.
-const FRAME_SCALE: [number, number, number] = [2.08, 4, 1];
+const FRAME_SCALE: [number, number, number] = [2.08, 4.17, 1];
 const WALK_FRAME_SCALE: [number, number, number] = [1.67, 1.33, 1];
 const BUTTON_SCALE: [number, number, number] = [1.33, 0.58, 1];
 const TAB_SCALE: [number, number, number] = [0.375, 0.54, 1];
 const TAB_SPACING = 0.096;
+const HALF_BUTTON_SCALE: [number, number, number] = [0.96, 0.58, 1];
+// Lists are two columns by two rows, with a Previous/More or action row below.
+const PAGE_SIZE = 4;
+const COLUMN_X = 0.12;
+const ROW_Y = [-0.02, -0.092, -0.164] as const;
 const LOGO_IMAGE_ID = "harlem-might-logo";
 // Measured against the 50 cm frame in Preview, one image unit is about 1 cm.
 // 30 x 10 cm fills most of the card like the mobile header and fits between
@@ -389,30 +598,26 @@ const ARROW_TILT_DEGREES = 60;
 // needs to be larger to read.
 const ARROW_SCALE = 5;
 
-// Featured songs copied from packages/payload/src/seed/music-artist-candidates.ts
-// (one per era: jazz, doo-wop, hip-hop, R&B). Live frames replace this.
-const MUSIC_SONGS = [
-  { id: "fats-waller", artist: "Fats Waller", title: "Ain't Misbehavin'",
-    youtubeUrl: "https://www.youtube.com/watch?v=pZ8fWP6a3Q4" },
-  { id: "frankie-lymon", artist: "Frankie Lymon", title: "Why Do Fools Fall in Love",
-    youtubeUrl: "https://www.youtube.com/watch?v=mEHcTciiXQY" },
-  { id: "big-l", artist: "Big L", title: "Put It On",
-    youtubeUrl: "https://www.youtube.com/watch?v=WWMjRMJ0dTI" },
-  { id: "teyana-taylor", artist: "Teyana Taylor", title: "Gonna Love Me",
-    youtubeUrl: "https://www.youtube.com/watch?v=LwSCplLupTA" },
-] as const;
-// Two columns of 23 x 7 cm song buttons.
-const SONG_BUTTON_SCALE: [number, number, number] = [0.96, 0.58, 1];
-const SONG_COLUMN_X = 0.12;
-
-// Demonstration content only; live frames come from projectHarlemSpecs.
-// Coordinates match the Harlem Might route fixtures for these places.
-const PREVIEW_PLACES = [
-  { id: "apollo", name: "Apollo Theater", address: "253 West 125th Street",
+// Offline fallback when the Payload API can't be reached. Same records as the
+// live catalogue: Apollo and Schomburg from the featured places, songs from
+// packages/payload/src/seed/music-artist-candidates.ts.
+const OFFLINE_PLACES: ContentPlace[] = [
+  { id: "apollo", name: "Apollo Theater", category: "Culture", street: "253 West 125th Street",
+    summary: "A Harlem performing-arts landmark with a global cultural reach.",
     latitude: 40.8100895, longitude: -73.9499948 },
-  { id: "schomburg", name: "Schomburg Center", address: "515 Malcolm X Boulevard",
-    latitude: 40.8146476, longitude: -73.9409874 },
-] as const;
+  { id: "schomburg", name: "Schomburg Center", category: "Books", street: "515 Malcolm X Boulevard",
+    summary: "", latitude: 40.8146476, longitude: -73.9409874 },
+];
+const OFFLINE_ARTISTS: ContentArtist[] = [
+  { id: "fats-waller", name: "Fats Waller", genre: "Jazz", era: "1920s\u20131940s", shortBio: "",
+    songTitle: "Ain't Misbehavin'", youtubeUrl: "https://www.youtube.com/watch?v=pZ8fWP6a3Q4" },
+  { id: "frankie-lymon", name: "Frankie Lymon", genre: "Doo-wop", era: "1950s\u20131960s", shortBio: "",
+    songTitle: "Goody Goody", youtubeUrl: "https://www.youtube.com/watch?v=K3VLt_Q5pmA" },
+  { id: "big-l", name: "Big L", genre: "Hip-hop", era: "1990s", shortBio: "",
+    songTitle: "Put It On", youtubeUrl: "https://www.youtube.com/watch?v=WWMjRMJ0dTI" },
+  { id: "teyana-taylor", name: "Teyana Taylor", genre: "R&B", era: "2000s\u2013present", shortBio: "",
+    songTitle: "Gonna Love Me", youtubeUrl: "https://www.youtube.com/watch?v=LwSCplLupTA" },
+];
 
 // Copied from packages/app/content/history-facts.ts, where each date was
 // checked against its source on 2026-10-09. Live frames replace this.
