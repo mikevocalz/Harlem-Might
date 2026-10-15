@@ -20,13 +20,29 @@ renderer.
 3. Copy `Assets/HarlemMight/Scripts/HarlemMightSpecsEntry.ts` into that Lens
    project's `Assets/HarlemMight/Scripts/` directory. The relative import
    resolves the synced `Assets/ViroSpecs/lens` directory.
-4. Attach `ViroSpecsAssetRegistry`, `ViroSpecsRuntimeHost`,
+4. Install Snap's Navigation Kit (`SpecsNavigationKit.lspkg`). The entry
+   script imports `ARNavigation`, `GeoLocationPlace` and
+   `NavigationDataComponent` from it.
+5. Attach `ViroSpecsAssetRegistry`, `ViroSpecsRuntimeHost`,
    `ViroSpecsInteractionHost`, `ViroSpecsPresentationHost` and
-   `HarlemMightSpecsEntry` to scene objects; wire the Inspector references.
-   Set the default UI Kit frame prefab and readable font in the asset registry.
-5. Run CLAD `/verify-preview` and LEAF interaction tests. The entrypoint
-   first shows an explicitly marked OFFLINE PREVIEW with two selectable places.
-6. A future authenticated Mobile Kit transport will call
+   `HarlemMightSpecsEntry` to scene objects; wire the Inspector references,
+   including the Navigation Kit object (with `NavigationDataComponent`) and the
+   AR Navigation arrow object. Set the default UI Kit frame prefab and
+   readable font in the asset registry.
+6. Set up the header logo. Import
+   `packages/assets/Harlem-Might-Logo-landscape.png` into the Lens project and
+   map it in `ViroSpecsAssetRegistry` under the image id `harlem-might-logo`.
+   Use it as supplied; never recolor the logo. For the registry's Default Image
+   Material, create an Unlit material with Blend Mode Normal, Depth Write off
+   and Base Texture enabled. Don't use the lab's two image materials: neither
+   renders the image correctly.
+7. Run CLAD `/verify-preview` and LEAF interaction tests. Offline, the
+   entrypoint shows the logo header and the app's tabs (Explore, Walks,
+   Stories, Music, Today). Explore lists two preview places and can start a
+   Navigation Kit walk to either one. The arrow is a straight-line bearing to
+   the entrance, not a street route. Today shows the next cited history fact;
+   Walks, Stories and Music say they load once the phone is connected.
+8. A future authenticated Mobile Kit transport will call
    `HarlemMightSpecsEntry.acceptFrame(frame)`. The app produces that frame
    via `projectHarlemSpecs` in `packages/app/features/specs/experience.ts`.
    The Lens forwards action strings to a registered `subscribeCommand`
@@ -44,7 +60,10 @@ submission ships in this PR.
 - Place rows: `placeCatalogueStore` (Payload readers), not Lens fixtures.
 - Route state: `useNavigationStore`; no separate Specs navigation controller.
 - Live actions: existing app controller must authorize and apply commands.
-- The two OFFLINE PREVIEW place names are demonstration content only.
+- The two offline preview places are demonstration content only.
+- The offline Today facts are a copy of
+  `packages/app/content/history-facts.ts`. Lens scripts can't import from the
+  monorepo, so update both when that file changes.
 
 ## Validation
 
