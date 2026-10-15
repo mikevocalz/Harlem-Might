@@ -20,10 +20,11 @@ are in [README.md](README.md).
   sample), the WebView video screen, `InternetModule` fetches to Payload, and
   `RemoteMediaModule` photo downloads, which it hands to Viro with
   `registerImage`.
-- viro-external dependencies: #68 is merged (textStyle, deferred SIK
-  binding). #69 (`ViroSpecsAssetRegistry.registerImage`) and #70 (`scroll` on
-  groups, rendered as a UI Kit ScrollWindow) are open. #70 adds no ScrollBar,
-  because ScrollBar's `scrollWindow` and orientation are private inputs.
+- viro-external dependencies, all merged into `main`: #68 (textStyle,
+  deferred SIK binding), #69 (`ViroSpecsAssetRegistry.registerImage`), #70
+  (`scroll` on groups, rendered as a UI Kit ScrollWindow) and #71 (runbook,
+  guide, sample). #70 adds no ScrollBar, because ScrollBar's `scrollWindow`
+  and orientation are private inputs.
 
 ## Data
 

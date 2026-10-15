@@ -33,16 +33,18 @@ to Viro with `registerImage`.
 
 ## Required sibling repository
 
-Use `mikevocalz/viro-external` with these changes present:
+Use `mikevocalz/viro-external` at `main` (bbd4c61 or later), which has:
 
-- #68 (merged): text styling and next-frame pinch binding.
-- #69 (open): `ViroSpecsAssetRegistry.registerImage`, used for every CMS photo.
-- #70 (open): the `scroll` option on group nodes, rendered as a UI Kit
+- #68: text styling and next-frame pinch binding.
+- #69: `ViroSpecsAssetRegistry.registerImage`, used for every CMS photo.
+- #70: the `scroll` option on group nodes, rendered as a UI Kit
   `ScrollWindow`. It adds no ScrollBar, because ScrollBar's `scrollWindow` and
   orientation are private inputs.
+- #71: the Lens Studio runbook, a step-by-step guide to building Specs UI with
+  code (`packages/specs/doc/BuildingSpecsApps.md`) and a runnable sample
+  (`packages/specs/examples/specs-sample/`).
 
-Until #69 and #70 merge, sync from a checkout that contains both branches. Do
-not substitute public ViroCore as a Snap OS renderer.
+Do not substitute public ViroCore as a Snap OS renderer.
 
 ## Setup
 
