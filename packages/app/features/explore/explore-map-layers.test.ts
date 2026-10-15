@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { MAPPED_PLACES } from './explore.store.ts';
+import { MAPPED_PLACES } from './place-previews.ts';
 import {
   DOTS_LAYER,
   PLACE_LAYERS,

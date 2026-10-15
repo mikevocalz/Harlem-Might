@@ -5,10 +5,10 @@ import { Button, DropZone, Modal, MotionView } from "@acme/ui";
 import { Pressable, Text, View } from "@acme/ui/tw";
 import { CloudUpload, Paperclip, X } from "@acme/ui/icons";
 import {
-  attach,
+  acquireAttachment,
   IDLE_PROGRESS,
   type AttachProgress,
-  type Attachment,
+  type AttachmentSource,
 } from "./attachment.ts";
 import { pickFile } from "./pick-file";
 
@@ -43,7 +43,6 @@ export function AttachSheet() {
   const open = useAttachStore((state) => state.open);
   const resolve = useAttachStore((state) => state.resolve);
   const onClose = () => resolve(null);
-  const onAttached = (attachment: Attachment) => resolve(attachment);
 
   const store = useMemo(() => createProgressStore(), []);
   const progress = useStore(store, (state) => state.progress);
@@ -51,16 +50,17 @@ export function AttachSheet() {
 
   const report = (next: AttachProgress) => store?.getState().set(next);
 
-  const run = async (source: { uri: string; name?: string }) => {
-    const attachment = await attach(source, report);
-    if (attachment) onAttached(attachment);
+  const acquireAndResolveAttachment = async (acquire: () => Promise<AttachmentSource | null>) => {
+    const request = useAttachStore.getState().settle;
+    const isCurrent = () => request !== null && useAttachStore.getState().settle === request;
+    const attachment = await acquireAttachment(acquire, report, isCurrent);
+    if (attachment) {
+      if (isCurrent()) useAttachStore.getState().resolve(attachment);
+      else attachment.release?.();
+    }
   };
 
-  const choose = async () => {
-    const picked = await pickFile();
-    if (picked === null) return;
-    await run(picked);
-  };
+  const choose = () => acquireAndResolveAttachment(pickFile);
 
   const percent = Math.round(progress.ratio * 100);
   const indeterminate =
@@ -115,10 +115,16 @@ export function AttachSheet() {
             className="h-64 p-4"
             onDrop={({ assets }) => {
               store?.getState().setHovering(false);
-              const asset = assets[0];
-              // A text-only drop carries no uri — there is nothing to attach.
-              if (asset?.uri === undefined) return;
-              void run({ uri: asset.uri, name: asset.fileName });
+              const [asset, ...unused] = assets;
+              // This single-file dialog owns the whole batch, including assets
+              // it cannot adopt. A text-only first asset still means no file.
+              unused.forEach((entry) => entry.release?.());
+              if (asset?.uri === undefined || useAttachStore.getState().settle === null) {
+                asset?.release?.();
+                return;
+              }
+              const source = { uri: asset.uri, name: asset.fileName, release: asset.release };
+              void acquireAndResolveAttachment(async () => source);
             }}
           >
             <View className="h-full w-full items-center justify-center gap-3">

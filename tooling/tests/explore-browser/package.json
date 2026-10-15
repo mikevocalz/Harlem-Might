@@ -1,0 +1,23 @@
+{
+  "name": "harlem-explore-browser-contracts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:runner": "node --test runner.test.mjs",
+    "build": "node build.mjs",
+    "test": "node run.mjs"
+  },
+  "dependencies": {
+    "@expo/html-elements": "58.0.2",
+    "@legendapp/motion": "2.5.3",
+    "esbuild": "0.25.12",
+    "lucide-react": "1.51.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native-css": "3.0.7",
+    "react-native-web": "0.21.3",
+    "tailwind-merge": "3.7.0",
+    "tailwind-variants": "3.3.1",
+    "zustand": "5.0.15"
+  }
+}

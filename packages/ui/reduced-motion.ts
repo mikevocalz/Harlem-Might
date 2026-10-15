@@ -43,12 +43,19 @@ function followSystemReduceMotion() {
   if (subscribed) return;
   subscribed = true;
   const { setReduceMotion } = useReducedMotionStore.getState();
+  let receivedSystemEvent = false;
+  AccessibilityInfo.addEventListener('reduceMotionChanged', (reduceMotion) => {
+    receivedSystemEvent = true;
+    setReduceMotion(reduceMotion);
+  });
   AccessibilityInfo.isReduceMotionEnabled()
-    .then(setReduceMotion)
+    .then((reduceMotion) => {
+      // A delayed startup snapshot must not overwrite a newer system event.
+      if (!receivedSystemEvent) setReduceMotion(reduceMotion);
+    })
     .catch((error: unknown) => {
       console.warn(`[reduced-motion] could not read the system setting: ${String(error)}`);
     });
-  AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
 }
 
 /** True when the user asked the OS to reduce motion. Re-renders when it changes. */

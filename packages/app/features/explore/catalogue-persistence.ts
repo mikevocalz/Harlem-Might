@@ -1,9 +1,11 @@
 import type { DetailResult } from '../../content/result.ts';
 import type { PlaceRecord } from '../../content/records.ts';
-import type { ExplorePlace } from './explore.store.ts';
+import type { ExplorePlace } from './place-model.ts';
 
 /** What the catalogue durably keeps between launches: rows plus resolved details. */
 export interface PlaceCatalogueSnapshot {
+  /** Version 2 rows obey the pending-coordinate gate; absent on legacy caches. */
+  schemaVersion?: 2;
   places: readonly ExplorePlace[];
   details: Readonly<Record<string, DetailResult<PlaceRecord>>>;
 }

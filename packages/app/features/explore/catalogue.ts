@@ -1,5 +1,5 @@
 import type { PlaceRecord } from '../../content/records.ts';
-import type { ExplorePlace } from './explore.store.ts';
+import type { ExplorePlace } from './place-model.ts';
 
 // Adapts the Payload place catalogue into the shape the Explore workspace and
 // place pages render. Nothing is invented here: absent facts stay absent, so

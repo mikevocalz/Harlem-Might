@@ -423,3 +423,81 @@ test('volume updates affect decoding requests and active sources without replay'
   await engine.close();
   assert.equal(playback.node.disconnects, 1);
 });
+
+test('outcome API distinguishes a successful start from cancellation while preserving legacy keys', async () => {
+  const { engine, decodes, playbacks } = harness();
+  const cancelled = engine.playAmbientWithOutcome('voice', 'one.mp3');
+  await flush();
+  engine.cancelPending('voice');
+  decodes[0]!.deferred.resolve({ duration: 1 });
+  assert.equal(await cancelled, 'cancelled');
+  assert.equal(playbacks.length, 0);
+  assert.equal(await engine.playAmbientWithOutcome('voice', 'one.mp3'), 'played');
+  assert.equal(playbacks[0]!.node.starts, 1);
+  assert.equal(await engine.playAmbient('voice', 'one.mp3'), 'voice');
+  assert.equal(await engine.playSpatial('voice', 'one.mp3'), 'voice');
+  await engine.close();
+});
+
+for (const cancelStage of ['queued', 'decode', 'resume'] as const) {
+  test(`outcome API reports cancellation during ${cancelStage}`, async () => {
+    const { engine, contexts, decodes, playbacks } = harness();
+    const pending = engine.playAmbientWithOutcome('voice', 'one.mp3');
+    const resume = deferred<void>();
+    if (cancelStage !== 'queued') {
+      await flush();
+      if (cancelStage === 'resume') {
+        contexts[0]!.resumeGate = resume.promise;
+        decodes[0]!.deferred.resolve({ duration: 1 });
+        await flush();
+      }
+    }
+    engine.unload('voice');
+    if (cancelStage === 'decode') decodes[0]!.deferred.resolve({ duration: 1 });
+    resume.resolve();
+    assert.equal(await pending, 'cancelled');
+    assert.equal(playbacks.length, 0);
+    await engine.close();
+  });
+}
+
+test('outcome API suppresses a stale failure without interrupting a newer owner request', async () => {
+  const { engine, decodes, playbacks } = harness();
+  const old = engine.playAmbientWithOutcome('voice', 'one.mp3');
+  await flush();
+  const next = engine.playAmbientWithOutcome('voice', 'two.mp3');
+  await flush();
+  decodes[1]!.deferred.resolve({ duration: 2 });
+  assert.equal(await next, 'played');
+  decodes[0]!.deferred.reject(new Error('old load failed'));
+  assert.equal(await old, 'cancelled');
+  assert.equal(playbacks[0]!.node.stops, 0);
+  await engine.close();
+});
+
+for (const failingStep of ['onEnded', 'stop', 'disconnect'] as const) {
+  test(`cleanup still releases other resources when ${failingStep} throws`, async (t) => {
+    const { engine, decodes, playbacks, contexts } = harness();
+    const warnings: unknown[][] = [];
+    t.mock.method(console, 'warn', (...args: unknown[]) => { warnings.push(args); });
+    const pending = engine.playAmbient('voice', 'one.mp3');
+    await flush();
+    decodes[0]!.deferred.resolve({ duration: 1 });
+    await pending;
+    const node = playbacks[0]!.node;
+    const calls: string[] = [];
+    for (const method of ['onEnded', 'stop', 'disconnect'] as const) {
+      t.mock.method(node, method, () => {
+        calls.push(method);
+        if (method === failingStep) throw new Error('private native error');
+      });
+    }
+    engine.unload('voice');
+    await flush();
+    assert.deepEqual(calls, ['onEnded', 'stop', 'disconnect']);
+    assert.deepEqual(warnings, [['Spatial audio resources could not disconnect cleanly.']]);
+    assert.equal(contexts[0]!.state, 'suspended');
+    await engine.close();
+    assert.equal(contexts[0]!.state, 'closed');
+  });
+}

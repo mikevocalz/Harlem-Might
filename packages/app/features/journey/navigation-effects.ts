@@ -24,7 +24,11 @@ export function applyJourneyNavigationCommand(input: {
     input.stopLocation();
   }
   if (input.type === 'resume') {
-    if (input.resume() && input.foreground && 'activeRoute' in active && active.origin.kind === 'device-location' && input.location === 'granted') input.startLocation();
+    // An approximate fix is still an authorized feed. Restart it so a later
+    // precise sample can recover guidance, just as the directions UI does.
+    if (input.resume() && input.foreground && 'activeRoute' in active
+      && active.origin.kind === 'device-location'
+      && (input.location === 'granted' || input.location === 'approximate')) input.startLocation();
   }
   if (input.type === 'stop' || input.type === 'confirm-stop') input.end();
 }

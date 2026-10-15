@@ -8,36 +8,12 @@ import { Play, Pause, AudioLines } from "../icons";
 import { haptics } from "../haptics";
 import { Slider } from "../Slider";
 import { Waveform } from "./Waveform.tsx";
-import { summarise } from "./waveform.ts";
+import {
+  createNativePlayerController,
+  initialNativePlayerState,
+  type NativePlayerState,
+} from "./native-player-controller.ts";
 import type { AudioPlayerProps } from "./AudioPlayer.types.ts";
-
-const TICK_MS = 60;
-
-function createPlayerStore() {
-  return createStore<{
-    playing: boolean;
-    elapsed: number;
-    total: number;
-    bars: number[];
-    error: string | null;
-    set: (
-      next: Partial<{
-        playing: boolean;
-        elapsed: number;
-        total: number;
-        bars: number[];
-        error: string | null;
-      }>,
-    ) => void;
-  }>((set) => ({
-    playing: false,
-    elapsed: 0,
-    total: 0,
-    bars: [],
-    error: null,
-    set: (next) => set(next),
-  }));
-}
 
 const clock = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
@@ -46,9 +22,9 @@ const clock = (seconds: number) =>
  * Play a voice note.
  *
  * The waveform is the recording's own shape: the recorder hands its captured
- * levels along, and the player only decodes the file when it was not given any
- * — a note opened on another device, say. Decoding on every render would make
- * the same recording look different depending on where it was opened.
+ * levels along, and the player only derives bars from the decoded file when it
+ * was not given any — a note opened on another device, say. Rebuilding the bars
+ * would make the same recording look different depending on where it was opened.
  *
  * `AudioBufferSourceNode` is one-shot by design in Web Audio: a stopped source
  * cannot restart, so each play builds a new one. The elapsed clock is derived
@@ -62,118 +38,47 @@ export function AudioPlayer({
   label,
   className,
 }: AudioPlayerProps) {
-  const store = useMemo(() => createPlayerStore(), []);
+  const store = useMemo(
+    () => createStore<NativePlayerState>(() => initialNativePlayerState()),
+    [],
+  );
   const playing = useStore(store, (state) => state.playing);
   const elapsed = useStore(store, (state) => state.elapsed);
   const total = useStore(store, (state) => state.total);
   const bars = useStore(store, (state) => state.bars);
   const error = useStore(store, (state) => state.error);
 
-  const context = useRef<AudioContext | null>(null);
-  const buffer = useRef<Awaited<ReturnType<typeof decodeAudioData>> | null>(
-    null,
-  );
-  const source = useRef<ReturnType<AudioContext["createBufferSource"]> | null>(
-    null,
-  );
-  const ticker = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startedAt = useRef(0);
-  const offset = useRef(0);
+  const controller = useRef<ReturnType<typeof createNativePlayerController> | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      try {
-        const decoded = await decodeAudioData(uri);
-        if (cancelled) return;
-
-        buffer.current = decoded;
-        // Only decode a waveform when the recorder did not supply one.
-        const shape =
-          levels !== undefined && levels.length > 0
-            ? summarise(levels)
-            : summarise(Array.from(decoded.getChannelData(0)));
-
-        store
-          ?.getState()
-          .set({ total: duration ?? decoded.duration, bars: shape });
-      } catch {
-        if (!cancelled) {
-          store
-            ?.getState()
-            .set({ error: "This recording could not be opened." });
-        }
-      }
-    };
-
-    void load();
+    const current = createNativePlayerController({
+      decode: decodeAudioData,
+      createContext: () => new AudioContext(),
+      createSource: (context) => context.createBufferSource(),
+      connect: (context, source) => { source.connect(context.destination); },
+      setOnEnded: (source, callback) => { source.onended = callback; },
+      onChange: (state) => store.setState(state),
+    });
+    controller.current = current;
+    void current.load(uri, duration, levels);
     return () => {
-      cancelled = true;
-      if (ticker.current !== null) clearInterval(ticker.current);
-      source.current?.stop();
-      void context.current?.close();
+      controller.current = null;
+      void current.dispose();
     };
-  }, [uri, duration, levels]);
+  }, [uri, duration, levels, store]);
 
   const play = () => {
-    const decoded = buffer.current;
-    if (decoded === null) return;
-    haptics.selection();
-
-    const audioContext = context.current ?? new AudioContext();
-    context.current = audioContext;
-
-    const node = audioContext.createBufferSource();
-    node.buffer = decoded;
-    node.connect(audioContext.destination);
-    node.onended = () => {
-      if (ticker.current !== null) clearInterval(ticker.current);
-      offset.current = 0;
-      store?.getState().set({ playing: false, elapsed: 0 });
-    };
-
-    node.start(0, offset.current);
-    source.current = node;
-    startedAt.current = audioContext.currentTime;
-    store?.getState().set({ playing: true });
-
-    ticker.current = setInterval(() => {
-      const played =
-        offset.current + (audioContext.currentTime - startedAt.current);
-      store?.getState().set({ elapsed: played });
-    }, TICK_MS);
+    if (controller.current?.play()) haptics.selection();
   };
 
   const pause = () => {
     haptics.selection();
-    if (ticker.current !== null) clearInterval(ticker.current);
-    const audioContext = context.current;
-    if (audioContext !== null) {
-      offset.current += audioContext.currentTime - startedAt.current;
-    }
-    source.current?.stop();
-    source.current = null;
-    store?.getState().set({ playing: false });
+    controller.current?.pause();
   };
 
-  /**
-   * Jump to a position.
-   *
-   * `AudioBufferSourceNode` is one-shot in Web Audio — a stopped source cannot
-   * be restarted — so seeking tears the current source down and `play()` builds
-   * a new one from the offset. Playback resumes only if it was already running,
-   * so dragging the slider on a paused note scrubs without starting it.
-   */
+  // A seek recreates the one-shot source only when the note was playing.
   const seek = (seconds: number) => {
-    const wasPlaying = playing;
-    if (ticker.current !== null) clearInterval(ticker.current);
-    source.current?.stop();
-    source.current = null;
-
-    offset.current = Math.max(0, Math.min(seconds, total));
-    store?.getState().set({ elapsed: offset.current, playing: false });
-    if (wasPlaying) play();
+    if (controller.current?.seek(seconds)) haptics.selection();
   };
 
   const progress = total > 0 ? Math.min(1, elapsed / total) : 0;
@@ -195,7 +100,7 @@ export function AudioPlayer({
         <Pressable
           role="button"
           aria-label={playing ? "Pause" : "Play"}
-          onPress={() => (playing ? pause() : play())}
+          onPress={() => (store.getState().playing ? pause() : play())}
           className="h-12 w-12 items-center justify-center rounded-md border-2 border-border bg-primary shadow-card transition-colors duration-fast hover:bg-primary-pressed active:bg-primary-pressed motion-reduce:transition-none"
         >
           {playing ? (

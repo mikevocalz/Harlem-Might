@@ -30,7 +30,9 @@ export function JourneyNativeActions() {
   const now = useJourneyClock();
   const eligible = (at: number) => {
     const state = useNavigationStore.getState(); const fixes = navigationFixStore.getState(); const stop = currentJourneyStop(); const ui = useNavigationUi.getState();
-    return !!stop && (verifiedArrival(state, fixes, at, stop.slug, ui.location, ui.online) || !!liveProgress(state, fixes, at, ui.online, stop.slug, ui.location));
+    if (!stop) return false;
+    const evidence = { state, fixes, now: at, stopSlug: stop.slug, location: ui.location, online: ui.online };
+    return verifiedArrival(evidence) || !!liveProgress(evidence);
   };
   const arAvailable = deviceSupportsAR && supportedBuild && journey.session?.status === 'active' && (navigation.phase === 'navigating' || navigation.phase === 'arrived') && eligible(now);
   return <JourneyDeviceActions watchEnabled={watch.enabled} watchBusy={watch.busy} watchMessage={watch.message}

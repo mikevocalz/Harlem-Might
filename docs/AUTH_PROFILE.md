@@ -27,6 +27,26 @@ No public exploration route may require a member session.
 Web uses Better Auth's HTTP-only session cookie and `credentials: include`; Payload authorizes `members` through the Better Auth strategy. The auth API is mounted at `/payload-api/auth` (`/sign-up/email`, `/sign-in/email`, `/get-session`, `/sign-out`).
 Mobile/spatial clients must use the same Better Auth identity and an approved secure native session/token store when their client implementation lands; do not put credentials in Zustand persistence, AsyncStorage, query strings, or logs.
 
+`packages/app/features/auth/member-session.ts` owns the guarded session lifecycle,
+profile updates, saved-place reads/writes and logout. Its `createMemberSession`
+factory creates one domain store for each host; the existing `useMemberSession`
+singleton and site-origin API remain the Next/native entry points. Shared
+`createMemberAuthActions` binds sign-in/registration to that same store, so one
+authentication boundary covers registration and its follow-on sign-in.
+
+Vite instantiates this core with its exact `VITE_PAYLOAD_API_BASE` mount, including
+custom origins and path prefixes. Its separate form store owns only transient
+inputs, validation and form feedback. It does not mirror member or saved-place
+state, persist credentials, or perform its own auth/network requests. Pending
+logout blocks competing authentication; failures remain visible for retry.
+Malformed saved-place responses keep the last confirmed list, and requests from
+an earlier account lifetime cannot restore rows or publish errors in a new one.
+
+This sharing does not change the supported public routes or presentation in
+any host. Next/native remain the primary shared product surfaces; Vite's current
+Today/public/profile routes remain available. Further presentation consolidation
+is a separate design follow-up.
+
 ## Saved places
 
 `saved-places` is a row-owned collection:
@@ -41,7 +61,7 @@ Access control filters every read/update/delete to the authenticated member ID. 
 
 - `/sign-in` — member email sign-in through `/payload-api/auth/sign-in/email`
 - `/sign-up` — member account creation through `/payload-api/auth/sign-up/email`, followed by sign-in when the signup does not issue a session
-- `/profile` — saved places/profile surface; the current implementation lives in `apps/web-vite` pending the Next.js member profile route
+- `/profile` — Next and native route adapters use the shared `packages/app/features/auth/MemberProfileScreen`. Vite retains its supported TanStack profile presentation. All hosts use the shared member session/auth implementation and Better Auth identity contract. Vite keeps its existing form presentation, saved-place cards and sign-out retry controls.
 - all other public routes remain signed-out capable
 - `/admin` is curator tooling and is not the member profile
 

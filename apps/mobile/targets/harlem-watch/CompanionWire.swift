@@ -26,7 +26,7 @@ struct CompanionSnapshot: Codable {
     }
     static func decode(_ json: String) -> CompanionSnapshot? {
         let keys: Set<String> = ["schemaVersion", "handoffId", "sessionId", "revision", "status", "walkTitle", "nextStopId", "nextStopTitle", "completedCount", "totalStops", "updatedAt", "expiresAt", "routeState", "instruction", "hapticsEnabled"]
-        guard let data = CompanionWire.data(json, keys: keys, required: keys),
+        guard let data = CompanionWire.data(json, keys: keys, required: keys, nullable: ["nextStopId", "nextStopTitle", "instruction"]),
               let s = try? JSONDecoder().decode(Self.self, from: data), s.schemaVersion == 1,
               CompanionWire.text(s.handoffId), CompanionWire.text(s.sessionId), CompanionWire.text(s.walkTitle),
               s.revision >= 0, s.revision <= 9_007_199_254_740_991,
@@ -72,10 +72,11 @@ struct CompanionCommand: Codable {
 
 enum CompanionWire {
     static func text(_ value: String, max: Int = 160) -> Bool { !value.isEmpty && value.count <= max }
-    static func data(_ json: String, keys: Set<String>, required: Set<String> = []) -> Data? {
+    static func data(_ json: String, keys: Set<String>, required: Set<String> = [], nullable: Set<String> = []) -> Data? {
         guard let data = json.data(using: .utf8), data.count <= 8_192,
               let value = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              Set(value.keys).isSubset(of: keys), required.isSubset(of: Set(value.keys)) else { return nil }
+              Set(value.keys).isSubset(of: keys), required.isSubset(of: Set(value.keys)),
+              value.allSatisfy({ !($0.value is NSNull) || nullable.contains($0.key) }) else { return nil }
         return data
     }
     static func date(_ value: String) -> Date? {

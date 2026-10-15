@@ -18,8 +18,5 @@
     "eslint": "catalog:",
     "eslint-config-expo": "catalog:",
     "typescript": "catalog:"
-  },
-  "dependencies": {
-    "zustand": "catalog:"
   }
 }

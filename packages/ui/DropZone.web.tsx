@@ -1,12 +1,13 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { tv } from './tv';
 import { DropSurface } from './html/dom.web';
 import { View } from './tw';
 import { CloudUpload } from './icons';
 import { Text } from './Text';
 import type { Assets, DropAsset, DropZoneProps } from './DropZone.types';
+import { useInstanceStore, useStore } from './use-instance-store';
 
 export type { Assets, DropAsset };
 
@@ -42,12 +43,35 @@ function accepts(type: string, allowed?: (string | RegExp)[]) {
   });
 }
 
-function toBase64(file: File) {
+function toBase64(file: File, signal: AbortSignal) {
   return new Promise<string>((resolve, reject) => {
+    if (signal.aborted) return reject(signal.reason);
     const reader = new FileReader();
-    reader.onerror = () => reject(reader.error ?? new Error('Could not read dropped file'));
-    reader.onload = () => resolve(String(reader.result ?? ''));
-    reader.readAsDataURL(file);
+    const cleanup = () => {
+      signal.removeEventListener('abort', abort);
+      reader.onload = reader.onerror = reader.onabort = null;
+    };
+    const abort = () => {
+      cleanup();
+      reader.abort();
+      reject(signal.reason);
+    };
+    reader.onerror = () => {
+      cleanup();
+      reject(reader.error ?? new Error('Could not read dropped file'));
+    };
+    reader.onabort = () => {
+      cleanup();
+      reject(new Error('Dropped file reading was cancelled'));
+    };
+    reader.onload = () => { cleanup(); resolve(String(reader.result ?? '')); };
+    signal.addEventListener('abort', abort, { once: true });
+    try {
+      reader.readAsDataURL(file);
+    } catch (error) {
+      cleanup();
+      reject(error);
+    }
   });
 }
 
@@ -55,15 +79,21 @@ async function fileToAsset(
   file: File,
   includeBase64: boolean,
   disableObjectUrl: boolean,
+  signal: AbortSignal,
 ): Promise<DropAsset> {
+  const base64 = includeBase64 ? await toBase64(file, signal) : undefined;
+  if (signal.aborted) throw signal.reason;
   const uri = disableObjectUrl ? undefined : URL.createObjectURL(file);
+  let released = false;
   return {
     uri,
     type: file.type || 'application/octet-stream',
     file,
     fileName: file.name,
-    base64: includeBase64 ? await toBase64(file) : undefined,
-    release: uri ? () => URL.revokeObjectURL(uri) : undefined,
+    base64,
+    release: uri ? () => {
+      if (!released) { released = true; URL.revokeObjectURL(uri); }
+    } : undefined,
   };
 }
 
@@ -96,6 +126,17 @@ export function DropZone({
 }: DropZoneProps) {
   const s = dropZone({ active });
   const dragDepth = useRef(0);
+  const pendingDrops = useRef(new Set<AbortController>());
+  const feedback = useInstanceStore(() => ({ readFailed: false }));
+  const readFailed = useStore(feedback, (state) => state.readFailed);
+
+  useEffect(() => {
+    const pending = pendingDrops.current;
+    return () => {
+      for (const request of pending) request.abort();
+      pending.clear();
+    };
+  }, []);
 
   return (
     <DropSurface
@@ -135,22 +176,36 @@ export function DropZone({
         event.preventDefault();
         dragDepth.current = 0;
         onExit?.();
+        if (!onDrop) return;
+        feedback.setState({ readFailed: false });
 
         const files = Array.from(event.dataTransfer.files).filter((file) =>
           accepts(file.type || 'application/octet-stream', allowedMimeTypes),
         );
-        const assets = await Promise.all(
-          files.map((file) => fileToAsset(file, includeBase64, disableObjectUrl)),
-        );
+        // Drag data is only readable during dispatch; snapshot it before await.
+        const text = event.dataTransfer.getData('text/plain');
+        const request = new AbortController();
+        pendingDrops.current.add(request);
+        try {
+          const prepared = await Promise.allSettled(
+            files.map((file) => fileToAsset(file, includeBase64, disableObjectUrl, request.signal)),
+          );
+          const assets = prepared.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []);
+          const failed = prepared.some((result) => result.status === 'rejected');
+          if (request.signal.aborted || failed) {
+            assets.forEach((asset) => asset.release?.());
+            if (!request.signal.aborted) feedback.setState({ readFailed: true });
+            return;
+          }
 
-        if (assets.length === 0) {
-          const text = event.dataTransfer.getData('text/plain');
-          if (text && accepts('text', allowedMimeTypes)) {
+          if (assets.length === 0 && text && accepts('text', allowedMimeTypes)) {
             assets.push({ type: 'text', text });
           }
+          // Ownership transfers to the consumer only after the whole batch is ready.
+          onDrop({ assets });
+        } finally {
+          pendingDrops.current.delete(request);
         }
-
-        onDrop?.({ assets });
       }}
       {...(rest as Omit<React.HTMLAttributes<HTMLDivElement>, 'children'>)}
     >
@@ -165,6 +220,7 @@ export function DropZone({
           </Text>
         </>
       )}
+      {readFailed ? <Text role="alert" tone="danger">Could not read dropped files. Try again.</Text> : null}
     </DropSurface>
   );
 }

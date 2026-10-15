@@ -2,13 +2,11 @@
 import { tv } from './tv';
 import { PasteWrapper, type PasteEventPayload } from './paste-wrapper';
 import { View, Text as TWText } from './tw';
-import { Input, Label } from './primitives';
-import { Text } from './Text';
+import { Input } from './primitives';
+import { FormField } from './FormField';
 
 const field = tv({
   slots: {
-    root: 'gap-1.5',
-    label: 'text-sm font-medium text-text',
     // `w-full` is explicit because the field is an @expo/ui Host now, and a
     // Host sizes to its content — it no longer inherits a column's default
     // stretch, which is what left fields only as wide as their placeholder.
@@ -16,10 +14,9 @@ const field = tv({
       'w-full min-h-11 justify-center rounded-md border-2 border-border bg-surface-raised px-4 py-2.5 text-base text-text ' +
       'placeholder:text-text-muted/70 transition-all duration-fast ' +
       'focus:shadow-card focus:outline-none motion-reduce:transition-none',
-    message: 'text-sm',
   },
   variants: {
-    error: { true: { input: 'border-danger focus:border-danger', message: 'text-danger' } },
+    error: { true: { input: 'border-danger focus:border-danger' } },
     disabled: { true: { input: 'opacity-50' } },
   },
 });
@@ -51,8 +48,7 @@ export function TextField({
     />
   );
   return (
-    <View className={s.root({ className: containerClassName })}>
-      <Label className={s.label()}>{label}</Label>
+    <FormField label={label} hint={hint} error={error} className={containerClassName}>
       {onPaste ? (
         <PasteWrapper onPaste={onPaste}>
           <View className="relative">
@@ -66,11 +62,6 @@ export function TextField({
           </View>
         </PasteWrapper>
       ) : input}
-      {error ? (
-        <Text className={s.message()}>{error}</Text>
-      ) : hint ? (
-        <Text tone="muted" variant="caption">{hint}</Text>
-      ) : null}
-    </View>
+    </FormField>
   );
 }

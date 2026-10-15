@@ -12,13 +12,13 @@ import React from 'react';
 import {
   Div, Main as EMain, Header as EHeader, Footer as EFooter, Nav as ENav,
   Section as ESection, Article as EArticle, Aside as EAside,
-  H1, H2, H3, H4, H5, H6, P as EP, Span, Time as ETime, A,
+  H1, H2, H3, H4, H5, H6, P as EP, Span, A,
   UL, LI, Table as ETable, THead, TBody, TR, TD, TH,
 } from '@expo/html-elements';
 import type { Role } from 'react-native';
 import { css, type CN } from './css';
 import {
-  FigcaptionBase, AddressBase, DetailsBase, SummaryBase,
+  FigcaptionBase, AddressBase, TimeBase as DomTimeBase, DetailsBase, SummaryBase,
   OrderedListBase, DescriptionListBase, DescriptionTermBase, DescriptionDetailsBase,
   FieldsetBase, LegendBase, SelectBase,
   DocumentHtmlBase, DocumentHeadBase, DocumentBodyBase,
@@ -79,11 +79,10 @@ export const Paragraph = css(
   'Paragraph',
 );
 export const Text = css(Span, 'Text');
-const TimeBase = css(ETime, 'Time');
+const TimeBase = css(DomTimeBase, 'Time');
 /**
- * `<time>`. Takes the colour and type of the text around it: Expo's Time is a
- * standalone RN Text, which on web reset both to black body text and
- * vanished on the dark surface.
+ * A real `<time datetime>` on web and inline text on native. Inherit the
+ * surrounding colour and type so dates remain legible on dark surfaces.
  */
 export function Time({ className = '', ...props }: React.ComponentProps<typeof TimeBase>) {
   return <TimeBase className={`text-inherit [font:inherit] ${className}`} {...props} />;

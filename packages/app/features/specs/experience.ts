@@ -1,4 +1,4 @@
-import type { ExplorePlace } from '../explore/explore.store.ts';
+import type { ExplorePlace } from '../explore/place-model.ts';
 import type { NavigationState } from '../navigation/session/navigationStore.ts';
 
 /**

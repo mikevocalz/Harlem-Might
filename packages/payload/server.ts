@@ -2,21 +2,12 @@
 // (React Server Components, route handlers). The `server-only` marker turns
 // an import from a client bundle into a build error.
 import 'server-only';
-import { fetchPublicPhotoResource, MAX_COMMONS_PHOTO_BYTES } from './src/artist-photo-fetch.ts';
-import { isFreeArtistPhotoLicense, isCommonsArtistPhotoUrl } from '@acme/app/features/music/artist-photo-rights.ts';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-import { createContentReaders, type ContentDocs, type ContentPage, type ContentQuery, type ContentSource } from '@acme/app/content';
-import { getPayload, type Where } from 'payload';
+import { createContentReaders } from '@acme/app/content';
+import { getPayload } from 'payload';
+import { createPayloadContentSource } from './src/content-source.ts';
 import config from './src/payload.config';
-import type { Event, Media, MusicArtist, Place, Story, Walk } from './src/payload-types';
 
-// Compile-time drift check: the generated CMS documents must satisfy the
-// reader contract in packages/app/content/docs.ts.
-type GeneratedDocs = { walks: Walk; stories: Story; events: Event; places: Place; 'music-artists': MusicArtist };
-type AssertDocsMatch<T extends ContentDocs> = T;
-export type CheckedContentDocs = AssertDocsMatch<GeneratedDocs>;
+export type { CheckedContentDocs } from './src/content-source.ts';
 
 /**
  * Whether this process has a content database. Without one the readers return
@@ -25,195 +16,11 @@ export type CheckedContentDocs = AssertDocsMatch<GeneratedDocs>;
  */
 export const isContentDatabaseConfigured = (): boolean => Boolean(process.env.DATABASE_URL);
 
-const TRANSIENT = /ENOTFOUND|EAI_AGAIN|ECONNRESET|ECONNREFUSED|ETIMEDOUT|timeout|terminated|Connection/i;
-
-// Retries for transient connection failures only: the Neon pooler stalls
-// after an idle suspend, and the local resolver has dropped its hostname
-// (getaddrinfo ENOTFOUND) for a second at a time. Up to ~2 s of backoff;
-// a query error or a third failure goes to the reader as `query-failed`.
-async function withRetry<TSlug extends keyof ContentDocs, T>(
-  query: ContentQuery<TSlug>,
-  run: (query: ContentQuery<TSlug>) => Promise<T>,
-): Promise<T> {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await run(query);
-    } catch (error) {
-      const cause = String((error as Error).cause ?? error);
-      if (attempt === 2 || !TRANSIENT.test(cause)) throw error;
-      console.warn(`payload ${query.collection} read failed (${cause.slice(0, 80)}), retry ${attempt + 1}`);
-      await new Promise((resolve) => setTimeout(resolve, 400 * 3 ** attempt));
-    }
-  }
-}
-
-const payloadSource: ContentSource = {
+const payloadSource = createPayloadContentSource({
   isConfigured: isContentDatabaseConfigured,
-  find: (query) => withRetry(query, findOnce),
-  findPage: (query) => withRetry(query, findPageOnce),
-};
-
-async function findOnce<TSlug extends keyof ContentDocs>(
-  query: ContentQuery<TSlug>,
-): Promise<ContentDocs[TSlug][]> {
-  // getPayload caches the instance on module scope
-  // (node_modules/payload/dist/index.d.ts: getPayload).
-  const payload = await getPayload({ config });
-  const { docs } = await payload.find({
-    collection: query.collection,
-    // The reader builds the clause from Payload operators; packages/app
-    // cannot name Payload's `Where` type, so it is narrowed here.
-    where: query.where as Where,
-    depth: query.depth,
-    limit: query.limit,
-    sort: query.sort,
-    // Readers never use totalDocs; skip the count(*) round trip.
-    pagination: false,
-    ...(query.select ? { select: Object.fromEntries(query.select.map((field) => [field, true])) } : {}),
-    draft: false,
-    // Run as an anonymous visitor so the collection read rule
-    // (publishedOrCurator) applies on top of the reader's own filter.
-    overrideAccess: false,
-  });
-  // CheckedContentDocs above proves the generated documents satisfy the
-  // reader contract; the Payload overloads just can't express the
-  // collection-keyed correlation, so it is asserted here.
-  return docs as ContentDocs[TSlug][];
-}
-
-async function findPageOnce<TSlug extends keyof ContentDocs>(
-  query: ContentQuery<TSlug>,
-): Promise<ContentPage<ContentDocs[TSlug]>> {
-  const payload = await getPayload({ config });
-  const { docs, hasNextPage, totalDocs } = await payload.find({
-    collection: query.collection,
-    where: query.where as Where,
-    depth: query.depth,
-    limit: query.limit,
-    page: query.page ?? 1,
-    sort: query.sort,
-    ...(query.select ? { select: Object.fromEntries(query.select.map((field) => [field, true])) } : {}),
-    draft: false,
-    overrideAccess: false,
-  });
-  return { docs: docs as ContentDocs[TSlug][], hasNextPage, totalDocs };
-}
-
-export type RightsClearedArtistPhoto = {
-  name: string;
-  url: string;
-  sourceUrl: string;
-  credit: string;
-  license: string;
-  licenseUrl?: string;
-  width?: number;
-  height?: number;
-};
-
-const imageExtension = (mime: string): 'jpg' | 'png' | 'webp' | undefined => {
-  if (/^image\/jpe?g$/i.test(mime)) return 'jpg';
-  if (/^image\/png$/i.test(mime)) return 'png';
-  if (/^image\/webp$/i.test(mime)) return 'webp';
-  return undefined;
-};
-
-/**
- * Persist a verified Commons artist photo into Payload Media and attach it to
- * the artist. This is deliberately stricter than the runtime display resolver:
- * provider-reference images (Deezer/editorial pages) are never copied into CMS.
- */
-export async function persistRightsClearedMusicArtistHeadshot(
-  artistId: number | string,
-  photo: RightsClearedArtistPhoto,
-): Promise<boolean> {
-  if (!isContentDatabaseConfigured()) return false;
-
-  let imageUrl: URL;
-  let sourceUrl: URL;
-  try {
-    imageUrl = new URL(photo.url);
-    sourceUrl = new URL(photo.sourceUrl);
-  } catch {
-    return false;
-  }
-  if (
-    !isCommonsArtistPhotoUrl(imageUrl.href) ||
-    sourceUrl.protocol !== 'https:' ||
-    sourceUrl.hostname !== 'commons.wikimedia.org' ||
-    !isFreeArtistPhotoLicense(photo.license)
-  ) {
-    return false;
-  }
-
-  const payload = await getPayload({ config });
-  const artist = await payload.findByID({
-    collection: 'music-artists',
-    id: artistId,
-    depth: 0,
-    draft: false,
-    overrideAccess: true,
-  });
-  if (artist.headshot) return true;
-
-  const existing = await payload.find({
-    collection: 'media',
-    where: { sourceUrl: { equals: photo.sourceUrl } },
-    depth: 0,
-    limit: 1,
-    pagination: false,
-    overrideAccess: true,
-  });
-
-  let mediaId: Media['id'] | undefined = existing.docs[0]?.id;
-  if (!mediaId) {
-    const response = await fetchPublicPhotoResource(photo.url, { kind: 'commons-image' });
-    if (!response.ok) return false;
-
-    const mime = response.contentType;
-    const extension = imageExtension(mime);
-    if (!extension) return false;
-    const bytes = Buffer.from(response.bytes);
-    if (bytes.length === 0 || bytes.length > MAX_COMMONS_PHOTO_BYTES) return false;
-
-    const dir = await mkdtemp(path.join(tmpdir(), 'harlem-music-headshot-'));
-    const filePath = path.join(dir, `artist-${String(artistId)}.${extension}`);
-    try {
-      await writeFile(filePath, bytes);
-      const created = await payload.create({
-        collection: 'media',
-        overrideAccess: true,
-        data: {
-          alt: `${photo.name} artist portrait`,
-          role: 'thumbnail',
-          source: 'wikimedia_commons',
-          sourceUrl: photo.sourceUrl,
-          license: photo.license,
-          licenseUrl: photo.licenseUrl,
-          creator: photo.credit,
-          credit: photo.credit,
-          attributionText: `${photo.name} — ${photo.credit}, ${photo.license}, via Wikimedia Commons`,
-          ingestedAt: new Date().toISOString(),
-          shareAlike: /by-sa/i.test(photo.license),
-          noDerivatives: false,
-        },
-        filePath,
-      });
-      mediaId = created.id;
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  }
-
-  if (!mediaId) return false;
-  await payload.update({
-    collection: 'music-artists',
-    id: artistId,
-    overrideAccess: true,
-    draft: false,
-    data: { headshot: mediaId },
-  });
-  return true;
-}
+  // Payload caches its initialized instance; this does not connect until a read.
+  getPayload: () => getPayload({ config }),
+});
 
 export const {
   listWalks,

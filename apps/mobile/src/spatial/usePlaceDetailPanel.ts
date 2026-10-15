@@ -1,14 +1,10 @@
 import { useEffect, useRef } from 'react';
 import type { MetaWindowPlacement } from '@viro-external/meta-layout';
-import { useExplore } from '@acme/app';
 import { spatialPanels } from '../../modules/spatial-panels';
 import { isHorizonBuild } from './horizonBuild';
-import {
-  PLACE_DETAIL_PANEL,
-  placeDetailPanelCommand,
-  placeDetailPlacement,
-} from './placeDetailPanel';
+import { placeDetailPlacement } from './placeDetailPanel';
 import { usePlaceDetailPanelStore } from './placeDetailPanel.store';
+import { attachPlaceDetailPanel } from './placeDetailPanelRuntime';
 
 /**
  * Shows Place Detail as its own Horizon OS panel beside the main window
@@ -19,7 +15,9 @@ import { usePlaceDetailPanelStore } from './placeDetailPanel.store';
  *   (it reads the same `useExplore` store).
  * - Clearing the selection closes it.
  * - Closing the panel itself (its Close button, Back, or the OS) calls
- *   `onClosedByUser`, which clears the selection.
+ *   `onClosedByUser`, which clears the selection. While unmounted, the
+ *   session clears selection itself and defers layout/navigation cleanup to
+ *   the next owner, unless a newer selection has superseded the dismissal.
  * - Where panels are unavailable, or the launch fails, the result is
  *   `inline` and the S17 column shows Detail in the main window.
  *
@@ -31,9 +29,8 @@ export function usePlaceDetailPanel(input: {
 }): MetaWindowPlacement {
   const { selectedPlaceId } = input;
   const status = usePlaceDetailPanelStore((state) => state.status);
-  const setStatus = usePlaceDetailPanelStore((state) => state.setStatus);
   const isAvailable = isHorizonBuild && spatialPanels.isAvailable;
-  const command = placeDetailPanelCommand({ selectedPlaceId, status, isAvailable });
+  const panelOwner = useRef<ReturnType<typeof attachPlaceDetailPanel> | null>(null);
 
   const onClosedByUser = useRef(input.onClosedByUser);
   useEffect(() => {
@@ -42,45 +39,17 @@ export function usePlaceDetailPanel(input: {
 
   useEffect(() => {
     if (!isAvailable) return;
-    const opened = spatialPanels.addOnPanelOpenedListener(({ name }) => {
-      if (name !== PLACE_DETAIL_PANEL) return;
-      // The selection was cleared while the OS was still opening the panel,
-      // when closePanel had nothing to close yet.
-      if (useExplore.getState().selectedPlaceId == null) {
-        void spatialPanels.closePanel(PLACE_DETAIL_PANEL);
-        return;
-      }
-      setStatus('open');
-    });
-    const closed = spatialPanels.addOnPanelClosedListener(({ name, reason }) => {
-      if (name !== PLACE_DETAIL_PANEL) return;
-      setStatus('closed');
-      if (reason === 'user') onClosedByUser.current();
-    });
+    const owner = attachPlaceDetailPanel(() => onClosedByUser.current());
+    panelOwner.current = owner;
     return () => {
-      opened.remove();
-      closed.remove();
+      owner.detach();
+      if (panelOwner.current === owner) panelOwner.current = null;
     };
-  }, [isAvailable, setStatus]);
+  }, [isAvailable]);
 
   useEffect(() => {
-    if (command === 'open') {
-      setStatus('opening');
-      spatialPanels.openPanel(PLACE_DETAIL_PANEL).catch((error: unknown) => {
-        console.warn(`[spatial] Place Detail panel did not open; showing Detail in the main window. ${String(error)}`);
-        setStatus('failed');
-      });
-    } else if (command === 'close') {
-      spatialPanels.closePanel(PLACE_DETAIL_PANEL).catch((error: unknown) => {
-        console.warn(`[spatial] Place Detail panel did not close. ${String(error)}`);
-      });
-    }
-  }, [command, setStatus]);
-
-  // A failed launch is retried on the next selection, not the same one.
-  useEffect(() => {
-    if (selectedPlaceId == null && status === 'failed') setStatus('closed');
-  }, [selectedPlaceId, status, setStatus]);
+    panelOwner.current?.sync();
+  }, [selectedPlaceId, status, isAvailable]);
 
   return placeDetailPlacement(status);
 }

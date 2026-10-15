@@ -9,9 +9,9 @@ import {
   ViroVirtualJoystick,
 } from './viro';
 import { SpatialDemoScene } from './SpatialDemoScene';
-import { TabletopThreeExperience } from './TabletopThreeExperience.web';
+import { TabletopThreeExperience } from './lightcycle/three/TabletopThreeExperience.web';
 import { gridRace, useGridRaceStore } from './gridRaceStore';
-import { useTabletopSessionStore } from './tabletopSessionStore';
+import { useTabletopSessionStore } from './lightcycle/runtime/tabletopSessionStore';
 
 type WebNavigatorProps = {
   initialScene: { scene: ComponentType<any> };

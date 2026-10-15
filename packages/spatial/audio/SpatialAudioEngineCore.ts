@@ -33,6 +33,9 @@ export type AudioPlayback = {
   setOrientation(orientation: SpatialAudioVec3): void;
 };
 
+/** A cancelled load must not consume a caller's once-only cue. */
+export type AudioPlaybackOutcome = 'played' | 'cancelled';
+
 type Session<Context> = {
   context: Context;
   transition: Promise<void>;
@@ -140,11 +143,16 @@ export class SpatialAudioEngineCore<Buffer, Context extends AudioContextLifecycl
   }
 
   playAmbient(key: string, source: SpatialAudioSource, options: AmbientAudioOptions = {}) {
+    // Keep the existing key-return API for callers that do not track outcomes.
+    return this.playAmbientWithOutcome(key, source, options).then(() => key);
+  }
+
+  playAmbientWithOutcome(key: string, source: SpatialAudioSource, options: AmbientAudioOptions = {}) {
     return this.play(key, source, options, false);
   }
 
   playSpatial(key: string, source: SpatialAudioSource, options: PositionalAudioOptions = {}) {
-    return this.play(key, source, options, true);
+    return this.play(key, source, options, true).then(() => key);
   }
 
   private async play(
@@ -152,19 +160,19 @@ export class SpatialAudioEngineCore<Buffer, Context extends AudioContextLifecycl
     source: SpatialAudioSource,
     options: PositionalAudioOptions,
     spatial: boolean,
-  ) {
+  ): Promise<AudioPlaybackOutcome> {
     this.stop(key);
     const request: Request = { ready: false, volume: options.volume ?? 1 };
     this.pending.set(key, request);
     try {
       await this.closeRecovery;
-      if (this.pending.get(key) !== request) return key;
+      if (this.pending.get(key) !== request) return 'cancelled';
       const session = this.ensureSession();
       const buffer = await this.load(key, source);
-      if (this.pending.get(key) !== request || this.session !== session) return key;
+      if (this.pending.get(key) !== request || this.session !== session) return 'cancelled';
       request.ready = true;
       await this.syncState(session);
-      if (this.pending.get(key) !== request || this.session !== session) return key;
+      if (this.pending.get(key) !== request || this.session !== session) return 'cancelled';
       const playback = this.createPlayback(session.context, buffer, {
         ...options, volume: request.volume,
       }, spatial);
@@ -172,16 +180,15 @@ export class SpatialAudioEngineCore<Buffer, Context extends AudioContextLifecycl
       playback.onEnded(() => {
         if (options.loop || this.active.get(key) !== playback) return;
         this.active.delete(key);
-        playback.onEnded(null);
-        playback.disconnect();
+        this.releasePlayback(playback, false);
         this.suspendIdle();
         options.onFinish?.();
       });
       playback.start();
       this.pending.delete(key);
-      return key;
+      return 'played';
     } catch (error) {
-      if (this.pending.get(key) !== request) return key;
+      if (this.pending.get(key) !== request) return 'cancelled';
       this.stop(key);
       throw error;
     } finally {
@@ -217,14 +224,21 @@ export class SpatialAudioEngineCore<Buffer, Context extends AudioContextLifecycl
     this.suspendIdle();
   }
 
+  private releasePlayback(playback: AudioPlayback, stop: boolean) {
+    // Native teardown can throw at any step; still release the remaining graph.
+    let failed = false;
+    try { playback.onEnded(null); } catch { failed = true; }
+    try { if (stop) playback.stop(); } catch { failed = true; }
+    try { playback.disconnect(); } catch { failed = true; }
+    if (failed) console.warn('Spatial audio resources could not disconnect cleanly.');
+  }
+
   stop(key: string) {
     this.cancelPending(key);
     const playback = this.active.get(key);
     if (playback) {
       this.active.delete(key);
-      playback.onEnded(null);
-      playback.stop();
-      playback.disconnect();
+      this.releasePlayback(playback, true);
     }
     this.suspendIdle();
   }

@@ -86,6 +86,7 @@ export function createMapboxDirectionsProvider(options: MapboxDirectionsOptions)
     id: 'mapbox',
     supportedModes: ['walking', 'cycling', 'driving'],
     async getRoutes(request, { signal } = {}) {
+      if (signal?.aborted) throw new RouteProviderError('aborted', 'mapbox', 'Route request was cancelled');
       if (request.mode === 'transit') {
         return {
           kind: 'unsupported',
@@ -94,10 +95,16 @@ export function createMapboxDirectionsProvider(options: MapboxDirectionsOptions)
           handoff: buildExternalMapsHandoff(request),
         };
       }
-      if (signal?.aborted) throw new RouteProviderError('aborted', 'mapbox', 'Route request was cancelled');
-      const query = buildMapboxDirectionsQuery(request);
-      query.set('access_token', token);
-      const url = `https://api.mapbox.com${buildMapboxDirectionsPath(request)}?${query}`;
+      let url: string;
+      try {
+        const query = buildMapboxDirectionsQuery(request);
+        query.set('access_token', token);
+        url = `https://api.mapbox.com${buildMapboxDirectionsPath(request)}?${query}`;
+      } catch {
+        // Pure builders may throw RangeError, but this provider promises a
+        // typed failure without echoing the token or precise coordinates.
+        throw new RouteProviderError('invalid-request', 'mapbox', 'Mapbox Directions request is invalid');
+      }
 
       let response: Response;
       try {
@@ -231,7 +238,7 @@ const MANEUVER_TYPES: Readonly<Record<string, ManeuverType>> = {
 };
 
 function parseManeuverType(value: unknown): ManeuverType {
-  return (typeof value === 'string' && MANEUVER_TYPES[value]) || 'other';
+  return typeof value === 'string' && Object.hasOwn(MANEUVER_TYPES, value) ? MANEUVER_TYPES[value]! : 'other';
 }
 
 const MODIFIERS: Readonly<Record<string, ManeuverModifier>> = {
@@ -246,7 +253,7 @@ const MODIFIERS: Readonly<Record<string, ManeuverModifier>> = {
 };
 
 function parseModifier(value: unknown): ManeuverModifier | undefined {
-  return typeof value === 'string' ? MODIFIERS[value] : undefined;
+  return typeof value === 'string' && Object.hasOwn(MODIFIERS, value) ? MODIFIERS[value] : undefined;
 }
 
 function parseGeometry(raw: unknown, label: string): RouteGeometry {

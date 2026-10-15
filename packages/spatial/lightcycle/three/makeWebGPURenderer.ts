@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import { disposeWebGPURenderer } from '../../disposeWebGPURenderer';
 
 export interface LightCycleWebGPURendererOptions {
   context: GPUCanvasContext;
@@ -33,11 +34,12 @@ export function makeLightCycleWebGPURenderer({
  * Three's WebGPU renderer owns an internal animation loop and module-level
  * render objects. Stop it explicitly before dropping the scene.
  */
-export function disposeLightCycleWebGPURenderer(
+export async function disposeLightCycleWebGPURenderer(
   renderer: THREE.WebGPURenderer,
+  initialized: boolean,
+  initialBackend: THREE.WebGPURenderer['backend'],
 ) {
-  renderer.setAnimationLoop(null);
-  renderer.dispose();
+  await disposeWebGPURenderer(renderer, initialized, initialBackend);
 
   // Temporary parity with react-native-webgpu's example cleanup for Three's
   // shared QuadMesh listener leak (upstream Three cleanup is still evolving).

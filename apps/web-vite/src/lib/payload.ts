@@ -10,24 +10,15 @@
  * SOT: packages/payload/src/payload.config.ts (routes.api) · .env.development.local
  * SOT-KEYWORDS: web-vite payload client rest base url pages collection
  */
-import { createPayloadClient } from '@acme/payload';
+import { createPayloadClient, type Media, type Page, type Place } from '@acme/payload';
 
 export const PAYLOAD_API_BASE =
-  import.meta.env.VITE_PAYLOAD_API_BASE ?? 'http://localhost:3000/payload-api';
+  import.meta.env?.VITE_PAYLOAD_API_BASE ?? 'http://localhost:3000/payload-api';
 
 export const payload = createPayloadClient({ baseUrl: PAYLOAD_API_BASE });
 
 /** Shape of the `pages` collection (packages/payload/src/collections/Pages.ts). */
-export interface CmsPage {
-  id: string;
-  title: string;
-  slug: string;
-  summary?: string | null;
-  body?: string | null;
-  published?: boolean | null;
-  updatedAt: string;
-  createdAt: string;
-}
+export type CmsPage = Pick<Page, 'id' | 'title' | 'slug' | 'summary' | 'body' | 'published' | 'updatedAt' | 'createdAt'>;
 
 export type CmsStatus =
   | { ok: true }
@@ -50,48 +41,22 @@ export async function listPages(): Promise<{ pages: CmsPage[]; status: CmsStatus
   }
 }
 
-/** Fetch one published page by slug; null when missing or when the CMS is down. */
+/** Only a successful empty query is missing; failures reach the router error boundary. */
 export async function getPage(slug: string): Promise<CmsPage | null> {
-  try {
-    const res = await payload.find<CmsPage>(
-      'pages',
-      `where[slug][equals]=${encodeURIComponent(slug)}&where[published][equals]=true&limit=1`,
-    );
-    return res.docs[0] ?? null;
-  } catch {
-    return null;
-  }
+  const res = await payload.find<CmsPage>(
+    'pages',
+    `where[slug][equals]=${encodeURIComponent(slug)}&where[published][equals]=true&limit=1`,
+  );
+  return res.docs[0] ?? null;
 }
 
 
-export interface CmsMedia {
-  id: string;
-  url?: string | null;
-  alt?: string | null;
-}
+export type CmsMedia = Pick<Media, 'id' | 'url' | 'alt'>;
 
-export interface CmsPlace {
-  id: string;
-  name: string;
-  slug: string;
-  kind?: string | null;
-  lifecycle?: string | null;
-  primaryCategory?: string | null;
-  primaryArea?: string | null;
-  logo?: string | CmsMedia | null;
-  menus?: Array<{
-    id?: string | null;
-    label?: string | null;
-    format?: 'image_gallery' | 'pdf' | 'web' | null;
-    active?: boolean | null;
-  }> | null;
-  dataQuality?: {
-    state?: string | null;
-    lastReviewedAt?: string | null;
-  } | null;
-  updatedAt: string;
-  createdAt: string;
-}
+export type CmsPlace = Pick<Place,
+  'id' | 'name' | 'slug' | 'kind' | 'lifecycle' | 'primaryCategory' | 'primaryArea' |
+  'logo' | 'menus' | 'dataQuality' | 'updatedAt' | 'createdAt'
+>;
 
 export async function listPlaces(): Promise<{ places: CmsPlace[]; status: CmsStatus }> {
   try {

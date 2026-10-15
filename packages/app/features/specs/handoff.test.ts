@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import type { ExplorePlace } from '../explore/explore.store.ts';
+import type { ExplorePlace } from '../explore/place-model.ts';
 import { projectHarlemSpecs } from './experience.ts';
 import {
   createSpecsHandoffSnapshot,

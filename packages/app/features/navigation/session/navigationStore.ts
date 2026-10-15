@@ -22,7 +22,7 @@ export type RouteLoadingState =
 export type ProgressState = { readonly kind: 'none' } | { readonly kind: 'tracking'; readonly progress: RouteProgress };
 
 /**
- * The low-frequency navigation state screens subscribe to. Each slice
+ * The screen-facing navigation state. Each slice
  * changes on its own: a GPS confidence change does not touch `progress`, an
  * AR tracking change does not touch `session`.
  */

@@ -27,7 +27,9 @@ const toMinutes = (hhmm: string): number | null => {
 function parseDays(selector: string): number[] | null {
   const days = new Set<number>();
   for (const part of selector.split(',')) {
-    const [from, to] = part.split('-');
+    const endpoints = part.split('-');
+    if (endpoints.length > 2) return null;
+    const [from, to] = endpoints;
     const a = OSM_DAYS.indexOf(from as (typeof OSM_DAYS)[number]);
     if (a < 0) return null;
     if (to === undefined) {
@@ -48,7 +50,9 @@ function parseDays(selector: string): number[] | null {
 function parseTimes(spec: string): HoursRange[] | null {
   const ranges: HoursRange[] = [];
   for (const part of spec.split(',')) {
-    const [from, to] = part.split('-');
+    const endpoints = part.split('-');
+    if (endpoints.length !== 2) return null;
+    const [from, to] = endpoints;
     if (from === undefined || to === undefined) return null;
     const start = toMinutes(from);
     let end = toMinutes(to);
@@ -129,12 +133,16 @@ export function harlemClock(now: Date): { day: number; minute: number } {
   return { day, minute: Number(parts.hour) * 60 + Number(parts.minute) };
 }
 
-/** Whether the table says the place is open at `day`/`minute`, counting yesterday's past-midnight ranges. */
+/** Whether the table says the place is open, including prior days' extended ranges. */
 export function isOpenAt(week: WeeklyHours, day: number, minute: number): boolean {
-  const today = week[day] ?? [];
-  if (today.some((r) => minute >= r.start && minute < r.end)) return true;
-  const yesterday = week[(day + 6) % 7] ?? [];
-  return yesterday.some((r) => r.end > 24 * 60 && minute < r.end - 24 * 60);
+  // The parser accepts clocks through 24:59, then adds one day for overnight
+  // ranges. An extended start can therefore finish in the second following day.
+  for (let daysAgo = 0; daysAgo <= 2; daysAgo++) {
+    const ranges = week[(day + 7 - daysAgo) % 7] ?? [];
+    const relativeMinute = minute + daysAgo * 24 * 60;
+    if (ranges.some((r) => relativeMinute >= r.start && relativeMinute < r.end)) return true;
+  }
+  return false;
 }
 
 /** "9 AM", "5:30 PM", "Midnight". */

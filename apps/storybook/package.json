@@ -7,7 +7,8 @@
     "dev": "storybook dev -p 6006",
     "build": "storybook build",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --test 'scripts/*.test.mjs'"
   },
   "dependencies": {
     "@acme/theme": "workspace:*",
@@ -23,6 +24,7 @@
     "@storybook/addon-a11y": "catalog:",
     "@storybook/react-vite": "catalog:",
     "@tailwindcss/postcss": "catalog:",
+    "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",

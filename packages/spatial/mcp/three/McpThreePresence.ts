@@ -71,7 +71,6 @@ export class McpThreePresence {
     THREE.TorusGeometry,
     THREE.MeshStandardMaterial
   >;
-  private loadedHead: THREE.Object3D | null = null;
   private loadedInternal: THREE.Object3D | null = null;
   private currentEventKey = '';
 
@@ -217,13 +216,11 @@ export class McpThreePresence {
         }
       });
 
-      this.loadedHead = model;
       this.headMount.add(model);
       this.fallbackHead.visible = false;
     } catch {
       // Keep the procedural MCP online if the hosted GLB is unavailable.
-      this.loadedHead = null;
-    this.loadedInternal = null;
+      this.loadedInternal = null;
       this.fallbackHead.visible = true;
     }
   }
@@ -315,6 +312,5 @@ export class McpThreePresence {
     this.chromeMaterial.dispose();
     this.whiteMaterial.dispose();
     this.root.clear();
-    this.loadedHead = null;
   }
 }

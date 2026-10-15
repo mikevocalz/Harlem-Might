@@ -163,6 +163,33 @@ describe('createLocationPipeline', () => {
     assert.equal(reason(p.ingest(fixAt(5, 0, T0 - 1000), T0)), 'out-of-order');
   });
 
+  it('keeps accepting current fixes after rejecting a future timestamp', () => {
+    const p = make();
+    const first = fixAt(0, 0, T0);
+    assert.equal(p.ingest(first, T0).kind, 'accepted');
+    const before = p.latest;
+    const future = fixAt(1, 0, T0 + 60_000);
+    assert.equal(reason(p.ingest(future, T0 + 1000)), 'future');
+    assert.equal(p.latest, before);
+
+    const current = fixAt(1, 0, T0 + 1000);
+    const result = p.ingest(current, T0 + 1000);
+    assert.ok(result.kind === 'accepted');
+    assert.equal(result.didReset, false);
+    assert.equal(p.latest?.timestampMs, current.timestampMs);
+    assert.equal(reason(p.ingest(current, T0 + 1000)), 'duplicate');
+    assert.equal(reason(p.ingest(fixAt(0, 0, T0 + 500), T0 + 1000)), 'out-of-order');
+    assert.equal(reason(p.ingest(future, T0 + 1000)), 'future');
+  });
+
+  it('does not let a future first fix block initialization', () => {
+    const p = make();
+    assert.equal(reason(p.ingest(fixAt(0, 0, T0 + 60_000), T0)), 'future');
+    assert.equal(p.latest, undefined);
+    const result = p.ingest(fixAt(0, 0, T0), T0);
+    assert.ok(result.kind === 'accepted' && result.didReset);
+  });
+
   it('rejects a single urban-canyon jump and keeps the filtered position', () => {
     const p = make();
     for (let i = 0; i < 10; i += 1) p.ingest(fixAt(1.4 * i, 0, T0 + i * 1000, 4), T0 + i * 1000);

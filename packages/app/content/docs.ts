@@ -1,7 +1,7 @@
 // The document shapes the readers consume, written as the minimum structure
 // they need. packages/app must not import Payload or @acme/payload
 // (packages/config/eslint/boundaries.mjs: FORBID_BACKEND_DIRECT), so these are
-// declared here. The binding in packages/payload/server.ts passes the
+// declared here. The binding in packages/payload/src/content-source.ts passes the
 // generated `Walk`/`Story`/`Event` documents into these types, so tsc fails
 // there if the CMS schema drifts away from this contract.
 

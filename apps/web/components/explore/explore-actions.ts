@@ -57,15 +57,18 @@ export function useExploreActions() {
   const pathname = usePathname() ?? routes.explore();
 
   const href = (patch: Record<string, string | null>) => exploreHref(pathname, params.toString(), patch);
+  // Regions render independently, and search may commit after another region
+  // has changed the URL. Mutations must rebase on history at invocation time.
+  const currentHref = (patch: Record<string, string | null>) => exploreHref(pathname, window.location.search, patch);
   // Query-only state stays client-side: native history updates useSearchParams
   // without re-running the page's dynamic server reader on every selection.
-  const replace = (patch: Record<string, string | null>) => window.history.replaceState(null, '', href(patch));
+  const replace = (patch: Record<string, string | null>) => window.history.replaceState(null, '', currentHref(patch));
   const select = (id: string, opener: string) => {
     const { sheet, openSheet, setSelectionPushed, pushRecent } = useExplore.getState();
     openSheet(sheet.open ? sheet.detent : DEFAULT_SHEET_DETENT, opener);
     setSelectionPushed(true);
     pushRecent(id);
-    window.history.pushState(null, '', href({ place: id }));
+    window.history.pushState(null, '', currentHref({ place: id }));
   };
   // Focus and the store follow the URL in the sheet region, so Close, Escape
   // and browser Back all take the same path.
@@ -78,7 +81,7 @@ export function useExploreActions() {
       replace({ place: null });
     }
   };
-  const commitQuery = (text: string) => window.history.replaceState(null, '', href({ q: text || null }));
+  const commitQuery = (text: string) => replace({ q: text || null });
 
   return { params, href, replace, select, close, commitQuery };
 }

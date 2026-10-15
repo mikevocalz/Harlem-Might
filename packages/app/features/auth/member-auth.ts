@@ -1,10 +1,10 @@
 'use client';
 
 // Shared calls for the Payload Better Auth member endpoints. The caller owns
-// the base URL: web passes an empty string for same-origin cookies, native
-// passes the public site origin. Credentials live only for this request.
+// session instance and site origin: the default store uses /payload-api, while
+// a configured store supplies its exact mount. Credentials live only for this request.
 
-import { useMemberSession, type MemberAuthenticationAttempt } from './member-session.ts';
+import { useMemberSession, type MemberAuthenticationAttempt, type MemberSessionState } from './member-session.ts';
 
 export interface MemberCredentials {
   email: string;
@@ -50,10 +50,10 @@ function errorMessage(body: unknown, status: number) {
 const sessionChanged = { ok: false as const, message: 'Your login changed. Try again from your current account.' };
 const unreachable = { ok: false as const, message: 'Could not reach Harlem Might. Check your connection and try again.' };
 
-async function post(baseUrl: string, path: string, body: Record<string, string>, attempt: MemberAuthenticationAttempt): Promise<MemberAuthResult> {
+async function post(path: string, body: Record<string, string>, attempt: MemberAuthenticationAttempt): Promise<MemberAuthResult> {
   if (!attempt.isCurrent()) return sessionChanged;
   try {
-    const response = await fetch(`${baseUrl}${path}`, {
+    const response = await fetch(`${attempt.apiBaseUrl}/auth${path}`, {
       method: 'POST',
       credentials: 'include',
       signal: attempt.signal,
@@ -70,13 +70,15 @@ async function post(baseUrl: string, path: string, body: Record<string, string>,
   }
 }
 
-/** Bind the shared screen to one deployment's `/payload-api/auth` mount. */
-export function createMemberAuthActions(siteUrl: string): MemberAuthActions {
-  const baseUrl = `${siteUrl.replace(/\/$/, '')}/payload-api/auth`;
+/** Bind authentication to the same store and API mount that own the session. */
+export function createMemberAuthActions(
+  siteUrl: string,
+  session: { getState: () => MemberSessionState } = useMemberSession,
+): MemberAuthActions {
   const authenticate = async (action: (attempt: MemberAuthenticationAttempt) => Promise<MemberAuthResult>): Promise<MemberAuthResult> => {
     // Own the boundary before fetch: Set-Cookie can take effect before the
     // response JSON resolves, and registration may itself create a session.
-    const attempt = useMemberSession.getState().beginAuthentication(siteUrl);
+    const attempt = session.getState().beginAuthentication(siteUrl);
     if (!attempt) return { ok: false, message: 'An account change is already in progress. Please wait.' };
     let result: MemberAuthResult;
     try {
@@ -88,9 +90,9 @@ export function createMemberAuthActions(siteUrl: string): MemberAuthActions {
   };
   return {
     signInEmail: ({ email, password }) => authenticate((attempt) =>
-      post(baseUrl, '/sign-in/email', { email: email.trim(), password }, attempt)),
+      post('/sign-in/email', { email: email.trim(), password }, attempt)),
     signUpEmail: ({ name, email, password }) => authenticate(async (attempt) => {
-      const created = await post(baseUrl, '/sign-up/email', {
+      const created = await post('/sign-up/email', {
         name: name.trim(),
         email: email.trim(),
         password,
@@ -98,7 +100,7 @@ export function createMemberAuthActions(siteUrl: string): MemberAuthActions {
       if (!created.ok) return created;
       // Keep the same boundary across both requests: sign-up can issue a
       // cookie, but the plugin does not guarantee it, so sign in explicitly.
-      return post(baseUrl, '/sign-in/email', { email: email.trim(), password }, attempt);
+      return post('/sign-in/email', { email: email.trim(), password }, attempt);
     }),
   };
 }

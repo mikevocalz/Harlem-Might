@@ -66,7 +66,7 @@ describe('Take Me There → phone AR', () => {
     h.native.camera = async () => true;
     assert.equal(await h.entry.open(() => {
       const layout = resolveExploreLayout({ windowWidth: 390, hasSelection: true, detailPlacement: 'inline', isHorizon: false,
-        compactPane: useExploreLayoutStore.getState().compactPane, discoverDrawerOpen: false });
+        compactPane: useExploreLayoutStore.getState().compactPane });
       assert.equal(layout.showMap, true, 'returning from the root AR route must expose the map');
     }, () => true, onStarted), 'opened');
     assert.equal(started, 1);
@@ -77,7 +77,7 @@ describe('Take Me There → phone AR', () => {
     let width = 1200;
     const pending = h.entry.open(() => {
       const layout = resolveExploreLayout({ windowWidth: width, hasSelection: true, detailPlacement: 'inline', isHorizon: false,
-        compactPane: useExploreLayoutStore.getState().compactPane, discoverDrawerOpen: false });
+        compactPane: useExploreLayoutStore.getState().compactPane });
       assert.equal(layout.showMap, true);
     }, () => true, () => useExploreLayoutStore.getState().setCompactPane('map'));
     width = 390; camera.resolve(true);

@@ -6,6 +6,7 @@ import { Pressable, Text, View } from '../tw';
 export interface CircuitButtonProps {
   children: ReactNode;
   onPress?: () => void;
+  /** Prefer primary/accent. orange aliases accent; cyan retains the focus color. */
   tone?: 'primary' | 'accent' | 'cyan' | 'orange';
   variant?: 'solid' | 'outline';
   className?: string;
@@ -26,7 +27,7 @@ const tones = {
     outlineText: 'text-accent',
     rail: 'bg-accent',
   },
-  // Compatibility mappings for starter stories/call sites.
+  // Public compatibility tones; internal callers use semantic names.
   cyan: {
     solid: 'border-focus bg-focus',
     outline: 'border-border-strong bg-surface-raised',

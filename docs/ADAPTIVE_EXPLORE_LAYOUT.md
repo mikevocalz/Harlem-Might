@@ -1,4 +1,15 @@
-# Harlem Might adaptive Explore layout
+# Harlem Might adaptive Explore layout (historical proposal)
+
+The SplitView composition and width-class table below are retained as design
+history. The [responsive layout contract](RESPONSIVE_LAYOUT.md) supersedes them:
+wide Explore keeps a 40/60 list/map workspace, with selected-place content in a
+30% overlay inspector or a promoted native panel. The current implementation is
+[`resolveExploreLayout`](../apps/mobile/src/spatial/exploreLayout.ts) with
+keep-mounted [`ExplorePane`](../apps/mobile/src/spatial/ExplorePane.tsx) surfaces.
+Follow the [development guide](DEVELOPMENT.md); do not recreate SplitView or add
+a separate Detail column from this older proposal.
+
+## Original proposal
 
 This document defines the product meaning of SplitView for Harlem Might. It is not a generic "put three things in three columns" recipe.
 

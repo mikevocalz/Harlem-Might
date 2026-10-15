@@ -1,5 +1,5 @@
 // @acme/app — universal business/domain logic and shared screens.
-// Screens live in features/* (Solito pattern); add domains alongside them.
+// Screens and shared domain logic live together in features/* (Solito pattern).
 export { ErrorScreen } from './features/error/screen';
 export { MemberAuthScreen, type MemberAuthIntent } from './features/auth/MemberAuthScreen';
 export { AppQueryProvider, createQueryClient } from './providers/query-provider';
@@ -16,17 +16,19 @@ export type { MapInsets } from './features/explore/ExploreMapPane';
 export { registerNativeMap, type NativeMapModule } from './features/explore/native-map-module.ts';
 export {
   HARLEM_PLACE_PREVIEWS,
-  HARLEM_CATEGORIES,
   getHarlemPlacePreview,
-  filterPlaces,
   placesNear,
-  haversine,
   MAPPED_PLACES,
   UNMAPPED_PLACES,
-  useExplore,
-  type ExplorePlace,
   type HarlemPlacePreview,
-} from './features/explore/explore.store';
+} from './features/explore/place-previews';
+export {
+  HARLEM_CATEGORIES,
+  filterPlaces,
+  haversine,
+  type ExplorePlace,
+} from './features/explore/place-model';
+export { useExplore } from './features/explore/explore.store';
 export { exploreCategories, explorePlaceFromRecord } from './features/explore/catalogue';
 export {
   useMightsAssistant,

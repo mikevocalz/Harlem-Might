@@ -1,0 +1,55 @@
+diff --git a/src/web/LoadSkiaWeb.tsx b/src/web/LoadSkiaWeb.tsx
+--- a/src/web/LoadSkiaWeb.tsx
++++ b/src/web/LoadSkiaWeb.tsx
+@@ -10,13 +10,17 @@
+   var CanvasKit: CanvasKitType;
+ }
+ 
+-let ckSharedPromise: Promise<CanvasKitType>;
++let ckSharedPromise: Promise<CanvasKitType> | undefined;
+ 
+ export const LoadSkiaWeb = async (opts?: CanvasKitInitOptions) => {
+   if (global.CanvasKit !== undefined) {
+     return;
+   }
+-  ckSharedPromise = ckSharedPromise ?? CanvasKitInit(opts);
++  ckSharedPromise = ckSharedPromise ?? CanvasKitInit(opts).catch((error: unknown) => {
++    // A failed WASM request must not poison later initialization attempts.
++    ckSharedPromise = undefined;
++    throw error;
++  });
+   const CanvasKit = await ckSharedPromise;
+   // The CanvasKit API is stored on the global object and used
+   // to create the JsiSKApi in the Skia.web.ts file.
+diff --git a/lib/module/web/LoadSkiaWeb.js b/lib/module/web/LoadSkiaWeb.js
+--- a/lib/module/web/LoadSkiaWeb.js
++++ b/lib/module/web/LoadSkiaWeb.js
+@@ -6,7 +6,11 @@
+   if (global.CanvasKit !== undefined) {
+     return;
+   }
+-  ckSharedPromise = ckSharedPromise !== null && ckSharedPromise !== void 0 ? ckSharedPromise : CanvasKitInit(opts);
++  ckSharedPromise = ckSharedPromise !== null && ckSharedPromise !== void 0 ? ckSharedPromise : CanvasKitInit(opts).catch(error => {
++    // A failed WASM request must not poison later initialization attempts.
++    ckSharedPromise = undefined;
++    throw error;
++  });
+   const CanvasKit = await ckSharedPromise;
+   // The CanvasKit API is stored on the global object and used
+   // to create the JsiSKApi in the Skia.web.ts file.
+diff --git a/lib/commonjs/web/LoadSkiaWeb.js b/lib/commonjs/web/LoadSkiaWeb.js
+--- a/lib/commonjs/web/LoadSkiaWeb.js
++++ b/lib/commonjs/web/LoadSkiaWeb.js
+@@ -14,7 +14,11 @@
+   if (global.CanvasKit !== undefined) {
+     return;
+   }
+-  ckSharedPromise = ckSharedPromise !== null && ckSharedPromise !== void 0 ? ckSharedPromise : (0, _canvaskit.default)(opts);
++  ckSharedPromise = ckSharedPromise !== null && ckSharedPromise !== void 0 ? ckSharedPromise : (0, _canvaskit.default)(opts).catch(error => {
++    // A failed WASM request must not poison later initialization attempts.
++    ckSharedPromise = undefined;
++    throw error;
++  });
+   const CanvasKit = await ckSharedPromise;
+   // The CanvasKit API is stored on the global object and used
+   // to create the JsiSKApi in the Skia.web.ts file.

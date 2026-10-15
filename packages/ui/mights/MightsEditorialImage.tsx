@@ -2,11 +2,10 @@
 
 import {
   editorialImageContentFit,
-  editorialImageStateKey,
   isDisplayableEditorialImage,
-  useEditorialImageStore,
   type EditorialImage,
 } from '@acme/assets';
+import { editorialImageStateKey, useEditorialImageStore } from './editorialImage.store.ts';
 import { Image } from '../Image';
 import { Figure, Figcaption, Link } from '../html';
 import { Text, View } from '../tw';

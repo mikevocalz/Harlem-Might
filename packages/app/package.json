@@ -23,8 +23,6 @@
     "@acme/ui": "workspace:*",
     "@acme/widgets": "workspace:*",
     "@tanstack/react-query": "catalog:",
-    "date-fns": "catalog:",
-    "expo-document-picker": "catalog:",
     "expo-file-system": "catalog:",
     "expo-image-picker": "catalog:",
     "expo-router": "catalog:",
@@ -49,6 +47,8 @@
     "@types/react": "catalog:",
     "eslint": "catalog:",
     "eslint-config-expo": "catalog:",
+    "react": "catalog:",
+    "react-native": "catalog:",
     "typescript": "catalog:"
   },
   "peerDependencies": {

@@ -52,17 +52,17 @@ export const Gateway: Story = {
             </Text>
             <View className="flex-row flex-wrap gap-3">
               <CircuitButton>Enter VR Grid</CircuitButton>
-              <CircuitButton tone="orange" variant="solid">Start Cycle Race</CircuitButton>
+              <CircuitButton tone="accent" variant="solid">Start Cycle Race</CircuitButton>
             </View>
           </View>
 
           <View className="gap-3 md:flex-row">
-            <GridCard className="flex-1" eyebrow="Render" title="Skia / CanvasKit">
+            <GridCard className="flex-1" label="Render" title="Skia / CanvasKit">
               <Text className="text-sm leading-6 text-white/55">
                 The same Grid Scene and Glyph City drawing code runs on Expo and web.
               </Text>
             </GridCard>
-            <GridCard className="flex-1" eyebrow="Motion" title="Viro Game Loop" tone="orange">
+            <GridCard className="flex-1" label="Motion" title="Viro Game Loop" tone="accent">
               <Text className="text-sm leading-6 text-white/55">
                 Fixed-step racing, analog input, collisions, scoring and OpenXR entry.
               </Text>
@@ -102,15 +102,15 @@ export const FutureControls: Story = {
     <View className="min-h-screen gap-6 bg-[#020407] p-8">
       <View className="flex-row flex-wrap gap-3">
         <CircuitButton>Enter Grid</CircuitButton>
-        <CircuitButton tone="orange">Diagnostics</CircuitButton>
+        <CircuitButton tone="accent">Diagnostics</CircuitButton>
         <CircuitButton variant="solid">Confirm</CircuitButton>
-        <CircuitButton tone="orange" variant="solid">Race</CircuitButton>
+        <CircuitButton tone="accent" variant="solid">Race</CircuitButton>
       </View>
       <View className="gap-4 md:flex-row">
-        <GridCard className="flex-1" eyebrow="Node A" title="System online">
+        <GridCard className="flex-1" label="Node A" title="System online">
           <Text className="text-sm text-white/55">Cyan information surface.</Text>
         </GridCard>
-        <GridCard className="flex-1" eyebrow="Node B" title="Race program" tone="orange">
+        <GridCard className="flex-1" label="Node B" title="Race program" tone="accent">
           <Text className="text-sm text-white/55">Orange action surface.</Text>
         </GridCard>
       </View>

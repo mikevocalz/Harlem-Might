@@ -117,7 +117,11 @@ private final class PhoneWalkBridge: NSObject, WCSessionDelegate {
                 } else { replyHandler(["accepted": false]) }
                 return
             }
+            // Delivery may have been queued before pairing or reachability changed.
+            // Recheck the live transport before exposing guidance or a command.
             guard UIApplication.shared.applicationState == .active, self.observing,
+                  session.activationState == .activated, session.isPaired,
+                  session.isWatchAppInstalled, session.isReachable,
                   let json = self.snapshotJSON, let snapshot = CompanionSnapshot.decode(json) else {
                 let rejectedHandoff = message["handoffId"] as? String ?? ""
                 if message["kind"] as? String == "request",

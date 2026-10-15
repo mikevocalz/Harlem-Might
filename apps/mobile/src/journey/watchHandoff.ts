@@ -50,7 +50,7 @@ async function publish() {
   const stop = currentJourneyStop();
   const now = Date.now();
   const ui = useNavigationUi.getState();
-  const progress = stop && session.status === 'active' ? liveProgress(useNavigationStore.getState(), navigationFixStore.getState(), now, ui.online, stop.slug, ui.location) : undefined;
+  const progress = stop && session.status === 'active' ? liveProgress({ state: useNavigationStore.getState(), fixes: navigationFixStore.getState(), now, online: ui.online, stopSlug: stop.slug, location: ui.location }) : undefined;
   publishing = epoch;
   try {
     await nativeCall(async () => {

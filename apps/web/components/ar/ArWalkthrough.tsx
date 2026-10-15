@@ -1,4 +1,4 @@
-import { getHarlemPlacePreview } from '@acme/app/features/explore/explore.store.ts';
+import { getHarlemPlacePreview } from '@acme/app/features/explore/place-previews.ts';
 import { Figcaption, Figure, ListItem, OrderedList, Section, Text } from '@acme/ui/html';
 import { View } from '@acme/ui/tw';
 import {

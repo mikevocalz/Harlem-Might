@@ -28,5 +28,5 @@ export const useMcpVoicePlaybackStore = create<McpVoicePlaybackState>((set) => (
       if (state.activeKey === null) return state;
       return { activeKey: null };
     }),
-  reset: () => ({ activeKey: null, seenKeys: {} }),
+  reset: () => set({ activeKey: null, seenKeys: {} }),
 }));

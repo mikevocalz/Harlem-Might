@@ -2,10 +2,12 @@
 
 ## App boundary
 
-- `apps/web` (Next.js) owns the public/product site: header, footer, homepage,
+- `apps/web` (Next.js) owns the primary public/product site: header, footer, homepage,
   product screens and the Kinetrell/Lenis/GSAP motion system.
-- `apps/web-vite` owns the internal curator/catalogue workspace and
-  Payload-backed operational tooling. It must not become a second product site.
+- `apps/web-vite` hosts the curator/catalogue workspace and Payload-backed
+  operational tooling, while retaining its supported public, Today and profile
+  routes. Content and member-session behavior are shared with the product;
+  presentation consolidation is deferred. See [AUTH_PROFILE.md](AUTH_PROFILE.md).
 - `packages/spatial` owns reusable spatial/WebGPU rendering surfaces shared by
   the product site and immersive routes.
 

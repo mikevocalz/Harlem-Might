@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createEditorialImageStore, editorialImageStateKey } from '@acme/assets';
+import { createEditorialImageStore, editorialImageStateKey } from './editorialImage.store.ts';
 
 test('keeps image-load state isolated by screen and asset', () => {
   const store = createEditorialImageStore();

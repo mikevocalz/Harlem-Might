@@ -184,7 +184,13 @@ Rules: one owner per row in ADR-02's table. Invalid `category` or `place` values
 
 ## Adaptive layout
 
-Width classes and foldable rules come from `docs/ADAPTIVE_EXPLORE_LAYOUT.md`; the native implementation is `apps/mobile/src/navigation/split-view/*` (`fold-layout.ts`, `index.web.tsx`). Web keeps those semantics and does not hardcode desktop pixel widths.
+The bullets below preserve the October 7 proposal. Current Explore composition
+is governed by the [responsive layout contract](../RESPONSIVE_LAYOUT.md) and
+[development guide](../DEVELOPMENT.md), which supersede the older
+[adaptive Explore proposal](../ADAPTIVE_EXPLORE_LAYOUT.md). The native
+implementation is [`resolveExploreLayout`](../../apps/mobile/src/spatial/exploreLayout.ts)
+with keep-mounted [`ExplorePane`](../../apps/mobile/src/spatial/ExplorePane.tsx)
+surfaces. The removed SplitView component is not an implementation target.
 
 - **Desktop (≥ 1024 on web, expanded/large classes).** Master (search, chips, results) | map | inspector. The inspector docks as a column beside the master list, not floating at the far edge (audit §10), so row, marker and detail stay visually bound. Its width is one layout token that also feeds `ExploreMap`'s inset, replacing `rightInset={460}` and `lg:w-[440px]`.
 - **Tablet and foldable.** Follow the size-class table: medium shows map + detail, expanded adds a narrow master rail. Book posture: master + map on the leading segment, detail on the trailing one, hinge as a non-interactive gap; the inspector overlays only the trailing segment. Tabletop: map above the fold, detail and controls below. Segment geometry comes from JS (Viewport Segments API with width-class fallback), never from a pile of breakpoints.

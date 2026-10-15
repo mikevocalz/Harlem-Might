@@ -4,6 +4,7 @@ import { createJourneyController, JourneyConflict, readLocalJourney, type Journe
 import { liveProgress, planFromWalk, storiesForStop, synopsisFromRoute, verifiedDestination } from './model.ts';
 import { applyWalkCommand, type WalkCommand } from '@acme/widgets';
 import type { PlaceRecord, StoryRecord, WalkRecord } from '../../content/records.ts';
+import type { ContentResult, DetailResult } from '../../content/result.ts';
 import type { NavigationState, NavigationFixState } from '../navigation/session/navigationStore.ts';
 import { fixtureRoute, fixtureDestination } from '../navigation/testing/fixtures.ts';
 
@@ -47,6 +48,41 @@ describe('anonymous walk journey', () => {
     assert.equal(await c.dispatch(request(c, 'confirm-stop', 'second')), true);
     assert.equal(c.getSnapshot().session?.status, 'completed');
   });
+  for (const outcome of ['success', 'failure'] as const) {
+    it(`keeps completed walk content cleared after a delayed final-stop ${outcome}`, async () => {
+      const finalPlace: PlaceRecord = { ...place, id: 2, slug: 'sylvias', name: 'Sylvia’s' };
+      const finalStory: StoryRecord = { id: 2, slug: 'final-story', title: 'Final story', body: 'Sourced context.', author: 'Author', places: [{ id: 2, slug: 'sylvias', name: 'Sylvia’s' }], images: [], archive: [], sources: walk.sources, publishedAt: date, updatedAt: date };
+      let finishPlace!: (result: DetailResult<PlaceRecord>) => void;
+      let finishStories!: (result: ContentResult<StoryRecord[]>) => void;
+      const pendingPlace = new Promise<DetailResult<PlaceRecord>>(resolve => { finishPlace = resolve; });
+      const pendingStories = new Promise<ContentResult<StoryRecord[]>>(resolve => { finishStories = resolve; });
+      const content = readers();
+      let storyReads = 0;
+      const c = createJourneyController({ storage: storage(), readers: {
+        ...content,
+        getPlace: slug => slug === finalPlace.slug ? pendingPlace : content.getPlace(),
+        listStories: () => ++storyReads === 1 ? content.listStories() : pendingStories,
+      } });
+      await c.begin(walk.slug); await flush();
+      assert.equal(c.getSnapshot().contentStatus, 'ready');
+      assert.equal(await c.dispatch(request(c, 'confirm-stop', 'first')), true);
+      assert.equal(c.getSnapshot().contentStatus, 'loading');
+      assert.equal(storyReads, 2);
+      assert.equal(await c.dispatch(request(c, 'confirm-stop', 'final')), true);
+      const completed = c.getSnapshot();
+      assert.equal(completed.session?.status, 'completed');
+      assert.deepEqual(completed.session?.completedStopIds, ['1', '2']);
+      assert.equal(completed.place, null);
+      assert.deepEqual(completed.stories, []);
+      assert.equal(completed.contentStatus, 'idle');
+
+      const failure = { status: 'unavailable', reason: 'query-failed', error: new Error('Content unavailable') } as const;
+      finishPlace(outcome === 'success' ? { status: 'ok', data: finalPlace } : failure);
+      finishStories(outcome === 'success' ? { status: 'ok', data: [finalStory] } : failure);
+      await flush();
+      assert.equal(c.getSnapshot(), completed, 'late content must not update the completed journey');
+    });
+  }
   it('pause, resume and stop are explicit; stopped sessions cannot resume', async () => {
     const c = createJourneyController({ readers: readers(), storage: storage() }); await c.begin(walk.slug);
     await c.dispatch(request(c, 'pause')); assert.equal(c.getSnapshot().session?.status, 'paused');
@@ -136,15 +172,15 @@ describe('story publication and sourcing gate', () => {
 describe('truthful live guidance', () => {
   it('suppresses live estimates for stale GPS, wrong way, paused, offline and unmatched input', () => {
     const now = Date.now(); const route = fixtureRoute('apollo-theater--sylvias-restaurant');
-    const state = { session: { phase: 'navigating', origin: { kind: 'device-location' }, destination: fixtureDestination('apollo-theater--sylvias-restaurant', false), mode: 'walking', activeRoute: { route, generation: 1, receivedAtMs: now }, deviation: { kind: 'on-route' }, arrival: { kind: 'en-route', distanceM: 100 }, reroute: { kind: 'idle' } }, positioning: { kind: 'tracking', confidence: 'high', sigmaM: 3, isMovingTooFast: false }, progress: { kind: 'tracking', progress: { routeId: route.id, timestampMs: now } }, routeLoading: { kind: 'idle' }, arTracking: { kind: 'off' } } as NavigationState;
+    const state = { session: { phase: 'navigating', origin: { kind: 'device-location' }, destination: fixtureDestination('apollo-theater--sylvias-restaurant', false), mode: 'walking', activeRoute: { route, generation: 1, receivedAtMs: now }, deviation: { kind: 'on-route' }, arrival: { kind: 'en-route', distanceM: 100 }, reroute: { kind: 'idle' } }, positioning: { kind: 'tracking', confidence: 'high', horizontalRadius68M: 3, isMovingTooFast: false }, progress: { kind: 'tracking', progress: { routeId: route.id, timestampMs: now } }, routeLoading: { kind: 'idle' }, arTracking: { kind: 'off' } } as NavigationState;
     const fixes = { lastFix: { kind: 'accepted', fix: { source: 'device-gps', timestampMs: now } }, match: { kind: 'matched' } } as NavigationFixState;
-    assert.equal(liveProgress(state, fixes, now, true, 'other-place', 'granted'), undefined);
-    assert.equal(liveProgress(state, fixes, now, true, 'sylvias-restaurant', 'denied'), undefined);
-    assert.ok(liveProgress(state, fixes, now, true, state.session.phase === 'navigating' ? state.session.destination.placeId! : '', 'granted'));
-    assert.equal(liveProgress(state, fixes, now + 120000, true, 'sylvias-restaurant', 'granted'), undefined);
-    assert.equal(liveProgress(state, fixes, now, false, 'sylvias-restaurant', 'granted'), undefined);
-    assert.equal(liveProgress({ ...state, session: { ...state.session, phase: 'paused' } } as NavigationState, fixes, now, true, state.session.phase === 'navigating' ? state.session.destination.placeId! : '', 'granted'), undefined);
-    assert.equal(liveProgress({ ...state, session: { ...state.session, deviation: { kind: 'wrong-direction' } } } as NavigationState, fixes, now, true, state.session.phase === 'navigating' ? state.session.destination.placeId! : '', 'granted'), undefined);
-    assert.equal(liveProgress(state, { ...fixes, match: undefined }, now, true, state.session.phase === 'navigating' ? state.session.destination.placeId! : '', 'granted'), undefined);
+    assert.equal(liveProgress({ state, fixes, now, online: true, stopSlug: 'other-place', location: 'granted' }), undefined);
+    assert.equal(liveProgress({ state, fixes, now, online: true, stopSlug: 'sylvias-restaurant', location: 'denied' }), undefined);
+    assert.ok(liveProgress({ state, fixes, now, online: true, stopSlug: state.session.phase === 'navigating' ? state.session.destination.placeId! : '', location: 'granted' }));
+    assert.equal(liveProgress({ state, fixes, now: now + 120000, online: true, stopSlug: 'sylvias-restaurant', location: 'granted' }), undefined);
+    assert.equal(liveProgress({ state, fixes, now, online: false, stopSlug: 'sylvias-restaurant', location: 'granted' }), undefined);
+    assert.equal(liveProgress({ state: { ...state, session: { ...state.session, phase: 'paused' } } as NavigationState, fixes, now, online: true, stopSlug: state.session.phase === 'navigating' ? state.session.destination.placeId! : '', location: 'granted' }), undefined);
+    assert.equal(liveProgress({ state: { ...state, session: { ...state.session, deviation: { kind: 'wrong-direction' } } } as NavigationState, fixes, now, online: true, stopSlug: state.session.phase === 'navigating' ? state.session.destination.placeId! : '', location: 'granted' }), undefined);
+    assert.equal(liveProgress({ state, fixes: { ...fixes, match: undefined }, now, online: true, stopSlug: state.session.phase === 'navigating' ? state.session.destination.placeId! : '', location: 'granted' }), undefined);
   });
 });

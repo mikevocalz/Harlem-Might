@@ -41,8 +41,9 @@ export function motion<P extends object>(
   Component: React.ComponentType<P>,
   displayName = Component.displayName ?? Component.name ?? 'Component',
 ) {
-  const M = createMotionAnimatedComponent(Component as React.ComponentType<{ style?: unknown }>);
-  return css(M as React.ComponentType<object>, `Motion(${displayName})`);
+  // Keep both wrappers generic so required props and Legend's controls survive.
+  const M = createMotionAnimatedComponent(Component);
+  return css(M, `Motion(${displayName})`);
 }
 
 export type MotionViewProps = React.ComponentProps<typeof Motion.View> & CN;

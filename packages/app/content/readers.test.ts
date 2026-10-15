@@ -9,6 +9,8 @@ import type {
   WalkDoc as Walk,
 } from './docs.ts';
 import { addHarlemDays } from './harlem-time.ts';
+import { createRestContentSource } from './rest-source.ts';
+import { explorePlaceFromRecord } from '../features/explore/catalogue.ts';
 import {
   createContentReaders,
   EVENT_RANGE_DAYS,
@@ -16,6 +18,7 @@ import {
   MUSIC_PAGE_SIZE,
   type ContentDocs,
   type ContentQuery,
+  type ContentSelect,
   type ContentSource,
   type ContentWhere,
 } from './readers.ts';
@@ -108,21 +111,32 @@ interface FakeOptions {
   fail?: Error;
 }
 
+const projectDocs = (docs: ContentDocs[keyof ContentDocs][], select?: readonly string[]) =>
+  select ? docs.map(doc => Object.fromEntries(Object.entries(doc).filter(([key]) => key === 'id' || select.includes(key)))) : docs;
+
+const responseSource = (body: unknown) => createRestContentSource({
+  apiUrl: 'https://content-fixture.test/payload-api',
+  fetch: async () => ({ ok: true, status: 200, json: async () => body }),
+});
+
 const fakeSource = (options: FakeOptions = {}) => {
   const queries: ContentQuery<keyof ContentDocs>[] = [];
   const source: ContentSource = {
     isConfigured: () => options.configured ?? true,
-    async find(query) {
+    async find<TSlug extends keyof ContentDocs, const TSelect extends ContentSelect>(query: ContentQuery<TSlug, TSelect>) {
       queries.push(query);
       if (options.fail) throw options.fail;
-      return (options.docs?.[query.collection] ?? []) as ContentDocs[typeof query.collection][];
+      const docs = projectDocs(options.docs?.[query.collection] ?? [], query.select);
+      return responseSource({ docs }).find(query);
     },
-    async findPage(query) {
+    async findPage<TSlug extends keyof ContentDocs, const TSelect extends ContentSelect>(query: ContentQuery<TSlug, TSelect>) {
       queries.push(query);
       if (options.fail) throw options.fail;
-      const all = (options.docs?.[query.collection] ?? []) as ContentDocs[typeof query.collection][];
+      const all = projectDocs(options.docs?.[query.collection] ?? [], query.select);
       const start = ((query.page ?? 1) - 1) * query.limit;
-      return { docs: all.slice(start, start + query.limit), hasNextPage: start + query.limit < all.length, totalDocs: all.length };
+      return responseSource({
+        docs: all.slice(start, start + query.limit), hasNextPage: start + query.limit < all.length, totalDocs: all.length,
+      }).findPage(query);
     },
   };
   return { source, queries };
@@ -148,7 +162,7 @@ const matchesEventWhere = (doc: VersionedEvent, where: ContentWhere): boolean =>
 
 const eventQuerySource = (docs: VersionedEvent[]) => {
   const { source, queries } = fakeSource();
-  source.findPage = async (query) => {
+  source.findPage = async <TSlug extends keyof ContentDocs, const TSelect extends ContentSelect>(query: ContentQuery<TSlug, TSelect>) => {
     assert.equal(query.collection, 'events');
     queries.push(query);
     const matches = docs.filter((doc) => matchesEventWhere(doc, query.where));
@@ -161,11 +175,11 @@ const eventQuerySource = (docs: VersionedEvent[]) => {
       return 0;
     });
     const start = ((query.page ?? 1) - 1) * query.limit;
-    return {
-      docs: matches.slice(start, start + query.limit) as ContentDocs[typeof query.collection][],
+    return responseSource({
+      docs: projectDocs(matches.slice(start, start + query.limit), query.select),
       hasNextPage: start + query.limit < matches.length,
       totalDocs: matches.length,
-    };
+    }).findPage(query);
   };
   return { source, queries };
 };
@@ -239,6 +253,18 @@ test('a generated source slug resolves through the stored legacy slug', async ()
   assert.equal(result.status, 'ok');
   if (result.status === 'ok') assert.equal(result.data.slug, 'the-edge');
   assert.deepEqual(queries[0]?.where, { 'legacySlugs.slug': { equals: 'osm-node-2768136308' } });
+});
+
+test('invalid event dates reject the returned Promise without a synchronous throw', async () => {
+  const { source, queries } = fakeSource();
+  const readers = createContentReaders(source);
+  for (const date of ['2026-02-30', 'not-a-date', '2026-13-01']) {
+    let result: ReturnType<typeof readers.listEventsForDate> | undefined;
+    assert.doesNotThrow(() => { result = readers.listEventsForDate(date); });
+    assert.ok(result instanceof Promise);
+    await assert.rejects(result, RangeError);
+  }
+  assert.equal(queries.length, 0);
 });
 
 test('events for a date use the New York day window, overlap semantics, earliest first', async () => {
@@ -444,6 +470,53 @@ test('event mapping keeps cancelled status, venue fallback and provenance', asyn
   });
 });
 
+for (const options of [
+  { configured: true },
+  { configured: false },
+  { configured: true, fail: new Error('socket hangup') },
+]) {
+  test(`listMusicArtistsPage rejects invalid pages before configuration or queries (${JSON.stringify(options)})`, async () => {
+    const { source, queries } = fakeSource(options);
+    let configurationChecks = 0;
+    const isConfigured = source.isConfigured;
+    source.isConfigured = () => {
+      configurationChecks++;
+      return isConfigured();
+    };
+    const readers = createContentReaders(source);
+    for (const page of [0, -1, 1.5, NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+      await assert.rejects(readers.listMusicArtistsPage(page), {
+        name: 'RangeError',
+        message: 'Expected a positive safe integer music page.',
+      }, `page ${page}`);
+    }
+    assert.equal(configurationChecks, 0);
+    assert.deepEqual(queries, []);
+  });
+}
+
+test('listMusicArtistsPage defaults to page 1 and accepts positive safe integer pages', async () => {
+  const { source, queries } = fakeSource();
+  const readers = createContentReaders(source);
+  for (const page of [undefined, 1, 2, Number.MAX_SAFE_INTEGER]) {
+    assert.deepEqual(await readers.listMusicArtistsPage(page), {
+      status: 'ok', data: { artists: [], hasNextPage: false, totalDocs: 0 },
+    });
+  }
+  assert.deepEqual(queries.map((query) => query.page), [1, 1, 2, Number.MAX_SAFE_INTEGER]);
+});
+
+test('listMusicArtistsPage keeps valid unconfigured reads unavailable without querying', async () => {
+  const { source, queries } = fakeSource({ configured: false });
+  const readers = createContentReaders(source);
+  for (const page of [undefined, 1, 2, Number.MAX_SAFE_INTEGER]) {
+    assert.deepEqual(await readers.listMusicArtistsPage(page), {
+      status: 'unavailable', reason: 'not-configured',
+    });
+  }
+  assert.deepEqual(queries, []);
+});
+
 test('listMusicArtistsPage pages the directory in MUSIC_PAGE_SIZE steps', async () => {
   const docs = Array.from({ length: 50 }, (_, i) => artist(100 + i, `artist-${i}`));
   const { source, queries } = fakeSource({ docs: { 'music-artists': docs } });
@@ -494,7 +567,7 @@ test('listMusicArtists reads every published page, including artists 101 and 102
 test('listMusicArtists never exposes a partial catalogue when a later page fails', async () => {
   const { source } = fakeSource({ docs: { 'music-artists': Array.from({ length: 102 }, (_, i) => artist(i, `artist-${i}`)) } });
   const findPage = source.findPage;
-  source.findPage = async (query) => {
+  source.findPage = async <TSlug extends keyof ContentDocs, const TSelect extends ContentSelect>(query: ContentQuery<TSlug, TSelect>) => {
     if (query.page === 2) throw new Error('Second-page read failed');
     return findPage(query);
   };
@@ -506,6 +579,45 @@ test('listMusicArtists never exposes a partial catalogue when a later page fails
 test('listMusicArtists fails closed when a paginated source repeats records', async () => {
   const { source } = fakeSource({ docs: { 'music-artists': [artist(1, 'one')] } });
   const findPage = source.findPage;
-  source.findPage = async (query) => ({ ...await findPage({ ...query, page: 1 }), hasNextPage: true });
+  source.findPage = async <TSlug extends keyof ContentDocs, const TSelect extends ContentSelect>(query: ContentQuery<TSlug, TSelect>) => ({ ...await findPage({ ...query, page: 1 }), hasNextPage: true });
   assert.equal((await createContentReaders(source).listMusicArtists()).status, 'unavailable');
 });
+
+for (const accuracy of ['pending', 'approx', 'verified'] as const) {
+  test(`${accuracy} place coordinates obey the read-model contract on every public projection`, async () => {
+    const location = [-73.94, 40.81] as const;
+    const doc: Place = {
+      ...place(10, 'stop-a'), location, locationAccuracy: accuracy,
+      locationSource: { url: 'https://example.org/place', verifiedAt: '2026-10-01T00:00:00Z' },
+    };
+    const readers = createContentReaders(fakeSource({ docs: {
+      places: [doc], walks: [{ ...walk, stops: [{ place: doc }] }],
+      stories: [{ ...story, places: [doc] }], events: [{ ...event, place: doc }],
+    } }).source);
+    const expected = accuracy === 'pending' ? undefined : location;
+    for (const result of [await readers.listPlaces(), await readers.listExploreCatalogue(), await readers.listExplorePoints()]) {
+      assert.ok(result.status === 'ok');
+      assert.equal(result.data.length, 1, 'Pending locations retain their catalogue record');
+      assert.deepEqual(result.data[0]!.location, expected);
+      assert.equal(result.data[0]!.locationAccuracy, accuracy);
+      assert.deepEqual(explorePlaceFromRecord(result.data[0]!).lngLat, expected);
+    }
+    for (const result of [await readers.getPlace(doc.slug), await readers.getPlaceByLegacySlug('legacy-stop')]) {
+      assert.ok(result.status === 'ok');
+      assert.deepEqual(result.data.location, expected);
+      assert.equal(result.data.locationAccuracy, accuracy);
+      assert.equal(result.data.locationSourceUrl, doc.locationSource!.url);
+      assert.equal(result.data.locationSourceReadAt, doc.locationSource!.verifiedAt);
+    }
+    const walkResult = await readers.getWalk(walk.slug);
+    const storyResult = await readers.getStory(story.slug);
+    const eventResult = await readers.listEventsForDate('2026-10-07');
+    assert.ok(walkResult.status === 'ok' && storyResult.status === 'ok' && eventResult.status === 'ok');
+    for (const related of [walkResult.data.stops[0]!.place, storyResult.data.places[0], eventResult.data[0]!.place]) {
+      assert.ok(related, 'Pending locations retain their place relationship');
+      assert.equal(related.slug, doc.slug);
+      assert.deepEqual(related.lngLat, expected);
+    }
+    assert.deepEqual(doc.location, location, 'Mapping does not mutate the editorial source');
+  });
+}

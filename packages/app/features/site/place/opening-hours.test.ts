@@ -38,3 +38,63 @@ test('harlemClock reads New York time', () => {
   // 2026-10-09T16:30Z is Friday 12:30 PM EDT.
   assert.deepEqual(harlemClock(new Date('2026-10-09T16:30:00Z')), { day: 4, minute: 12 * 60 + 30 });
 });
+
+test('rejects malformed day ranges instead of silently ignoring extra endpoints', () => {
+  for (const value of [
+    'Mo-Fr-Su 09:00-17:00', 'Mo-Fr- 09:00-17:00', 'Mo-Fr-Tu-We 09:00-17:00',
+    'Mo-Fr,Sa-Su-Mo 09:00-17:00', 'Mo-Fr 09:00-17:00; Sa-Su-Mo off',
+  ]) assert.equal(parseOpeningHours(value), null, value);
+});
+
+test('rejects malformed time ranges instead of publishing a truncated schedule', () => {
+  for (const value of [
+    'Mo 09:00-17:00-18:00', 'Mo 09:00-17:00-', '09:00-17:00-18:00',
+    'Mo 09:00-12:00,13:00-17:00-18:00', 'Mo 09:00-17:00; Tu 10:00-12:00-14:00',
+  ]) assert.equal(parseOpeningHours(value), null, value);
+});
+
+test('retains valid wrapping days and complete split/overnight endpoints', () => {
+  const week = parseOpeningHours('Fr-Mo 18:00-02:00; We 09:00-12:00,13:00-17:00');
+  assert.ok(week);
+  for (const day of [4, 5, 6, 0]) assert.deepEqual(week[day], [{ start: 1080, end: 1560 }]);
+  assert.deepEqual(week[1], []);
+  assert.deepEqual(week[2], [{ start: 540, end: 720 }, { start: 780, end: 1020 }]);
+});
+
+test('extended opening times do not report open before their next-day start', () => {
+  for (const input of ['Mo 24:30-02:00', 'Mo 24:30-24:45']) {
+    const week = parseOpeningHours(input);
+    assert.ok(week);
+    assert.equal(isOpenAt(week, 0, 23 * 60 + 59), false);
+    assert.equal(isOpenAt(week, 1, 15), false, input);
+    assert.equal(isOpenAt(week, 1, 29), false, input);
+    assert.equal(isOpenAt(week, 1, 30), true, input);
+    const end = input.endsWith('02:00') ? 120 : 45;
+    assert.equal(isOpenAt(week, 1, end - 1), true, input);
+    assert.equal(isOpenAt(week, 1, end), false, input);
+  }
+});
+
+test('a full-day extended-start range retains its final segment two days later', () => {
+  const week = parseOpeningHours('Su 24:30-24:30');
+  assert.ok(week);
+  assert.equal(isOpenAt(week, 0, 29), false);
+  assert.equal(isOpenAt(week, 0, 30), true);
+  assert.equal(isOpenAt(week, 0, 1439), true);
+  assert.equal(isOpenAt(week, 1, 0), true);
+  assert.equal(isOpenAt(week, 1, 29), true);
+  assert.equal(isOpenAt(week, 1, 30), false);
+});
+
+test('ordinary and midnight-start ranges keep inclusive starts and exclusive ends across a week boundary', () => {
+  for (const [input, startDay, startMinute, endDay, endMinute] of [
+    ['Su 18:00-02:00', 6, 1080, 0, 120],
+    ['Su 24:00-02:00', 0, 0, 0, 120],
+    ['Su 23:00-24:00', 6, 1380, 0, 0],
+  ] as const) {
+    const week = parseOpeningHours(input);
+    assert.ok(week);
+    assert.equal(isOpenAt(week, startDay, startMinute), true, input);
+    assert.equal(isOpenAt(week, endDay, endMinute), false, input);
+  }
+});

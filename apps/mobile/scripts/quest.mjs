@@ -98,9 +98,12 @@ if (!isRequiredNode(process.versions.node)) {
 }
 {
   const result = capture(process.execPath, [join(appDir, 'scripts/assert-viro-fork.mjs')], { cwd: appDir });
+  // Keep the exact native revisions and any explicit local-development warning
+  // visible even when the preflight succeeds.
+  if (result.stdout.trim()) console.log(result.stdout.trim());
+  if (result.stderr.trim()) console.error(result.stderr.trim());
   if (result.status !== 0) {
-    console.error(result.stderr.trim() || result.stdout.trim());
-    fail('Viro fork / Nitro Rive check', 'apply the change printed above, run `pnpm install`, then rerun');
+    fail('Native revisions / Viro fork / Nitro Rive check', 'apply the change printed above, run `pnpm install`, then rerun');
   }
   const nitro = result.stdout.includes('Nitro Rive GPU bridge verified')
     ? 'Nitro Rive bridge present'

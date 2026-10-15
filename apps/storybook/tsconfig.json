@@ -1,9 +1,15 @@
 {
   "extends": "@acme/config/typescript/react-library.json",
-  "compilerOptions": {},
+  "compilerOptions": {
+    "types": [
+      "node"
+    ]
+  },
   "include": [
     "**/*.ts",
     "**/*.tsx",
+    ".storybook/**/*.ts",
+    ".storybook/**/*.tsx",
     "css.d.ts"
   ],
   "exclude": [

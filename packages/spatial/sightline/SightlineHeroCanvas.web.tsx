@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { GpuCanvas } from '@acme/ui/primitives';
 import { SightlineHeroRenderer } from './SightlineHeroRenderer';
+import { startCanvasSession } from '../canvasSession';
 
 export interface SightlineHeroCanvasProps {
   /** Must be referentially stable: it is an effect dependency, and a new function rebuilds the GPU device. */
@@ -26,6 +27,7 @@ export function SightlineHeroCanvas({
   onUnavailable,
 }: SightlineHeroCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const previousClose = useRef<Promise<void> | undefined>(undefined);
   // Callbacks live in a ref so a host re-render never rebuilds the device.
   const callbacks = useRef({ onReady, onUnavailable });
   useEffect(() => {
@@ -41,40 +43,32 @@ export function SightlineHeroCanvas({
       return;
     }
 
-    let disposed = false;
-    let renderer: SightlineHeroRenderer | null = null;
-    let resizeObserver: ResizeObserver | null = null;
-    let device: GPUDevice | null = null;
+    const session = startCanvasSession(previousClose.current, async (owner) => {
+      let renderer: SightlineHeroRenderer | null = null;
+      const draw = (now: number) => {
+        if (!owner.active) return;
+        renderer?.setProgress(getProgress?.() ?? 0);
+        renderer?.render(now, reducedMotion);
+      };
 
-    const fail = (reason: string) => {
-      if (!disposed) callbacks.current.onUnavailable?.(reason);
-    };
-
-    const draw = (now: number) => {
-      renderer?.setProgress(getProgress?.() ?? 0);
-      renderer?.render(now, reducedMotion);
-    };
-
-    void (async () => {
       const adapter = await gpu.requestAdapter();
-      if (disposed) return;
-      if (!adapter) return fail('no-adapter');
+      if (!owner.active) return;
+      if (!adapter) return owner.fail('no-adapter');
 
-      device = await adapter.requestDevice();
-      if (disposed) {
-        device.destroy();
-        return;
-      }
+      const device = await adapter.requestDevice();
+      owner.own(() => device.destroy());
+      if (!owner.active) return;
       // destroy() on unmount also resolves `lost`; only an unexpected loss is a failure.
       void device.lost.then((info) => {
-        if (info.reason !== 'destroyed') fail('device-lost');
+        if (info.reason !== 'destroyed') owner.fail('device-lost');
       });
 
       // Cast: apps whose lib config lacks the WebGPU getContext overload resolve this to RenderingContext.
       const context = canvas.getContext('webgpu') as GPUCanvasContext | null;
-      if (!context) return fail('no-context');
+      if (!context) return owner.fail('no-context');
 
       const resize = () => {
+        if (!owner.active) return;
         const dpr = Math.min(2, globalThis.devicePixelRatio || 1);
         const rect = canvas.getBoundingClientRect();
         const width = Math.max(1, Math.round(rect.width * dpr));
@@ -93,38 +87,30 @@ export function SightlineHeroCanvas({
         alphaMode: 'premultiplied',
       });
 
-      try {
-        renderer = new SightlineHeroRenderer({
-          context,
-          device,
-          width: canvas.width,
-          height: canvas.height,
-        });
-        await renderer.init();
-      } catch {
-        return fail('init-failed');
-      }
+      renderer = new SightlineHeroRenderer({
+        context,
+        device,
+        width: canvas.width,
+        height: canvas.height,
+      });
+      const ownedRenderer = renderer;
+      owner.own(() => ownedRenderer.dispose());
+      await renderer.init();
+      if (!owner.active) return;
 
-      if (disposed) return;
-
-      resizeObserver = new ResizeObserver(resize);
+      const resizeObserver = new ResizeObserver(resize);
+      owner.own(() => resizeObserver.disconnect());
       resizeObserver.observe(canvas);
 
       if (reducedMotion) {
         draw(performance.now());
       } else {
-        renderer.renderer.setAnimationLoop(draw);
+        await renderer.renderer.setAnimationLoop(draw);
       }
-      callbacks.current.onReady?.();
-    })().catch(() => fail('init-failed'));
-
-    return () => {
-      disposed = true;
-      resizeObserver?.disconnect();
-      renderer?.renderer.setAnimationLoop(null);
-      renderer?.dispose();
-      device?.destroy();
-    };
+      if (owner.active) callbacks.current.onReady?.();
+    }, (reason) => callbacks.current.onUnavailable?.(reason));
+    previousClose.current = session.closed;
+    return session.close;
   }, [getProgress, reducedMotion]);
 
   return (

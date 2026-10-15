@@ -35,7 +35,7 @@ export {
   type HistoryState,
   type Snapshot,
 } from './history.ts';
-export { attach, fileNameFrom, IDLE_PROGRESS, type Attachment, type AttachProgress } from './attachment.ts';
+export { attach, fileNameFrom, IDLE_PROGRESS, type Attachment, type AttachmentSource, type AttachProgress } from './attachment.ts';
 export { promptUrl } from './prompt-url';
 export { AttachSheet } from './AttachSheet.tsx';
 export { useAttachStore } from './attach.store.ts';

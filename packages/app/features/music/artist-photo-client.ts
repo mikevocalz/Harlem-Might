@@ -44,7 +44,8 @@ export async function fetchArtistPhotos(
   });
   if (!response.ok) throw new Error(`Artist photo service answered ${response.status}`);
   const body = (await response.json()) as { photos?: Record<string, unknown> };
-  const photos: Record<string, ArtistPhotoResult | null> = {};
+  // Define own data properties before assignment, including names such as __proto__.
+  const photos: Record<string, ArtistPhotoResult | null> = Object.fromEntries(names.map((name) => [name, null]));
   for (const name of names) {
     const value = body.photos?.[name];
     photos[name] = isArtistPhotoResult(value) ? value : null;

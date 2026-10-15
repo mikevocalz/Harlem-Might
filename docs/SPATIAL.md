@@ -34,12 +34,31 @@ Storybook contains **Spatial / Grid World** stories for:
 - the complete Grid gateway composition;
 - Grid Scene + Glyph City;
 - Grid Floor;
-- cyan/orange CircuitButton variants;
+- primary/accent CircuitButton variants;
 - futuristic GridCard variants.
+
+### Semantic control props and compatibility
+
+Use `GridCard label="…"` for contextual labels and `tone="primary"` (the default)
+or `tone="accent"` for both controls. `GridCard` also supports `verdigris`.
+The shared gateway, tabletop panel and stories use these semantic names; the
+existing Tailwind/Uniwind styles, geometry and platform wrappers are unchanged.
+
+Public compatibility remains supported:
+
+- `GridCard eyebrow` is a fallback when `label` is absent. An explicit `label`
+  takes precedence; `label=""` suppresses the label. Text casing is preserved.
+- `tone="orange"` renders exactly like `tone="accent"` on both controls.
+- `tone="cyan"` keeps its existing focus-color styling. It is not an alias for
+  the default `primary` tone, so it must not be mechanically replaced.
 
 ## XR entryway and light-cycle race
 
-The `/spatial` route and Expo Spatial drawer screen act as a gateway rather than dropping directly into a game.
+The exported [`SpatialScreen`](../packages/spatial/SpatialScreen.tsx) provides a
+Grid gateway demonstration rather than dropping directly into a game. It is not
+mounted by the current Next or Expo product routes; see [Routes](#routes) for
+the active entry points. The shared gateway and race remain available as package
+exports, alongside the Storybook Grid World demonstrations.
 
 The Viro world uses an early-1980s computer-world visual grammar without shipping film logos, characters, audio, models or copied production assets: black void, cyan vector floor grid, warm orange geometry, light walls/trails, sparse skyline outlines and minimal HUD typography.
 
@@ -66,6 +85,15 @@ The old Viro AR Driving Car sample informed the input/simulation direction: acce
 
 The headset scene remains usable without the 2D joystick because the steering pads live inside the world.
 
+
+## LightCycle code ownership
+
+The tabletop implementation is grouped under `packages/spatial/lightcycle`: shared
+state/input/driver modules in `runtime/`, native co-location and replication in
+`viro/`, session/scoreboard UI in `ui/`, and solo experiences beside the renderer
+in `three/`. The deterministic core and existing package entry points remain
+unchanged. See [LightCycle ownership](../packages/spatial/lightcycle/README.md)
+for the layer boundaries and test command.
 
 ## Futuristic tabletop placement (implemented)
 
@@ -133,26 +161,71 @@ App config, look-and-pinch input, the testing ladder and open questions for the 
 - Pico uses the shared Viro/OpenXR scene and inline window fallback.
 - Web uses the Viro browser renderer.
 
-## Use the mikevocalz Viro fork
+## Use the pinned native siblings
 
-The Quest/PICO native development target is `mikevocalz/viro#decax9-three-panel`. Because this starter repository is public while that fork is private, the checked-in catalog keeps public `@reactvision/react-viro@3.0.2` only as an unauthenticated **web/Storybook/CI resolution fallback**. It is not an accepted native SDK-58 runtime.
+Native/headset development uses the existing `link:` dependencies on sibling Git
+checkouts of `mikevocalz/viro`, `mikevocalz/viro-external` and
+`mikevocalz/nitro-mapbox-ar`. Place them beside Harlem Might, under the directory
+names `viro`, `viro-external` and `nitro-mapbox-ar`. Private repository access is
+required for Viro and Viro External.
 
-Every native command now runs `apps/mobile/scripts/assert-viro-fork.mjs` first. If public Viro is installed, `dev`, `android`, `ios`, and `prebuild` fail before Expo starts. A native/headset build therefore cannot accidentally ship against the unsupported public 3.0.1 peer lane.
+[tooling/native-revisions.json](../tooling/native-revisions.json) is the source of
+truth for their tested, full commit SHAs. CI reads this file, validates that every
+pin is an immutable 40-character SHA, checks out those commits, and verifies the
+clean sibling checkouts before installing dependencies. Do not substitute branch
+names or change a pin without validating the corresponding native source change.
 
-For native/headset development, enable the private fork so the Expo 58/RN 0.88 peer lane, PICO routing, OpenXR bridge, spatial windows and native Viro/Rive surface are present:
-
-```yaml
-overrides:
-  "@reactvision/react-viro": "github:mikevocalz/viro#decax9-three-panel"
-```
-
-Then run:
+Prepare clean checkouts or separate Git worktrees at those commits, preserving
+any local work elsewhere. The preflight only inspects repositories; it never
+fetches, switches, resets, cleans or rewrites them. From Harlem Might's root:
 
 ```bash
+node tooling/native-revisions.mjs
 pnpm install
 pnpm --filter mobile viro:assert-fork
-pnpm spatial:prepare-web
-pnpm skia:prepare-web
+```
+
+The standalone check works before installation with only Node and Git. It prints
+the exact resolved SHA and path for each sibling, rejects missing/non-Git
+checkouts and wrong revisions, and reports staged, modified, deleted and
+untracked source changes. Git-ignored dependency/build outputs are not considered
+source changes. Git worktrees and detached HEAD checkouts are supported.
+
+Every native entrypoint (`dev`, `android`, `ios`, `prebuild`, `android:quest`, and
+`quest`) runs `apps/mobile/scripts/assert-viro-fork.mjs` first. In addition to the
+revision check, it verifies that installed native links point at those siblings
+using the mobile application's nearest-first package lookup paths, including
+workspace-root hoisted packages. A nearer stale link still fails, even when a
+correct hoisted package exists. The preflight retains the existing Viro peer-lane
+and capability gates: PICO routing,
+Meta Horizon/OpenXR, Meta VR Glasses targeting, spatial layout and Viro/Rive
+surfaces. Installing the public Viro catalog fallback does not satisfy this
+native contract. Missing/stale links require `pnpm install` after preparing the
+correct siblings.
+
+### Intentional local sibling development
+
+To test changes in a sibling, opt in explicitly for that command:
+
+```bash
+HARLEM_NATIVE_LOCAL_DEV=1 pnpm --filter mobile quest
+# Or another existing native entrypoint, such as:
+HARLEM_NATIVE_LOCAL_DEV=1 pnpm --filter mobile ios
+```
+
+This allows a different HEAD or dirty source outside CI, prints each deviation,
+and labels the run as local development rather than reproducible pinned-native
+validation. Missing/invalid repositories, incorrect installed links and the
+existing Viro capability gates still fail. CI rejects this opt-in, including on
+GitHub Actions. Unset it to return to strict checks; do not set it globally for
+release validation. Neither mode claims that a physical native/device build has
+passed.
+
+The builtin-only regression suite creates temporary Git repositories; it needs
+no private checkout or installed packages:
+
+```bash
+node --test apps/mobile/scripts/native-revisions.test.mjs
 ```
 
 ## Checked-in Android XR project
@@ -169,10 +242,31 @@ The Expo app declares `@metavr/layout-compat` and `@metavr/layout-window-compat`
 
 ## Routes
 
-- Next: `/spatial`
-- Expo: drawer → **Spatial**
+- **Next:** `/spatial` permanently redirects to `/ar` in
+  [the Next configuration](../apps/web/next.config.ts). `/ar` is the public concept
+  page; it does not mount `SpatialScreen` or request the camera.
+- **Expo:** tabs and adaptive navigation replace the old Spatial drawer entry.
+  **More → AR concept** opens the concept screen. Walking AR is embedded in Explore's map
+  pane through [ExploreNavigationAr](../apps/mobile/src/ar/ExploreNavigationAr.tsx).
+  **Walk in AR** is offered for eligible iOS/Android walking routes from device
+  location; headset builds are excluded, and entry checks native AR support and
+  camera permission.
+- **Expo headset worlds:** Place Detail's
+  [ViewInArButton](../apps/mobile/src/ar/ViewInArButton.tsx) opens
+  [`/explore-ar`](../apps/mobile/app/explore-ar.tsx) for **View on a table**
+  (passthrough) or **Stand on the street** (full-scale VR). These controls require
+  a Horizon build, the Meta Horizon runtime and place coordinates. Legacy walking
+  AR visits to `/explore-ar` hand back to Explore's embedded navigation host.
+- **Grid demonstrations:** Storybook → **Spatial / Grid World** shows the
+  [Grid gateway composition and UI primitives](../packages/ui/GridWorld.stories.tsx).
+  `SpatialScreen`, `SpatialViroExperience` and `GridRaceScene` remain
+  [exported by `@acme/spatial`](../packages/spatial/index.ts) for demo hosts;
+  the current Next and Expo routes do not mount `SpatialScreen`.
 
-Both mount the same `SpatialScreen`.
+The concept pages' status does not describe the native Explore implementations.
+These entries document checked-in routing, not device validation; the runtime,
+permission and platform capability qualifications elsewhere in this guide still
+apply.
 
 ## Design and interaction references
 

@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload';
+import { curatorOnly, publishedPageOrCurator } from '../access/editorial.ts';
 
 // Public content for the site (apps/web-vite reads it over REST at
 // /payload-api). Anonymous read is intentional — this is published material,
@@ -6,7 +7,7 @@ import type { CollectionConfig } from 'payload';
 export const Pages: CollectionConfig = {
   slug: 'pages',
   admin: { useAsTitle: 'title' },
-  access: { read: () => true },
+  access: { read: publishedPageOrCurator, create: curatorOnly, update: curatorOnly, delete: curatorOnly },
   fields: [
     { name: 'title', type: 'text', required: true },
     { name: 'slug', type: 'text', required: true, unique: true, index: true },

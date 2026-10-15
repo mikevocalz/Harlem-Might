@@ -5,6 +5,7 @@ import { PixelRatio } from 'react-native';
 import type { CanvasRef } from 'react-native-webgpu';
 import { Canvas, useDevice } from 'react-native-webgpu';
 import { SightlineHeroRenderer } from './SightlineHeroRenderer';
+import { startCanvasSession } from '../canvasSession';
 
 export interface SightlineHeroCanvasProps {
   getProgress?: () => number;
@@ -19,17 +20,19 @@ export function SightlineHeroCanvas({
   style,
 }: SightlineHeroCanvasProps) {
   const canvasRef = useRef<CanvasRef>(null);
-  const rendererRef = useRef<SightlineHeroRenderer | null>(null);
+  const previousClose = useRef<Promise<void> | undefined>(undefined);
   const { device } = useDevice();
 
   useEffect(() => {
     if (!device || !canvasRef.current) return;
 
-    let cancelled = false;
-
-    const start = async () => {
+    const session = startCanvasSession(previousClose.current, async (owner) => {
       const context = canvasRef.current?.getContext('webgpu');
-      if (!context || cancelled) return;
+      if (!context) return owner.fail('no-context');
+      // useDevice owns this device; only the renderer belongs to this effect.
+      void device.lost.then((info) => {
+        if (info.reason !== 'destroyed') owner.fail('device-lost');
+      });
 
       const canvas = context.canvas as unknown as {
         width: number;
@@ -53,27 +56,19 @@ export function SightlineHeroCanvas({
         width: canvas.width,
         height: canvas.height,
       });
-      rendererRef.current = renderer;
+      owner.own(() => renderer.dispose());
       await renderer.init();
 
-      if (cancelled) {
-        renderer.dispose();
-        return;
-      }
+      if (!owner.active) return;
 
-      renderer.renderer.setAnimationLoop((now) => {
+      await renderer.renderer.setAnimationLoop((now) => {
+        if (!owner.active) return;
         renderer.setProgress(getProgress?.() ?? 0);
         renderer.render(now, reducedMotion);
       });
-    };
-
-    void start();
-
-    return () => {
-      cancelled = true;
-      rendererRef.current?.dispose();
-      rendererRef.current = null;
-    };
+    });
+    previousClose.current = session.closed;
+    return session.close;
   }, [device, getProgress, reducedMotion]);
 
   return <Canvas ref={canvasRef} opaque={false} style={[{ flex: 1 }, style]} />;

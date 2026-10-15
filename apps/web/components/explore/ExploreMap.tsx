@@ -16,11 +16,6 @@ import { useMapStatus } from './map-status';
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
-// Start the mapbox-gl chunk fetch at module evaluation, not inside the mount
-// effect: the ~800 kB library is the first thing on the map's critical path,
-// so it downloads while React hydrates instead of after it.
-const mapboxglPromise = typeof window === 'undefined' ? null : import('mapbox-gl');
-
 export interface MapPlace {
   id: string;
   name: string;
@@ -62,6 +57,10 @@ const DOTS_LAYER = 'hm-place-dots';
 const LABELS_LAYER = 'hm-place-labels';
 const PLACES_SOURCE = 'hm-places';
 type MapView = 'map' | 'tilt' | 'buildings';
+const cameraForView = (view: MapView) => ({
+  pitch: view === 'map' ? 0 : view === 'tilt' ? 48 : BUILDING_PITCH,
+  bearing: view === 'map' ? 0 : view === 'tilt' ? -12 : BUILDING_BEARING,
+});
 const MAP_VIEWS: readonly { id: MapView; label: string }[] = [
   { id: 'map', label: '2D' },
   { id: 'tilt', label: 'Tilt' },
@@ -269,7 +268,8 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
   const containerRef = useRef<HTMLElement | null>(null);
   const mapRef = useRef<MapboxMap | null>(null);
   const mapboxglRef = useRef<typeof import('mapbox-gl').default | null>(null);
-  const markersRef = useRef(new Map<string, { marker: Marker; el: HTMLButtonElement }>());
+  const markersRef = useRef(new Map<string, { marker: Marker; el: HTMLButtonElement; label: HTMLSpanElement }>());
+  const placesRef = useRef(places);
   const onSelectRef = useRef(onSelect);
   const selectedRef = useRef(selectedId);
   const visibleRef = useRef(visibleIds);
@@ -282,13 +282,15 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
   const [mapView, setMapView] = useState<MapView>('buildings');
   const mapViewRef = useRef(mapView);
   const guiding = useIsGuiding();
+  const selectedPlace = places.find((place) => place.id === selectedId);
 
   useEffect(() => {
+    placesRef.current = places;
     onSelectRef.current = onSelect;
     selectedRef.current = selectedId;
     visibleRef.current = visibleIds;
     mapViewRef.current = mapView;
-  }, [onSelect, selectedId, visibleIds, mapView]);
+  }, [places, onSelect, selectedId, visibleIds, mapView]);
 
   // The selected marker stays visible even when the filter excludes it: the
   // open sheet points at it. The camera is never refitted to the filtered set;
@@ -344,14 +346,40 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
     const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
       .setLngLat([place.lngLat[0], place.lngLat[1]])
       .addTo(map);
-    markersRef.current.set(place.id, { marker, el });
+    markersRef.current.set(place.id, { marker, el, label });
     el.hidden = !visibleRef.current.includes(place.id) && place.id !== selectedRef.current;
+  };
+
+  // A server refresh can replace catalogue records without remounting this
+  // pane. Reconcile the source and owned buttons without rebuilding the map
+  // or interrupting its navigation subscriptions and camera.
+  const applyPlaces = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    const current = placesRef.current;
+    (map.getSource(PLACES_SOURCE) as GeoJSONSource | undefined)?.setData({
+      type: 'FeatureCollection', features: current.map(placeFeature),
+    });
+    const byId = new Map(current.map((place) => [place.id, place]));
+    markersRef.current.forEach(({ marker, el, label }, id) => {
+      const place = byId.get(id);
+      if (!place) {
+        marker.remove();
+        markersRef.current.delete(id);
+        return;
+      }
+      marker.setLngLat([place.lngLat[0], place.lngLat[1]]);
+      el.setAttribute('aria-label', place.name);
+      label.textContent = place.name;
+    });
+    current.forEach((place) => { if (place.featured) addMarker(place); });
+    applyVisibility();
   };
 
   // Reads refs only, so it is safe from the async map init and from effects.
   const applySelection = (animate: boolean) => {
     const id = selectedRef.current;
-    const place = places.find((p) => p.id === id);
+    const place = placesRef.current.find((p) => p.id === id);
     // The selection always gets a button marker, so the label, the pressed
     // state and the focus-return target exist even for a dot-only place.
     if (place) addMarker(place);
@@ -389,12 +417,19 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
     let observer: ResizeObserver | null = null;
     const markers = markersRef.current;
 
-    void mapboxglPromise?.then(({ default: mapboxgl }) => {
+    // Load only for a usable mount. The module loader reuses successful loads;
+    // retaining our own promise would also retain a failed chunk request.
+    void import('mapbox-gl').then(({ default: mapboxgl }) => {
       if (cancelled) return;
       mapboxgl.accessToken = TOKEN;
       mapboxglRef.current = mapboxgl;
-      const bounds = new mapboxgl.LngLatBounds();
-      places.forEach((p) => bounds.extend([p.lngLat[0], p.lngLat[1]]));
+      const catalogueBounds = () => {
+        const bounds = new mapboxgl.LngLatBounds();
+        placesRef.current.forEach((p) => bounds.extend([p.lngLat[0], p.lngLat[1]]));
+        return bounds;
+      };
+      const bounds = catalogueBounds();
+      const initialView = mapViewRef.current;
       let map: MapboxMap;
       performance.mark('hm:map-create');
       try {
@@ -409,15 +444,17 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
             basemap: {
               theme: 'faded',
               lightPreset: 'day',
-              show3dObjects: true,
+              show3dObjects: initialView !== 'map',
               showPointOfInterestLabels: false,
               showTransitLabels: false,
             },
           },
-          bounds,
-          fitBoundsOptions: { padding: FIT_PADDING, maxZoom: FIT_MAX_ZOOM },
-          pitch: BUILDING_PITCH,
-          bearing: BUILDING_BEARING,
+          // Empty bounds are invalid to Mapbox. A refresh may clear the
+          // catalogue while the import is pending; later records reconcile.
+          ...(placesRef.current.length > 0
+            ? { bounds, fitBoundsOptions: { ...cameraForView(initialView), padding: FIT_PADDING, maxZoom: FIT_MAX_ZOOM } }
+            : {}),
+          ...cameraForView(initialView),
           maxPitch: 72,
           attributionControl: true,
           cooperativeGestures: false,
@@ -427,10 +464,20 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
         setStatus('unavailable');
         return;
       }
+      let ready = false;
+      let webglFailed = false;
       map.on('error', (e) => {
-        if (/webgl/i.test(e.error?.message ?? '')) setStatus('unavailable');
+        if (cancelled) return;
+        webglFailed ||= /webgl/i.test(e.error?.message ?? '');
+        // Style/token/network failures need a usable list fallback before
+        // readiness too. Keep the map alive: a transient resource failure
+        // may recover and reach idle. Later tile errors do not hide a map
+        // that is already usable; WebGL failure remains terminal here.
+        if (!ready || webglFailed) setStatus('unavailable');
       });
       map.once('idle', () => {
+        if (cancelled || webglFailed) return;
+        ready = true;
         performance.mark('hm:map-idle');
         performance.measure('hm:map-ready', 'hm:map-create', 'hm:map-idle');
         setStatus('ready');
@@ -438,18 +485,19 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
       // Top-left: the sheet and inspector own the bottom and right edges.
       map.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-left');
       mapRef.current = map;
-      places.forEach((p) => {
-        if (p.featured) addMarker(p);
-      });
-      applyVisibility();
+      applyPlaces();
 
       map.once('load', () => {
+        if (cancelled) return;
+        // Standard ignores config changes before its basemap fragment exists.
+        // Replay a view choice made between construction and style readiness.
+        map.setConfigProperty('basemap', 'show3dObjects', mapViewRef.current !== 'map');
         // The whole catalogue as canvas layers — circles plus names that fade
         // in at street zoom. Standard's top slot keeps them above basemap
         // labels and 3D objects; the route lines attach after them.
         map.addSource(PLACES_SOURCE, {
           type: 'geojson',
-          data: { type: 'FeatureCollection', features: places.map(placeFeature) },
+          data: { type: 'FeatureCollection', features: placesRef.current.map(placeFeature) },
         });
         map.addLayer({
           id: DOTS_LAYER,
@@ -511,16 +559,22 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
       // fit the bounds the first time it gets one.
       let fitted = container.clientWidth > 0;
       observer = new ResizeObserver(() => {
+        if (cancelled) return;
         map.resize();
         if (!fitted && container.clientWidth > 0) {
           fitted = true;
-          map.fitBounds(bounds, { padding: FIT_PADDING, maxZoom: FIT_MAX_ZOOM, duration: 0 });
+          if (placesRef.current.length > 0)
+            map.fitBounds(catalogueBounds(), { ...cameraForView(mapViewRef.current), padding: FIT_PADDING, maxZoom: FIT_MAX_ZOOM, duration: 0 });
           applySelection(false);
           if (!selectedRef.current && mapViewRef.current === 'buildings' && map.getZoom() < 16)
             map.jumpTo({ zoom: 16, pitch: BUILDING_PITCH, bearing: BUILDING_BEARING });
         }
       });
       observer.observe(container);
+    }).catch(() => {
+      // A failed import must stay local to this mount, including after cleanup
+      // or a newer mount has begun loading into the shared map status store.
+      if (!cancelled) setStatus('unavailable');
     });
 
     return () => {
@@ -534,9 +588,15 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
       mapRef.current = null;
       mapboxglRef.current = null;
     };
-    // places is static catalogue data; the map is built once per mount.
+    // The map is built once per mount; callbacks read the latest catalogue refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    applyPlaces();
+    // Reconcile data in place; selection framing runs in the effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [places]);
 
   useEffect(() => {
     applyVisibility();
@@ -545,9 +605,10 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
 
   useEffect(() => {
     applySelection(true);
-    // applySelection reads refs; the selection and the sheet's size are the triggers.
+    // Reframe only when selection, its coordinate, or sheet geometry changes.
+    // A catalogue refresh with the same point must not interrupt the camera.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, layoutKey]);
+  }, [selectedId, selectedPlace?.lngLat[0], selectedPlace?.lngLat[1], layoutKey]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -556,8 +617,7 @@ export function ExploreMap({ places, visibleIds, selectedId, onSelect, occluderR
     // depth cue and Buildings pushes the camera far enough to read facades.
     map.setConfigProperty('basemap', 'show3dObjects', mapView !== 'map');
     const target = {
-      pitch: mapView === 'map' ? 0 : mapView === 'tilt' ? 48 : BUILDING_PITCH,
-      bearing: mapView === 'map' ? 0 : mapView === 'tilt' ? -12 : BUILDING_BEARING,
+      ...cameraForView(mapView),
       zoom: mapView === 'buildings' ? Math.max(map.getZoom(), 16) : map.getZoom(),
     };
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) map.jumpTo(target);

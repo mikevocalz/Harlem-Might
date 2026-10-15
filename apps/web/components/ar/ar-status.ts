@@ -22,7 +22,7 @@ export const SPATIAL_STATUS: readonly SpatialStatus[] = [
     status: 'concept',
     detail: 'Design only. No code places a label on a building yet. The app’s one AR scene is a tabletop game.',
     evidence:
-      'No ViroARScene reads HARLEM_PLACE_PREVIEWS; the only AR scene is packages/spatial/TabletopColocationScene.native.tsx (audit §19).',
+      'No ViroARScene reads HARLEM_PLACE_PREVIEWS; the only AR scene is packages/spatial/lightcycle/viro/TabletopColocationScene.native.tsx (audit §19).',
   },
   {
     id: 'phone-app',

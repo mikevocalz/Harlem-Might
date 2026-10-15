@@ -26,8 +26,11 @@ export const mapPlace = (doc: PlaceDoc): PlaceRef => {
     id: doc.id,
     slug: doc.slug,
     name: doc.name,
+    ...(doc.primaryArea ? { area: doc.primaryArea } : {}),
+    ...(doc.address?.formatted ? { address: doc.address.formatted } : {}),
+    ...(doc.summary ? { summary: doc.summary } : {}),
     ...(images.length ? { images } : {}),
-    ...(doc.location ? { lngLat: doc.location } : {}),
+    ...(doc.locationAccuracy !== 'pending' && doc.location ? { lngLat: doc.location } : {}),
   };
 };
 
@@ -46,7 +49,7 @@ export const mapPlaceRecord = (doc: PlaceDoc): PlaceRecord => ({
   category: opt(doc.primaryCategory),
   area: opt(doc.primaryArea),
   summary: opt(doc.summary),
-  location: doc.location ?? undefined,
+  location: doc.locationAccuracy === 'pending' ? undefined : doc.location ?? undefined,
   locationAccuracy: doc.locationAccuracy,
   locationSourceUrl: opt(doc.locationSource?.url),
   locationSourceReadAt: opt(doc.locationSource?.verifiedAt),

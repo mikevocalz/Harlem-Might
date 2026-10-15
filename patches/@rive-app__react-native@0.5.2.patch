@@ -10,3 +10,20 @@ index 020b96a8922afe6ac317171eed0c194185e84567..36d0baf4de7e5c480a3179fb733b11f3
      layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
      surfaceTextureListener = object : TextureView.SurfaceTextureListener {
        override fun onSurfaceTextureAvailable(st: SurfaceTexture, w: Int, h: Int) {
+diff --git a/nitrogen/generated/shared/c++/views/HybridRiveViewComponent.cpp b/nitrogen/generated/shared/c++/views/HybridRiveViewComponent.cpp
+index 9e39585..78f6380 100644
+--- a/nitrogen/generated/shared/c++/views/HybridRiveViewComponent.cpp
++++ b/nitrogen/generated/shared/c++/views/HybridRiveViewComponent.cpp
+@@ -205,8 +205,10 @@ namespace margelo::nitro::rive::views {
+     // This is called immediately after `ShadowNode` is created, cloned or in progress.
+     // On Android, we need to wrap props in our state, which gets routed through Java and later unwrapped in JNI/C++.
+     auto& concreteShadowNode = static_cast<HybridRiveViewShadowNode&>(shadowNode);
+-    const std::shared_ptr<const HybridRiveViewProps>& constProps = concreteShadowNode.getConcreteSharedProps();
+-    const std::shared_ptr<HybridRiveViewProps>& props = std::const_pointer_cast<HybridRiveViewProps>(constProps);
++    // Keep an owning value from ShadowNode; RN's concrete getter returns a dangling reference.
++    auto constBaseProps = concreteShadowNode.getProps();
++    auto constProps = std::static_pointer_cast<const HybridRiveViewProps>(constBaseProps);
++    auto props = std::const_pointer_cast<HybridRiveViewProps>(constProps);
+     HybridRiveViewState state{props};
+     concreteShadowNode.setStateData(std::move(state));
+   }

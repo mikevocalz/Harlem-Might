@@ -1,5 +1,6 @@
 'use client';
 import { Collapsible as ExpoCollapsible, Host } from '@expo/ui';
+import { View } from './tw';
 import type { CollapsibleProps } from './Collapsible.types';
 
 /**
@@ -13,12 +14,16 @@ import type { CollapsibleProps } from './Collapsible.types';
  * Its children are native views, so this hosts `@expo/ui` content — not kit
  * components, which a native container cannot lay out.
  */
-export function Collapsible({ label, isOpen, onOpenChange, children }: CollapsibleProps) {
+export function Collapsible({ label, isOpen, onOpenChange, children, className }: CollapsibleProps) {
   return (
-    <Host matchContents>
-      <ExpoCollapsible label={label} isOpen={isOpen} onOpenChange={onOpenChange}>
-        {children}
-      </ExpoCollapsible>
-    </Host>
+    // Keep box styling outside Host: content measurement must not consume padding.
+    // Native header/body layout still belongs to the platform disclosure control.
+    <View className={className}>
+      <Host matchContents>
+        <ExpoCollapsible label={label} isOpen={isOpen} onOpenChange={onOpenChange}>
+          {children}
+        </ExpoCollapsible>
+      </Host>
+    </View>
   );
 }

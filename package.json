@@ -14,6 +14,7 @@
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
+    "test:generators": "node --test tooling/generators/gen.test.mjs",
     "gen": "node tooling/generators/gen.mjs",
     "spatial:prepare-web": "node tooling/copy-viro-web-assets.mjs",
     "skia:prepare-web": "node tooling/copy-skia-web-assets.mjs",

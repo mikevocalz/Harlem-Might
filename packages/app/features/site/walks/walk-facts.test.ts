@@ -96,13 +96,15 @@ describe('walkMapView', () => {
     a: [-73.95, 40.81],
     b: [-73.944, 40.812],
   };
-  const locate = (slug: string) => points[slug];
+  const mappedStop = (position: number, slug: string) => ({
+    position, place: { id: position, slug, name: slug, lngLat: points[slug] },
+  });
 
   it('returns null when no stop has a point', () => {
-    assert.equal(walkMapView([stop(1, 'zzz'), stop(2)], locate), null);
+    assert.equal(walkMapView([stop(1, 'apollo-theater'), stop(2)]), null);
   });
-  it('centres on the stops and marks the first one', () => {
-    const view = walkMapView([stop(1, 'a'), stop(2, 'b'), stop(3)], locate);
+  it('maps non-fixture catalogue stops and marks the first one', () => {
+    const view = walkMapView([mappedStop(1, 'a'), mappedStop(2, 'b'), stop(3)]);
     assert.ok(view);
     assert.equal(view.located, 2);
     assert.deepEqual(view.center, [-73.947, 40.811]);
@@ -110,7 +112,18 @@ describe('walkMapView', () => {
     assert.equal(view.pins[0]?.tone, 'live');
     assert.equal(view.pins[1]?.tone, 'cobalt');
   });
+  it('does not label a later mapped stop as the start when the first point is missing', () => {
+    const view = walkMapView([stop(1), mappedStop(2, 'b'), mappedStop(3, 'a')]);
+    assert.ok(view);
+    assert.equal(view.located, 2);
+    assert.deepEqual(view.pins.map((pin) => pin.tone), ['cobalt', 'cobalt']);
+    assert.deepEqual(view.pins.map((pin) => pin.lngLat), [points.b, points.a]);
+  });
+  it('keeps the start marker when only a later stop is missing', () => {
+    const view = walkMapView([mappedStop(1, 'a'), stop(2), mappedStop(3, 'b')]);
+    assert.deepEqual(view?.pins.map((pin) => pin.tone), ['live', 'cobalt']);
+  });
   it('zooms in for a single stop', () => {
-    assert.equal(walkMapView([stop(1, 'a')], locate)?.zoom, 16);
+    assert.equal(walkMapView([mappedStop(1, 'a')])?.zoom, 16);
   });
 });

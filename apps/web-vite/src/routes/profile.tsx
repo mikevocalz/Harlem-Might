@@ -10,7 +10,7 @@ import {
   TextField,
 } from '@acme/ui';
 import { Main, Section, View } from '@acme/ui/tw';
-import { useMemberSession, type SavedPlaceRecord } from '@/lib/member-session';
+import { useMemberSession, useMemberAuthForm, type SavedPlaceRecord } from '@/lib/member-session';
 import type { CmsPlace } from '@/lib/payload';
 
 export const Route = createFileRoute('/profile')({
@@ -41,16 +41,21 @@ function ProfilePage() {
 }
 
 function SignInPanel() {
-  const mode = useMemberSession((state) => state.mode);
-  const email = useMemberSession((state) => state.email);
-  const password = useMemberSession((state) => state.password);
-  const name = useMemberSession((state) => state.name);
-  const error = useMemberSession((state) => state.error);
-  const setMode = useMemberSession((state) => state.setMode);
-  const setEmail = useMemberSession((state) => state.setEmail);
-  const setPassword = useMemberSession((state) => state.setPassword);
-  const setName = useMemberSession((state) => state.setName);
-  const submit = useMemberSession((state) => state.submit);
+  const mode = useMemberAuthForm((state) => state.mode);
+  const email = useMemberAuthForm((state) => state.email);
+  const password = useMemberAuthForm((state) => state.password);
+  const name = useMemberAuthForm((state) => state.name);
+  const formError = useMemberAuthForm((state) => state.error);
+  const sessionError = useMemberSession((state) => state.error);
+  const error = formError ?? sessionError;
+  const setMode = useMemberAuthForm((state) => state.setMode);
+  const setEmail = useMemberAuthForm((state) => state.setEmail);
+  const setPassword = useMemberAuthForm((state) => state.setPassword);
+  const setName = useMemberAuthForm((state) => state.setName);
+  const submit = useMemberAuthForm((state) => state.submit);
+  const signOut = useMemberAuthForm((state) => state.signOut);
+  const signOutError = useMemberSession((state) => state.signOutError);
+  const signOutPending = useMemberSession((state) => state.signOutPending);
 
   return (
     <Main className="flex-1 bg-surface">
@@ -64,6 +69,13 @@ function SignInPanel() {
             places, saved walks and preferences to follow you between devices.
           </Text>
         </View>
+
+        {signOutPending || signOutError ? (
+          <View role="status" className="max-w-xl gap-3">
+            <Text className="text-sm text-danger">{signOutPending ? 'Confirming sign-out…' : signOutError}</Text>
+            <Button title="Retry sign-out" variant="outline" disabled={signOutPending} onPress={() => void signOut()} />
+          </View>
+        ) : null}
 
         <Card className="w-full max-w-xl gap-5 border-border bg-surface-raised p-5 sm:p-7">
           <View className="flex-row gap-2">
@@ -114,6 +126,7 @@ function SignInPanel() {
           <Button
             title={mode === 'register' ? 'Create account' : 'Sign in'}
             onPress={() => void submit()}
+            disabled={signOutPending}
             fullWidth
           />
 
@@ -130,13 +143,13 @@ function SignInPanel() {
 function SignedInProfile() {
   const member = useMemberSession((state) => state.member);
   const savedPlaces = useMemberSession((state) => state.savedPlaces);
-  const signOut = useMemberSession((state) => state.signOut);
+  const signOut = useMemberAuthForm((state) => state.signOut);
   const removeSavedPlace = useMemberSession((state) => state.removeSavedPlace);
+  const error = useMemberSession((state) => state.error);
 
   if (!member) return null;
 
-  const avatarUri =
-    typeof member.avatar === 'object' && member.avatar ? member.avatar.url : undefined;
+  const avatarUri = member.image ?? undefined;
 
   return (
     <Main className="flex-1 bg-surface">
@@ -168,6 +181,8 @@ function SignedInProfile() {
               Places you save from the map will collect here.
             </Text>
           </View>
+
+          {error ? <View role="alert"><Text className="text-sm text-danger">{error}</Text></View> : null}
 
           {savedPlaces.length ? (
             <View className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">

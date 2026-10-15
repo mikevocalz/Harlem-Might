@@ -12,8 +12,16 @@ export interface JourneyRouteIdentity {
 
 /** Pending GPS belongs to this request until a device-origin trip takes over. */
 function tripOwnsLocation(session: NavigationSession, stopSlug: string): boolean {
-  return 'destination' in session && session.origin.kind === 'device-location' && session.phase !== 'paused' &&
+  return 'destination' in session && session.origin.kind === 'device-location' && session.phase !== 'paused' && session.phase !== 'arrived' &&
     (session.destination.placeId !== stopSlug || session.phase === 'routeReady' || 'activeRoute' in session);
+}
+
+/** An existing stopped trip needs an explicit navigation action, not new GPS. */
+function blockedTripMessage(session: NavigationSession, stopSlug: string): string | undefined {
+  if (!('activeRoute' in session) || session.destination.placeId !== stopSlug) return undefined;
+  if (session.phase === 'paused') return 'This trip is paused. Resume it, or end it before requesting directions again.';
+  if (session.phase === 'arrived') return 'You have arrived on this trip. End the trip before requesting directions again.';
+  return undefined;
 }
 
 /** Wait for a new fix without retaining permission to route a superseded walk or trip. */
@@ -38,18 +46,31 @@ export function startJourneyRouteIntent(input: {
   const requestedAt = now();
   const initialTrip = input.getNavigation();
   const initialSelection = input.getDirectionsPlaceId();
+  const blocked = blockedTripMessage(initialTrip, input.identity.stopSlug);
+  if (blocked) {
+    input.setError(blocked);
+    return () => {};
+  }
   let done = false;
   let planning = false;
   let requested = false;
   let ownsFeed = false;
+  let startingFeed = false;
+  let transferredFeed = false;
   let unsubscribe = () => {};
   let clearTimeout = () => {};
+  const releaseFeed = () => {
+    if (ownsFeed && !transferredFeed && !tripOwnsLocation(input.getNavigation(), input.identity.stopSlug)) input.stopLocation();
+    ownsFeed = false;
+  };
   const finish = (transferred = false) => {
     if (done) return;
     done = true;
     unsubscribe(); clearTimeout();
-    if (ownsFeed && !transferred && !tripOwnsLocation(input.getNavigation(), input.identity.stopSlug)) input.stopLocation();
-    ownsFeed = false;
+    transferredFeed = transferred;
+    // A source may synchronously report its first fix before the runtime has
+    // received its unsubscribe handle. Release it after startLocation returns.
+    if (!startingFeed) releaseFeed();
   };
   const cancel = (message: string) => { finish(); input.setError(message); };
   const tryPlan = () => {
@@ -72,6 +93,8 @@ export function startJourneyRouteIntent(input: {
     if (destination && destination.placeId !== captured.stopSlug) {
       cancel('Another trip was opened while location was loading. End that trip before getting directions to this stop.'); return;
     }
+    const blocked = blockedTripMessage(trip, captured.stopSlug);
+    if (blocked) { cancel(blocked); return; }
     if (requested) {
       // Starting a provider request is not a successful handoff. Keep ownership
       // through calculatingRoute, including synchronous request notifications.
@@ -92,6 +115,8 @@ export function startJourneyRouteIntent(input: {
     if (requested) {
       clearTimeout(); // This deadline only covers acquiring the first GPS fix.
       tryPlan();
+    } else {
+      cancel('Directions could not be started for the current trip. Check its status and try again.');
     }
   };
   unsubscribe = input.subscribe(tryPlan);
@@ -100,7 +125,10 @@ export function startJourneyRouteIntent(input: {
     if (!done) cancel('No precise, recent location yet. Check location access and try again. The saved walk remains available.');
   }, 25_000);
   ownsFeed = !input.isLocationRunning();
+  startingFeed = true;
   input.startLocation();
-  tryPlan();
+  startingFeed = false;
+  if (done) releaseFeed();
+  else tryPlan();
   return () => finish();
 }

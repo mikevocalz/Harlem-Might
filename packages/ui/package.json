@@ -18,6 +18,7 @@
       "default": "./icons.web.ts"
     },
     "./native": "./native.ts",
+    "./mights/routes": "./mights/routes.ts",
     "./mights": {
       "react-native": "./mights/index.native.ts",
       "default": "./mights/index.ts"
@@ -26,13 +27,12 @@
   "scripts": {
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --test 'tv.test.ts' 'mights/geometry.native.test.ts' 'mights/editorialImage.store.test.ts' 'haptic-policy.test.ts' 'layout/masonry-layout.test.ts'"
+    "test": "node --test '**/*.test.ts'"
   },
   "dependencies": {
     "@acme/assets": "workspace:*",
     "@acme/theme": "workspace:*",
     "@expo/html-elements": "catalog:",
-    "@expo/material-symbols": "catalog:",
     "@expo/ui": "catalog:",
     "@legendapp/list": "catalog:",
     "@legendapp/motion": "catalog:",

@@ -5,13 +5,21 @@ import {
   createPreferencesStore,
   readPreferences,
   type PreferencesState,
+  type PreferencesStorage,
 } from './preferences.store.shared.ts';
 
-// MMKV, instance id `editor`. Its reads are synchronous, so the very first
-// render already knows the arrangement.
-const storage = createMMKV({ id: 'editor' });
-const store = createPreferencesStore(storage, readPreferences(storage));
+// Acquire inside the guarded storage operations, not while importing the
+// feature barrel. A failed open is retried by the next read/write.
+let storage: ReturnType<typeof createMMKV> | undefined;
+const local = () => storage ??= createMMKV({ id: 'editor' });
+const lazyStorage: PreferencesStorage = {
+  getString: (key) => local().getString(key),
+  set: (key, value) => local().set(key, value),
+  remove: (key) => local().remove(key),
+};
+let store: ReturnType<typeof createPreferencesStore> | undefined;
+const preferencesStore = () => store ??= createPreferencesStore(lazyStorage, readPreferences(lazyStorage));
 
 export function useEditorPreferences<T>(selector: (state: PreferencesState) => T): T {
-  return useStore(store, selector);
+  return useStore(preferencesStore(), selector);
 }

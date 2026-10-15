@@ -92,7 +92,7 @@ describe('summarise', () => {
     assert.deepEqual(summarise([0.2, 0.4], 8), [0.2, 0.2, 0.2, 0.2, 0.4, 0.4, 0.4, 0.4]);
   });
 
-  it('always returns exactly the requested bar count', () => {
+  it('returns exactly the requested bar count for non-empty recordings', () => {
     for (const length of [1, 3, 47, 48, 49, 5000]) {
       const samples = Array.from({ length }, (_, i) => (i % 7) / 7);
       assert.equal(summarise(samples, BAR_COUNT).length, BAR_COUNT, `length ${length}`);
@@ -115,7 +115,7 @@ describe('summarise', () => {
     assert.deepEqual(summarise(samples, 2), [1, 0]);
   });
 
-  it('handles an empty recording', () => {
+  it('preserves no waveform for an empty recording', () => {
     assert.deepEqual(summarise([], 8), []);
   });
 });

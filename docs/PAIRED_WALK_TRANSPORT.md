@@ -122,6 +122,41 @@ Required before merge/release:
 5. VoiceOver/TalkBack, maximum text size, Crown/rotary, haptics disabled, low power,
    denied notifications/location, airplane mode and small/round screen captures.
 
+## Additional host lifecycle evidence (2026-10-12)
+
+`node tooling/tests/walk-companion/run.mjs kotlin` now compiles and executes the
+actual Android phone module and Wear store, as well as the shared production
+wire validator. The 36 deterministic lifecycle/callback scenarios use controlled
+host boundaries for the main scheduler, Wear capability/message completion,
+Expo callbacks and Compose state storage. They cover delayed discovery/expiry,
+background and observer revocation, stale callbacks and handoffs, wrong peers,
+reconnect, replay caps, timer cancellation and authoritative confirmation.
+They reproduced and guard fixes for expired publication after discovery,
+ambiguous Wear peers retaining guidance, and guidance surviving a phone switch.
+
+This extends the earlier source-only evidence above; it does not satisfy the
+native-target build, actual platform callback/threading or paired-device gates.
+No Android SDK, Gradle, Expo runtime, Swift lifecycle, UI or device test is implied.
+See `tooling/tests/walk-companion/README.md` for the exact boundary and commands.
+Wire schema, Payload 4 and Viro platform support are unchanged.
+
+## Swift callback harness follow-on (2026-10-12)
+
+The same native-companion runner now includes a 39-scenario Swift lifecycle
+harness designed to compile the complete production phone module and watch
+store against narrowly bounded host framework fakes. It exercises actual Expo
+callback registration and WatchConnectivity delegate/store methods, including
+queued delivery after unpairing or disconnect. Both bridges now recheck live
+transport state when consuming queued requests, commands or snapshots.
+
+This new Swift harness is **not yet compiler-verified in the local Linux
+workspace**: `swiftc` is absent. The completed follow-on chain needs the existing
+macOS CI compiler to establish the fixed-source pass and exact-guard negative
+controls; compiler/runtime failures cannot count as expected regression proof. Local Node
+source checks are not Swift execution. Apple SDK/build, runtime, threading,
+UI and device evidence remain outstanding. See the test README for the exact
+fake boundaries, timer semantics and pending verification.
+
 ## Explicitly outstanding issue 41 work
 
 - Independently authenticated watch HTTPS and revocable, narrowly scoped watch

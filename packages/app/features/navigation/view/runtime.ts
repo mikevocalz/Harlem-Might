@@ -147,8 +147,8 @@ export interface OriginPlace {
 
 /**
  * Asks for routes from the chosen origin. Returns false when the origin is
- * not known yet (no fix, or a place without coordinates); the panel keeps
- * its button disabled in that case, so this is a guard, not a flow.
+ * not known yet (no fix, or a place without coordinates), or a trip is still
+ * active. This also guards stale UI events and another place's mounted panel.
  */
 export function requestDirections(input: {
   readonly destination: RouteDestination;
@@ -156,6 +156,9 @@ export function requestDirections(input: {
   readonly originChoice: OriginChoice;
   readonly originPlace?: OriginPlace;
 }): boolean {
+  // Arrived still owns an active route until End, just like paused/guiding.
+  // A mounted panel for another place must not silently replace that trip.
+  if (hasActiveTrip(useNavigationStore.getState().session)) return false;
   let origin: NavigationOrigin;
   let originCoordinate: GeographicCoordinate | undefined;
   if (input.originChoice.kind === 'place') {
@@ -169,6 +172,19 @@ export function requestDirections(input: {
   if (!originCoordinate) return false;
   void navigationController().planRoute({ origin, originCoordinate, destination: input.destination, mode: input.mode });
   return true;
+}
+
+/**
+ * Discards only this panel's obsolete preview when its inputs disappear or
+ * switch to an external handoff. Keep the device fix/feed so a mounted panel
+ * can recover without another permission request. Active trips and previews
+ * owned by another destination remain authoritative.
+ */
+export function clearDirectionsPreview(placeId: string): void {
+  const session = useNavigationStore.getState().session;
+  if (hasActiveTrip(session)) return;
+  const trip = 'destination' in session ? session : session.phase === 'error' ? session.trip : undefined;
+  if (trip?.destination.placeId === placeId) runtime.controller?.beginSelection(trip.origin);
 }
 
 /**

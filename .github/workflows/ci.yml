@@ -21,6 +21,11 @@ jobs:
           # Bump .nvmrc and the root package.json "engines" together.
           node-version-file: .nvmrc
           cache: pnpm
+      - name: Load immutable native revisions
+        id: native-revisions
+        run: node tooling/native-revisions.mjs --github-output "$GITHUB_OUTPUT"
+      - name: Test native revision contract
+        run: node --test apps/mobile/scripts/native-revisions.test.mjs
       - name: Verify private spatial dependency access
         env:
           DEPENDENCY_TOKEN: ${{ secrets.SPATIAL_DEPENDENCIES_TOKEN }}
@@ -33,7 +38,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: mikevocalz/viro
-          ref: 99b1d87c55ca9f43a6452144183a0b32a2bfb3c9
+          ref: ${{ steps.native-revisions.outputs.viro }}
           token: ${{ secrets.SPATIAL_DEPENDENCIES_TOKEN }}
           path: .spatial-deps/viro
           persist-credentials: false
@@ -41,7 +46,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: mikevocalz/viro-external
-          ref: 2331527d50ffda0a8882c6fb832b10895c7c39f4
+          ref: ${{ steps.native-revisions.outputs.viro_external }}
           token: ${{ secrets.SPATIAL_DEPENDENCIES_TOKEN }}
           path: .spatial-deps/viro-external
           persist-credentials: false
@@ -49,7 +54,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: mikevocalz/nitro-mapbox-ar
-          ref: 5ef7c59947155f9a2e6565b9263c3f47e124bf49
+          ref: ${{ steps.native-revisions.outputs.nitro_mapbox_ar }}
           path: .spatial-deps/nitro-mapbox-ar
           persist-credentials: false
       - name: Place linked spatial packages
@@ -57,6 +62,8 @@ jobs:
           mv .spatial-deps/viro ../viro
           mv .spatial-deps/viro-external ../viro-external
           mv .spatial-deps/nitro-mapbox-ar ../nitro-mapbox-ar
+      - name: Verify native sibling checkouts
+        run: node tooling/native-revisions.mjs
       - run: pnpm install --frozen-lockfile
       - name: Install linked package dependencies
         run: |
@@ -80,14 +87,24 @@ jobs:
           ln -sfn "$target" ../viro/node_modules/@expo/config-plugins
       - run: pnpm spatial:verify-android
       - run: pnpm spatial:verify-typegpu
-      - run: pnpm --filter @acme/spatial test
-      - run: pnpm --filter @acme/app test
-      - run: pnpm --filter @acme/widgets test
-      - run: pnpm --filter @acme/payload test
-      - run: pnpm --filter web test
       - name: Validate mobile dependency contract
         run: pnpm --filter mobile viro:assert-fork
-      - run: pnpm --filter mobile test
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Compile pinned Rive Android descriptor and check ownership
+        # Compiles the installed production C++ TU with real pinned RN/Nitro
+        # headers, rejects the unpatched source, then runs an ASan/UBSan probe.
+        # This is a host compile gate, not an Android NDK link or device test.
+        env:
+          CXX: clang++
+        run: node tooling/verify-rive-android-cpp.mjs
+      - name: Run all workspace unit tests
+        # Discover each package's test script, preserving its platform-specific setup.
+        run: pnpm --recursive --if-present test
+      - name: Test generated feature boundaries
+        run: pnpm test:generators
       - run: pnpm --filter mobile test:scripts
       - run: pnpm turbo run build typecheck lint
       - name: Require deployable build artifacts

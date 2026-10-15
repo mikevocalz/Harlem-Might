@@ -80,17 +80,15 @@ catalog:
   expo: 58.0.7
   expo-location: ~58.0.13
   "@expo/env": 2.5.0
-  "@expo/metro-runtime": 58.0.9
+  "@expo/metro-runtime": 58.0.14
   expo-asset: 58.0.13
   expo-font: 58.0.7
   expo-file-system: 58.0.8
   expo-haptics: 58.0.5
   expo-image: 58.0.13
-  expo-document-picker: 58.0.4
   expo-image-picker: 58.0.10
   expo-glass-effect: 58.0.3
   expo-symbols: 58.0.4
-  "@expo/material-symbols": 0.1.1
   expo-linking: 58.0.11
   expo-router: 58.0.17
   expo-build-properties: 58.0.10
@@ -116,11 +114,9 @@ catalog:
   react-native-svg: 15.15.5
   react-native-pulsar: 1.7.0
   "@expo/html-elements": 58.0.2
-  "@expo/ui": 58.0.14
+  "@expo/ui": 58.0.15
   expo-paste-input: 0.2.2
   expo-drag-drop-content-view: 0.9.2
-  "@kishannareshpal/expo-pdf": 0.3.2
-  react-native-secure-webview: 0.1.0
 
   # universal GPU graphics
   "@shopify/react-native-skia": 2.13.0
@@ -166,7 +162,6 @@ catalog:
   kinetrell: github:mikevocalz/Kinetrell#344de51531ce050c4311d3feb70e4d596bdc8041
   "@legendapp/list": 3.6.0
   "@legendapp/motion": 2.5.3
-  date-fns: 4.4.0
   zustand: 5.0.15
   zod: 4.6.5
 
@@ -219,8 +214,10 @@ catalog:
   "@eslint/eslintrc": ^3.3.7
   babel-plugin-react-compiler: 1.0.0
   turbo: 2.11.7
+  yaml: 2.8.2
 
 patchedDependencies:
-  '@rive-app/react-native@0.5.2': patches/@rive-app__react-native@0.5.2.patch
+  "@shopify/react-native-skia@2.13.0": patches/@shopify__react-native-skia@2.13.0.patch
+  "@rive-app/react-native@0.5.2": patches/@rive-app__react-native@0.5.2.patch
   "@seshuk/payload-storage-bunny@3.0.0": patches/@seshuk__payload-storage-bunny@3.0.0.patch
   react-native@0.88.0-rc.4: patches/react-native@0.88.0-rc.4.patch

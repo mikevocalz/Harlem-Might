@@ -20,6 +20,7 @@ import type { TravelMode } from '../model/route';
 import { MODE_LABEL, MODE_ORDER, type DirectionsView, type RouteSummary, type StepRow } from '../view/directionsView';
 import { useNavigationUi } from '../view/navigationUi.store';
 import {
+  clearDirectionsPreview,
   closeDirections,
   endNavigation,
   navigationController,
@@ -97,14 +98,18 @@ export function DirectionsPanel({
     if (destination && mode !== 'transit') requestDirections({ destination, mode, originChoice, ...(origin ? { originPlace: origin } : {}) });
   };
 
-  // Ask once an origin exists, and again when mode or origin changes.
+  // Coordinate values, rather than array identities, follow mounted catalogue
+  // corrections without re-requesting on equivalent projections or every fix.
   const originKey = originChoice.kind === 'place' ? `place:${originChoice.placeId}:${origin ? 1 : 0}` : `device:${hasDevicePosition ? 1 : 0}`;
   const hasOrigin = originChoice.kind === 'place' ? origin !== undefined : hasDevicePosition;
   useEffect(() => {
-    if (!guiding && hasOrigin) request();
-    // request reads the latest store values; these are the triggers.
+    if (guiding) return;
+    if (destination && hasOrigin && mode !== 'transit') request();
+    else clearDirectionsPreview(place.id);
+    // Request uses this render's labels/choices. Only routing inputs trigger it;
+    // new array/object identities and session loading changes must not loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [place.id, mode, originKey]);
+  }, [place.id, place.lngLat?.[0], place.lngLat?.[1], mode, originKey, originPlace?.lngLat?.[0], originPlace?.lngLat?.[1], guiding]);
 
   // No location source at all, or access refused: open the place list so the
   // panel never sits on a dead "Your location".

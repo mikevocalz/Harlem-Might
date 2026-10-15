@@ -1,4 +1,4 @@
-import type { ExplorePlace } from '@acme/app/features/explore/explore.store.ts';
+import type { ExplorePlace } from '@acme/app/features/explore/place-model.ts';
 import { Link } from '@acme/ui/html';
 import { View } from '@acme/ui/tw';
 import { MightsBand, MightsText } from '@acme/ui/mights';

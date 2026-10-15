@@ -2,11 +2,13 @@ import type { ReactNode } from 'react';
 import { Text, View } from '../tw';
 
 export interface GridCardProps {
-  /** Backward-compatible prop; rendered as a sentence-case contextual label. */
+  /** Compatibility fallback for label; label takes precedence, including an empty string. */
   eyebrow?: string;
+  /** Preferred contextual label, rendered without changing its case. */
   label?: string;
   title: string;
   children?: ReactNode;
+  /** Prefer semantic tones. orange aliases accent; cyan retains the focus color. */
   tone?: 'primary' | 'accent' | 'verdigris' | 'cyan' | 'orange';
   className?: string;
 }
@@ -27,7 +29,7 @@ const toneClasses = {
     label: 'text-forest-700 dark:text-forest-300',
     corner: 'border-forest-600/60',
   },
-  // Compatibility mappings for older starter call sites.
+  // Public compatibility tones; internal callers use semantic names.
   cyan: {
     rail: 'bg-focus',
     label: 'text-focus',

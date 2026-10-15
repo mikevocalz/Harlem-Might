@@ -1,7 +1,7 @@
 'use client';
 import { useEffect } from 'react';
 import { Div } from '@expo/html-elements';
-import { Host, TextInput as BaseExpoTextInput, useNativeState } from '@expo/ui';
+import { Host, TextInput as BaseExpoTextInput, useNativeState, type TextInputProps as ExpoTextInputProps } from '@expo/ui';
 import { css } from './css';
 
 /**
@@ -20,8 +20,11 @@ const ExpoTextInput = css(BaseExpoTextInput, 'ExpoTextInput');
  * exist here, and borrowing them would promise behaviour this control cannot
  * honour.
  */
-export interface NativeInputProps {
+export interface NativeInputProps extends Pick<ExpoTextInputProps,
+  'autoComplete' | 'autoCapitalize' | 'inputMode' | 'autoFocus' | 'returnKeyType'> {
   value?: string;
+  /** Initial text only. Later changes do not replace user edits. */
+  defaultValue?: string;
   onChangeText?: (text: string) => void;
   onFocus?: () => void;
   onBlur?: () => void;
@@ -30,7 +33,6 @@ export interface NativeInputProps {
   placeholderTextColor?: string;
   secureTextEntry?: boolean;
   editable?: boolean;
-  returnKeyType?: 'done' | 'go' | 'next' | 'search' | 'send';
   multiline?: boolean;
   numberOfLines?: number;
   'aria-label'?: string;
@@ -65,6 +67,11 @@ export interface NativeInputProps {
  */
 export function NativeInput({
   value,
+  defaultValue,
+  autoComplete,
+  autoCapitalize,
+  inputMode,
+  autoFocus,
   onChangeText,
   onFocus,
   onBlur,
@@ -81,7 +88,7 @@ export function NativeInput({
   fontSize,
   containerStyle,
 }: NativeInputProps) {
-  const state = useNativeState(value ?? '');
+  const state = useNativeState(value ?? defaultValue ?? '');
 
   // Adopt external changes — a parent clearing a query, a form reset. Compared
   // first so a JS write never echoes back over text the user is mid-way through
@@ -117,6 +124,10 @@ export function NativeInput({
       <Host matchContents={{ vertical: true, horizontal: false }}>
         <ExpoTextInput
           value={state}
+          autoComplete={autoComplete}
+          autoCapitalize={autoCapitalize}
+          inputMode={inputMode}
+          autoFocus={autoFocus}
           onChangeText={onChangeText}
           onFocus={onFocus}
           onBlur={onBlur}

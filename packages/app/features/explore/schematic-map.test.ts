@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { HARLEM_PLACE_PREVIEWS, MAPPED_PLACES, UNMAPPED_PLACES, type HarlemPlacePreview } from './explore.store.ts';
+import { HARLEM_PLACE_PREVIEWS, MAPPED_PLACES, UNMAPPED_PLACES, type HarlemPlacePreview } from './place-previews.ts';
 import { markerLabel, projectSchematic, projectToSchematic, schematicBounds } from './schematic-map.ts';
 
 describe('projectSchematic', () => {

@@ -12,5 +12,3 @@ export {
   isDisplayableEditorialImage,
 } from './editorial-images.ts';
 export type { EditorialImage, EditorialImageRole, EditorialImageSource } from './editorial-images.ts';
-export { createEditorialImageStore, editorialImageStateKey, useEditorialImageStore } from './editorialImage.store.ts';
-export type { EditorialImageStatus } from './editorialImage.store.ts';

@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { create } from 'zustand';
+import { liveProgress } from '../../journey/model.ts';
 import { createStore } from 'zustand/vanilla';
+import { DEFAULT_NAVIGATION_CONFIG } from '../config.ts';
 import type { LocationFix } from '../model/location.ts';
 import type { RouteRequest, RouteResponse } from '../model/route.ts';
 import { RouteProviderError, type RouteProvider } from '../providers/routeProvider.ts';
@@ -339,5 +341,193 @@ describe('navigation controller: AR, pause and safety', () => {
     assert.equal(summary.matchedPosition?.kind, 'matched');
     assert.equal(summary.rerouting, 'idle');
     assert.equal(summary.confidence, 'high');
+  });
+});
+
+
+describe('navigation controller: fresh stationary progress', () => {
+  it('refreshes timestamp and ETA on fresh fixes even when the step and rounded distance stay the same', async () => {
+    const h = harness();
+    await h.startNavigating();
+    const fix: LocationFix = { coordinate: fixtureRoute(NAME).geometry.coordinates[0]!, accuracy: { horizontalM: 6 }, timestampMs: T0, source: 'device-gps' };
+    h.feed(fix);
+    const initial = selectProgress(h.store.getState());
+    assert.ok(initial);
+    let sessionWrites = 0;
+    h.store.subscribe((state, previous) => { if (state.session !== previous.session) sessionWrites += 1; });
+    for (let second = 1; second <= 20; second += 1) h.feed({ ...fix, timestampMs: T0 + second * 1000 });
+    const current = selectProgress(h.store.getState());
+    assert.ok(current);
+    assert.equal(current.activeStepIndex, initial.activeStepIndex);
+    assert.equal(Math.round(current.distanceRemainingM), Math.round(initial.distanceRemainingM));
+    assert.ok(liveProgress({ state: h.store.getState(), fixes: h.fixStore.getState(), now: h.clock.now(), online: true, stopSlug: h.destination.placeId!, location: 'granted' }),
+      'a stationary walker still has fresh, matched GPS after twenty seconds');
+    assert.equal(current.timestampMs, T0 + 20_000);
+    assert.equal(current.etaMs, current.timestampMs + current.durationRemainingS * 1000);
+    assert.equal(sessionWrites, 0, 'fresh progress never rewrites an unchanged session');
+    h.clock.advance(10_001);
+    assert.equal(liveProgress({ state: h.store.getState(), fixes: h.fixStore.getState(), now: h.clock.now(), online: true, stopSlug: h.destination.placeId!, location: 'granted' }), undefined,
+      'silence must still expire live progress');
+  });
+
+  for (const command of ['pause', 'cancel'] as const) {
+    it(`does not apply arrival or reroute after a progress subscriber calls ${command}`, async () => {
+      const h = harness();
+      await h.startNavigating();
+      const fix: LocationFix = { coordinate: h.destination.entrance!.coordinate, accuracy: { horizontalM: 6 }, timestampMs: T0, source: 'device-gps' };
+      h.feed(fix);
+      const release = h.store.subscribe((state, previous) => {
+        if (state.progress !== previous.progress && state.progress.kind === 'tracking') h.controller[command]();
+      });
+      h.feed({ ...fix, timestampMs: T0 + 1000 });
+      release();
+      assert.equal(h.store.getState().session.phase, command === 'pause' ? 'paused' : 'idle');
+      assert.equal(h.scripted.requests.length, 1);
+    });
+  }
+
+  it('never refreshes progress from rejected fixes, paused fixes, or cancelled trips', async () => {
+    const h = harness();
+    await h.startNavigating();
+    const fix: LocationFix = { coordinate: fixtureRoute(NAME).geometry.coordinates[0]!, accuracy: { horizontalM: 6 }, timestampMs: T0, source: 'device-gps' };
+    h.feed(fix);
+    const progress = h.store.getState().progress;
+    h.feed({ ...fix, accuracy: { horizontalM: 500 }, timestampMs: T0 + 1000 });
+    assert.equal(h.fixStore.getState().lastFix?.kind, 'rejected');
+    assert.equal(h.store.getState().progress, progress);
+    assert.ok(h.controller.pause());
+    const paused = h.store.getState().session;
+    h.feed({ ...fix, timestampMs: T0 + 2000 });
+    assert.equal(h.store.getState().session, paused);
+    assert.equal(h.store.getState().progress, progress);
+    assert.ok(h.controller.resume());
+    h.feed({ ...fix, timestampMs: T0 + 3000 });
+    assert.equal(selectProgress(h.store.getState())?.timestampMs, T0 + 3000);
+    h.controller.cancel();
+    h.feed({ ...fix, timestampMs: T0 + 4000 });
+    assert.equal(h.store.getState().session.phase, 'idle');
+    assert.deepEqual(h.store.getState().progress, { kind: 'none' });
+  });
+});
+
+describe('navigation controller: terminal arrival confidence', () => {
+  async function estimatedArrival() {
+    const h = harness();
+    await h.startNavigating();
+    const fix: LocationFix = { coordinate: h.destination.entrance!.coordinate,
+      accuracy: { horizontalM: 18 }, timestampMs: T0, source: 'device-gps' };
+    h.feed(fix);
+    h.feed({ ...fix, timestampMs: T0 + 1000 });
+    const arrived = h.store.getState().session;
+    assert.ok(arrived.phase === 'arrived' && arrived.arrival.kind === 'arrived' && arrived.arrival.confidence === 'estimated');
+    return { ...h, fix, arrived, arrivedAtMs: arrived.arrival.arrivedAtMs };
+  }
+
+  it('upgrades an estimate from an already-delivered precise fix without resuming guidance or replacing the trip', async () => {
+    const h = await estimatedArrival();
+    const progress = h.store.getState().progress;
+    h.feed({ ...h.fix, accuracy: { horizontalM: 5 }, timestampMs: T0 + 2000 });
+    const confirmed = h.store.getState().session;
+    assert.ok(confirmed.phase === 'arrived' && confirmed.arrival.kind === 'arrived');
+    assert.equal(confirmed.arrival.confidence, 'confirmed');
+    assert.equal(confirmed.arrival.arrivedAtMs, h.arrivedAtMs);
+    assert.equal(confirmed.destination, h.arrived.destination);
+    assert.equal(confirmed.activeRoute, h.arrived.activeRoute);
+    assert.equal(confirmed.origin, h.arrived.origin);
+    assert.equal(h.store.getState().progress, progress, 'arrival confirmation is not progress tracking');
+    assert.equal(h.controller.resume(), false);
+    assert.equal(h.controller.reroute(), false);
+    h.clock.advance(20_000);
+    assert.equal(h.scripted.requests.length, 1);
+  });
+
+  it('keeps the arrived route when a cancelled reroute answers after confirmation', async () => {
+    const h = harness();
+    await h.startNavigating();
+    const fix: LocationFix = { coordinate: h.destination.entrance!.coordinate,
+      accuracy: { horizontalM: 18 }, timestampMs: T0, source: 'device-gps' };
+    h.feed(fix);
+    const response = deferred<RouteResponse>();
+    h.scripted.answers.push(() => response.promise);
+    assert.ok(h.controller.reroute());
+    h.clock.advance(1000);
+    assert.equal(h.scripted.requests.length, 2);
+    h.feed({ ...fix, timestampMs: T0 + 1000 });
+    assert.ok(h.scripted.requests[1]!.signal?.aborted);
+    h.feed({ ...fix, accuracy: { horizontalM: 5 }, timestampMs: T0 + 2000 });
+    const arrival = h.store.getState().session;
+    assert.ok(arrival.phase === 'arrived' && arrival.arrival.kind === 'arrived' && arrival.arrival.confidence === 'confirmed');
+    assert.equal(arrival.activeRoute.generation, 1);
+    response.resolve(h.scripted.routes('apollo-theater--marcus-garvey-park'));
+    await flush();
+    assert.equal(h.store.getState().session, arrival);
+    assert.equal(h.store.getState().routeLoading.kind, 'idle');
+  });
+
+  it('does not downgrade, leave arrived, or reroute when later fixes are coarse or far away', async () => {
+    const h = await estimatedArrival();
+    h.feed({ ...h.fix, accuracy: { horizontalM: 5 }, timestampMs: T0 + 2000 });
+    const confirmed = h.store.getState().session;
+    assert.ok(confirmed.phase === 'arrived' && confirmed.arrival.kind === 'arrived' && confirmed.arrival.confidence === 'confirmed');
+    for (let second = 60; second <= 70; second += 1) {
+      h.feed({ ...h.fix, coordinate: h.origin, timestampMs: T0 + second * 1000 });
+    }
+    assert.equal(h.store.getState().session, confirmed, 'completed arrivals retain their original ownership and confidence');
+    assert.equal(h.scripted.requests.length, 1);
+  });
+
+  for (const evidence of ['invalid', 'stale', 'outside'] as const) {
+    it(`never confirms an estimate from ${evidence} evidence`, async () => {
+      const h = await estimatedArrival();
+      if (evidence === 'stale') h.clock.advance(20_000);
+      for (let index = 2; index <= 8; index += 1) {
+        h.feed({ ...h.fix, coordinate: evidence === 'invalid' ? { latitude: Number.NaN, longitude: 0 } : evidence === 'outside' ? h.origin : h.fix.coordinate,
+          accuracy: { horizontalM: 5 }, timestampMs: T0 + index * 1000 });
+      }
+      assert.equal(h.store.getState().session, h.arrived);
+      h.clock.advance(20_000);
+      assert.equal(h.scripted.requests.length, 1);
+    });
+  }
+
+  it('does not restore an arrival cancelled by a fix subscriber', async () => {
+    const h = await estimatedArrival();
+    // Only cancel once: cancel itself resets the fix store.
+    let cancelled = false;
+    const unsubscribe = h.fixStore.subscribe(() => {
+      if (!cancelled) { cancelled = true; h.controller.cancel(); }
+    });
+    h.feed({ ...h.fix, accuracy: { horizontalM: 5 }, timestampMs: T0 + 2000 });
+    unsubscribe();
+    assert.equal(h.store.getState().session.phase, 'idle');
+  });
+
+  it('ignores invalid arrival evidence and cannot resurrect a cancelled arrival in a new paused trip', async () => {
+    const h = await estimatedArrival();
+    h.feed({ ...h.fix, accuracy: { horizontalM: 500 }, timestampMs: T0 + 2000 });
+    assert.equal(h.store.getState().session, h.arrived);
+    h.controller.cancel();
+    h.feed({ ...h.fix, accuracy: { horizontalM: 5 }, timestampMs: T0 + 3000 });
+    assert.equal(h.store.getState().session.phase, 'idle');
+    await h.startNavigating();
+    assert.ok(h.controller.pause());
+    const paused = h.store.getState().session;
+    h.feed({ ...h.fix, accuracy: { horizontalM: 5 }, timestampMs: T0 + 4000 });
+    assert.equal(h.store.getState().session, paused);
+  });
+});
+
+
+describe('positioning uncertainty contract', () => {
+  it('names the display r68 independently from the unchanged filter sigma', async () => {
+    const h = harness();
+    await h.startNavigating();
+    h.feed(h.trace({ seed: 77, accuracyM: 12 })[0]!);
+    const position = h.store.getState().positioning;
+    const fix = h.fixStore.getState().lastFix;
+    assert.ok(position.kind === 'tracking' && fix?.kind === 'accepted');
+    assert.equal(position.horizontalRadius68M, Math.round(fix.filtered.sigmaM / DEFAULT_NAVIGATION_CONFIG.location.radiusToSigma));
+    assert.equal(Object.hasOwn(position, 'sigmaM'), false);
+    assert.equal(typeof fix.filtered.sigmaM, 'number');
   });
 });

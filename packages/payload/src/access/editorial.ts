@@ -16,3 +16,7 @@ export const publishedOrCurator: Access = ({ req: { user } }) =>
   isCurator(user) ? true : { _status: { equals: 'published' } };
 
 export const curatorOnly: Access = ({ req: { user } }) => isCurator(user);
+
+/** Pages use an explicit publication flag rather than Payload draft status. */
+export const publishedPageOrCurator: Access = ({ req: { user } }) =>
+  isCurator(user) ? true : { published: { equals: true } };

@@ -12,6 +12,15 @@ export const DEFAULT_PREFERENCES: ToolbarPreferences = {
   enabled: [],
 };
 
+const capabilityFor = (id: string) => Object.hasOwn(CAPABILITY_BY_ID, id) ? CAPABILITY_BY_ID[id] : undefined;
+
+function knownIds(value: unknown, fallback: readonly string[]): readonly string[] {
+  if (value == null) return fallback;
+  if (!Array.isArray(value)) throw new Error('Invalid toolbar preference list');
+  return [...new Set(value.filter((id): id is string =>
+    typeof id === 'string' && capabilityFor(id) !== undefined))];
+}
+
 /**
  * Reconcile saved preferences against the registry as it exists NOW.
  *
@@ -29,15 +38,16 @@ export const DEFAULT_PREFERENCES: ToolbarPreferences = {
  *   4. Drop enabled ids that are gone or are not advanced (basic ones are not
  *      switchable, so an entry for one is stale data).
  */
-export function reconcilePreferences(saved: Partial<ToolbarPreferences> | null): ToolbarPreferences {
-  const savedOrder = saved?.order ?? DEFAULT_PREFERENCES.order;
-  const savedEnabled = saved?.enabled ?? DEFAULT_PREFERENCES.enabled;
-
-  const known = savedOrder.filter((id) => CAPABILITY_BY_ID[id] !== undefined);
+export function reconcilePreferences(saved: unknown): ToolbarPreferences {
+  if (saved == null) return DEFAULT_PREFERENCES;
+  if (typeof saved !== 'object' || Array.isArray(saved)) throw new Error('Invalid toolbar preferences');
+  const object = saved as Record<string, unknown>;
+  const known = knownIds(object.order, DEFAULT_PREFERENCES.order);
+  const savedEnabled = knownIds(object.enabled, DEFAULT_PREFERENCES.enabled);
   const missingBasics = BASIC_IDS.filter((id) => !known.includes(id));
 
   const enabled = savedEnabled.filter((id) => {
-    const capability = CAPABILITY_BY_ID[id];
+    const capability = capabilityFor(id);
     return capability !== undefined && !capability.basic;
   });
 
@@ -54,7 +64,7 @@ export function reconcilePreferences(saved: Partial<ToolbarPreferences> | null):
  */
 export function visibleToolbarIds(preferences: ToolbarPreferences): readonly string[] {
   const isVisible = (id: string) => {
-    const capability = CAPABILITY_BY_ID[id];
+    const capability = capabilityFor(id);
     if (capability === undefined || capability.role !== 'toolbar') return false;
     return capability.basic || preferences.enabled.includes(id);
   };
@@ -117,7 +127,7 @@ export function toggleEnabled(
   preferences: ToolbarPreferences,
   id: string,
 ): ToolbarPreferences {
-  const capability = CAPABILITY_BY_ID[id];
+  const capability = capabilityFor(id);
   if (capability === undefined || capability.basic) return preferences;
 
   const enabled = preferences.enabled.includes(id)

@@ -1,6 +1,6 @@
 import type { CollectionConfig } from 'payload';
-import { curatorOnly, publishedOrCurator } from '../access/editorial';
-import { validateOptionalUrl } from '../fields/provenance';
+import { curatorOnly, publishedOrCurator } from '../access/editorial.ts';
+import { slugField, validateOptionalUrl } from '../fields/provenance.ts';
 
 /** A curated, sourced Harlem music catalog; no inferred YouTube IDs or unlicensed portraits. */
 export const MusicArtists: CollectionConfig = {
@@ -10,7 +10,7 @@ export const MusicArtists: CollectionConfig = {
   versions: { drafts: true },
   fields: [
     { name: 'name', type: 'text', required: true, index: true },
-    { name: 'slug', type: 'text', required: true, unique: true, index: true },
+    slugField(),
     { name: 'genre', type: 'text', required: true, index: true },
     { name: 'era', type: 'text' },
     { name: 'connection', type: 'select', required: true, options: [

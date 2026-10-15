@@ -67,7 +67,11 @@ export interface CapabilityContext {
   editor: EnrichedTextInputInstance;
   /** Resolves a media URI to insert. Supplied by the host screen. */
   pickImage?: () => Promise<{ uri: string; width: number; height: number } | null>;
-  /** Resolves a file to link. Supplied by the host screen. */
+  /**
+   * Resolves a file to link. The host must retain any transient resource and
+   * its release callback for the document's lifetime; this command only
+   * inserts the URI and name, and does not own document resources.
+   */
   pickFile?: () => Promise<{ uri: string; name: string } | null>;
   /** Records a voice note. Native only — see AudioRecorderSheet.web. */
   recordAudio?: () => Promise<{ uri: string; duration: number } | null>;

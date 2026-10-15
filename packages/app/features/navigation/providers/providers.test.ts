@@ -166,6 +166,23 @@ describe('parseMapboxDirections', () => {
     }
   });
 
+  it('treats inherited object keys as unknown maneuver vocabulary', () => {
+    for (const key of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'unrecognized']) {
+      const body = structuredClone(loadFixture('apollo-theater--sylvias-restaurant').response) as {
+        routes: { legs: { steps: { maneuver: { type: string; modifier?: string } }[] }[] }[];
+      };
+      const maneuver = body.routes[0]!.legs[0]!.steps[1]!.maneuver;
+      maneuver.type = key;
+      maneuver.modifier = key;
+      const result = parseMapboxDirections(body, 'walking');
+      assert.equal(result.kind, 'routes');
+      if (result.kind !== 'routes') return;
+      const parsed = result.routes[0].legs[0]!.steps[1]!.maneuver;
+      assert.equal(parsed.type, 'other', key);
+      assert.equal(parsed.modifier, undefined, key);
+    }
+  });
+
   it('maps unknown maneuver types to other and rejects malformed shapes', () => {
     const f = loadFixture('apollo-theater--sylvias-restaurant');
     const body = structuredClone(f.response) as { routes: { legs: { steps: { maneuver: { type: string } }[] }[]; geometry: unknown }[] };
@@ -199,6 +216,35 @@ describe('createMapboxDirectionsProvider', () => {
     assert.equal(url.searchParams.get('access_token'), FAKE_TOKEN);
   });
 
+  it('classifies invalid origin, destination and entrance coordinates without fetching', async () => {
+    const { impl, calls } = fakeFetch(() => json(200, loadFixture(NAME).response));
+    const provider = createMapboxDirectionsProvider({ accessToken: FAKE_TOKEN, fetchImpl: impl });
+    const request = requestFor(NAME);
+    const invalid = { latitude: 91, longitude: -73.944623 };
+    const requests: RouteRequest[] = [
+      { ...request, origin: invalid },
+      { ...request, origin: { latitude: 40.8, longitude: Number.NaN } },
+      { ...request, destination: { ...request.destination, coordinate: { latitude: 40.8, longitude: 181 } } },
+      { ...request, destination: { ...request.destination, entrance: { coordinate: invalid, source: 'cms-verified' } } },
+    ];
+    for (const badRequest of requests) {
+      await assert.rejects(provider.getRoutes(badRequest), (error: unknown) => {
+        assert.ok(error instanceof RouteProviderError);
+        assert.equal(error.kind, 'invalid-request');
+        assert.equal(error.provider, 'mapbox');
+        assert.equal(error.status, undefined);
+        assert.ok(!error.message.includes(FAKE_TOKEN));
+        assert.ok(!error.message.includes(String(invalid.longitude)));
+        return true;
+      });
+    }
+    assert.equal(calls.length, 0);
+    const abort = new AbortController();
+    abort.abort();
+    await assert.rejects(provider.getRoutes(requests[0]!, { signal: abort.signal }),
+      (error: unknown) => error instanceof RouteProviderError && error.kind === 'aborted');
+  });
+
   it('answers transit with an unsupported result and maps links, without calling Mapbox', async () => {
     const { impl, calls } = fakeFetch(() => json(500, {}));
     const provider = createMapboxDirectionsProvider({ accessToken: FAKE_TOKEN, fetchImpl: impl });
@@ -210,6 +256,18 @@ describe('createMapboxDirectionsProvider', () => {
     assert.ok(response.handoff.appleMapsUrl.includes('dirflg=r'));
     assert.ok(response.handoff.googleMapsUrl.includes('travelmode=transit'));
     assert.ok(!provider.supportedModes.includes('transit'));
+  });
+
+  it('rejects every pre-cancelled mode before fetching or producing a transit handoff', async () => {
+    const { impl, calls } = fakeFetch(() => json(500, {}));
+    const provider = createMapboxDirectionsProvider({ accessToken: FAKE_TOKEN, fetchImpl: impl });
+    const abort = new AbortController();
+    abort.abort();
+    for (const mode of ['walking', 'cycling', 'driving', 'transit'] as const) {
+      await assert.rejects(provider.getRoutes(requestFor(NAME, mode), { signal: abort.signal }),
+        (error: unknown) => error instanceof RouteProviderError && error.kind === 'aborted');
+    }
+    assert.deepEqual(calls, []);
   });
 
   const failures: [string, () => Response, string][] = [

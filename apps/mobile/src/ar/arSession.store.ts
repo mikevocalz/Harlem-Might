@@ -17,6 +17,7 @@ export interface ArPlacement {
 export type ArRouteState =
   | { readonly status: 'idle' }
   | { readonly status: 'loading' }
+  | { readonly status: 'unavailable'; readonly reason: 'missing-origin' | 'no-destinations' | 'request-failed' }
   | { readonly status: 'ready'; readonly route: WalkingRoute };
 
 /**
@@ -58,6 +59,8 @@ export interface ArSessionState {
   resolve: (mode: ArMode, degraded: readonly ModeDegradedEvent[]) => void;
   place: (placement: ArPlacement | null) => void;
   setRouteLoading: () => void;
+  clearRoute: () => void;
+  setRouteUnavailable: (reason: Extract<ArRouteState, { status: 'unavailable' }>['reason']) => void;
   /** Sets the route and moves the playhead back to its start. */
   setRoute: (route: WalkingRoute) => void;
   /**
@@ -99,6 +102,8 @@ export const useArSession = create<ArSessionState>((set) => ({
   resolve: (resolved, degraded) => set({ resolved, degraded }),
   place: (placement) => set({ placement }),
   setRouteLoading: () => set({ route: { status: 'loading' } }),
+  clearRoute: () => set({ route: { status: 'idle' }, playheadM: 0 }),
+  setRouteUnavailable: (reason) => set({ route: { status: 'unavailable', reason }, playheadM: 0 }),
   setRoute: (route) => set({ route: { status: 'ready', route }, playheadM: 0 }),
   setPlayheadM: (distanceM) => {
     if (!Number.isFinite(distanceM)) throw new RangeError('distanceM must be finite');

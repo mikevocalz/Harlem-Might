@@ -13,11 +13,11 @@ import {
   ViroXRSceneNavigator,
 } from './viro';
 import { SpatialDemoScene } from './SpatialDemoScene';
-import { TabletopColocationScene } from './TabletopColocationScene.native';
-import { TabletopThreeExperience } from './TabletopThreeExperience.native';
+import { TabletopColocationScene } from './lightcycle/viro/TabletopColocationScene.native';
+import { TabletopThreeExperience } from './lightcycle/three/TabletopThreeExperience.native';
 import { GridCoreSpinner } from './rive-fx/GridFxStage.native';
 import { gridRace, useGridRaceStore } from './gridRaceStore';
-import { tabletopSession, useTabletopSessionStore } from './tabletopSessionStore';
+import { tabletopSession, useTabletopSessionStore } from './lightcycle/runtime/tabletopSessionStore';
 
 type HeadsetNavigatorProps = {
   initialScene?: { scene: ComponentType<any> };

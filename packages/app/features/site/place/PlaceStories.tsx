@@ -1,5 +1,5 @@
 import type { StoryRecord } from '@acme/app/content';
-import type { ExplorePlace } from '@acme/app/features/explore/explore.store.ts';
+import type { ExplorePlace } from '@acme/app/features/explore/place-model.ts';
 import { Image } from '@acme/ui';
 import { MightsBand, MightsHeading, MightsMapImage, MightsNotchCard, MightsText, routes } from '@acme/ui/mights';
 import { View } from '@acme/ui/tw';

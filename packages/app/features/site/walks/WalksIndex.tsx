@@ -2,7 +2,6 @@ import type { WalkRecord } from '@acme/app/content';
 import { List, ListItem, Section } from '@acme/ui/html';
 import { MapAttribution, MightsEditorialImage, MightsHeading, MightsMapImage, MightsNotchCard, MightsPlaceBento, MightsText, routes } from '@acme/ui/mights';
 import { View } from '@acme/ui/tw';
-import { locatePlace } from '../content/place-link.ts';
 import { walkMapView, walkSummaryLine } from './walk-facts.ts';
 
 // B6. References (structure only): Tripadvisor itinerary
@@ -16,7 +15,7 @@ const BENTO_MAX = 5;
 function WalkModule({ walk, featured, headingLevel }: { walk: WalkRecord; featured: boolean; headingLevel: 2 | 3 }) {
   // Only the featured walk draws a map: one Mapbox raster per index, not one per walk.
   const image = walk.images[0];
-  const view = !image && featured ? walkMapView(walk.stops, locatePlace) : null;
+  const view = !image && featured ? walkMapView(walk.stops) : null;
   const facts = walkSummaryLine(walk);
   return (
     <View className="flex flex-1 flex-col">
@@ -62,7 +61,7 @@ export function WalksIndex({ walks }: { walks: readonly WalkRecord[] }) {
   if (walks.length < 2) {
     const walk = walks[0];
     if (!walk) return null;
-    const hasMap = !walk.images[0] && walkMapView(walk.stops, locatePlace) !== null;
+    const hasMap = !walk.images[0] && walkMapView(walk.stops) !== null;
     return (
       <View className="flex max-w-content-screen flex-col gap-2">
         <MightsNotchCard href={routes.walk(walk.slug)}>
@@ -74,7 +73,7 @@ export function WalksIndex({ walks }: { walks: readonly WalkRecord[] }) {
   }
   const inBento = walks.slice(0, BENTO_MAX);
   const rest = walks.slice(BENTO_MAX);
-  const featuredHasMap = !walks[0]!.images[0] && walkMapView(walks[0]!.stops, locatePlace) !== null;
+  const featuredHasMap = !walks[0]!.images[0] && walkMapView(walks[0]!.stops) !== null;
   return (
     <View className="flex flex-col gap-16">
       <View className="flex flex-col gap-2">

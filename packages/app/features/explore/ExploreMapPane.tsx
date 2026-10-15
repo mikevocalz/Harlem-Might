@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import { MightsButton } from '@acme/ui/mights';
 import { Text, View } from '@acme/ui/tw';
-import { type ExplorePlace } from './explore.store';
+import type { ExplorePlace } from './place-model';
 import { usePlaceCatalogue } from './place-catalogue.store.ts';
 import { useExploreType } from './explore-type';
 import { ExploreMap } from './ExploreMap';

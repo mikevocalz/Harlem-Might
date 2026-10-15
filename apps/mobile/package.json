@@ -27,7 +27,6 @@
     "@expo/env": "catalog:",
     "@expo/metro-runtime": "catalog:",
     "@expo/ui": "catalog:",
-    "@kishannareshpal/expo-pdf": "catalog:",
     "@mapbox/react-native-mapbox-ar-reactvision": "link:../../../nitro-mapbox-ar/packages/reactvision",
     "@metavr/layout-compat": "catalog:",
     "@metavr/layout-window-compat": "catalog:",
@@ -76,7 +75,6 @@
     "react-native-reanimated": "catalog:",
     "react-native-safe-area-context": "catalog:",
     "react-native-screens": "catalog:",
-    "react-native-secure-webview": "catalog:",
     "react-native-svg": "catalog:",
     "react-native-web": "catalog:",
     "react-native-worklets": "catalog:",
@@ -92,7 +90,8 @@
     "eslint": "catalog:",
     "eslint-config-expo": "catalog:",
     "tailwindcss": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "yaml": "catalog:"
   },
   "private": true,
   "expo": {

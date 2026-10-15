@@ -56,6 +56,23 @@ test('findPage sends the page and reads Payload pagination metadata', async () =
   assert.match(decodeURIComponent(urls[0] ?? ''), /music-artists\?.*limit=24.*page=2/);
 });
 
+test('find ignores page while findPage preserves it for the same query', async () => {
+  const urls: URL[] = [];
+  const source = createRestContentSource({
+    apiUrl: 'https://example.test/payload-api',
+    fetch: async (url) => {
+      urls.push(new URL(url));
+      return { ok: true, status: 200, json: async () => ({ docs: [], totalDocs: 0 }) };
+    },
+  });
+  const query = { collection: 'walks', where: {}, depth: 1, limit: 5, page: 2 } as const;
+  await source.find(query);
+  await source.findPage(query);
+  assert.equal(urls[0]?.searchParams.has('page'), false);
+  assert.equal(urls[1]?.searchParams.get('page'), '2');
+  assert.equal(query.page, 2, 'the adapter must not mutate its caller’s query');
+});
+
 test('no apiUrl means not configured', () => {
   const source = createRestContentSource({ apiUrl: undefined, fetch: async () => assert.fail('no request') });
   assert.equal(source.isConfigured(), false);
@@ -110,4 +127,37 @@ test('event range REST failures remain unavailable rather than an empty event li
     if (result.status === 'unavailable') assert.equal(result.reason, 'query-failed');
     assert.ok(!('data' in result));
   }
+});
+
+test('selected list/page reads preserve the sparse response and encode the same include-list', async () => {
+  const urls: URL[] = [];
+  const projected = { id: 17, name: 'Test Place' };
+  const source = createRestContentSource({
+    apiUrl: 'https://example.test/payload-api',
+    fetch: async url => {
+      urls.push(new URL(url));
+      return { ok: true, status: 200, json: async () => ({ docs: [projected], hasNextPage: true, totalDocs: 30 }) };
+    },
+  });
+  const query = { collection: 'places', where: {}, depth: 0, limit: 1, select: ['name'], page: 2 } as const;
+  const list = await source.find(query);
+  const page = await source.findPage(query);
+  assert.equal(list[0], projected);
+  assert.equal(page.docs[0], projected);
+  assert.deepEqual(page, { docs: [projected], hasNextPage: true, totalDocs: 30 });
+  assert.equal('slug' in list[0]!, false);
+  assert.equal('kind' in page.docs[0]!, false);
+  assert.equal(urls[0]?.searchParams.get('select[name]'), 'true');
+  assert.equal(urls[1]?.searchParams.get('select[name]'), 'true');
+  assert.equal(urls[0]?.searchParams.has('page'), false);
+  assert.equal(urls[1]?.searchParams.get('page'), '2');
+});
+
+test('empty and pass-through field selections retain their existing REST encoding', () => {
+  const query = { collection: 'places', where: {}, depth: 0, limit: 1 } as const;
+  assert.equal(restQueryString({ ...query, select: [] }), restQueryString(query));
+  const fields: readonly string[] = ['createdAt', 'address.formatted'];
+  const selected = new URLSearchParams(restQueryString({ ...query, select: fields }));
+  assert.equal(selected.get('select[createdAt]'), 'true');
+  assert.equal(selected.get('select[address.formatted]'), 'true');
 });

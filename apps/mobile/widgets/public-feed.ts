@@ -6,7 +6,8 @@ import { WIDGET_SCHEMA_VERSION, type WidgetSnapshot } from '@acme/widgets';
  * coordinates, or raw Payload member rows in this shared projection.
  * Never cache stale events as if they were current.
  */
-const storage = createMMKV({ id: 'harlem-might-public-widgets-v1' });
+let storage: ReturnType<typeof createMMKV> | undefined;
+const local = () => storage ??= createMMKV({ id: 'harlem-might-public-widgets-v1' });
 const SNAPSHOT_KEY = 'published-snapshot';
 
 function isSnapshot(value: unknown): value is WidgetSnapshot {
@@ -19,13 +20,15 @@ function isSnapshot(value: unknown): value is WidgetSnapshot {
     const card = v[kind];
     return card === null || !!card &&
       typeof card === 'object' && card.kind === kind &&
-      typeof card.title === 'string' && typeof card.path === 'string';
+      typeof card.title === 'string' && typeof card.path === 'string' &&
+      typeof card.subtitle === 'string' && typeof card.eyebrow === 'string' &&
+      (card.sourceUrl === undefined || typeof card.sourceUrl === 'string');
   });
 }
 
 export function loadPublicSnapshot(): WidgetSnapshot | null {
   try {
-    const raw = storage.getString(SNAPSHOT_KEY);
+    const raw = local().getString(SNAPSHOT_KEY);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     return isSnapshot(parsed) ? parsed : null;
@@ -36,7 +39,12 @@ export function loadPublicSnapshot(): WidgetSnapshot | null {
 
 export function storePublicSnapshot(snapshot: WidgetSnapshot): void {
   if (!isSnapshot(snapshot)) throw new Error('Invalid widget snapshot');
-  storage.set(SNAPSHOT_KEY, JSON.stringify(snapshot));
+  try {
+    local().set(SNAPSHOT_KEY, JSON.stringify(snapshot));
+  } catch {
+    // Persistence is optional. A valid in-memory snapshot remains usable when
+    // native storage cannot open or write; invalid input must still throw above.
+  }
 }
 
 /**

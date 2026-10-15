@@ -95,14 +95,18 @@ function currentRouteIdentity(): JourneyRouteIdentity | undefined {
   if (session?.status !== 'active' || !stop) return undefined;
   return { sessionId: session.sessionId, revision: session.revision, stopId: stop.id, stopSlug: stop.slug };
 }
-export function journeyCommand(type: 'pause' | 'resume' | 'stop' | 'confirm-stop', confirmed?: true) {
+// Pause/resume retain their optional argument; stop forms must supply true.
+export function journeyCommand(...[type, confirmed]:
+  | [type: 'pause' | 'resume', confirmed?: true]
+  | [type: 'pause' | 'resume' | 'stop' | 'confirm-stop', confirmed: true]
+) {
   const state = journeyController().getSnapshot();
   const session = state.session;
   if (!session) return Promise.resolve(false);
   const base = { schemaVersion: 1 as const, commandId: commandId(), sessionId: session.sessionId, expectedRevision: session.revision };
   const command: WalkCommand = type === 'confirm-stop'
-    ? { ...base, type, confirmed: confirmed!, stopId: currentJourneyStop()?.id ?? '' }
-    : type === 'stop' ? { ...base, type, confirmed: confirmed! } : { ...base, type };
+    ? { ...base, type, confirmed, stopId: currentJourneyStop()?.id ?? '' }
+    : type === 'stop' ? { ...base, type, confirmed } : { ...base, type };
   return journeyController().dispatch(command);
 }
 

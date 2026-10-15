@@ -58,6 +58,12 @@ export const withMemberAvatarStorage = (storagePlugin: Plugin): Plugin => async 
     ...result,
     collections: result.collections?.map((collection) => collection.slug !== 'media' ? collection : {
       ...collection,
+      // cloud-storage .33 couples public CDN delivery to disabling SSRF checks.
+      // Restore the safe fetch boundary after Bunny configures the collection:
+      // Public URLs still work; private targets, including redirects, do not.
+      upload: typeof collection.upload === 'object'
+        ? { ...collection.upload, skipSafeFetch: false }
+        : collection.upload,
       hooks: {
         ...collection.hooks,
         afterChange: collection.hooks?.afterChange?.map((hook) => existing.has(hook) ? hook : wrapStorageHook(hook)),

@@ -9,7 +9,7 @@ const now = 1800000000000;
 const identity: JourneyRouteIdentity = { sessionId: 'session', revision: 2, stopId: '1', stopSlug: 'apollo' };
 const fix = { kind: 'accepted', fix: { source: 'device-gps', timestampMs: now, accuracy: { horizontalM: 5 } } } as NavigationFixState['lastFix'];
 const trip = (placeId = 'apollo', kind = 'device-location', phase = 'navigating') => ({
-  phase, destination: { placeId }, origin: { kind }, ...(phase === 'navigating' ? { activeRoute: {} } : {}),
+  phase, destination: { placeId }, origin: { kind }, ...(['navigating', 'calibratingAR', 'navigatingAR', 'rerouting', 'paused', 'arrived'].includes(phase) ? { activeRoute: {} } : {}),
 }) as NavigationSession;
 
 function setup(running = false, initialSelection: string | null = null) {

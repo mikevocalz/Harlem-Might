@@ -104,11 +104,9 @@ export default function ExploreRouteLayout() {
   );
 
   const compactPane = useExploreLayoutStore((state) => state.compactPane);
-  const discoverDrawerOpen = useExploreLayoutStore((state) => state.discoverDrawerOpen);
   const setCompactPane = useExploreLayoutStore((state) => state.setCompactPane);
   const showCompactDetail = useExploreLayoutStore((state) => state.showCompactDetail);
   const leaveCompactDetail = useExploreLayoutStore((state) => state.leaveCompactDetail);
-  const setDiscoverDrawerOpen = useExploreLayoutStore((state) => state.setDiscoverDrawerOpen);
 
   const isSpatialAvailable = metaWindows.useSpatialAvailable();
   const workspace = resolveExploreWorkspace({ selectedPlaceId, isSpatialAvailable });
@@ -127,7 +125,6 @@ export default function ExploreRouteLayout() {
     detailPlacement,
     isHorizon: isHorizonBuild,
     compactPane,
-    discoverDrawerOpen,
   });
   const single = layout.arrangement === 'single';
   const arPresentation = navigationArHostPresentation({
@@ -145,8 +142,6 @@ export default function ExploreRouteLayout() {
   const open = (placeId: string, origin: 'map' | 'discover', focusId: string | null) => {
     openPlace(placeId, focusId);
     if (single) showCompactDetail(origin);
-    // A Discover opened from "Places" folds away so Detail can take its place.
-    setDiscoverDrawerOpen(false);
   };
 
   const dismissDetail = () => {
@@ -169,7 +164,7 @@ export default function ExploreRouteLayout() {
     previousSelection.current = selectedPlaceId;
   }, [selectedPlaceId]);
 
-  // Android Back: Detail, then a Discover screen or drawer.
+  // Android Back: Detail, then the compact Discover screen.
   const directionsOpen = directionsPlaceId != null && directionsPlaceId === selectedPlaceId && !guiding;
   const latest = useRef<{ layout: ExploreLayout; dismissDetail: () => void; directionsOpen: boolean; focused: boolean }>({
     layout,
@@ -205,9 +200,6 @@ export default function ExploreRouteLayout() {
         case 'show-map':
           useExploreLayoutStore.getState().setCompactPane('map');
           return true;
-        case 'close-drawer':
-          useExploreLayoutStore.getState().setDiscoverDrawerOpen(false);
-          return true;
         case null:
           return false;
       }
@@ -215,7 +207,7 @@ export default function ExploreRouteLayout() {
     return () => subscription.remove();
   }, [arHost]);
 
-  const showPlaces = () => (single ? setCompactPane('discover') : setDiscoverDrawerOpen(true));
+  const showPlaces = () => { if (single) setCompactPane('discover'); };
   // Guidance: phones bring the map forward and reach the step list through
   // the HUD; wider layouts keep the steps in the Detail column beside it.
   const showSteps = () => {
@@ -232,7 +224,7 @@ export default function ExploreRouteLayout() {
   // back (the panel does that itself). During guidance a phone's "Map"
   // uncovers the map; beside the map the steps stay put, so no button.
   const directionsDismiss = !guiding ? () => {} : single ? () => setCompactPane('map') : undefined;
-  const showMap = () => (single ? setCompactPane('map') : setDiscoverDrawerOpen(false));
+  const showMap = () => { if (single) setCompactPane('map'); };
   const windowPadding = isHorizonBuild ? 'window' : 'pane';
 
   return (
@@ -246,7 +238,6 @@ export default function ExploreRouteLayout() {
                 padding={windowPadding}
                 onSelectPlace={(place) => open(place.id, 'discover', rowFocusId(place.id))}
                 onShowMap={layout.discoverDismiss === 'show-map' ? showMap : undefined}
-                onClose={layout.discoverDismiss === 'close' ? showMap : undefined}
               />
             </ExplorePane>
 

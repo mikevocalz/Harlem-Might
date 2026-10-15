@@ -63,7 +63,10 @@ final class WatchWalkStore: NSObject, ObservableObject, WCSessionDelegate {
             if cleared == snapshot?.handoffId { clear("Share your walk again from the phone.", notifyPhone: false) }
             return
         }
-        guard message["kind"] as? String == "snapshot", let json = message["json"] as? String,
+        // A queued snapshot can arrive after the disconnect callback cleared us.
+        // Even an unseen epoch needs a currently active, reachable phone.
+        guard WCSession.default.activationState == .activated, WCSession.default.isReachable,
+              message["kind"] as? String == "snapshot", let json = message["json"] as? String,
               let next = CompanionSnapshot.decode(json) else { return }
         if invalidHandoffs.contains(next.handoffId) { notifyPhoneCleared(next.handoffId); return }
         if let previous = snapshot {

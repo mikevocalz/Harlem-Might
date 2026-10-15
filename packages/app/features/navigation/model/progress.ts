@@ -76,9 +76,8 @@ export type PositioningState =
   | {
       readonly kind: 'tracking';
       readonly confidence: ConfidenceLevel;
-      /** Legacy name: rounded 68% horizontal radius in metres for display.
-       * ingestFix already converts filtered per-axis sigma to this radius. */
-      readonly sigmaM: number;
+      /** Rounded 68% horizontal radius in metres, converted once from filter sigma. */
+      readonly horizontalRadius68M: number;
       /** True when filtered speed is above the walking guard; screens should ask the person to stop using AR. */
       readonly isMovingTooFast: boolean;
     }

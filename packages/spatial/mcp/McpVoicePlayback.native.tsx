@@ -12,6 +12,7 @@ import {
 } from './mcpVoice';
 
 type NativeAudioSource = number | { uri: string };
+type VoicePlaybackOutcome = 'played' | 'failed';
 
 type Props = {
   state: LightCycleMatchState | null;
@@ -26,33 +27,43 @@ export function McpVoicePlaybackNative({
   sources,
   enabled = true,
 }: Props) {
-  const playedEventKeys = useRef(new Set<string>());
+  const outcomes = useRef(new Map<string, VoicePlaybackOutcome>());
   const playbackKey = `mcp-playback:${useId()}`;
+  const active = enabled && state !== null;
+  const cue = active && state ? deriveMcpVoiceCue(state, localPlayerId) : null;
+  const eventKey = cue?.eventKey;
+  const source = cue ? sources[cue.name] : undefined;
+  // Race state and source objects can change every tick without a new cue.
+  const asset = typeof source === 'number' ? source : source?.uri;
 
   useEffect(() => {
-    if (!enabled || !state) return;
+    if (!active) {
+      spatialAudio.unload(playbackKey);
+      return;
+    }
+    if (!eventKey || asset === undefined || outcomes.current.has(eventKey)) return;
 
-    const cue = deriveMcpVoiceCue(state, localPlayerId);
-    if (!cue || playedEventKeys.current.has(cue.eventKey)) return;
-
-    const source = sources[cue.name];
-    if (!source) return;
-
-    playedEventKeys.current.add(cue.eventKey);
-
-    // A source that already ended throws on a second stop; safe to ignore.
-    void spatialAudio.playAmbient(playbackKey, source).catch((error) => {
-      console.warn('Unable to play MCP voice cue.', error);
+    let cancelled = false;
+    void spatialAudio.playAmbientWithOutcome(playbackKey, asset).then((outcome) => {
+      // Cancellation while loading never consumes a once-only cue. A successful
+      // start does, even if the component is disabled before this continuation.
+      if (outcome === 'played') outcomes.current.set(eventKey, 'played');
+    }).catch(() => {
+      if (cancelled) return;
+      // An unavailable cue must not retry on every race tick or expose its URI.
+      outcomes.current.set(eventKey, 'failed');
+      console.warn('An MCP voice cue could not be played.');
     });
 
-    return () => spatialAudio.cancelPending(playbackKey);
-  }, [enabled, localPlayerId, playbackKey, sources, state]);
+    return () => {
+      cancelled = true;
+      // Let a spoken line finish when its triggering race condition expires.
+      spatialAudio.cancelPending(playbackKey);
+    };
+  }, [active, asset, eventKey, playbackKey]);
 
   useEffect(
-    () => () => {
-      // Already stopped.
-      spatialAudio.unload(playbackKey);
-    },
+    () => () => spatialAudio.unload(playbackKey),
     [playbackKey],
   );
 

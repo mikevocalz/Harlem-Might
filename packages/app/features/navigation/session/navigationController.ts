@@ -201,7 +201,7 @@ export function createNavigationController(options: NavigationControllerOptions)
       (current.kind !== 'tracking' ||
         (next.kind === 'tracking' &&
           current.confidence === next.confidence &&
-          current.sigmaM === next.sigmaM &&
+          current.horizontalRadius68M === next.horizontalRadius68M &&
           current.isMovingTooFast === next.isMovingTooFast));
     if (!same) store.setState({ positioning: next });
   }
@@ -234,7 +234,7 @@ export function createNavigationController(options: NavigationControllerOptions)
 
     beginSelection(origin) {
       const phase = get().session.phase;
-      if (phase !== 'idle' && phase !== 'routeReady' && phase !== 'error' && phase !== 'arrived') return false;
+      if (phase !== 'idle' && phase !== 'calculatingRoute' && phase !== 'routeReady' && phase !== 'error' && phase !== 'arrived') return false;
       teardown();
       store.setState({ session: { phase: 'selectingDestination', origin }, routeLoading: { kind: 'idle' }, progress: { kind: 'none' } });
       return true;
@@ -394,32 +394,49 @@ export function createNavigationController(options: NavigationControllerOptions)
       updatePositioning({
         kind: 'tracking',
         confidence: filtered.confidence,
-        sigmaM: Math.round(filtered.sigmaM / config.location.radiusToSigma),
+        horizontalRadius68M: Math.round(filtered.sigmaM / config.location.radiusToSigma),
         isMovingTooFast: tooFastSince !== undefined && filtered.timestampMs - tooFastSince >= config.location.tooFastDurationMs,
       });
 
       const session = get().session;
-      if (!tracking || !hasTrip(session) || !GUIDING_PHASES.has(session.phase)) {
+      if (!tracking || !hasTrip(session)) {
         fixStore.setState({ lastFix: result });
         return;
       }
-      if (result.didReset) tracking.matcher.resetContinuity();
-      const match = tracking.matcher.match(filtered, movementHeading(filtered), fix.accuracy.horizontalM);
+      const currentTracking = tracking;
+      if (session.phase === 'arrived') {
+        // Arrival is terminal. An already-delivered fix may improve an
+        // estimate, but never restart matching, guidance, or location use.
+        const arrival = session.arrival.kind === 'arrived' && session.arrival.confidence === 'estimated'
+          ? currentTracking.arrival.observe(fix, filtered)
+          : undefined;
+        fixStore.setState({ lastFix: result });
+        if (get().session === session && tracking === currentTracking && session.arrival.kind === 'arrived'
+          && arrival?.kind === 'arrived' && arrival.confidence === 'confirmed') {
+          setSession({ ...session, arrival: { ...session.arrival, confidence: 'confirmed', distanceM: arrival.distanceM } });
+        }
+        return;
+      }
+      if (!GUIDING_PHASES.has(session.phase)) {
+        fixStore.setState({ lastFix: result });
+        return;
+      }
+      if (result.didReset) currentTracking.matcher.resetContinuity();
+      const match = currentTracking.matcher.match(filtered, movementHeading(filtered), fix.accuracy.horizontalM);
       fixStore.setState({ lastFix: result, match });
+      // Store subscribers may pause, end or replace the trip synchronously.
+      if (get().session !== session || tracking !== currentTracking) return;
 
       if (match.kind === 'matched') {
-        const progress = computeRouteProgress(tracking.steps, match);
-        const previous = get().progress;
-        const changed =
-          previous.kind !== 'tracking' ||
-          previous.progress.routeId !== progress.routeId ||
-          previous.progress.activeStepIndex !== progress.activeStepIndex ||
-          Math.round(previous.progress.distanceRemainingM) !== Math.round(progress.distanceRemainingM);
-        if (changed) store.setState({ progress: { kind: 'tracking', progress } });
+        const progress = computeRouteProgress(currentTracking.steps, match);
+        // Timestamp and ETA are live evidence even when rounded distance and
+        // step are unchanged (for example while waiting at a crossing).
+        store.setState({ progress: { kind: 'tracking', progress } });
+        if (get().session !== session || tracking !== currentTracking) return;
       }
 
-      const deviation = tracking.offRoute.observe({ fix, filtered, match });
-      const arrival = tracking.arrival.observe(fix, filtered);
+      const deviation = currentTracking.offRoute.observe({ fix, filtered, match });
+      const arrival = currentTracking.arrival.observe(fix, filtered);
       const latest = get().session;
       if (!hasTrip(latest)) return;
 

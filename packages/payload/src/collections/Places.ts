@@ -1,5 +1,5 @@
 import type { CollectionConfig, TextFieldSingleValidation } from 'payload';
-import { isHttpUrl, validateOptionalUrl } from '../fields/provenance';
+import { isHttpUrl, slugField, validateOptionalUrl } from '../fields/provenance.ts';
 
 const requireEntranceSource: TextFieldSingleValidation = (value, { siblingData }) => {
   const entrance = siblingData as { note?: string | null; location?: unknown } | undefined;
@@ -20,7 +20,7 @@ export const Places: CollectionConfig = {
   },
   fields: [
     { name: 'name', type: 'text', required: true, index: true },
-    { name: 'slug', type: 'text', required: true, unique: true, index: true },
+    slugField(),
     {
       name: 'legacySlugs',
       type: 'array',

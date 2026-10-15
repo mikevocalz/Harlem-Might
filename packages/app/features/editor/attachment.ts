@@ -1,10 +1,19 @@
 import { downloadAttachment } from './download';
 
 export interface Attachment {
-  /** URI to store in the document. */
+  /** URI to use while this attachment is owned; browser blob URLs are session-local. */
   uri: string;
   name: string;
+  /**
+   * Release a transient resource after the recipient no longer needs the URI.
+   * Safe to repeat. Native durable file URIs do not supply browser cleanup.
+   * Keep this callback with the attachment; do not release just because its
+   * picker/dialog closes or its URI has been inserted into an editor.
+   */
+  release?: () => void;
 }
+
+export type AttachmentSource = Omit<Attachment, 'name'> & { name?: string };
 
 export type AttachPhase = 'idle' | 'attaching' | 'done' | 'error';
 
@@ -12,7 +21,7 @@ export interface AttachProgress {
   phase: AttachPhase;
   /** 0–1. Meaningful only while `phase` is 'attaching' and the size is known. */
   ratio: number;
-  /** Null when the source reports no length — see `attach` for why. */
+  /** Null when the source reports no valid length — see `attach` for why. */
   bytesTotal: number | null;
   name: string | null;
   error: string | null;
@@ -31,11 +40,19 @@ const REMOTE = /^https?:\/\//i;
 /** Filename from a URI, falling back to something stable rather than empty. */
 export function fileNameFrom(uri: string): string {
   const last = uri.split('?')[0]?.split('/').pop();
-  return last !== undefined && last.length > 0 ? decodeURIComponent(last) : 'attachment';
+  if (last === undefined || last.length === 0) return 'attachment';
+  try {
+    return decodeURIComponent(last);
+  } catch {
+    // Local filenames and dropped URLs can contain a literal percent sign.
+    return last;
+  }
 }
 
 /**
  * Bring a dropped or picked file into the app and report progress.
+ * Takes ownership of `source`: failure releases it, while success transfers
+ * the returned attachment's release callback to the caller.
  *
  * WHAT THE PERCENTAGE MEANS, honestly:
  *
@@ -48,33 +65,38 @@ export function fileNameFrom(uri: string): string {
  *   happened. A progress bar with nothing behind it is theatre, and it teaches
  *   people to distrust the ones that mean something.
  *
- * `totalBytes` can be 0 when a server sends no content-length; the ratio then
- * stays 0 and the caller shows an indeterminate state rather than dividing by
- * zero and rendering NaN%.
+ * Missing or invalid lengths stay indeterminate. Valid lengths can still be
+ * underestimates (for example, compressed response sizes), so the measured
+ * ratio is clamped to 0–1; completion still waits for the actual transfer.
  */
 export async function attach(
-  source: { uri: string; name?: string },
+  source: AttachmentSource,
   onProgress: (progress: AttachProgress) => void,
 ): Promise<Attachment | null> {
   const name = source.name ?? fileNameFrom(source.uri);
-
-  if (!REMOTE.test(source.uri)) {
-    onProgress({ phase: 'done', ratio: 1, bytesTotal: null, name, error: null });
-    return { uri: source.uri, name };
-  }
-
-  onProgress({ phase: 'attaching', ratio: 0, bytesTotal: null, name, error: null });
+  const local = !REMOTE.test(source.uri);
+  let downloadedRelease: (() => void) | undefined;
+  let transferred = false;
 
   try {
+    if (local) {
+      onProgress({ phase: 'done', ratio: 1, bytesTotal: null, name, error: null });
+      transferred = true;
+      return { uri: source.uri, name, ...(source.release ? { release: source.release } : {}) };
+    }
+
+    onProgress({ phase: 'attaching', ratio: 0, bytesTotal: null, name, error: null });
     const uri = await downloadAttachment(source.uri, name, ({ bytesWritten, totalBytes }) => {
+      const bytesTotal = Number.isFinite(totalBytes) && totalBytes > 0 ? totalBytes : null;
       onProgress({
         phase: 'attaching',
-        ratio: totalBytes > 0 ? bytesWritten / totalBytes : 0,
-        bytesTotal: totalBytes > 0 ? totalBytes : null,
+        ratio: bytesTotal !== null && Number.isFinite(bytesWritten)
+          ? Math.min(1, Math.max(0, bytesWritten / bytesTotal)) : 0,
+        bytesTotal,
         name,
         error: null,
       });
-    });
+    }, (release) => { downloadedRelease = release; });
 
     // A cancelled transfer resolves null, and must not be reported as a
     // completed one.
@@ -83,13 +105,61 @@ export async function attach(
       return null;
     }
     onProgress({ phase: 'done', ratio: 1, bytesTotal: null, name, error: null });
-    return { uri, name };
+    transferred = true;
+    return { uri, name, ...(downloadedRelease ? { release: downloadedRelease } : {}) };
   } catch (cause) {
     onProgress({
       phase: 'error',
       ratio: 0,
       bytesTotal: null,
       name,
+      error: cause instanceof Error ? cause.message : 'Could not attach that file.',
+    });
+    return null;
+  } finally {
+    // Remote acquisition replaces the source resource; local success keeps it.
+    if (!local || !transferred) source.release?.();
+    if (!transferred) downloadedRelease?.();
+  }
+}
+
+/**
+ * Acquire and attach inside one UI error boundary, scoped to the open dialog.
+ * Obsolete results are released here. A current result transfers ownership to
+ * the caller, who must also release it if its own handoff becomes obsolete.
+ */
+export async function acquireAttachment(
+  acquire: () => Promise<AttachmentSource | null>,
+  onProgress: (progress: AttachProgress) => void,
+  isCurrent: () => boolean = () => true,
+): Promise<Attachment | null> {
+  const report = (progress: AttachProgress) => {
+    if (isCurrent()) onProgress(progress);
+  };
+  try {
+    if (!isCurrent()) return null;
+    const source = await acquire();
+    // Closing/replacing the dialog must not start a transfer for an old picker.
+    if (!isCurrent()) {
+      source?.release?.();
+      return null;
+    }
+    if (source === null) {
+      report(IDLE_PROGRESS);
+      return null;
+    }
+    const attachment = await attach(source, report);
+    if (!isCurrent()) {
+      attachment?.release?.();
+      return null;
+    }
+    return attachment;
+  } catch (cause) {
+    report({
+      phase: 'error',
+      ratio: 0,
+      bytesTotal: null,
+      name: null,
       error: cause instanceof Error ? cause.message : 'Could not attach that file.',
     });
     return null;

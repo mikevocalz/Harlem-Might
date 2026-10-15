@@ -1,29 +1,19 @@
 'use client';
 
 import { create } from 'zustand';
-import { PAYLOAD_API_BASE, type CmsPlace } from './payload';
+import { createMemberAuthActions } from '@acme/app/features/auth/member-auth.ts';
+import { createMemberSession } from '@acme/app/features/auth/member-session.ts';
+import { PAYLOAD_API_BASE } from './payload.ts';
 
-export interface MemberProfile {
-  id: number | string;
-  email: string;
-  name?: string | null;
-  avatar?: number | string | { id: number | string; url?: string | null } | null;
-}
+export type { MemberProfile, SavedPlaceEntry as SavedPlaceRecord } from '@acme/app/features/auth/member-session.ts';
 
-export interface SavedPlaceRecord {
-  id: number | string;
-  place: number | string | CmsPlace;
-  createdAt: string;
-}
+// Bind the exact mount once. Session reads, auth, logout and saved-place writes
+// all use the shared owner/lifetime guards, including nondefault API paths.
+export const useMemberSession = createMemberSession({ apiBase: PAYLOAD_API_BASE });
 
 type AuthMode = 'login' | 'register';
-type SessionStatus = 'idle' | 'loading' | 'signed-out' | 'signed-in';
-
-interface MemberSessionState {
-  status: SessionStatus;
+interface MemberAuthFormState {
   mode: AuthMode;
-  member: MemberProfile | null;
-  savedPlaces: SavedPlaceRecord[];
   email: string;
   password: string;
   name: string;
@@ -32,157 +22,41 @@ interface MemberSessionState {
   setEmail: (email: string) => void;
   setPassword: (password: string) => void;
   setName: (name: string) => void;
-  hydrate: () => Promise<void>;
   submit: () => Promise<void>;
   signOut: () => Promise<void>;
-  refreshSavedPlaces: () => Promise<void>;
-  savePlace: (placeId: number | string) => Promise<void>;
-  removeSavedPlace: (savedPlaceId: number | string) => Promise<void>;
 }
 
-const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
-  const response = await fetch(`${PAYLOAD_API_BASE}${path}`, {
-    ...init,
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-  });
-
-  const body = (await response.json().catch(() => null)) as
-    | ({ message?: string; errors?: { message?: string }[] } & T)
-    | null;
-
-  if (!response.ok) {
-    throw new Error(
-      body?.errors?.[0]?.message ??
-        body?.message ??
-        `Request failed with status ${response.status}`,
-    );
-  }
-
-  return body as T;
-};
-
-const getMember = async () => {
-  const result = await request<{ user?: MemberProfile | null }>('/auth/get-session');
-  return result.user ?? null;
-};
-
-const getSavedPlaces = async () => {
-  const result = await request<{ docs: SavedPlaceRecord[] }>(
-    '/saved-places?depth=1&sort=-createdAt&limit=100',
-  );
-  return result.docs;
-};
-
-export const useMemberSession = create<MemberSessionState>((set, get) => ({
-  status: 'idle',
-  mode: 'login',
-  member: null,
-  savedPlaces: [],
-  email: '',
-  password: '',
-  name: '',
-  error: null,
-
-  setMode: (mode) => set({ mode, error: null }),
-  setEmail: (email) => set({ email }),
-  setPassword: (password) => set({ password }),
-  setName: (name) => set({ name }),
-
-  hydrate: async () => {
-    if (get().status !== 'idle') return;
-    set({ status: 'loading', error: null });
-
-    try {
-      const member = await getMember();
-      if (!member) {
-        set({ status: 'signed-out', member: null, savedPlaces: [] });
+/** Vite presentation only: transient inputs, validation and form feedback. */
+export const useMemberAuthForm = create<MemberAuthFormState>((set, get) => {
+  const auth = createMemberAuthActions('', useMemberSession);
+  return {
+    mode: 'login', email: '', password: '', name: '', error: null,
+    setMode: (mode) => set({ mode, error: null }),
+    setEmail: (email) => set({ email }),
+    setPassword: (password) => set({ password }),
+    setName: (name) => set({ name }),
+    submit: async () => {
+      const session = useMemberSession.getState();
+      if (session.signOutPending || session.status === 'loading') return;
+      const { mode, email, password, name } = get();
+      set({ password: '', error: null });
+      if (mode === 'register' && !name.trim()) {
+        set({ error: 'Add your name to create an account.' });
         return;
       }
-
-      set({ status: 'signed-in', member });
-      await get().refreshSavedPlaces();
-    } catch {
-      set({ status: 'signed-out', member: null, savedPlaces: [] });
-    }
-  },
-
-  submit: async () => {
-    const { mode, email, password, name } = get();
-    set({ status: 'loading', error: null });
-
-    try {
-      if (mode === 'register') {
-        if (!name.trim()) throw new Error('Add your name to create an account.');
-        await request('/auth/sign-up/email', {
-          method: 'POST',
-          body: JSON.stringify({ email: email.trim(), password, name: name.trim() }),
-        });
-      }
-
-      const result = await request<{ user: MemberProfile }>('/auth/sign-in/email', {
-        method: 'POST',
-        body: JSON.stringify({ email: email.trim(), password }),
-      });
-
-      set({
-        status: 'signed-in',
-        member: result.user,
-        password: '',
-        error: null,
-      });
-      await get().refreshSavedPlaces();
-    } catch (error) {
-      set({
-        status: 'signed-out',
-        password: '',
-        error: error instanceof Error ? error.message : 'Could not sign in.',
-      });
-    }
-  },
-
-  signOut: async () => {
-    try {
-      await request('/auth/sign-out', { method: 'POST' });
-    } finally {
-      set({
-        status: 'signed-out',
-        member: null,
-        savedPlaces: [],
-        email: '',
-        password: '',
-        name: '',
-        error: null,
-      });
-    }
-  },
-
-  refreshSavedPlaces: async () => {
-    if (!get().member) return;
-    try {
-      const savedPlaces = await getSavedPlaces();
-      set({ savedPlaces });
-    } catch (error) {
-      set({
-        error:
-          error instanceof Error ? error.message : 'Could not load your saved places.',
-      });
-    }
-  },
-
-  savePlace: async (placeId) => {
-    await request('/saved-places', {
-      method: 'POST',
-      body: JSON.stringify({ place: placeId }),
-    });
-    await get().refreshSavedPlaces();
-  },
-
-  removeSavedPlace: async (savedPlaceId) => {
-    await request(`/saved-places/${savedPlaceId}`, { method: 'DELETE' });
-    await get().refreshSavedPlaces();
-  },
-}));
+      const submitting = mode === 'register'
+        ? auth.signUpEmail({ name, email, password })
+        : auth.signInEmail({ email, password });
+      const boundary = useMemberSession.getState().authBoundary;
+      const result = await submitting;
+      // Form feedback belongs to the boundary that submitted it. The shared
+      // store alone owns cancellation, identity, cookies and saved-place IO.
+      if (useMemberSession.getState().authBoundary !== boundary) return;
+      set({ error: result.ok ? null : result.message });
+    },
+    signOut: () => {
+      set({ email: '', password: '', name: '', error: null });
+      return useMemberSession.getState().signOut();
+    },
+  };
+});

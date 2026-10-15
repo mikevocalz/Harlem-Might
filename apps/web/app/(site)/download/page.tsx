@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getHarlemPlacePreview } from '@acme/app/features/explore/explore.store.ts';
+import { getHarlemPlacePreview } from '@acme/app/features/explore/place-previews.ts';
 import { DescriptionDetails, DescriptionList, DescriptionTerm, Figcaption, Figure } from '@acme/ui/html';
 import { View } from '@acme/ui/tw';
 import {

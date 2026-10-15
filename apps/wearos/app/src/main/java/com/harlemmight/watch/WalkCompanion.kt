@@ -14,10 +14,11 @@ import com.google.android.gms.wearable.Wearable
 import com.harlemmight.companion.CompanionWire
 import org.json.JSONObject
 import java.time.Instant
+import java.time.Clock
 import java.util.UUID
 
 /** Foreground-only paired state. No preferences, DataItems, services or outbox. */
-class WearWalkStore(private val context: Context) : MessageClient.OnMessageReceivedListener, CapabilityClient.OnCapabilityChangedListener {
+class WearWalkStore(private val context: Context, private val clock: Clock = Clock.systemUTC()) : MessageClient.OnMessageReceivedListener, CapabilityClient.OnCapabilityChangedListener {
     var snapshot by mutableStateOf<JSONObject?>(null); private set
     var status by mutableStateOf("Open the phone app and share a walk."); private set
     var pending by mutableStateOf(false); private set
@@ -69,13 +70,18 @@ class WearWalkStore(private val context: Context) : MessageClient.OnMessageRecei
                 if (!foreground || operation != generation || request != reconnectGeneration) return@addOnSuccessListener
                 val node = info.nodes.singleOrNull()
                 if (node == null) { phone = null; clear("Connect one phone and open Harlem Might."); return@addOnSuccessListener }
+                // A new peer cannot inherit the previous phone's snapshot or pending action.
+                if (phone != null && phone != node.id) clear("Phone changed. Share a fresh walk from your phone.")
                 phone = node.id; reachable = true
+                val delivery = generation
                 Wearable.getMessageClient(context).sendMessage(node.id, CompanionWire.REQUEST, (snapshot?.optString("handoffId") ?: "").toByteArray(Charsets.UTF_8))
-                    .addOnFailureListener { if (operation == generation && request == reconnectGeneration) clear("Phone disconnected. Nothing was queued.") }
+                    .addOnFailureListener { if (delivery == generation && request == reconnectGeneration) clear("Phone disconnected. Nothing was queued.") }
             }.addOnFailureListener { if (operation == generation && request == reconnectGeneration) clear("Wear Data Layer is unavailable. Public highlights still work.") }
     }
     override fun onCapabilityChanged(info: CapabilityInfo) { main.post {
-        if (phone != null && info.nodes.none { it.id == phone }) { phone = null; clear("Phone disconnected. Share again after reconnecting.") }
+        if (info.nodes.size != 1 || (phone != null && info.nodes.none { it.id == phone })) {
+            clear("Connect one phone and share again after reconnecting."); phone = null
+        }
     } }
     override fun onMessageReceived(event: MessageEvent) { main.post {
         if (!foreground || event.sourceNodeId != phone || event.data.size > 8192) return@post
@@ -87,7 +93,7 @@ class WearWalkStore(private val context: Context) : MessageClient.OnMessageRecei
             return@post
         }
         if (event.path != CompanionWire.SNAPSHOT) return@post
-        val next = CompanionWire.snapshot(event.data.toString(Charsets.UTF_8)) ?: return@post
+        val next = CompanionWire.snapshot(event.data.toString(Charsets.UTF_8), clock.millis()) ?: return@post
         if (next.getString("handoffId") in invalidHandoffs) {
             notifyPhoneCleared(next.getString("handoffId")); return@post
         }
@@ -123,12 +129,12 @@ class WearWalkStore(private val context: Context) : MessageClient.OnMessageRecei
         if (confirmed && next.getBoolean("hapticsEnabled")) confirmationFeedback++
         expiry?.let { main.removeCallbacks(it) }
         expiry = Runnable { clear("Guidance expired. Share a fresh walk from your phone.") }.also {
-            main.postDelayed(it, (Instant.parse(next.getString("expiresAt")).toEpochMilli() - System.currentTimeMillis()).coerceAtLeast(1))
+            main.postDelayed(it, (Instant.parse(next.getString("expiresAt")).toEpochMilli() - clock.millis()).coerceAtLeast(1))
         }
     } }
     fun send(type: String, expected: JSONObject) {
         val s = snapshot; val node = phone
-        if (!foreground || !reachable || pending || s == null || node == null || !CompanionWire.fresh(s) ||
+        if (!foreground || !reachable || pending || s == null || node == null || !CompanionWire.fresh(s, clock.millis()) ||
             expected.opt("handoffId") != s.opt("handoffId") || expected.opt("sessionId") != s.opt("sessionId") ||
             expected.opt("revision") != s.opt("revision") || expected.opt("nextStopId") != s.opt("nextStopId")) {
             status = "Walk changed. Review the latest stop before confirming."; return
@@ -139,7 +145,7 @@ class WearWalkStore(private val context: Context) : MessageClient.OnMessageRecei
         if (type in listOf("stop", "confirm-stop")) c.put("confirmed", true)
         if (type == "confirm-stop") c.put("stopId", s.opt("nextStopId"))
         val json = c.toString()
-        if (CompanionWire.command(json, s) == null) return
+        if (CompanionWire.command(json, s, clock.millis()) == null) return
         pending = true; pendingCommand = c; pendingCount = s.getInt("completedCount")
         status = "Waiting for your phone to confirm…"
         val operation = ++generation

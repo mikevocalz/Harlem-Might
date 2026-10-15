@@ -70,16 +70,13 @@ it('preserves the full reviewed group framing and busts both client cache layers
   assert.ok(musicKeys.artistPhotos(['Cameo']).includes(ARTIST_PHOTO_VERSION));
 });
 
-it('keeps both public GET routes read-only and restricted to reviewed, published artists', () => {
+// Request/response contracts are exercised in apps/web/lib/artist-photo-routes.test.ts.
+it('keeps both public GET routes free of writes and live photo discovery', () => {
   const route = readFileSync(new URL('../../../../apps/web/app/api/music/artist-photo/route.ts', import.meta.url), 'utf8');
   const imageRoute = readFileSync(new URL('../../../../apps/web/app/api/music/artist-photo/image/route.ts', import.meta.url), 'utf8');
   for (const source of [route, imageRoute]) {
     assert.doesNotMatch(source, /persistRightsCleared|payload\.(?:create|update|delete)|resolveVerifiedArtistPhoto|resolveArtistPhotos/);
-    assert.match(source, /listMusicArtists/);
-    assert.match(source, /resolveReviewedArtistPhoto/);
   }
-  assert.match(route, /allowedNames\.has\(name\)/);
-  assert.match(imageRoute, /catalogue\.data\.some/);
 });
 
 
@@ -92,4 +89,43 @@ it('social previews replace all quarantined photos, retain later uploads, and co
   }
   assert.equal(musicArtistOpenGraphPhoto({ name: 'Vado' })?.url, resolveReviewedArtistPhoto('Vado')?.url);
   assert.equal(musicArtistOpenGraphPhoto({ name: 'Unknown' }), undefined);
+});
+
+it('returns null for inherited table keys and retains every requested batch key', () => {
+  const names = ['constructor', '__proto__', 'toString', 'Unknown Artist'];
+  const results = resolveReviewedArtistPhotos(names);
+  for (const name of names) {
+    assert.equal(resolveReviewedArtistPhoto(name), null, name);
+    assert.equal(Object.hasOwn(results, name), true, name);
+    assert.equal(results[name], null, name);
+  }
+});
+
+it('resolves reviewed aliases and unknown names without performing network discovery', (t) => {
+  const fetch = t.mock.method(globalThis, 'fetch', async () => {
+    throw new Error('Reviewed selection must not discover upstream photos');
+  });
+  const results = resolveReviewedArtistPhotos([
+    '  A$AP Ant  ', 'Frankie Lymon & the Teenagers', 'Unknown Artist',
+  ]);
+  assert.equal(results['  A$AP Ant  ']?.url, REVIEWED_ARTIST_PHOTOS['asap ant']?.url);
+  assert.equal(results['  A$AP Ant  ']?.name, '  A$AP Ant  ');
+  assert.equal(results['Frankie Lymon & the Teenagers']?.url,
+    REVIEWED_ARTIST_PHOTOS['frankie lymon and the teenagers']?.url);
+  assert.equal(results['Unknown Artist'], null);
+  assert.equal(fetch.mock.callCount(), 0);
+});
+
+it('returns independent photo copies so callers cannot change later reviewed selections', () => {
+  const original = { ...REVIEWED_ARTIST_PHOTOS.cameo! };
+  const first = resolveReviewedArtistPhoto('Cameo')!;
+  const batch = resolveReviewedArtistPhotos(['Cameo', 'CAMEO']);
+  assert.notEqual(first, batch.Cameo);
+  assert.notEqual(batch.Cameo, batch.CAMEO);
+  first.url = 'https://unreviewed.example/replacement.jpg';
+  first.credit = 'Changed attribution';
+  batch.Cameo!.sourceUrl = 'https://unreviewed.example/source';
+  assert.deepEqual(REVIEWED_ARTIST_PHOTOS.cameo, original);
+  assert.deepEqual(resolveReviewedArtistPhoto('Cameo'), original);
+  assert.deepEqual(batch.CAMEO, { ...original, name: 'CAMEO' });
 });

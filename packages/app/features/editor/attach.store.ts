@@ -11,10 +11,14 @@ import type { Attachment } from './attachment.ts';
  * as an absolute overlay instead confined it to the sheet's box, where it had
  * no room.
  *
- * So the dialog is mounted once at the app root, and the editor asks for a file
- * through this store. `request()` returns a promise that settles when the user
- * picks or cancels, which keeps the capability's `await pickFile()` shape
- * intact regardless of where the UI lives.
+ * A host using this exported dialog should mount it once outside that sheet,
+ * and ask for a file through this store. `request()` returns a promise that
+ * settles when the user picks or cancels. No current app host mounts it.
+ *
+ * A successful request transfers ownership of the attachment and its optional
+ * release callback to the caller. The host must retain it for as long as its
+ * editor/document uses the URI, then release it; closing the dialog is not the
+ * end of an adopted attachment's lifetime.
  */
 interface AttachState {
   open: boolean;
@@ -36,7 +40,9 @@ export const useAttachStore = create<AttachState>((set, get) => ({
     }),
 
   resolve: (attachment) => {
-    get().settle?.(attachment);
+    const settle = get().settle;
+    if (settle) settle(attachment);
+    else attachment?.release?.();
     set({ open: false, settle: null });
   },
 }));
