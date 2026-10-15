@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { ExplorePlace } from '../explore/explore.store.ts';
 import type { NavigationState } from '../navigation/session/navigationStore.ts';
-import { projectHarlemSpecs } from './experience.ts';
+import {
+  projectHarlemSpecs, SPECS_BACKPLATE_M, SPECS_BUTTON_SCALE, SPECS_WALK_FRAME_SCALE,
+} from './experience.ts';
 
 const apollo: ExplorePlace = {
   id: 'apollo-theater', name: 'Apollo Theater', category: 'Culture',
@@ -21,6 +23,49 @@ const idle = (): NavigationState => ({
   arTracking: { kind: 'off' },
   progress: { kind: 'none' },
 });
+
+type Frame = ReturnType<typeof projectHarlemSpecs>;
+
+// Half the height a single line of live text needs on the plate.
+const TEXT_HALF_HEIGHT_M = 0.02;
+
+/** Every text line and button plate sits inside the backplate, in hm-root space. */
+function assertContentInsidePlate(frame: Frame): void {
+  const byId = new Map(frame.scene.nodes.map(node => [node.id, node]));
+  const plate = byId.get('hm-backplate');
+  if (!plate?.scale) throw new Error(`${frame.view}: backplate with a scale`);
+  const plateY = plate.position?.[1] ?? 0;
+  const halfH = (SPECS_BACKPLATE_M.height * plate.scale[1]) / 2;
+  const halfW = (SPECS_BACKPLATE_M.width * plate.scale[0]) / 2;
+  const rootY = (node: { id: string; parentId?: string; position?: [number, number, number] }): number => {
+    const own = node.position?.[1] ?? 0;
+    const parent = node.parentId && node.parentId !== 'hm-root' ? byId.get(node.parentId) : undefined;
+    return own + (parent ? rootY(parent) : 0);
+  };
+  for (const node of frame.scene.nodes) {
+    if (node.id === 'hm-root' || node.id === 'hm-backplate' || node.kind === 'group') continue;
+    const y = rootY(node);
+    const half = node.kind === 'panel' && node.scale
+      ? (SPECS_BACKPLATE_M.height * node.scale[1]) / 2 : TEXT_HALF_HEIGHT_M;
+    assert.ok(y + half <= plateY + halfH, `${frame.view}: ${node.id} top inside plate`);
+    assert.ok(y - half >= plateY - halfH, `${frame.view}: ${node.id} bottom inside plate`);
+    if (node.kind === 'panel' && node.scale) {
+      assert.ok((SPECS_BACKPLATE_M.width * node.scale[0]) / 2 <= halfW, `${frame.view}: ${node.id} fits plate width`);
+    }
+  }
+}
+
+/** Each action target's first child is the 32 x 7 cm plate, then its label. */
+function assertFullSizeTargets(frame: Frame): void {
+  assert.ok(frame.targets.length > 0, `${frame.view}: has targets`);
+  for (const target of frame.targets) {
+    const children = frame.scene.nodes.filter(node => node.parentId === target.targetId);
+    assert.equal(children[0]?.kind, 'panel', `${target.targetId}: plate is the first child`);
+    assert.deepEqual(children[0]?.scale, SPECS_BUTTON_SCALE);
+    assert.equal(children[1]?.kind, 'text', `${target.targetId}: label is the plate's sibling`);
+    assert.equal(children.length, 2);
+  }
+}
 
 function titleOf(frame: ReturnType<typeof projectHarlemSpecs>): string | undefined {
   return frame.scene.nodes.find(node => node.id === 'hm-title')?.text;
@@ -111,7 +156,11 @@ describe('Harlem Might Specs scene projections', () => {
     assert.equal(good.navigation?.generation, 2);
     assert.equal(good.navigation?.plan.route.id, 'walk-a#2');
     assert.equal(good.targets.length, 1);
-    assert.equal(good.scene.nodes.some(node => node.kind === 'panel'), false);
+    const walkPlate = good.scene.nodes.find(node => node.id === 'hm-backplate');
+    assert.deepEqual(walkPlate?.scale, SPECS_WALK_FRAME_SCALE);
+    assert.equal(good.scene.nodes.find(node => node.id === 'hm-root')?.position?.[1], 0.15);
+    assertContentInsidePlate(good);
+    assertFullSizeTargets(good);
 
     assert.equal(projectHarlemSpecs({ places: [], navigation, nowMs: 40000 }).navigation, undefined);
     assert.equal(projectHarlemSpecs({ places: [], navigation }).navigation, undefined);
@@ -163,5 +212,25 @@ describe('Harlem Might Specs scene projections', () => {
       } },
     } });
     assert.match(confirmed.scene.nodes.find(node => node.id === 'hm-subtitle')?.text ?? '', /arrived/);
+    assertContentInsidePlate(confirmed);
+    assertFullSizeTargets(confirmed);
+  });
+
+  it('sizes every non-walking plate to its layout and gives each action a full plate', () => {
+    const many = Array.from({ length: 6 }, (_, i) => ({ ...apollo, id: 'p' + i, name: 'Place ' + i }));
+    const frames: Frame[] = [
+      projectHarlemSpecs({ places: many, navigation: idle() }),
+      projectHarlemSpecs({ places: [apollo], navigation: idle() }),
+      projectHarlemSpecs({ places: [apollo], selectedPlaceId: apollo.id, navigation: idle() }),
+      projectHarlemSpecs({ places: [], selectedPlaceId: 'missing', navigation: idle() }),
+      projectHarlemSpecs({ places: [], navigation: { ...idle(), session: {
+        phase: 'error', error: { message: 'Route service offline.' },
+      } as NavigationState['session'] } }),
+    ];
+    for (const frame of frames) {
+      assertContentInsidePlate(frame);
+      assertFullSizeTargets(frame);
+    }
+    assert.deepEqual(frames.map(frame => frame.view), ['discover', 'discover', 'place', 'error', 'error']);
   });
 });

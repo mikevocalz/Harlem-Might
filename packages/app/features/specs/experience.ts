@@ -76,9 +76,30 @@ function hasRoutableCoordinate(place: ExplorePlace): boolean {
 
 type Action = { label: string; command: string };
 
+type Vec3 = [number, number, number];
+
+/**
+ * Calibrations shared with the Lens entry script (HarlemMightSpecsEntry.ts).
+ * A UI Kit BackPlate is 24 x 12 cm at scale 1. Buttons are 32 x 7 cm, the
+ * walking card is 40 x 16 cm and the main frame is 50 cm wide.
+ */
+export const SPECS_BACKPLATE_M = { width: 0.24, height: 0.12 } as const;
+export const SPECS_FRAME_SCALE: Vec3 = [2.08, 4, 1];
+export const SPECS_WALK_FRAME_SCALE: Vec3 = [1.67, 1.33, 1];
+export const SPECS_BUTTON_SCALE: Vec3 = [1.33, 0.58, 1];
+
+const BUTTON_HALF_HEIGHT = (SPECS_BACKPLATE_M.height * SPECS_BUTTON_SCALE[1]) / 2;
+// Room above the title and below the last button, so text and button plates
+// never reach the frame edge.
+const FRAME_MARGIN = 0.045;
+// Centre-to-centre gap between buttons, as in the entry script. The 1.5 cm
+// gap keeps neighbouring colliders from touching.
+const BUTTON_SPACING = 0.085;
+
 /**
  * Only one primary reading surface is exposed at a time.
- * Unlike Quest's three-panel workspace, walking hides the large frame.
+ * Unlike Quest's three-panel workspace, walking swaps the large frame for the
+ * small walking card above eye level, leaving the lower view to the route.
  */
 function compose(
   view: HarlemSpecsFrame['view'],
@@ -87,32 +108,57 @@ function compose(
   actions: readonly Action[],
 ): HarlemSpecsFrame {
   const walking = view === 'walking';
+  const shown = actions.slice(0, walking ? 1 : 4);
+  const titleY = walking ? 0.045 : 0.15;
+  const subtitleY = walking ? 0.005 : 0.075;
+  const actionY = (i: number) => walking ? -0.052 : -0.005 - i * BUTTON_SPACING;
+
   const nodes: SpecsSceneNode[] = [{
-    id: 'hm-root', kind: 'group', position: [0, -0.08, -1.1],
+    id: 'hm-root', kind: 'group', position: [0, walking ? 0.15 : -0.06, -1.1],
   }];
-  if (!walking) {
+  if (walking) {
+    // Same card and offset as the entry script's walking card: 40 x 16 cm,
+    // spanning y 0.07 to -0.09 under hm-root.
     nodes.push({
       id: 'hm-backplate', kind: 'panel', parentId: 'hm-root',
-      scale: [0.54, 0.43, 1],
+      position: [0, -0.01, 0], scale: SPECS_WALK_FRAME_SCALE,
+    });
+  } else {
+    // The frame keeps the calibrated 50 cm width and grows to the content:
+    // from the title down to the bottom edge of the last button.
+    const top = titleY + FRAME_MARGIN;
+    const bottom = shown.length
+      ? actionY(shown.length - 1) - BUTTON_HALF_HEIGHT - FRAME_MARGIN
+      : (subtitle ? subtitleY : titleY) - FRAME_MARGIN;
+    nodes.push({
+      id: 'hm-backplate', kind: 'panel', parentId: 'hm-root',
+      position: [0, (top + bottom) / 2, 0],
+      scale: [SPECS_FRAME_SCALE[0], (top - bottom) / SPECS_BACKPLATE_M.height, 1],
     });
   }
   nodes.push({
     id: 'hm-title', kind: 'text', parentId: 'hm-root',
-    text: summary(title, 40), position: [0, walking ? 0.06 : 0.15, 0.025],
+    text: summary(title, 40), position: [0, titleY, 0.025],
   });
   if (subtitle) {
     nodes.push({
       id: 'hm-subtitle', kind: 'text', parentId: 'hm-root',
       text: summary(subtitle, walking ? 43 : 55),
-      position: [0, walking ? 0 : 0.075, 0.026],
+      position: [0, subtitleY, 0.026],
     });
   }
   const targets: SpecsPresentation['targets'] = [];
-  for (const [i, item] of actions.slice(0, walking ? 1 : 4).entries()) {
+  for (const [i, item] of shown.entries()) {
     const id = `hm-action-${i}`;
     nodes.push({
       id, kind: 'group', parentId: 'hm-root',
-      position: [0, walking ? -0.08 : -0.005 - i * 0.07, 0.035],
+      position: [0, actionY(i), 0.035],
+    });
+    // SIK fits the target's collider to its first visual child, so the plate
+    // comes first and the whole 32 x 7 cm plate is pinchable. The label is the
+    // plate's sibling so it does not inherit the plate's non-uniform scale.
+    nodes.push({
+      id: `${id}-plate`, kind: 'panel', parentId: id, scale: SPECS_BUTTON_SCALE,
     });
     nodes.push({
       id: `${id}-label`, kind: 'text', parentId: id,
