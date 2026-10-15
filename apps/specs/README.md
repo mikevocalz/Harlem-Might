@@ -5,6 +5,27 @@ Specs experience. The phone/web/Quest UI is **not** deployed into Lens Studio.
 The shared app projects its state into portable Viro scene nodes; the existing
 `viro-external` Specs runtime renders them with Lens Studio/Snap OS.
 
+## What Viro renders here
+
+Lens Studio draws every pixel; ViroCore does not run on the glasses. Viro
+External is the UI layer: `HarlemMightSpecsEntry` describes each screen as
+portable nodes and calls `ViroSpecsPresentationHost.present()`, and the synced
+Lens scripts in `Assets/ViroSpecs/lens` turn them into Lens objects. The same
+node format renders through ViroCore on iOS, Android, Quest and PICO.
+
+| Node | Becomes in Lens Studio | Used for |
+|---|---|---|
+| `panel` | Snap UI Kit frame prefab | the card, button and tab plates |
+| `text` | Lens `Text` with `textStyle` size and color | titles, labels, body copy |
+| `image` | Lens `Image` from `ViroSpecsAssetRegistry` | header logo, CMS photos |
+| `group` | empty `SceneObject` | layout, and each pinch target |
+| `targets` | SIK `Interactable`, bound one frame later | pinches that come back as action strings |
+
+Outside Viro, the entrypoint drives Lens and Snap components directly:
+Navigation Kit (arrow and place list), Snap's map, the WebView video screen,
+the Internet Module that reads Payload, and `RemoteMediaModule`, whose photo
+textures are handed to Viro with `registerImage`.
+
 ## Required sibling repository
 
 Use `mikevocalz/viro-external` at `main` (d0bd05b or later). That includes
