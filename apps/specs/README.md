@@ -7,9 +7,8 @@ The shared app projects its state into portable Viro scene nodes; the existing
 
 ## Required sibling repository
 
-Use `mikevocalz/viro-external` on branch
-`feat/specs-live-presentation-20261013` (or the merged release containing
-`ViroSpecsPresentationHost`). Do not substitute public ViroCore as a Snap OS
+Use `mikevocalz/viro-external` at `main` (d0bd05b or later). That includes
+`ViroSpecsPresentationHost` with text styling and next-frame pinch binding. Do not substitute public ViroCore as a Snap OS
 renderer.
 
 1. Use Lens Studio 5.22+ targeting SPECS 27. Initialize a Lens project with
