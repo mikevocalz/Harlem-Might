@@ -5,6 +5,9 @@ Specs experience. The phone/web/Quest UI is **not** deployed into Lens Studio.
 The shared app projects its state into portable Viro scene nodes; the existing
 `viro-external` Specs runtime renders them with Lens Studio/Snap OS.
 
+What the Lens does today, and what has been verified where, is in
+[STATUS.md](STATUS.md).
+
 ## What Viro renders here
 
 Lens Studio draws every pixel; ViroCore does not run on the glasses. Viro
@@ -17,114 +20,132 @@ node format renders through ViroCore on iOS, Android, Quest and PICO.
 |---|---|---|
 | `panel` | Snap UI Kit frame prefab | the card, button and tab plates |
 | `text` | Lens `Text` with `textStyle` size and color | titles, labels, body copy |
-| `image` | Lens `Image` from `ViroSpecsAssetRegistry` | header logo, CMS photos |
+| `image` | Lens `Image` from `ViroSpecsAssetRegistry` | header logo, tab icons, CMS photos |
 | `group` | empty `SceneObject` | layout, and each pinch target |
+| `group` with `scroll` | UI Kit `ScrollWindow` | the list window and detail pages |
 | `targets` | SIK `Interactable`, bound one frame later | pinches that come back as action strings |
 
 Outside Viro, the entrypoint drives Lens and Snap components directly:
-Navigation Kit (arrow and place list), Snap's map, the WebView video screen,
-the Internet Module that reads Payload, and `RemoteMediaModule`, whose photo
-textures are handed to Viro with `registerImage`.
+Navigation Kit (arrow and `ManualPlaceList`), Snap's map (`[MapComponent]`
+from the Navigation Kit sample), the WebView video screen, the Internet Module
+that reads Payload, and `RemoteMediaModule`, whose photo textures are handed
+to Viro with `registerImage`.
 
 ## Required sibling repository
 
-Use `mikevocalz/viro-external` at `main` (d0bd05b or later). That includes
-`ViroSpecsPresentationHost` with text styling and next-frame pinch binding. Do not substitute public ViroCore as a Snap OS
-renderer.
+Use `mikevocalz/viro-external` with these changes present:
 
-1. Use Lens Studio 5.22+ targeting SPECS 27. Initialize a Lens project with
-   Snap's current CLAD toolchain, then install the upstream pinned packages
-   documented in `viro-external/packages/specs`.
+- #68 (merged): text styling and next-frame pinch binding.
+- #69 (open): `ViroSpecsAssetRegistry.registerImage`, used for every CMS photo.
+- #70 (open): the `scroll` option on group nodes, rendered as a UI Kit
+  `ScrollWindow`. It adds no ScrollBar, because ScrollBar's `scrollWindow` and
+  orientation are private inputs.
+
+Until #69 and #70 merge, sync from a checkout that contains both branches. Do
+not substitute public ViroCore as a Snap OS renderer.
+
+## Setup
+
+1. Use Lens Studio 5.24.1 targeting SPECS 27 (verified version; 5.22+ is the
+   floor). Initialize a Lens project with Snap's current CLAD toolchain, then
+   install the upstream pinned packages documented in
+   `viro-external/packages/specs`.
 2. From Viro External, run `pnpm --filter @viro-external/specs
    specs:sync -- --project /path/to/LensProject`.
-3. Copy `Assets/HarlemMight/Scripts/HarlemMightSpecsEntry.ts` into that Lens
-   project's `Assets/HarlemMight/Scripts/` directory. The relative import
-   resolves the synced `Assets/ViroSpecs/lens` directory.
+3. Copy the three scripts in `Assets/HarlemMight/Scripts/`
+   (`HarlemMightSpecsEntry.ts`, `HarlemMightContent.ts`,
+   `HarlemMightVideoScreen.ts`) into the Lens project's
+   `Assets/HarlemMight/Scripts/`. The relative imports resolve the synced
+   `Assets/ViroSpecs/lens` directory.
 4. Install Snap's Navigation Kit (`SpecsNavigationKit.lspkg`). The entry
-   script imports `ARNavigation`, `GeoLocationPlace` and
-   `NavigationDataComponent` from it.
-5. Attach `ViroSpecsAssetRegistry`, `ViroSpecsRuntimeHost`,
+   script imports `ARNavigation`, `GeoLocationPlace`, `Place` and
+   `NavigationDataComponent` from it. Put the Harlem places (Apollo Theater,
+   Schomburg Center) in the scene's `ManualPlaceList`; walks reuse those
+   entries so the map shows one pin per place.
+5. Turn on Project Settings > Experimental API. Lens Studio stores it in the
+   `.esproj` as `EXPERIMENTAL_API` in `metaInfo.lensDescriptors`. Don't try to
+   set `spkPrivilegeLevel` by editing the file; Lens Studio overwrites it on
+   save. Experimental API is required for `http://` fetches to a local server
+   and for WebView.
+6. Attach `ViroSpecsAssetRegistry`, `ViroSpecsRuntimeHost`,
    `ViroSpecsInteractionHost`, `ViroSpecsPresentationHost` and
-   `HarlemMightSpecsEntry` to scene objects; wire the Inspector references,
-   including the Navigation Kit object (with `NavigationDataComponent`) and the
-   AR Navigation arrow object. Set the default UI Kit frame prefab and
-   readable font in the asset registry.
-6. Set up the header logo. Import
-   `packages/assets/Harlem-Might-Logo-landscape.png` into the Lens project and
-   map it in `ViroSpecsAssetRegistry` under the image id `harlem-might-logo`.
-   Use it as supplied; never recolor the logo. For the registry's Default Image
-   Material, create an Unlit material with Blend Mode Normal, Depth Write off
-   and Base Texture enabled. Don't use the lab's two image materials: neither
-   renders the image correctly.
-7. Connect the catalogue. Create an Internet Module asset and set it as the
-   entrypoint's `internetModule`. Set `apiBase` to the Payload REST base the
-   mobile app uses (`EXPO_PUBLIC_PAYLOAD_API_BASE`, ending in
-   `/payload-api`). Every tab then reads the same collections, filters and
-   sort orders as the mobile screens: featured places, published walks,
-   stories and music artists, and today's events in New York time. Lens only
-   fetches `https://` URLs. A local `http://localhost:3000/payload-api` works
-   in Preview only with Experimental APIs on, and Spectacles need a public
-   https host. When a read fails, the tab shows its offline preview and
-   retries the next time it opens. Detail views show the record's CMS photo
-   (place images, story images or archive art, artist headshots, event or
-   venue images) when it has one. Set `assetRegistryObject` to the
-   `ViroSpecsAssetRegistry` object; photos are registered there at runtime
-   (`registerImage`, viro-external #69).
-8. Set up the Music video screen. Turn on Project Settings > Experimental
-   APIs; WebView refuses to start without it. Create an Internet Module asset,
-   add a scene object with an Image (the header logo's material works, the
-   script clones it) and `HarlemMightVideoScreen`, wire both inputs, and set it
-   as the entrypoint's `videoScreenObject`. Place it over the card body below
-   the tabs: 32 x 18 cm at about 16 cm below eye level. WebView only runs on
-   Spectacles; in Preview the Music card shows the song and "Video plays on
-   Spectacles".
-9. Optional map: copy `MapComponentModified` from Snap's Navigation Kit sample
-   (Spectacles-Sample, cloned with Git LFS), add `[MapComponent].prefab`, and
-   point its `navigationComponent` inputs at the Navigation Kit object. Put
-   Harlem places (Apollo Theater, Schomburg Center) in the scene's
-   `ManualPlaceList`; the entrypoint walks to those entries so the map shows
-   one pin per place.
-10. Run CLAD `/verify-preview` and LEAF interaction tests. Offline, the
-   entrypoint shows the logo header and the app's tabs (Explore, Walks,
-   Stories, Music, Today). Explore lists two preview places and can start a
-   Navigation Kit walk to either one. The arrow is a straight-line bearing to
-   the entrance, not a street route. Today shows the next cited history fact;
-   Each tab's cards scroll in one window (Music loads its next 24 artists as
-   you near the bottom), and pinching one opens a scrolling page with the
-   mobile screen's content: full story body, artist biography and album art,
-   walk stops. Scrolling needs viro-external's `scroll` node (PR #70). Explore
-   and Walks can start a Navigation Kit walk, and a Music artist plays their
-   featured song on the video screen.
-11. A future authenticated Mobile Kit transport will call
-   `HarlemMightSpecsEntry.acceptFrame(frame)`. The app produces that frame
-   via `projectHarlemSpecs` in `packages/app/features/specs/experience.ts`.
-   The Lens forwards action strings to a registered `subscribeCommand`
-   listener; it never writes to the app navigation store or CMS itself.
-   The entrypoint rejects commands not present in the most recently accepted
-   frame; the phone must still authenticate/authorize the command and session.
+   `HarlemMightSpecsEntry` to scene objects. Wire the entry's inputs:
+   `presentationHostObject`, `navigationObject` (the object with
+   `NavigationDataComponent`), `arNavigationObject` (the AR Navigation arrow),
+   `assetRegistryObject`, and optionally `placeIcon`. Set the default UI Kit
+   frame prefab and readable font in the asset registry.
+7. Import the images and map them in `ViroSpecsAssetRegistry`:
+   - `packages/assets/Harlem-Might-Logo-landscape.png` under
+     `harlem-might-logo`. Use it as supplied; never recolor the logo.
+   - The ten PNGs in `Assets/HarlemMight/Images/TabIcons/` under their file
+     names without the extension (`tab-explore-active`, `tab-explore-idle`,
+     and so on for walks, stories, music and today).
+
+   For the registry's Default Image Material, create an Unlit material with
+   Blend Mode Normal, Depth Write off and Base Texture enabled. Don't use the
+   lab's two image materials: neither renders the image correctly.
+8. Connect Payload. Create an Internet Module asset and set it as the entry's
+   `internetModule`. Set `apiBase` to the Payload REST base, ending in
+   `/payload-api` (the Lens equivalent of `EXPO_PUBLIC_PAYLOAD_API_BASE`). The
+   committed default, `http://localhost:3200/payload-api`, is the Harlem web
+   app run locally against the Neon database in the repo `.env`:
+
+   ```sh
+   pnpm --filter web exec node scripts/next.mjs dev -p 3200
+   ```
+
+   No public Payload host exists yet (`harlemmight.com` does not resolve).
+   Spectacles need a public `https://` host; for a device on the same Wi-Fi,
+   use `http://<Mac LAN IP>:3200/payload-api` with Experimental API on. When a
+   read fails, the tab shows its offline content and retries the next time it
+   opens.
+9. Set up the video screen. Add a scene object with an Image (the header
+   logo's material works; the script clones it) and `HarlemMightVideoScreen`,
+   set its `internetModule` and `screen` inputs, and set the object as the
+   entry's `videoScreenObject`. The entry positions and sizes it (44 x 24.75
+   cm in the Play popup), so its starting transform doesn't matter.
+10. Add the map. Copy `MapComponentModified` from Snap's Navigation Kit sample
+    (Spectacles-Sample, cloned with Git LFS), add `[MapComponent].prefab`,
+    point its `navigationComponent` inputs at the Navigation Kit object, and
+    set it as the entry's `mapObject`. The entry shows it on Explore only and
+    hides it during a walk.
+11. Run CLAD `/verify-preview` and LEAF interaction tests in Preview. To run on
+    Spectacles, connect them and push from Lens Studio.
+12. A future authenticated Mobile Kit transport will call
+    `HarlemMightSpecsEntry.acceptFrame(frame)`. The app produces that frame
+    via `projectHarlemSpecs` in `packages/app/features/specs/experience.ts`.
+    The Lens forwards action strings to a registered `subscribeCommand`
+    listener; it never writes to the app navigation store or CMS itself.
+    The entrypoint rejects commands not present in the most recently accepted
+    frame; the phone must still authenticate/authorize the command and session.
 
 `acceptFrame` consumes only `{scene, targets}`. The separate
 `navigation` projection goes to `ViroSpecsNavigationHost` *after* a live
 location fix, AR tracking and permission gate. No automatic world-route
-submission ships in this PR.
+submission ships in this PR. The Navigation Kit arrow is a straight-line
+bearing to the entrance, not a street route.
 
 ## Source of truth
 
-- Place rows: `placeCatalogueStore` (Payload readers), not Lens fixtures.
+- Content: the same public Payload REST collections, filters and sort orders
+  as the mobile app (`packages/app/content/rest-source.ts`, `readers.ts`).
+  `HarlemMightContent` ports them because Lens scripts can't import from the
+  monorepo; update both when the mobile readers change.
 - Route state: `useNavigationStore`; no separate Specs navigation controller.
 - Live actions: existing app controller must authorize and apply commands.
 - The two offline preview places are demonstration content only.
 - The offline Today facts are a copy of
-  `packages/app/content/history-facts.ts`. Lens scripts can't import from the
-  monorepo, so update both when that file changes.
+  `packages/app/content/history-facts.ts`. Update both when that file changes.
 
 ## Validation
 
 ```sh
-pnpm --filter @acme/app test
+node --experimental-strip-types --test packages/app/features/specs/*.test.ts apps/specs/tests/*.test.ts
 pnpm --filter @acme/app typecheck
 pnpm --filter @viro-external/specs specs:validate-lens
 ```
 
-The first two commands use Harlem Might; the third uses Viro External. Lens
-Studio/LEAF and physical Specs checks remain unrun in this GitHub-only slice.
+The first command is the `specs-portable-contracts` CI step (17 tests). The
+second uses Harlem Might; the third uses Viro External. Lens Studio Preview
+checks are listed in [STATUS.md](STATUS.md); nothing has run on Spectacles
+hardware yet.
