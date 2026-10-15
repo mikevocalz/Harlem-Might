@@ -5,7 +5,7 @@ import {
 import { ViroSpecsAssetRegistry } from "../../ViroSpecs/lens/ViroSpecsAssetRegistry";
 import { HarlemMightVideoScreen } from "./HarlemMightVideoScreen";
 import {
-  HarlemMightContent, formatEventTime,
+  HarlemMightContent, formatEventWhen, formatStoryDate, placeRowLine, todayHeading,
   type ContentArtist, type ContentEvent, type ContentImage, type ContentPlace, type ContentStory, type ContentWalk,
 } from "./HarlemMightContent";
 import { Place } from "SpecsNavigationKit.lspkg/NavigationDataComponent/Place";
@@ -318,18 +318,21 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
     switch (this.tab) {
       case "explore":
         return (live ? this.places : OFFLINE_PLACES).map((p) => ({
-          id: p.id, title: p.name, sub: [p.category, p.street].filter(Boolean).join(", "), image: p.image }));
+          id: p.id, title: p.name, sub: placeRowLine(p), image: p.image }));
       case "walks":
         return live ? this.walks.map((w) => ({ id: w.id, title: w.title, sub: w.facts, image: w.image })) : [];
       case "stories":
         return live ? this.stories.map((st) => ({
-          id: st.id, title: st.title, sub: st.author ? "By " + st.author : "", image: st.image })) : [];
+          id: st.id, title: st.title, image: st.image,
+          sub: [st.author ? "By " + st.author : "", formatStoryDate(st.publishedAt || st.updatedAt)].filter(Boolean).join(", ") })) : [];
       case "music":
         return this.currentArtists().map((a) => ({
           id: a.id, title: a.name, sub: [a.genre, a.era].filter(Boolean).join(" \u00b7 "), image: a.image }));
       case "today":
         return live ? this.events.map((e) => ({
-          id: e.id, title: e.title, sub: formatEventTime(e.startsAt), image: e.image,
+          id: e.id, title: e.title, image: e.image,
+          sub: [e.lifecycle === "cancelled" ? "Cancelled" : e.lifecycle === "postponed" ? "Postponed" : "",
+            formatEventWhen(e.startsAt, e.endsAt, this.eventsUpcoming)].filter(Boolean).join(". "),
           struck: e.lifecycle !== "scheduled" })) : [];
     }
   }
@@ -476,7 +479,10 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
     const items = this.listItems();
     const page = this.page.get(this.tab) ?? 0;
     const shown = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-    ui.header(tabInfo.label, this.listSubtitle(items.length, page));
+    const title = this.tab === "today" && this.status.get("today") === "ready"
+      ? (this.eventsUpcoming ? "Upcoming in Harlem" : "Today in Harlem, " + todayHeading(new Date()))
+      : tabInfo.label;
+    ui.header(title, this.listSubtitle(items.length, page));
     if (items.length === 0) {
       if (this.tab === "today") {
         // No listings: the app's Today screen still has its history fact.
@@ -530,7 +536,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       case "today":
         if (!live) return "Offline";
         if (count === 0) return "No listings today";
-        return (this.eventsUpcoming ? "Upcoming · " : "Today · ") + range + " listings";
+        return "Showing " + (count > PAGE_SIZE ? range : "1\u2013" + count + " of " + count) + " listings. New York time.";
     }
   }
 
@@ -542,8 +548,9 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
     if (this.tab === "explore") {
       const place = this.currentPlaces().find((p) => p.id === id);
       if (!place) return ui.actions(null);
-      ui.header(place.name, [place.category, place.street].filter(Boolean).join(", "));
-      this.body(ui, place.summary, place.image);
+      ui.header(place.name, [place.category, place.street || place.area].filter(Boolean).join(", "));
+      this.body(ui, (place.summary || "No description has been published for this place yet.")
+        + (place.latitude === null ? " Location pending verification." : ""), place.image);
       ui.actions(this.walkTarget() ? { label: "Start walking", action: "preview:walk" } : null);
     } else if (this.tab === "walks") {
       const walk = this.walks.find((w) => w.id === id);
@@ -554,14 +561,17 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
     } else if (this.tab === "stories") {
       const story = this.stories.find((st) => st.id === id);
       if (!story) return ui.actions(null);
-      ui.header(story.title, story.author ? "By " + story.author : "");
+      const published = formatStoryDate(story.publishedAt);
+      const updated = formatStoryDate(story.updatedAt);
+      ui.header(story.title, "By " + (story.author || "Harlem Might")
+        + (published ? ". Published " + published + (updated && updated !== published ? ", updated " + updated : "") : "") + ".");
       this.body(ui, story.dek, story.image);
       ui.actions(null);
     } else {
       const event = this.events.find((e) => e.id === id);
       if (!event) return ui.actions(null);
       const state = event.lifecycle === "scheduled" ? "" : event.lifecycle === "cancelled" ? "Cancelled" : "Postponed";
-      ui.header(event.title, [state, formatEventTime(event.startsAt)].filter(Boolean).join(" · "));
+      ui.header(event.title, [state, formatEventWhen(event.startsAt, event.endsAt, this.eventsUpcoming)].filter(Boolean).join(". "));
       this.body(ui, event.venue, event.image);
       ui.actions(null);
     }
@@ -630,7 +640,10 @@ class Layout {
   }
 
   header(title: string, subtitle: string): void {
-    this.text("hm-title", clip(title, 30), 0, TITLE_Y, 80, GOLD);
+    // Long titles step down a size before they are shortened, so headings like
+    // "Today in Harlem, Thursday, October 15th" stay whole.
+    const size = title.length <= 26 ? 80 : title.length <= 36 ? 64 : 54;
+    this.text("hm-title", clip(title, size === 80 ? 26 : size === 64 ? 36 : 46), 0, TITLE_Y, size, GOLD);
     if (subtitle) this.text("hm-subtitle", clip(subtitle, 60), 0, SUBTITLE_Y, 40, MUTED);
   }
 
@@ -771,10 +784,10 @@ const ARROW_SCALE = 5;
 // live catalogue: Apollo and Schomburg from the featured places, songs from
 // packages/payload/src/seed/music-artist-candidates.ts.
 const OFFLINE_PLACES: ContentPlace[] = [
-  { id: "apollo", name: "Apollo Theater", category: "Culture", street: "253 West 125th Street",
+  { id: "apollo", name: "Apollo Theater", category: "Culture", street: "253 West 125th Street", area: "Harlem",
     summary: "A Harlem performing-arts landmark with a global cultural reach.",
     latitude: 40.8100895, longitude: -73.9499948, image: null },
-  { id: "schomburg", name: "Schomburg Center", category: "Books", street: "515 Malcolm X Boulevard",
+  { id: "schomburg", name: "Schomburg Center", category: "Books", street: "515 Malcolm X Boulevard", area: "Harlem",
     summary: "", latitude: 40.8146476, longitude: -73.9409874, image: null },
 ];
 const OFFLINE_ARTISTS: ContentArtist[] = [

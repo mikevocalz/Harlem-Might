@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { HarlemMightContent, formatEventTime, newYorkDay, shouldUseStoredArtistPhoto } from '../Assets/HarlemMight/Scripts/HarlemMightContent.ts';
+import { HarlemMightContent, formatEventTime, formatEventWhen, formatStoryDate, newYorkDay, placeRowLine, shouldUseStoredArtistPhoto, storyParagraphs, todayHeading } from '../Assets/HarlemMight/Scripts/HarlemMightContent.ts';
 
 function client(bodies: Record<string, unknown>) {
   const urls: string[] = [];
@@ -85,4 +85,34 @@ test('asks the site photo service for missing portraits like artist-photo-client
   assert.equal(urls[0], 'https://example.test/api/music/artist-photo?v=6&names=A%24AP%20Ant%7CNobody');
   assert.equal(photos['A$AP Ant']?.credit, 'Last.fm A$AP Ant artist profile · Verified artist source · external reference');
   assert.equal(photos.Nobody, null);
+});
+
+// Mobile formats these with Intl in America/New_York; Lens has no time zones,
+// so the port must produce the same strings.
+const intlRange = (s: string, e: string, showDate = false) => {
+  const tz = 'America/New_York';
+  const day = (d: string) => new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date(d));
+  return new Intl.DateTimeFormat('en-US', { timeZone: tz,
+    ...(day(s) === day(e) && !showDate ? {} : { month: 'short', day: 'numeric' }),
+    ...(showDate ? { year: 'numeric' } : {}), hour: 'numeric', minute: '2-digit' })
+    .formatRange(new Date(s), new Date(e)).replace(/[\u2009\u202f]/g, ' ');
+};
+
+test('event times match eventWhen on mobile', () => {
+  for (const [s, e, d] of [['2026-10-15T14:00:00Z', '2026-10-15T16:00:00Z', false],
+    ['2026-10-15T23:30:00Z', '2026-10-16T02:00:00Z', false], ['2026-10-15T14:00:00Z', '2026-10-18T22:00:00Z', false],
+    ['2026-12-01T20:00:00Z', '2026-12-01T22:00:00Z', true], ['2026-10-15T15:00:00Z', '2026-10-15T15:00:00Z', false]] as const) {
+    assert.equal(formatEventWhen(s, e, d), intlRange(s, e, d), s + ' to ' + e);
+  }
+});
+
+test('story dates, Today heading, place rows and story paragraphs match mobile', () => {
+  assert.equal(formatStoryDate('2026-10-03T02:00:00Z'), 'Oct 2, 2026');
+  assert.equal(todayHeading(new Date('2026-10-09T15:00:00Z')), 'Friday, October 9th');
+  assert.equal(todayHeading(new Date('2026-10-22T15:00:00Z')), 'Thursday, October 22nd');
+  assert.equal(todayHeading(new Date('2026-10-11T15:00:00Z')), 'Sunday, October 11th');
+  const place = { id: '1', name: 'X', category: 'Culture', street: '', area: 'Harlem', summary: '',
+    latitude: null, longitude: null, image: null };
+  assert.equal(placeRowLine(place), 'Culture, Harlem, location pending');
+  assert.deepEqual(storyParagraphs('One\nline.\n \nTwo.'), ['One line.', 'Two.']);
 });

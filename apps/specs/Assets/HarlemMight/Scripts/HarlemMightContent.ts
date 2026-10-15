@@ -9,14 +9,19 @@
 export type ContentImage = { url: string; width: number; height: number; alt: string; credit?: string };
 
 export type ContentPlace = {
-  id: string; name: string; category: string; street: string; summary: string;
+  id: string; name: string; category: string; street: string; area: string; summary: string;
   latitude: number | null; longitude: number | null; image: ContentImage | null;
 };
 export type ContentWalk = {
   id: string; title: string; summary: string; facts: string; firstStop: ContentPlace | null;
   image: ContentImage | null;
+  startDescription: string; endDescription: string;
+  stops: { name: string; street: string; note: string }[];
 };
-export type ContentStory = { id: string; title: string; dek: string; author: string; image: ContentImage | null };
+export type ContentStory = {
+  id: string; title: string; dek: string; author: string; image: ContentImage | null;
+  publishedAt: string; updatedAt: string; body: string[];
+};
 export type ContentArtist = {
   id: string; name: string; genre: string; era: string; shortBio: string;
   connection: string; biography: string[];
@@ -26,7 +31,7 @@ export type ContentArtist = {
   albumArt: ContentImage | null;
 };
 export type ContentEvent = {
-  id: string; title: string; startsAt: string; venue: string; lifecycle: string;
+  id: string; title: string; startsAt: string; endsAt: string; venue: string; lifecycle: string;
   image: ContentImage | null;
 };
 
@@ -46,7 +51,7 @@ export class HarlemMightContent {
   async featuredPlaces(): Promise<ContentPlace[]> {
     const docs = await this.docs("places", [
       "where[featured][equals]=true", "depth=1", "limit=24", "sort=name",
-      ...select("slug", "name", "primaryCategory", "summary", "location", "address", "images"),
+      ...select("slug", "name", "primaryCategory", "primaryArea", "summary", "location", "address", "images"),
     ]);
     return docs.map((doc) => toPlace(doc, this.origin()));
   }
@@ -61,6 +66,16 @@ export class HarlemMightContent {
       firstStop: doc.stops?.[0]?.place && typeof doc.stops[0].place === "object"
         ? toPlace(doc.stops[0].place, this.origin()) : null,
       image: toImage(doc.images?.[0], this.origin()),
+      startDescription: (doc.startDescription ?? "").trim(),
+      endDescription: (doc.endDescription ?? "").trim(),
+      stops: (Array.isArray(doc.stops) ? doc.stops : []).map((stop: any) => {
+        const place = stop?.place && typeof stop.place === "object" ? toPlace(stop.place, this.origin()) : null;
+        return {
+          name: place?.name || "This stop is no longer in the catalogue",
+          street: place ? place.street || place.area : "",
+          note: stop?.note ?? "",
+        };
+      }),
     }));
   }
 
@@ -68,8 +83,16 @@ export class HarlemMightContent {
     const docs = await this.docs("stories", [published(), "depth=1", "limit=100", "sort=-publishedAt"]);
     return docs.map((doc) => ({
       id: String(doc.id), title: doc.title ?? "", dek: doc.dek ?? "", author: doc.author ?? "",
-      // Same order as the mobile story card: own images, then archive art.
-      image: toImage(doc.images?.[0], this.origin()) ?? toImage(doc.archive?.[0]?.media, this.origin()),
+      // Same order as the mobile story card (storyPhotos): own images, then
+      // the linked places' photos, then archive art.
+      image: firstImage([
+        ...(doc.images ?? []),
+        ...(doc.places ?? []).flatMap((place: any) => (typeof place === "object" ? place?.images ?? [] : [])),
+        ...(doc.archive ?? []).map((item: any) => item?.media),
+      ], this.origin()),
+      publishedAt: doc.publishedAt ?? "",
+      updatedAt: doc.updatedAt ?? "",
+      body: storyParagraphs(doc.body ?? ""),
     }));
   }
 
@@ -124,7 +147,11 @@ export class HarlemMightContent {
   async todayEvents(now: Date): Promise<{ events: ContentEvent[]; upcoming: boolean }> {
     const [start, end] = newYorkDay(now);
     let events = await this.events(start, end);
-    if (events.length > 0) return { events, upcoming: false };
+    // Today view lists scheduled events first (orderForToday on mobile).
+    if (events.length > 0) {
+      const scheduled = events.filter((e) => e.lifecycle === "scheduled");
+      return { events: scheduled.concat(events.filter((e) => e.lifecycle !== "scheduled")), upcoming: false };
+    }
     events = await this.events(start, new Date(start.getTime() + 90 * DAY_MS));
     return { events, upcoming: true };
   }
@@ -140,6 +167,7 @@ export class HarlemMightContent {
       id: String(doc.id),
       title: doc.title ?? "",
       startsAt: doc.startsAt ?? "",
+      endsAt: doc.endsAt ?? doc.startsAt ?? "",
       venue: (typeof doc.place === "object" && doc.place?.name) || doc.venueName || "",
       lifecycle: doc.lifecycle ?? "scheduled",
       // The event's own image, else its venue's, as on the mobile event card.
@@ -238,6 +266,7 @@ function toPlace(doc: any, origin: string): ContentPlace {
     name: doc.name ?? "",
     category: doc.primaryCategory || "Community",
     street: streetOf(doc.address?.formatted ?? ""),
+    area: doc.primaryArea || "Harlem",
     summary: doc.summary ?? "",
     latitude: point ? Number(point[1]) : null,
     longitude: point ? Number(point[0]) : null,
@@ -305,4 +334,77 @@ export function formatEventTime(iso: string): string {
   const m = local.getUTCMinutes();
   const time = ((h + 11) % 12 + 1) + ":" + (m < 10 ? "0" : "") + m + (h < 12 ? " AM" : " PM");
   return days[local.getUTCDay()] + " " + months[local.getUTCMonth()] + " " + local.getUTCDate() + " · " + time;
+}
+
+function firstImage(media: any[], origin: string): ContentImage | null {
+  for (const item of media) {
+    const image = toImage(item, origin);
+    if (image) return image;
+  }
+  return null;
+}
+
+/** Story body as paragraphs, like storyParagraphs in story-format.ts. */
+export function storyParagraphs(body: string): string[] {
+  return body.split(/\r?\n\s*\r?\n/).map((p) => p.replace(/\s*\r?\n\s*/g, " ").trim()).filter((p) => p.length > 0);
+}
+
+/** Explore row line, placeRowLine in explore-copy.ts: "Culture, 253 West 125th Street". */
+export function placeRowLine(place: ContentPlace): string {
+  return place.category + ", " + (place.street || place.area) + (place.latitude === null ? ", location pending" : "");
+}
+
+const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September",
+  "October", "November", "December"];
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+// Wall-clock parts in New York for an instant.
+function newYorkParts(date: Date): { y: number; mo: number; d: number; wd: number; h: number; mi: number } {
+  const local = new Date(date.getTime() - (isEasternDaylightTime(date) ? 4 : 5) * 3600 * 1000);
+  return { y: local.getUTCFullYear(), mo: local.getUTCMonth(), d: local.getUTCDate(), wd: local.getUTCDay(),
+    h: local.getUTCHours(), mi: local.getUTCMinutes() };
+}
+
+function clock(h: number, mi: number, withPeriod: boolean): string {
+  return ((h + 11) % 12 + 1) + ":" + (mi < 10 ? "0" : "") + mi + (withPeriod ? (h < 12 ? " AM" : " PM") : "");
+}
+
+/**
+ * When an event runs, like eventWhen in event-format.ts: same-day events show
+ * times only ("7:30 – 10:00 PM"); multi-day runs add dates; Upcoming adds the year.
+ */
+export function formatEventWhen(startIso: string, endIso: string, showDate = false): string {
+  const start = new Date(startIso);
+  const end = new Date(endIso || startIso);
+  if (isNaN(start.getTime())) return "";
+  const a = newYorkParts(start);
+  const b = newYorkParts(isNaN(end.getTime()) ? start : end);
+  const sameDay = a.y === b.y && a.mo === b.mo && a.d === b.d;
+  const date = (p: typeof a) => MONTHS_SHORT[p.mo] + " " + p.d + (showDate ? ", " + p.y : "");
+  if (sameDay) {
+    // Intl's formatRange drops the shared AM/PM: "7:30 – 10:00 PM".
+    const prefix = showDate ? date(a) + ", " : "";
+    if (a.h === b.h && a.mi === b.mi) return prefix + clock(a.h, a.mi, true);
+    const samePeriod = (a.h < 12) === (b.h < 12);
+    return prefix + clock(a.h, a.mi, !samePeriod) + " \u2013 " + clock(b.h, b.mi, true);
+  }
+  return date(a) + ", " + clock(a.h, a.mi, true) + " \u2013 " + date(b) + ", " + clock(b.h, b.mi, true);
+}
+
+/** "Oct 3, 2026" in New York, like storyDate in story-format.ts. */
+export function formatStoryDate(iso: string): string {
+  const date = new Date(iso);
+  if (isNaN(date.getTime())) return "";
+  const p = newYorkParts(date);
+  return MONTHS_SHORT[p.mo] + " " + p.d + ", " + p.y;
+}
+
+/** "Friday, October 9th" in New York, like todayHeading in event-format.ts. */
+export function todayHeading(now: Date): string {
+  const p = newYorkParts(now);
+  const n = p.d;
+  const tens = n % 100;
+  const suffix = tens >= 11 && tens <= 13 ? "th" : n % 10 === 1 ? "st" : n % 10 === 2 ? "nd" : n % 10 === 3 ? "rd" : "th";
+  return WEEKDAYS[p.wd] + ", " + MONTHS_LONG[p.mo] + " " + n + suffix;
 }
