@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { HarlemMightContent, formatEventTime, formatEventWhen, formatStoryDate, newYorkDay, placeRowLine, shouldUseStoredArtistPhoto, storyParagraphs, todayHeading } from '../Assets/HarlemMight/Scripts/HarlemMightContent.ts';
+import { HarlemMightContent, formatEventTime, formatEventWhen, formatStoryDate, isPlaceholderBio, newYorkDay, placeRowLine, shouldUseStoredArtistPhoto, storyParagraphs, todayHeading } from '../Assets/HarlemMight/Scripts/HarlemMightContent.ts';
 
 function client(bodies: Record<string, unknown>) {
   const urls: string[] = [];
@@ -115,4 +115,14 @@ test('story dates, Today heading, place rows and story paragraphs match mobile',
     latitude: null, longitude: null, image: null };
   assert.equal(placeRowLine(place), 'Culture, Harlem, location pending');
   assert.deepEqual(storyParagraphs('One\nline.\n \nTwo.'), ['One line.', 'Two.']);
+});
+
+test('hides artists whose bio is still the seed placeholder', async () => {
+  const { content } = client({ 'music-artists': { hasNextPage: true, docs: [
+    { id: 1, name: 'Draft', shortBio: 'Editorial candidate pending verification of Harlem relationship.' },
+    { id: 2, name: 'Big L', shortBio: 'Harlem lyricist revered for dense punchlines.' }] } });
+  const page = await content.musicArtists(1);
+  assert.deepEqual(page.artists.map((a) => a.name), ['Big L']);
+  assert.equal(page.hasNextPage, true);
+  assert.equal(isPlaceholderBio({ biography: '  editorial candidate pending verification…' }), true);
 });

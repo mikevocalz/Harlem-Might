@@ -102,7 +102,9 @@ export class HarlemMightContent {
     ]);
     return {
       hasNextPage: Boolean(body.hasNextPage),
-      artists: (body.docs ?? []).map((doc: any) => ({
+      // Published records whose bio is still the seed placeholder are hidden on
+      // Specs; hasNextPage still follows Payload's paging.
+      artists: (body.docs ?? []).filter((doc: any) => !isPlaceholderBio(doc)).map((doc: any) => ({
         id: String(doc.id),
         name: doc.name ?? "",
         genre: doc.genre ?? "",
@@ -407,4 +409,11 @@ export function todayHeading(now: Date): string {
   const tens = n % 100;
   const suffix = tens >= 11 && tens <= 13 ? "th" : n % 10 === 1 ? "st" : n % 10 === 2 ? "nd" : n % 10 === 3 ? "rd" : "th";
   return WEEKDAYS[p.wd] + ", " + MONTHS_LONG[p.mo] + " " + n + suffix;
+}
+
+const PLACEHOLDER_BIO = /^editorial candidate pending verification/i;
+
+/** The seed text left on unverified artists ("Editorial candidate pending verification…"). */
+export function isPlaceholderBio(doc: { shortBio?: string; biography?: string }): boolean {
+  return PLACEHOLDER_BIO.test((doc.shortBio ?? "").trim()) || PLACEHOLDER_BIO.test((doc.biography ?? "").trim());
 }
