@@ -421,7 +421,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
     if (!this.video || this.songSlotTopCm === null) return;
     const windowTop = DETAIL_CENTER_Y + DETAIL_WINDOW_CM[1] / 200;
     const centerY = windowTop - (this.songSlotTopCm + HERO_ROW_CM / 2 - fromTopCm) / 100;
-    this.video.place(new vec3(SONG_SCREEN.x * 100, (ROOT_Y + centerY) * 100, ROOT_Z * 100 + 1),
+    this.video.place(new vec3((ROOT_X + SONG_SCREEN.x) * 100, (ROOT_Y + centerY) * 100, ROOT_Z * 100 + 1),
       new vec2(SONG_SCREEN.w, SONG_SCREEN.w * 9 / 16));
     const slotTop = this.songSlotTopCm - fromTopCm;
     this.video.setInView(slotTop >= -0.5 && slotTop + HERO_ROW_CM <= DETAIL_WINDOW_CM[1] + 0.5);
@@ -479,7 +479,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
 
     // 1.1 m sits in the comfortable focus band; a little below eye level keeps
     // the street ahead visible above the card.
-    nodes.push({ id: "hm-root", kind: "group", position: [0, ROOT_Y, ROOT_Z] });
+    nodes.push({ id: "hm-root", kind: "group", position: [ROOT_X, ROOT_Y, ROOT_Z] });
     nodes.push({ id: "hm-frame", kind: "panel", parentId: "hm-root", position: [0, 0.04, -0.03], scale: FRAME_SCALE });
     // The app header: the landscape logo, as on mobile, never a text stand-in.
     nodes.push({ id: "hm-logo", kind: "image", parentId: "hm-root", source: LOGO_IMAGE_ID,
@@ -554,7 +554,9 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
         position: [0, 0.011, 0.006], scale: [RAIL_ICON_CM, RAIL_ICON_CM, 1] });
       ui.text(id + "-label", tab.label, 0, -0.022, 36, active ? GOLD : MUTED, id);
       ui.targets.push({ targetId: id, action: "preview:tab:" + tab.id });
-      if (active) ui.text("hm-tab-bar", "\u258e", RAIL_X - 0.038, y, 110, GOLD);
+      // The selection mark: a short gold bar centred under the label, inside
+      // the tab's own plate.
+      if (active) ui.text("hm-tab-bar", "\u2501\u2501", 0, -0.031, 34, GOLD, id);
     });
   }
 
@@ -690,7 +692,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       const note = ui.nodes[ui.nodes.length - 1];
       note.position = [0, PLAYER_Y - 0.085, 0.014];
     }
-    this.video?.place(new vec3(0, (ROOT_Y + PLAYER_Y) * 100, ROOT_Z * 100 + 1.5),
+    this.video?.place(new vec3(ROOT_X * 100, (ROOT_Y + PLAYER_Y) * 100, ROOT_Z * 100 + 1.5),
       new vec2(PLAYER_W_CM, PLAYER_W_CM * 9 / 16));
     this.video?.setInView(true);
     ui.button("hm-close-player", "Close", "preview:close-player", 0, ACTION_Y, HALF_BUTTON_SCALE, 52);
@@ -949,7 +951,9 @@ const FRAME_SCALE: [number, number, number] = [2.08, 4.17, 1];
 const WALK_FRAME_SCALE: [number, number, number] = [1.67, 1.33, 1];
 const BUTTON_SCALE: [number, number, number] = [1.33, 0.58, 1];
 const HALF_BUTTON_SCALE: [number, number, number] = [0.96, 0.58, 1];
-// Card root, in metres from the Lens origin.
+// Card root, in metres from the Lens origin. The rail (left edge -0.35) and
+// card (right edge +0.25) span 60 cm; the card stays centred in view.
+const ROOT_X = 0;
 const ROOT_Y = -0.06;
 const ROOT_Z = -1.1;
 const TITLE_Y = 0.16;
