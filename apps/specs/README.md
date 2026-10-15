@@ -35,13 +35,29 @@ renderer.
    Material, create an Unlit material with Blend Mode Normal, Depth Write off
    and Base Texture enabled. Don't use the lab's two image materials: neither
    renders the image correctly.
-7. Run CLAD `/verify-preview` and LEAF interaction tests. Offline, the
+7. Set up the Music video screen. Turn on Project Settings > Experimental
+   APIs; WebView refuses to start without it. Create an Internet Module asset,
+   add a scene object with an Image (the header logo's material works, the
+   script clones it) and `HarlemMightVideoScreen`, wire both inputs, and set it
+   as the entrypoint's `videoScreenObject`. Place it over the card body below
+   the tabs: 32 x 18 cm at about 16 cm below eye level. WebView only runs on
+   Spectacles; in Preview the Music card shows the song and "Video plays on
+   Spectacles".
+8. Optional map: copy `MapComponentModified` from Snap's Navigation Kit sample
+   (Spectacles-Sample, cloned with Git LFS), add `[MapComponent].prefab`, and
+   point its `navigationComponent` inputs at the Navigation Kit object. Put
+   Harlem places (Apollo Theater, Schomburg Center) in the scene's
+   `ManualPlaceList`; the entrypoint walks to those entries so the map shows
+   one pin per place.
+9. Run CLAD `/verify-preview` and LEAF interaction tests. Offline, the
    entrypoint shows the logo header and the app's tabs (Explore, Walks,
    Stories, Music, Today). Explore lists two preview places and can start a
    Navigation Kit walk to either one. The arrow is a straight-line bearing to
    the entrance, not a street route. Today shows the next cited history fact;
-   Walks, Stories and Music say they load once the phone is connected.
-8. A future authenticated Mobile Kit transport will call
+   Music lists four featured songs from the Payload artist seed and plays one
+   on the video screen. Walks and Stories say they load once the phone is
+   connected.
+10. A future authenticated Mobile Kit transport will call
    `HarlemMightSpecsEntry.acceptFrame(frame)`. The app produces that frame
    via `projectHarlemSpecs` in `packages/app/features/specs/experience.ts`.
    The Lens forwards action strings to a registered `subscribeCommand`

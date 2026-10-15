@@ -2,6 +2,7 @@ import {
   ViroSpecsPresentationHost,
   type ViroSpecsPresentationSnapshot,
 } from "../../ViroSpecs/lens/ViroSpecsPresentationHost";
+import { HarlemMightVideoScreen } from "./HarlemMightVideoScreen";
 import { Place } from "SpecsNavigationKit.lspkg/NavigationDataComponent/Place";
 import { ARNavigation } from "SpecsNavigationKit.lspkg/ARNavigationComponent/Scripts/ARNavigation";
 import { GeoLocationPlace } from "SpecsNavigationKit.lspkg/NavigationDataComponent/GeoLocationPlace";
@@ -34,7 +35,14 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
   @hint("Optional icon for Navigation Kit places")
   placeIcon: Texture;
 
+  @input
+  @allowUndefined
+  @hint("Object with HarlemMightVideoScreen; the Music tab plays songs on it")
+  videoScreenObject: SceneObject;
+
   private presentation: ViroSpecsPresentationHost | null = null;
+  private video: HarlemMightVideoScreen | null = null;
+  private playing: (typeof MUSIC_SONGS)[number] | null = null;
   private navigation: NavigationDataComponent | null = null;
   private arrow: ARNavigation | null = null;
   private unsubscribe: (() => void) | null = null;
@@ -56,6 +64,9 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
     this.arrow = this.arNavigationObject.getComponent(
       ARNavigation.getTypeName()
     ) as ARNavigation | null;
+    this.video = (this.videoScreenObject?.getComponent(
+      HarlemMightVideoScreen.getTypeName()
+    ) as HarlemMightVideoScreen | null) ?? null;
     if (!this.navigation || !this.arrow) {
       throw new Error("Harlem Might requires Navigation Kit's NavigationDataComponent and ARNavigation.");
     }
@@ -110,6 +121,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       if (!TABS.some((t) => t.id === id)) return;
       this.tab = id;
       this.previewPlace = null;
+      this.stopSong();
     } else if (command === "preview:back") {
       this.previewPlace = null;
     } else if (command.startsWith("preview:place:")) {
@@ -117,6 +129,13 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       this.previewPlace = PREVIEW_PLACES.find((place) => place.id === id) ?? null;
     } else if (command === "preview:walk" && this.previewPlace) {
       this.startWalk(this.previewPlace);
+    } else if (command.startsWith("preview:song:")) {
+      const song = MUSIC_SONGS.find((s) => s.id === command.slice("preview:song:".length));
+      if (!song) return;
+      this.playing = song;
+      this.video?.play(song.youtubeUrl);
+    } else if (command === "preview:stop-song") {
+      this.stopSong();
     } else if (command === "preview:end-walk") {
       this.endWalk();
     } else return;
@@ -189,6 +208,12 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
     });
   }
 
+  private stopSong(): void {
+    if (!this.playing) return;
+    this.playing = null;
+    this.video?.stop();
+  }
+
   private endWalk(): void {
     if (!this.walk) return;
     this.arrow?.setVisible(false);
@@ -257,6 +282,16 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       text("hm-title", "Explore", 0, 0.065, 104, GOLD);
       text("hm-subtitle", "Offline preview", 0, 0.02, 52, MUTED);
       PREVIEW_PLACES.forEach((p, index) => button(index, p.name, "preview:place:" + p.id, -0.05 - index * 0.085));
+    } else if (this.tab === "music" && this.playing) {
+      text("hm-title", this.playing.title, 0, 0.075, 64, GOLD);
+      button(0, "Stop", "preview:stop-song", 0.02);
+      // The video screen covers this line on Spectacles; Preview has no WebView.
+      text("hm-note", this.playing.artist + "\nVideo plays on Spectacles", 0, -0.105, 52, MUTED);
+    } else if (this.tab === "music") {
+      text("hm-title", "Music", 0, 0.065, 104, GOLD);
+      text("hm-subtitle", "Featured songs from Harlem artists", 0, 0.02, 52, MUTED);
+      MUSIC_SONGS.forEach((song, index) => pinchable("hm-song-" + index, song.artist, "preview:song:" + song.id,
+        (index % 2 === 0 ? -1 : 1) * SONG_COLUMN_X, -0.05 - Math.floor(index / 2) * 0.085, SONG_BUTTON_SCALE, 60, IVORY));
     } else if (this.tab === "today") {
       const fact = nearestHistoryFact(new Date());
       text("hm-title", "From Harlem\u2019s past", 0, 0.065, 80, GOLD);
@@ -264,7 +299,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       text("hm-body", wrap(fact.text, 40), 0, -0.06, 60, IVORY);
       text("hm-source", "Source: " + fact.sourceLabel, 0, -0.145, 44, MUTED);
     } else {
-      // Walks, Stories and Music are catalogue content; offline there is none
+      // Walks and Stories are catalogue content; offline there is none
       // to show, so the tab says where it comes from instead of faking it.
       const tab = TABS.find((t) => t.id === this.tab)!;
       text("hm-title", tab.label, 0, 0.065, 116, GOLD);
@@ -319,7 +354,7 @@ const TABS = [
   { id: "explore", label: "Explore", offline: "" },
   { id: "walks", label: "Walks", offline: "Guided walks load from the Harlem Might app once your phone is connected." },
   { id: "stories", label: "Stories", offline: "Stories load from the Harlem Might app once your phone is connected." },
-  { id: "music", label: "Music", offline: "Music loads from the Harlem Might app once your phone is connected." },
+  { id: "music", label: "Music", offline: "" },
   { id: "today", label: "Today", offline: "" },
 ] as const;
 
@@ -353,6 +388,22 @@ const ARROW_TILT_DEGREES = 60;
 // The kit sizes the arrow for a glance down at 35 cm below; at eye level it
 // needs to be larger to read.
 const ARROW_SCALE = 5;
+
+// Featured songs copied from packages/payload/src/seed/music-artist-candidates.ts
+// (one per era: jazz, doo-wop, hip-hop, R&B). Live frames replace this.
+const MUSIC_SONGS = [
+  { id: "fats-waller", artist: "Fats Waller", title: "Ain't Misbehavin'",
+    youtubeUrl: "https://www.youtube.com/watch?v=pZ8fWP6a3Q4" },
+  { id: "frankie-lymon", artist: "Frankie Lymon", title: "Why Do Fools Fall in Love",
+    youtubeUrl: "https://www.youtube.com/watch?v=mEHcTciiXQY" },
+  { id: "big-l", artist: "Big L", title: "Put It On",
+    youtubeUrl: "https://www.youtube.com/watch?v=WWMjRMJ0dTI" },
+  { id: "teyana-taylor", artist: "Teyana Taylor", title: "Gonna Love Me",
+    youtubeUrl: "https://www.youtube.com/watch?v=LwSCplLupTA" },
+] as const;
+// Two columns of 23 x 7 cm song buttons.
+const SONG_BUTTON_SCALE: [number, number, number] = [0.96, 0.58, 1];
+const SONG_COLUMN_X = 0.12;
 
 // Demonstration content only; live frames come from projectHarlemSpecs.
 // Coordinates match the Harlem Might route fixtures for these places.
