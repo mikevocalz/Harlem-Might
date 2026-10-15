@@ -163,7 +163,8 @@ export class HarlemMightContent {
       "where[and][0][_status][equals]=published",
       "where[and][1][startsAt][less_than]=" + encodeURIComponent(end.toISOString()),
       "where[and][2][endsAt][greater_than]=" + encodeURIComponent(start.toISOString()),
-      "depth=1", "limit=24", "sort=startsAt,id",
+      // depth 2 so the venue's images arrive populated for the image fallback.
+      "depth=2", "limit=24", "sort=startsAt,id",
     ]);
     return docs.map((doc) => ({
       id: String(doc.id),

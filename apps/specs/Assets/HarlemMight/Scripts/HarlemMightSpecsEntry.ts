@@ -90,8 +90,8 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
   private selected: string | null = null;
   private registry: ViroSpecsAssetRegistry | null = null;
   private readonly remoteMedia = require("LensStudio:RemoteMediaModule") as RemoteMediaModule;
-  // url -> registry image id once loaded, or the load's state.
-  private readonly photos = new Map<string, string | "loading" | "failed">();
+  // url -> registry id when loaded, "loading", or the time (s) a failed load may retry.
+  private readonly photos = new Map<string, string | number>();
   private navigation: NavigationDataComponent | null = null;
   private arrow: ARNavigation | null = null;
   private unsubscribe: (() => void) | null = null;
@@ -155,6 +155,9 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
     // semantic actions become eligible for forwarding to the phone.
     this.presentation.present(frame);
     this.endWalk();
+    // Live frames have no preview Stop, so nothing from the preview keeps playing.
+    this.playerOpen = false;
+    this.stopSong();
     this.allowedLiveActions.clear();
     for (const target of frame.targets) this.allowedLiveActions.add(target.action);
     this.usingLiveFrame = true;
@@ -389,7 +392,14 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
   private photo(image: ContentImage | null): string | null {
     if (!image || !this.registry || !this.internetModule) return null;
     const state = this.photos.get(image.url);
-    if (state === "loading" || state === "failed") return null;
+    if (state === "loading") return null;
+    // A failed load is retried after a pause, so a network blip doesn't hide
+    // the photo for the rest of the session.
+    if (typeof state === "number") {
+      if (getTime() < state) return null;
+      this.photos.delete(image.url);
+      return this.photo(image);
+    }
     if (state) return state;
     this.photos.set(image.url, "loading");
     const resource = this.internetModule.makeResourceFromUrl(image.url);
@@ -400,7 +410,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       this.showPreview();
     }, (message) => {
       print("[HarlemMightSpecsEntry] photo failed: " + image.url + " " + message);
-      this.photos.set(image.url, "failed");
+      this.photos.set(image.url, getTime() + PHOTO_RETRY_S);
     });
     return null;
   }
@@ -988,6 +998,7 @@ const DETAIL_WINDOW_CM = [48, 23] as const;
 const DETAIL_CENTER_Y = -0.012;
 const DETAIL_WINDOW_OBJECT = "viro-scroll:hm-detail";
 const PAGE_GAP_CM = 1.6;
+const PHOTO_RETRY_S = 20;
 const LINE_CM_PER_POINT = 0.052;
 const HERO_ROW_CM = 15.5;
 // Play popup: a 44 x 24.75 cm (16:9) video centred on the card.
