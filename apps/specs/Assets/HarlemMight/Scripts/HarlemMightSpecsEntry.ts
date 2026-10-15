@@ -85,6 +85,8 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
   private listShownFor: TabId | null = null;
   // Top of the artist page's song slot in content cm; the WebView follows it as the page scrolls.
   private songSlotTopCm: number | null = null;
+  // True while the Play popup is open over the artist page.
+  private playerOpen = false;
   private selected: string | null = null;
   private registry: ViroSpecsAssetRegistry | null = null;
   private readonly remoteMedia = require("LensStudio:RemoteMediaModule") as RemoteMediaModule;
@@ -177,11 +179,13 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       if (!TABS.some((t) => t.id === id)) return;
       this.tab = id;
       this.selected = null;
+      this.playerOpen = false;
       this.listScrollFromTop = 0;
       this.stopSong();
       this.load(id);
     } else if (command === "preview:back") {
       this.selected = null;
+      this.playerOpen = false;
       this.stopSong();
     } else if (command.startsWith("preview:open:")) {
       this.selected = command.slice("preview:open:".length);
@@ -190,7 +194,11 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       const target = this.walkTarget();
       if (target) this.startWalk(target);
     } else if (command === "preview:play") {
+      this.playerOpen = true;
       this.cueSong(true);
+    } else if (command === "preview:close-player") {
+      this.playerOpen = false;
+      this.stopSong();
     } else if (command === "preview:stop-song") {
       this.stopSong();
     } else if (command === "preview:end-walk") {
@@ -490,7 +498,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
     this.presentation.present({ scene: { version: 1, nodes }, targets });
     this.watchListScroll();
     this.watchDetailScroll();
-    if (this.songSlotTopCm === null) this.video?.setInView(false);
+    if (this.songSlotTopCm === null && !this.playerOpen) this.video?.setInView(false);
   }
 
   // The list is rebuilt on every redraw (a new page of artists, a photo that
@@ -661,11 +669,39 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
     ui.actions(primary);
   }
 
+  // The Play popup: a large 16:9 video over the card with YouTube's own
+  // controls (pinches are forwarded to the WebView), title above, Close below.
+  private renderPlayer(ui: Layout, artist: ContentArtist): void {
+    ui.header(artist.songTitle || "Featured song", artist.name);
+    // The video's YouTube thumbnail as a poster under the WebView, which
+    // covers it once the player has a page.
+    const posterId = this.photo(youTubePoster(artist.youtubeUrl!));
+    if (posterId) {
+      ui.nodes.push({ id: "hm-player-poster", kind: "image", parentId: "hm-root", source: posterId,
+        position: [0, PLAYER_Y, 0.008], scale: [PLAYER_W_CM, PLAYER_W_CM * 9 / 16, 1] });
+    }
+    // Lens Studio Preview renders WebView pages blank, even after it accepts the URL.
+    const state = global.deviceInfoSystem.isEditor() ? "unavailable" : this.video?.status ?? "unavailable";
+    if (state !== "ready") {
+      ui.text("hm-player-note", state === "loading" ? "Starting the player\u2026"
+        : "Plays with YouTube controls on Spectacles.\nLens Studio Preview can\u2019t show web video.",
+        0, PLAYER_Y - 0.085, 34, GOLD);
+      // Over the poster's lower edge, in front of it.
+      const note = ui.nodes[ui.nodes.length - 1];
+      note.position = [0, PLAYER_Y - 0.085, 0.014];
+    }
+    this.video?.place(new vec3(0, (ROOT_Y + PLAYER_Y) * 100, ROOT_Z * 100 + 1.5),
+      new vec2(PLAYER_W_CM, PLAYER_W_CM * 9 / 16));
+    this.video?.setInView(true);
+    ui.button("hm-close-player", "Close", "preview:close-player", 0, ACTION_Y, HALF_BUTTON_SCALE, 52);
+  }
+
   // The mobile artist profile as a scrolling page: portrait and Featured song
   // side by side, then facts, the full biography and The record.
   private renderArtist(ui: Layout): void {
     const artist = this.currentArtists().find((a) => a.id === this.selected);
     if (!artist) return ui.actions(null);
+    if (this.playerOpen && artist.youtubeUrl) return this.renderPlayer(ui, artist);
     ui.header(artist.name, [artist.genre, artist.era, artist.connection].filter(Boolean).join(" \u00b7 "));
     const page = new Page();
     // Row 1: portrait on the left, the song player's slot on the right.
@@ -824,6 +860,12 @@ function findByName(name: string): SceneObject | null {
   return null;
 }
 
+// The video's YouTube thumbnail (480 x 360, letterboxed 16:9 inside).
+function youTubePoster(url: string): ContentImage | null {
+  const match = /(?:youtu\.be\/|[?&]v=|\/embed\/)([A-Za-z0-9_-]{11})/.exec(url);
+  return match ? { url: "https://i.ytimg.com/vi/" + match[1] + "/hqdefault.jpg", width: 480, height: 360, alt: "" } : null;
+}
+
 // Width and height in cm that fit an image's aspect ratio inside a box.
 function fit(image: ContentImage, boxW: number, boxH: number): [number, number] {
   const aspect = image.width > 0 && image.height > 0 ? image.width / image.height : 4 / 3;
@@ -944,6 +986,10 @@ const DETAIL_WINDOW_OBJECT = "viro-scroll:hm-detail";
 const PAGE_GAP_CM = 1.6;
 const LINE_CM_PER_POINT = 0.052;
 const HERO_ROW_CM = 15.5;
+// Play popup: a 44 x 24.75 cm (16:9) video centred on the card.
+const PLAYER_W_CM = 44;
+const PLAYER_Y = -0.005;
+
 // Largest CMS photo in a detail view, in cm (width, height).
 const PHOTO_BOX = [18, 11] as const;
 const LOGO_IMAGE_ID = "harlem-might-logo";

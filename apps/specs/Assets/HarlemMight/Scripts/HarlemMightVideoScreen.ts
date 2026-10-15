@@ -1,3 +1,6 @@
+import { Interactable } from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable";
+import { InteractorEvent } from "SpectaclesInteractionKit.lspkg/Core/Interactor/InteractorEvent";
+
 /**
  * Plays a YouTube video for the Harlem Might Music tab in a Spectacles WebView.
  * WebView is an experimental, device-only API: in Lens Studio Preview creation
@@ -24,7 +27,40 @@ export class HarlemMightVideoScreen extends BaseScriptComponent {
   private pendingUrl: string | null = null;
   private creating = false;
 
+  // Pinches on the screen become WebView touches, so the embed's own controls
+  // (play/pause, scrubber, volume, fullscreen) work: the job the Asset
+  // Library WebView package does with SIK.
+  private wireTouch(): void {
+    const object = this.getSceneObject();
+    const collider = (object.getComponent("Physics.ColliderComponent")
+      ?? object.createComponent("Physics.ColliderComponent")) as ColliderComponent;
+    const shape = Shape.createBoxShape();
+    shape.size = new vec3(1, 1, 0.02);
+    collider.shape = shape;
+    collider.fitVisual = false;
+    const interactable = (object.getComponent(Interactable.getTypeName())
+      ?? object.createComponent(Interactable.getTypeName())) as Interactable;
+    const send = (state: TouchState) => (event: InteractorEvent) => {
+      if (!this.ready || !this.control) return;
+      const hit = event.interactor.targetHitInfo?.localHitPosition;
+      if (!hit) return;
+      // The Image quad spans -0.5..0.5 in local space; WebView pixels start top-left.
+      const x = Math.min(1, Math.max(0, hit.x + 0.5)) * RESOLUTION.x;
+      const y = Math.min(1, Math.max(0, 0.5 - hit.y)) * RESOLUTION.y;
+      try {
+        this.control.touch(0, state, x, y);
+      } catch (error) {
+        print("[HarlemMightVideoScreen] touch failed: " + error);
+      }
+    };
+    interactable.onTriggerStart.add(send(TouchState.Began));
+    interactable.onTriggerUpdate.add(send(TouchState.Moved));
+    interactable.onTriggerEnd.add(send(TouchState.Ended));
+    interactable.onTriggerCanceled.add(send(TouchState.Ended));
+  }
+
   onAwake(): void {
+    this.wireTouch();
     // Hide the Image component, not the object: this script lives on the same
     // object, and a disabled object would stop its timeout and WebView callbacks.
     this.screen.enabled = false;
@@ -51,7 +87,7 @@ export class HarlemMightVideoScreen extends BaseScriptComponent {
     if (!id) return;
     // The privacy-enhanced embed the mobile app uses (music-format.ts),
     // which fills the WebView without YouTube's page chrome.
-    this.pendingUrl = "https://www.youtube-nocookie.com/embed/" + id + "?rel=0&playsinline=1"
+    this.pendingUrl = "https://www.youtube-nocookie.com/embed/" + id + "?rel=0&playsinline=1&controls=1&fs=1"
       + (autoplay ? "&autoplay=1" : "");
     if (this.ready) {
       this.screen.enabled = this.inView;
@@ -90,7 +126,7 @@ export class HarlemMightVideoScreen extends BaseScriptComponent {
     let options: WebViewOptions;
     try {
       // Throws unless Project Settings > Experimental APIs is on.
-      options = InternetModule.createWebViewOptions(new vec2(1280, 720));
+      options = InternetModule.createWebViewOptions(RESOLUTION);
     } catch (error) {
       this.creating = false;
       print("[HarlemMightVideoScreen] WebView unavailable: " + error);
@@ -100,9 +136,28 @@ export class HarlemMightVideoScreen extends BaseScriptComponent {
     this.internetModule.createWebView(
       options,
       (texture) => {
+        print("[HarlemMightVideoScreen] WebView texture created");
         this.screen.mainPass.baseTex = texture;
         this.control = texture.control as WebPageTextureProvider;
+        // Lens Studio Preview creates the texture but never fires onReady, so
+        // also try the URL a moment after creation; a call that is too early
+        // throws, and the retry or onReady takes over.
+        const early = this.createEvent("DelayedCallbackEvent");
+        early.bind(() => {
+          if (this.ready || !this.pendingUrl) return;
+          try {
+            this.control!.loadUrl(this.pendingUrl);
+            print("[HarlemMightVideoScreen] loadUrl accepted before onReady");
+            this.ready = true;
+            this.setStatus("ready");
+            this.screen.enabled = this.inView;
+          } catch (error) {
+            print("[HarlemMightVideoScreen] loadUrl before onReady failed: " + error);
+          }
+        });
+        early.reset(1.5);
         this.control.onReady.add(() => {
+          print("[HarlemMightVideoScreen] WebView ready");
           this.ready = true;
           this.setStatus("ready");
           // Show the screen only once it has a page; until then the image
@@ -125,7 +180,8 @@ export class HarlemMightVideoScreen extends BaseScriptComponent {
   }
 }
 
-const CREATE_TIMEOUT_S = 5;
+const CREATE_TIMEOUT_S = 20;
+const RESOLUTION = new vec2(1280, 720);
 
 function youTubeVideoId(url: string): string | null {
   const match = /(?:youtu\.be\/|[?&]v=|\/embed\/)([A-Za-z0-9_-]{11})/.exec(url);
