@@ -52,6 +52,11 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
 
   @input
   @allowUndefined
+  @hint("Snap Navigation Kit map ([MapComponent]); shown only on the Explore tab, like the mobile map pane")
+  mapObject: SceneObject;
+
+  @input
+  @allowUndefined
   @hint("ViroSpecsAssetRegistry object; CMS photos are registered on it at runtime")
   assetRegistryObject: SceneObject;
 
@@ -169,6 +174,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       this.stopSong();
     } else if (command.startsWith("preview:open:")) {
       this.selected = command.slice("preview:open:".length);
+      if (this.tab === "music") this.cueSong(false);
     } else if (command === "preview:page:next") {
       const items = this.listItems();
       const page = this.page.get(this.tab) ?? 0;
@@ -183,10 +189,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       const target = this.walkTarget();
       if (target) this.startWalk(target);
     } else if (command === "preview:play") {
-      const artist = this.currentArtists().find((a) => a.id === this.selected);
-      if (!artist?.youtubeUrl) return;
-      this.playing = { artist: artist.name, title: artist.songTitle, youtubeUrl: artist.youtubeUrl };
-      this.video?.play(artist.youtubeUrl);
+      this.cueSong(true);
     } else if (command === "preview:stop-song") {
       this.stopSong();
     } else if (command === "preview:end-walk") {
@@ -284,7 +287,8 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       tab === "explore" ? content.featuredPlaces().then((v) => { this.places = v; })
       : tab === "walks" ? content.walks().then((v) => { this.walks = v; })
       : tab === "stories" ? content.stories().then((v) => { this.stories = v; })
-      : tab === "music" ? content.musicArtists(1).then((v) => { this.artists = v.artists; this.moreArtists = v.hasNextPage; })
+      : tab === "music" ? content.musicArtists(1).then((v) => {
+          this.artists = v.artists; this.moreArtists = v.hasNextPage; this.fillArtistPhotos(v.artists); })
       : content.todayEvents(new Date()).then((v) => { this.events = v.events; this.eventsUpcoming = v.upcoming; });
     task.then(
       () => { this.status.set(tab, "ready"); this.showPreview(); },
@@ -300,27 +304,45 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
     if (!this.content) return;
     this.content.musicArtists(page).then((v) => {
       this.artists = this.artists.concat(v.artists);
+      this.fillArtistPhotos(v.artists);
       this.artistPage = page;
       this.moreArtists = v.hasNextPage;
       this.showPreview();
     }, (error) => print("[HarlemMightSpecsEntry] music page " + page + ": " + error));
   }
 
-  // The current tab's list, live when loaded, otherwise the offline preview.
-  private listItems(): { id: string; label: string }[] {
+  // The current tab's cards, live when loaded, otherwise the offline preview.
+  // Each carries what its mobile card shows: title, one line under it, photo.
+  private listItems(): ListItem[] {
     const live = this.status.get(this.tab) === "ready";
     switch (this.tab) {
       case "explore":
-        return (live ? this.places : OFFLINE_PLACES).map((p) => ({ id: p.id, label: p.name }));
+        return (live ? this.places : OFFLINE_PLACES).map((p) => ({
+          id: p.id, title: p.name, sub: [p.category, p.street].filter(Boolean).join(", "), image: p.image }));
       case "walks":
-        return live ? this.walks.map((w) => ({ id: w.id, label: w.title })) : [];
+        return live ? this.walks.map((w) => ({ id: w.id, title: w.title, sub: w.facts, image: w.image })) : [];
       case "stories":
-        return live ? this.stories.map((st) => ({ id: st.id, label: st.title })) : [];
+        return live ? this.stories.map((st) => ({
+          id: st.id, title: st.title, sub: st.author ? "By " + st.author : "", image: st.image })) : [];
       case "music":
-        return (live ? this.artists : OFFLINE_ARTISTS).map((a) => ({ id: a.id, label: a.name }));
+        return this.currentArtists().map((a) => ({
+          id: a.id, title: a.name, sub: [a.genre, a.era].filter(Boolean).join(" \u00b7 "), image: a.image }));
       case "today":
-        return live ? this.events.map((e) => ({ id: e.id, label: e.title })) : [];
+        return live ? this.events.map((e) => ({
+          id: e.id, title: e.title, sub: formatEventTime(e.startsAt), image: e.image,
+          struck: e.lifecycle !== "scheduled" })) : [];
     }
+  }
+
+  // Artists without a usable stored headshot get the site's photo-service
+  // portrait, as on the mobile Music grid.
+  private fillArtistPhotos(artists: ContentArtist[]): void {
+    const missing = artists.filter((a) => !a.image).map((a) => a.name);
+    if (!this.content || missing.length === 0) return;
+    this.content.artistPhotos(missing).then((photos) => {
+      for (const artist of artists) if (!artist.image && photos[artist.name]) artist.image = photos[artist.name];
+      this.showPreview();
+    }, (error) => print("[HarlemMightSpecsEntry] artist photos: " + error));
   }
 
   private walkTarget(): WalkTarget | null {
@@ -361,6 +383,17 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
     return null;
   }
 
+  // The artist profile's Featured song panel: the YouTube embed sits on the
+  // card beside the portrait, cued when the profile opens, playing on Play.
+  private cueSong(autoplay: boolean): void {
+    const artist = this.currentArtists().find((a) => a.id === this.selected);
+    if (!artist?.youtubeUrl) return;
+    this.playing = { artist: artist.name, title: artist.songTitle, youtubeUrl: artist.youtubeUrl };
+    this.video?.place(new vec3(SONG_SCREEN.x * 100, (ROOT_Y + SONG_SCREEN.y) * 100, ROOT_Z * 100 + 1),
+      new vec2(SONG_SCREEN.w, SONG_SCREEN.w * 9 / 16));
+    this.video?.play(artist.youtubeUrl, autoplay);
+  }
+
   private stopSong(): void {
     if (!this.playing) return;
     this.playing = null;
@@ -377,180 +410,246 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
 
   private showPreview(): void {
     if (!this.presentation || this.usingLiveFrame) return;
-    type Node = ViroSpecsPresentationSnapshot["scene"]["nodes"][number];
     const nodes: Node[] = [];
     const targets: ViroSpecsPresentationSnapshot["targets"] = [];
-    const text = (id: string, value: string, x: number, y: number, size: number, color: Color, parentId = "hm-root"): void => {
-      nodes.push({ id, kind: "text", parentId, text: value,
-        position: [x, y, 0.01], textStyle: { size, color } });
-    };
-    // The group is the action target and SIK fits its collider to the first
-    // visual inside it, the plate, so the whole plate is pinchable. The label
-    // is the plate's sibling so it doesn't inherit the plate's non-uniform scale.
-    const pinchable = (id: string, label: string, action: string, x: number, y: number,
-      scale: [number, number, number], size: number, color: Color): void => {
-      nodes.push({ id, kind: "group", parentId: "hm-root", position: [x, y, 0.005] });
-      nodes.push({ id: id + "-plate", kind: "panel", parentId: id, scale });
-      text(id + "-label", label, 0, 0, size, color, id);
-      targets.push({ targetId: id, action });
-    };
-    const button = (index: number, label: string, action: string, y: number): void =>
-      pinchable("hm-button-" + index, label, action, 0, y, BUTTON_SCALE, 80, IVORY);
+    const ui = new Layout(nodes, targets);
+    if (this.mapObject) this.mapObject.enabled = this.tab === "explore" && !this.walk;
 
     if (this.walk) {
       // While walking the card shrinks and moves above eye level, leaving the
       // lower view to the Navigation Kit arrow, which already shows the place
       // name and distance. The card carries only the next step.
-      nodes.push({ id: "hm-root", kind: "group", position: [0, 0.15, -1.1] });
+      nodes.push({ id: "hm-root", kind: "group", position: [0, 0.15, ROOT_Z] });
       nodes.push({ id: "hm-frame", kind: "panel", parentId: "hm-root", position: [0, -0.01, -0.03], scale: WALK_FRAME_SCALE });
       const { arrived, place } = this.walk;
-      text("hm-note", arrived ? "You're at " + place.name : "Follow the arrow to " + place.name,
+      ui.text("hm-note", arrived ? "You're at " + place.name : "Follow the arrow to " + place.name,
         0, 0.035, 60, arrived ? GOLD : IVORY);
-      button(0, arrived ? "Done" : "End walk", "preview:end-walk", -0.035);
+      ui.button("hm-end", arrived ? "Done" : "End walk", "preview:end-walk", 0, -0.035, BUTTON_SCALE, 80);
       this.presentation.present({ scene: { version: 1, nodes }, targets });
       return;
     }
 
     // 1.1 m sits in the comfortable focus band; a little below eye level keeps
     // the street ahead visible above the card.
-    nodes.push({ id: "hm-root", kind: "group", position: [0, -0.06, -1.1] });
+    nodes.push({ id: "hm-root", kind: "group", position: [0, ROOT_Y, ROOT_Z] });
     nodes.push({ id: "hm-frame", kind: "panel", parentId: "hm-root", position: [0, 0.04, -0.03], scale: FRAME_SCALE });
     // The app header: the landscape logo, as on mobile, never a text stand-in.
     nodes.push({ id: "hm-logo", kind: "image", parentId: "hm-root", source: LOGO_IMAGE_ID,
       position: [0, 0.225, 0.01], scale: LOGO_SCALE });
-    // The app's tab bar, in the app's order, under the header.
-    TABS.forEach((tab, index) => {
-      const active = tab.id === this.tab;
-      pinchable("hm-tab-" + tab.id, tab.label, "preview:tab:" + tab.id,
-        (index - (TABS.length - 1) / 2) * TAB_SPACING, 0.135, TAB_SCALE, 48, active ? GOLD : MUTED);
-    });
+    this.renderRail(ui);
 
-    const half = (index: number, label: string, action: string, x: number, y: number): void =>
-      pinchable("hm-item-" + index, clip(label, 22), action, x, y, HALF_BUTTON_SCALE, 52, IVORY);
-    const header = (title: string, subtitle: string): void => {
-      text("hm-title", clip(title, 26), 0, 0.07, 88, GOLD);
-      if (subtitle) text("hm-subtitle", clip(subtitle, 52), 0, 0.03, 46, MUTED);
-    };
-    // Body copy, with the item's CMS photo on the left when it has one. The
-    // photo keeps its aspect ratio inside an 18 x 11 cm box (image units are cm),
-    // clear of the action row below it.
-    const paragraph = (value: string, image: ContentImage | null = null): void => {
-      const photoId = this.photo(image);
-      if (photoId && image) {
-        const aspect = image.width > 0 && image.height > 0 ? image.width / image.height : 4 / 3;
-        const [w, h] = aspect >= PHOTO_BOX[0] / PHOTO_BOX[1]
-          ? [PHOTO_BOX[0], PHOTO_BOX[0] / aspect] : [PHOTO_BOX[1] * aspect, PHOTO_BOX[1]];
-        nodes.push({ id: "hm-photo", kind: "image", parentId: "hm-root", source: photoId,
-          position: [-0.12, -0.06, 0.01], scale: [w, h, 1] });
-        if (value) text("hm-body", wrap(clip(value, 110), 24), 0.115, -0.06, 44, IVORY);
-      } else if (value) {
-        text("hm-body", wrap(clip(value, 150), 44), 0, -0.05, 46, IVORY);
-      }
-    };
-    // Bottom row of a detail view: the tab's main action on the left, Back on the right.
-    const actions = (primary: { label: string; action: string } | null): void => {
-      if (primary) half(10, primary.label, primary.action, -COLUMN_X, ROW_Y[2]);
-      half(11, "Back", "preview:back", primary ? COLUMN_X : 0, ROW_Y[2]);
-    };
     const status = this.status.get(this.tab);
     const tabInfo = TABS.find((t) => t.id === this.tab)!;
-
     if (status === "loading") {
-      header(tabInfo.label, "Loading from Harlem Might\u2026");
+      ui.header(tabInfo.label, "Loading from Harlem Might…");
     } else if (this.selected) {
-      this.renderDetail(header, paragraph, actions, text);
+      this.renderDetail(ui);
     } else {
-      const items = this.listItems();
-      const page = this.page.get(this.tab) ?? 0;
-      const shown = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-      header(tabInfo.label, this.listSubtitle(items.length, page));
-      if (items.length === 0) {
-        if (this.tab === "today") {
-          // No listings: the app's Today screen still has its history fact.
-          const fact = nearestHistoryFact(new Date());
-          text("hm-date", "From Harlem\u2019s past \u00b7 " + formatFactDate(fact.date), 0, -0.01, 46, GOLD);
-          text("hm-body", wrap(fact.text, 44), 0, -0.07, 46, IVORY);
-          text("hm-source", "Source: " + fact.sourceLabel, 0, -0.13, 40, MUTED);
-        } else {
-          text("hm-body", wrap(tabInfo.offline, 40), 0, -0.04, 52, IVORY);
-        }
-      }
-      shown.forEach((item, index) =>
-        half(index, item.label, "preview:open:" + item.id,
-          (index % 2 === 0 ? -1 : 1) * COLUMN_X, ROW_Y[Math.floor(index / 2)]));
-      if (page > 0) half(10, "Previous", "preview:page:prev", -COLUMN_X, ROW_Y[2]);
-      const more = (page + 1) * PAGE_SIZE < items.length || (this.tab === "music" && this.moreArtists && status === "ready");
-      if (more) half(11, "More", "preview:page:next", COLUMN_X, ROW_Y[2]);
+      this.renderList(ui, tabInfo);
     }
     this.presentation.present({ scene: { version: 1, nodes }, targets });
+  }
+
+  // The app's tabs as a rail on the card's left edge, like the Quest build's
+  // rail window (apps/mobile/src/spatial/railWindow.ts): one narrow column of
+  // the mobile tab bar's Lucide icons over short labels, the current tab in gold
+  // with a gold bar.
+  private renderRail(ui: Layout): void {
+    ui.nodes.push({ id: "hm-rail", kind: "panel", parentId: "hm-root",
+      position: [RAIL_X, 0.04, -0.03], scale: RAIL_FRAME_SCALE });
+    TABS.forEach((tab, index) => {
+      const active = tab.id === this.tab;
+      const id = "hm-tab-" + tab.id;
+      const y = 0.04 + ((TABS.length - 1) / 2 - index) * RAIL_SPACING;
+      ui.nodes.push({ id, kind: "group", parentId: "hm-root", position: [RAIL_X, y, 0.005] });
+      ui.nodes.push({ id: id + "-plate", kind: "panel", parentId: id, scale: RAIL_ITEM_SCALE });
+      ui.nodes.push({ id: id + "-icon", kind: "image", parentId: id,
+        source: "tab-" + tab.id + (active ? "-active" : "-idle"),
+        position: [0, 0.011, 0.006], scale: [RAIL_ICON_CM, RAIL_ICON_CM, 1] });
+      ui.text(id + "-label", tab.label, 0, -0.022, 36, active ? GOLD : MUTED, id);
+      ui.targets.push({ targetId: id, action: "preview:tab:" + tab.id });
+      if (active) ui.text("hm-tab-bar", "\u258e", RAIL_X - 0.038, y, 110, GOLD);
+    });
+  }
+
+  private renderList(ui: Layout, tabInfo: (typeof TABS)[number]): void {
+    const items = this.listItems();
+    const page = this.page.get(this.tab) ?? 0;
+    const shown = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+    ui.header(tabInfo.label, this.listSubtitle(items.length, page));
+    if (items.length === 0) {
+      if (this.tab === "today") {
+        // No listings: the app's Today screen still has its history fact.
+        const fact = nearestHistoryFact(new Date());
+        ui.text("hm-date", "From Harlem’s past · " + formatFactDate(fact.date), 0, 0.03, 46, GOLD);
+        ui.text("hm-body", wrap(fact.text, 44), 0, -0.04, 46, IVORY);
+        ui.text("hm-source", "Source: " + fact.sourceLabel, 0, -0.11, 40, MUTED);
+      } else {
+        ui.text("hm-body", wrap(tabInfo.offline, 40), 0, -0.02, 52, IVORY);
+      }
+    }
+    shown.forEach((item, index) => {
+      const x = (index % 2 === 0 ? -1 : 1) * TILE_COLUMN_X;
+      const y = TILE_ROW_Y[Math.floor(index / 2)];
+      this.renderTile(ui, "hm-item-" + index, item, x, y);
+    });
+    const more = (page + 1) * PAGE_SIZE < items.length
+      || (this.tab === "music" && this.moreArtists && this.status.get("music") === "ready");
+    if (page > 0) ui.button("hm-prev", "‹", "preview:page:prev", -PAGER_X, TITLE_Y, PAGER_SCALE, 80);
+    if (more) ui.button("hm-next", "›", "preview:page:next", PAGER_X, TITLE_Y, PAGER_SCALE, 80);
+  }
+
+  // A list card: photo on the left when the record has one, title and the
+  // mobile card's second line beside it. The whole tile is one pinch target.
+  private renderTile(ui: Layout, id: string, item: ListItem, x: number, y: number): void {
+    ui.nodes.push({ id, kind: "group", parentId: "hm-root", position: [x, y, 0.005] });
+    ui.nodes.push({ id: id + "-plate", kind: "panel", parentId: id, scale: TILE_SCALE });
+    ui.targets.push({ targetId: id, action: "preview:open:" + item.id });
+    const photoId = this.photo(item.image);
+    const textX = photoId ? 0.045 : 0;
+    const width = photoId ? 13 : 22;
+    if (photoId && item.image) {
+      const [w, h] = fit(item.image, TILE_PHOTO_CM, TILE_PHOTO_CM);
+      ui.nodes.push({ id: id + "-photo", kind: "image", parentId: id, source: photoId,
+        position: [-0.06, 0, 0.006], scale: [w, h, 1] });
+    }
+    const title = wrap(clip(item.title, width * 2 - 2), width);
+    ui.text(id + "-title", item.struck ? strike(title) : title, textX, 0.018, 42, IVORY, id);
+    if (item.sub) ui.text(id + "-sub", clip(item.sub, Math.round(width * 1.3)), textX, -0.035, 34, MUTED, id);
   }
 
   private listSubtitle(count: number, page: number): string {
     const live = this.status.get(this.tab) === "ready";
     const range = count > PAGE_SIZE
-      ? (page * PAGE_SIZE + 1) + "\u2013" + Math.min(count, (page + 1) * PAGE_SIZE) + " of " + count : String(count);
+      ? (page * PAGE_SIZE + 1) + "–" + Math.min(count, (page + 1) * PAGE_SIZE) + " of " + count : String(count);
     switch (this.tab) {
-      case "explore": return live ? "Featured places \u00b7 " + range : "Offline preview";
+      case "explore": return live ? "Featured places · " + range : "Offline preview";
       case "walks": return live ? range + " guided walks" : "";
       case "stories": return live ? range + " stories" : "";
-      case "music": return live ? "Harlem artists \u00b7 " + range : "Offline preview";
+      case "music": return live ? "Harlem artists · " + range : "Offline preview";
       case "today":
         if (!live) return "Offline";
         if (count === 0) return "No listings today";
-        return (this.eventsUpcoming ? "Upcoming \u00b7 " : "Today \u00b7 ") + range + " listings";
+        return (this.eventsUpcoming ? "Upcoming · " : "Today · ") + range + " listings";
     }
   }
 
   // Detail view for the selected item, with the same fields as the item's
   // mobile screen (Place Detail, walk, story, artist and event pages).
-  private renderDetail(
-    header: (title: string, subtitle: string) => void,
-    paragraph: (value: string, image?: ContentImage | null) => void,
-    actions: (primary: { label: string; action: string } | null) => void,
-    text: (id: string, value: string, x: number, y: number, size: number, color: Color) => void,
-  ): void {
+  private renderDetail(ui: Layout): void {
     const id = this.selected;
+    if (this.tab === "music") return this.renderArtist(ui);
     if (this.tab === "explore") {
       const place = this.currentPlaces().find((p) => p.id === id);
-      if (!place) return actions(null);
-      header(place.name, [place.category, place.street].filter(Boolean).join(", "));
-      paragraph(place.summary, place.image);
-      actions(this.walkTarget() ? { label: "Start walking", action: "preview:walk" } : null);
+      if (!place) return ui.actions(null);
+      ui.header(place.name, [place.category, place.street].filter(Boolean).join(", "));
+      this.body(ui, place.summary, place.image);
+      ui.actions(this.walkTarget() ? { label: "Start walking", action: "preview:walk" } : null);
     } else if (this.tab === "walks") {
       const walk = this.walks.find((w) => w.id === id);
-      if (!walk) return actions(null);
-      header(walk.title, walk.facts);
-      paragraph(walk.summary, walk.image);
-      actions(this.walkTarget() ? { label: "Walk to first stop", action: "preview:walk" } : null);
+      if (!walk) return ui.actions(null);
+      ui.header(walk.title, walk.facts);
+      this.body(ui, walk.summary, walk.image);
+      ui.actions(this.walkTarget() ? { label: "Walk to first stop", action: "preview:walk" } : null);
     } else if (this.tab === "stories") {
       const story = this.stories.find((st) => st.id === id);
-      if (!story) return actions(null);
-      header(story.title, story.author ? "By " + story.author : "");
-      paragraph(story.dek, story.image);
-      actions(null);
-    } else if (this.tab === "music") {
-      const artist = this.currentArtists().find((a) => a.id === id);
-      if (!artist) return actions(null);
-      if (this.playing) {
-        header(this.playing.title, this.playing.artist);
-        // The video screen covers the card body on Spectacles; Preview has no WebView.
-        text("hm-note", "Video plays on Spectacles", 0, -0.05, 46, MUTED);
-        actions({ label: "Stop", action: "preview:stop-song" });
-        return;
-      }
-      header(artist.name, [artist.genre, artist.era].filter(Boolean).join(" \u00b7 "));
-      paragraph(artist.shortBio, artist.image);
-      actions(artist.youtubeUrl ? { label: "Play " + (artist.songTitle || "song"), action: "preview:play" } : null);
+      if (!story) return ui.actions(null);
+      ui.header(story.title, story.author ? "By " + story.author : "");
+      this.body(ui, story.dek, story.image);
+      ui.actions(null);
     } else {
       const event = this.events.find((e) => e.id === id);
-      if (!event) return actions(null);
-      const time = formatEventTime(event.startsAt);
+      if (!event) return ui.actions(null);
       const state = event.lifecycle === "scheduled" ? "" : event.lifecycle === "cancelled" ? "Cancelled" : "Postponed";
-      header(event.title, [state, time].filter(Boolean).join(" \u00b7 "));
-      paragraph(event.venue, event.image);
-      actions(null);
+      ui.header(event.title, [state, formatEventTime(event.startsAt)].filter(Boolean).join(" · "));
+      this.body(ui, event.venue, event.image);
+      ui.actions(null);
     }
   }
+
+  // The mobile artist profile in one card: portrait leading, Featured song
+  // player beside it, then the facts and short bio, Play and Back below.
+  private renderArtist(ui: Layout): void {
+    const artist = this.currentArtists().find((a) => a.id === this.selected);
+    if (!artist) return ui.actions(null);
+    ui.header(artist.name, [artist.genre, artist.era, artist.connection].filter(Boolean).join(" · "));
+    const photoId = this.photo(artist.image);
+    if (photoId && artist.image) {
+      const [w, h] = fit(artist.image, PORTRAIT_CM, PORTRAIT_CM);
+      ui.nodes.push({ id: "hm-portrait", kind: "image", parentId: "hm-root", source: photoId,
+        position: [PORTRAIT_X, SONG_SCREEN.y, 0.01], scale: [w, h, 1] });
+    } else {
+      ui.text("hm-portrait-note", artist.image ? "Loading photo…" : artist.name + "\nphoto unavailable",
+        PORTRAIT_X, SONG_SCREEN.y, 36, MUTED);
+    }
+    if (artist.youtubeUrl) {
+      // The WebView covers this placeholder on Spectacles; Preview has no WebView.
+      ui.text("hm-song-note", "Featured song\n" + clip(artist.songTitle, 30) + "\n\nPlays on Spectacles",
+        SONG_SCREEN.x, SONG_SCREEN.y, 36, MUTED);
+    }
+    const credit = artist.image?.credit ? "Photo: " + clip(artist.image.credit, 70) : "";
+    if (credit) ui.text("hm-credit", credit, 0, -0.072, 28, MUTED);
+    ui.text("hm-body", wrap(clip(artist.shortBio || artist.biography[0] || "", 130), 56), 0, -0.11, 38, IVORY);
+    ui.actions(artist.youtubeUrl ? { label: "Play " + clip(artist.songTitle || "song", 16), action: "preview:play" } : null);
+  }
+
+  // Body copy, with the item's CMS photo on the left when it has one.
+  private body(ui: Layout, value: string, image: ContentImage | null): void {
+    const photoId = this.photo(image);
+    if (photoId && image) {
+      const [w, h] = fit(image, PHOTO_BOX[0], PHOTO_BOX[1]);
+      ui.nodes.push({ id: "hm-photo", kind: "image", parentId: "hm-root", source: photoId,
+        position: [-0.12, -0.02, 0.01], scale: [w, h, 1] });
+      if (value) ui.text("hm-body", wrap(clip(value, 140), 24), 0.115, -0.02, 42, IVORY);
+    } else if (value) {
+      ui.text("hm-body", wrap(clip(value, 180), 46), 0, -0.02, 46, IVORY);
+    }
+  }
+}
+
+type Node = ViroSpecsPresentationSnapshot["scene"]["nodes"][number];
+type ListItem = { id: string; title: string; sub: string; image: ContentImage | null; struck?: boolean };
+
+// Node helpers for one presented frame.
+class Layout {
+  constructor(readonly nodes: Node[], readonly targets: ViroSpecsPresentationSnapshot["targets"]) {}
+
+  text(id: string, value: string, x: number, y: number, size: number, color: Color, parentId = "hm-root"): void {
+    this.nodes.push({ id, kind: "text", parentId, text: value, position: [x, y, 0.01], textStyle: { size, color } });
+  }
+
+  // The group is the action target and SIK fits its collider to the first
+  // visual inside it, the plate, so the whole plate is pinchable. The label
+  // is the plate's sibling so it doesn't inherit the plate's non-uniform scale.
+  button(id: string, label: string, action: string, x: number, y: number,
+    scale: [number, number, number], size: number, color: Color = IVORY): void {
+    this.nodes.push({ id, kind: "group", parentId: "hm-root", position: [x, y, 0.005] });
+    this.nodes.push({ id: id + "-plate", kind: "panel", parentId: id, scale });
+    this.text(id + "-label", label, 0, 0, size, color, id);
+    this.targets.push({ targetId: id, action });
+  }
+
+  header(title: string, subtitle: string): void {
+    this.text("hm-title", clip(title, 30), 0, TITLE_Y, 80, GOLD);
+    if (subtitle) this.text("hm-subtitle", clip(subtitle, 60), 0, SUBTITLE_Y, 40, MUTED);
+  }
+
+  // Bottom row of a detail view: the main action on the left, Back on the right.
+  actions(primary: { label: string; action: string } | null): void {
+    if (primary) this.button("hm-primary", clip(primary.label, 22), primary.action, -0.12, ACTION_Y, HALF_BUTTON_SCALE, 52);
+    this.button("hm-back", "Back", "preview:back", primary ? 0.12 : 0, ACTION_Y, HALF_BUTTON_SCALE, 52);
+  }
+}
+
+// Width and height in cm that fit an image's aspect ratio inside a box.
+function fit(image: ContentImage, boxW: number, boxH: number): [number, number] {
+  const aspect = image.width > 0 && image.height > 0 ? image.width / image.height : 4 / 3;
+  return aspect >= boxW / boxH ? [boxW, boxW / aspect] : [boxH * aspect, boxH];
+}
+
+// Cancelled and postponed events are struck through on the mobile Today card.
+function strike(value: string): string {
+  return value.split("").map((ch) => (ch === "\n" ? ch : ch + "̶")).join("");
 }
 
 // Shorten to fit a label, on a word boundary when one is close.
@@ -624,15 +723,36 @@ const MUTED: Color = [0.74, 0.7, 0.62, 1];
 const FRAME_SCALE: [number, number, number] = [2.08, 4.17, 1];
 const WALK_FRAME_SCALE: [number, number, number] = [1.67, 1.33, 1];
 const BUTTON_SCALE: [number, number, number] = [1.33, 0.58, 1];
-const TAB_SCALE: [number, number, number] = [0.375, 0.54, 1];
-const TAB_SPACING = 0.096;
 const HALF_BUTTON_SCALE: [number, number, number] = [0.96, 0.58, 1];
-// Lists are two columns by two rows, with a Previous/More or action row below.
+// Card root, in metres from the Lens origin.
+const ROOT_Y = -0.06;
+const ROOT_Z = -1.1;
+const TITLE_Y = 0.135;
+const SUBTITLE_Y = 0.098;
+const ACTION_Y = -0.168;
+// Tab rail left of the card: 8.5 cm wide, 7 x 7 cm items (above the 6.4 cm
+// hand-target floor) 7.8 cm apart, 3.2 cm icons.
+const RAIL_X = -0.3075;
+const RAIL_SPACING = 0.078;
+const RAIL_FRAME_SCALE: [number, number, number] = [0.35, 3.5, 1];
+const RAIL_ITEM_SCALE: [number, number, number] = [0.29, 0.58, 1];
+const RAIL_ICON_CM = 3.2;
+// Lists: two columns by two rows of 23 x 12 cm tiles, paged with arrows
+// either side of the title.
 const PAGE_SIZE = 4;
+const TILE_SCALE: [number, number, number] = [0.96, 1.0, 1];
+const TILE_COLUMN_X = 0.12;
+const TILE_ROW_Y = [0.02, -0.11] as const;
+const TILE_PHOTO_CM = 9;
+const PAGER_X = 0.21;
+const PAGER_SCALE: [number, number, number] = [0.3, 0.54, 1];
+// Artist profile: portrait on the left, Featured song player on the right
+// (16:9, 26 cm wide), both centred 4 cm below the subtitle.
+const PORTRAIT_X = -0.14;
+const PORTRAIT_CM = 15;
+const SONG_SCREEN = { x: 0.085, y: 0.01, w: 26 } as const;
 // Largest CMS photo in a detail view, in cm (width, height).
 const PHOTO_BOX = [18, 11] as const;
-const COLUMN_X = 0.12;
-const ROW_Y = [-0.02, -0.092, -0.164] as const;
 const LOGO_IMAGE_ID = "harlem-might-logo";
 // Measured against the 50 cm frame in Preview, one image unit is about 1 cm.
 // 30 x 10 cm fills most of the card like the mobile header and fits between
@@ -658,13 +778,13 @@ const OFFLINE_PLACES: ContentPlace[] = [
     summary: "", latitude: 40.8146476, longitude: -73.9409874, image: null },
 ];
 const OFFLINE_ARTISTS: ContentArtist[] = [
-  { id: "fats-waller", name: "Fats Waller", genre: "Jazz", era: "1920s\u20131940s", shortBio: "",
+  { id: "fats-waller", name: "Fats Waller", genre: "Jazz", era: "1920s\u20131940s", shortBio: "", connection: "", biography: [], albumArt: null,
     songTitle: "Ain't Misbehavin'", youtubeUrl: "https://www.youtube.com/watch?v=pZ8fWP6a3Q4", image: null },
-  { id: "frankie-lymon", name: "Frankie Lymon", genre: "Doo-wop", era: "1950s\u20131960s", shortBio: "",
+  { id: "frankie-lymon", name: "Frankie Lymon", genre: "Doo-wop", era: "1950s\u20131960s", shortBio: "", connection: "", biography: [], albumArt: null,
     songTitle: "Goody Goody", youtubeUrl: "https://www.youtube.com/watch?v=K3VLt_Q5pmA", image: null },
-  { id: "big-l", name: "Big L", genre: "Hip-hop", era: "1990s", shortBio: "",
+  { id: "big-l", name: "Big L", genre: "Hip-hop", era: "1990s", shortBio: "", connection: "", biography: [], albumArt: null,
     songTitle: "Put It On", youtubeUrl: "https://www.youtube.com/watch?v=WWMjRMJ0dTI", image: null },
-  { id: "teyana-taylor", name: "Teyana Taylor", genre: "R&B", era: "2000s\u2013present", shortBio: "",
+  { id: "teyana-taylor", name: "Teyana Taylor", genre: "R&B", era: "2000s\u2013present", shortBio: "", connection: "", biography: [], albumArt: null,
     songTitle: "Gonna Love Me", youtubeUrl: "https://www.youtube.com/watch?v=LwSCplLupTA", image: null },
 ];
 

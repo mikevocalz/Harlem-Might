@@ -25,11 +25,21 @@ export class HarlemMightVideoScreen extends BaseScriptComponent {
     this.screen.mainMaterial = this.screen.mainMaterial.clone();
   }
 
-  play(youtubeUrl: string): void {
+  /** World position (cm) and size (cm) of the screen, e.g. beside an artist portrait. */
+  place(position: vec3, size: vec2): void {
+    const transform = this.getSceneObject().getTransform();
+    transform.setWorldPosition(position);
+    transform.setWorldScale(new vec3(size.x, size.y, 1));
+  }
+
+  /** Loads the video's embed player; `autoplay` starts it, otherwise it waits cued. */
+  play(youtubeUrl: string, autoplay = true): void {
     const id = youTubeVideoId(youtubeUrl);
     if (!id) return;
-    // The embed player fills the WebView without YouTube's page chrome.
-    this.pendingUrl = "https://www.youtube.com/embed/" + id + "?autoplay=1&playsinline=1&rel=0";
+    // The privacy-enhanced embed the mobile app uses (music-format.ts),
+    // which fills the WebView without YouTube's page chrome.
+    this.pendingUrl = "https://www.youtube-nocookie.com/embed/" + id + "?rel=0&playsinline=1"
+      + (autoplay ? "&autoplay=1" : "");
     if (this.ready) {
       this.screen.getSceneObject().enabled = true;
       this.flush();
@@ -41,7 +51,7 @@ export class HarlemMightVideoScreen extends BaseScriptComponent {
     this.pendingUrl = null;
     this.screen.getSceneObject().enabled = false;
     // Loading a blank https page stops playback; WebView only accepts https.
-    if (this.ready) this.control!.loadUrl("https://www.youtube.com/embed/");
+    if (this.ready) this.control!.loadUrl("https://www.youtube-nocookie.com/embed/");
   }
 
   private create(): void {

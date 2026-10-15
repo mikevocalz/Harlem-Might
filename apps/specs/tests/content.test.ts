@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { HarlemMightContent, formatEventTime, newYorkDay } from '../Assets/HarlemMight/Scripts/HarlemMightContent.ts';
+import { HarlemMightContent, formatEventTime, newYorkDay, shouldUseStoredArtistPhoto } from '../Assets/HarlemMight/Scripts/HarlemMightContent.ts';
 
 function client(bodies: Record<string, unknown>) {
   const urls: string[] = [];
@@ -55,10 +55,34 @@ test('New York days and times follow US Eastern daylight time', () => {
   assert.equal(formatEventTime('2026-01-10T00:30:00.000Z'), 'Fri Jan 9 · 7:30 PM');
 });
 
-test('resolves relative CMS media URLs against the API origin', async () => {
-  const { content } = client({ 'music-artists': { docs: [{ id: 21, name: '40 Cal',
-    headshot: { url: '/payload-api/media/file/artist-21-original.jpg', width: 980, height: 735, alt: 'portrait' } }] } });
-  const { artists } = await content.musicArtists(1);
-  assert.deepEqual(artists[0].image, { url: 'https://example.test/payload-api/media/file/artist-21-original.jpg',
-    width: 980, height: 735, alt: 'portrait' });
+test('resolves relative CMS media URLs against the API origin, with the mobile credit line', async () => {
+  const { content } = client({ 'music-artists': { docs: [{ id: 21, name: '40 Cal', connection: 'scene',
+    biography: 'First.\n\nSecond.',
+    headshot: { url: '/payload-api/media/file/artist-21-original.jpg', width: 980, height: 735, alt: 'portrait',
+      credit: 'Masar Tv', license: 'CC BY 3.0', sourceUrl: 'https://commons.wikimedia.org/wiki/File:40_Cal.jpg' } }] } });
+  const [artist] = (await content.musicArtists(1)).artists;
+  assert.deepEqual(artist.image, { url: 'https://example.test/payload-api/media/file/artist-21-original.jpg',
+    width: 980, height: 735, alt: 'portrait', credit: 'Masar Tv · CC BY 3.0' });
+  assert.equal(artist.connection, 'Harlem music-scene figure');
+  assert.deepEqual(artist.biography, ['First.', 'Second.']);
+});
+
+test('rejects the stored headshots the mobile policy rejects', () => {
+  assert.equal(shouldUseStoredArtistPhoto('Black Ivory',
+    { sourceUrl: 'https://commons.wikimedia.org/wiki/File:Black Ivory first promo picture.jpg' }), false);
+  assert.equal(shouldUseStoredArtistPhoto('Big L', { sourceUrl: 'https://example.test/x.jpg' }), true);
+  assert.equal(shouldUseStoredArtistPhoto('Big L', undefined), false);
+});
+
+test('asks the site photo service for missing portraits like artist-photo-client', async () => {
+  const urls: string[] = [];
+  const content = new HarlemMightContent('https://example.test/payload-api', async (url) => {
+    urls.push(url);
+    return { photos: { 'A$AP Ant': { url: 'https://example.test/api/music/artist-photo/image?name=A%24AP%20Ant&v=6',
+      provider: 'curated_web', credit: 'Last.fm A$AP Ant artist profile', width: 1080, height: 1080 } } };
+  });
+  const photos = await content.artistPhotos(['A$AP Ant', 'Nobody']);
+  assert.equal(urls[0], 'https://example.test/api/music/artist-photo?v=6&names=A%24AP%20Ant%7CNobody');
+  assert.equal(photos['A$AP Ant']?.credit, 'Last.fm A$AP Ant artist profile · Verified artist source · external reference');
+  assert.equal(photos.Nobody, null);
 });

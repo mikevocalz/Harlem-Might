@@ -5,8 +5,8 @@
  * GETs only; Payload's read access serves published documents to anyone.
  */
 
-/** A CMS photo with an absolute URL and its pixel size, when Payload has it. */
-export type ContentImage = { url: string; width: number; height: number; alt: string };
+/** A photo with an absolute URL, its pixel size, and the credit line the mobile card shows. */
+export type ContentImage = { url: string; width: number; height: number; alt: string; credit?: string };
 
 export type ContentPlace = {
   id: string; name: string; category: string; street: string; summary: string;
@@ -19,7 +19,11 @@ export type ContentWalk = {
 export type ContentStory = { id: string; title: string; dek: string; author: string; image: ContentImage | null };
 export type ContentArtist = {
   id: string; name: string; genre: string; era: string; shortBio: string;
-  songTitle: string; youtubeUrl: string | null; image: ContentImage | null;
+  connection: string; biography: string[];
+  songTitle: string; youtubeUrl: string | null;
+  /** Stored CMS headshot when the mobile policy allows it; else filled from the photo service. */
+  image: ContentImage | null;
+  albumArt: ContentImage | null;
 };
 export type ContentEvent = {
   id: string; title: string; startsAt: string; venue: string; lifecycle: string;
@@ -81,12 +85,38 @@ export class HarlemMightContent {
         genre: doc.genre ?? "",
         era: doc.era ?? "",
         shortBio: doc.shortBio ?? "",
+        connection: musicConnectionLabel(doc.connection),
+        biography: biographyParagraphs(doc.biography ?? ""),
         songTitle: doc.featuredSong?.title ?? "",
         youtubeUrl: doc.featuredSong?.youtubeUrl ?? null,
-        // CMS headshot only; the mobile app never uses album art as a portrait.
-        image: toImage(doc.headshot, this.origin()),
+        // The mobile app never uses album art as a portrait.
+        image: shouldUseStoredArtistPhoto(doc.name ?? "", doc.headshot)
+          ? toImage(doc.headshot, this.origin(), creditLine(doc.headshot)) : null,
+        albumArt: toImage(doc.albumArt, this.origin()),
       })),
     };
+  }
+
+  /**
+   * Portraits for artists without a usable stored headshot, from the site's
+   * /api/music/artist-photo service, exactly as artist-photo-client.ts asks.
+   */
+  async artistPhotos(names: string[]): Promise<Record<string, ContentImage | null>> {
+    const result: Record<string, ContentImage | null> = {};
+    if (names.length === 0) return result;
+    const url = this.origin() + "/api/music/artist-photo?v=" + ARTIST_PHOTO_VERSION
+      + "&names=" + encodeURIComponent(names.join("|"));
+    const body = await this.fetchJson(url);
+    for (const name of names) {
+      const photo = body?.photos?.[name];
+      result[name] = photo && typeof photo.url === "string" ? {
+        url: photo.url, width: Number(photo.width) || 0, height: Number(photo.height) || 0,
+        alt: name + " artist photo",
+        credit: [photo.credit, providerLabel(photo.provider), photo.license || "external reference"]
+          .filter(Boolean).join(" \u00b7 "),
+      } : null;
+    }
+    return result;
   }
 
   // Today: events overlapping today in New York, like the app's Today view;
@@ -145,10 +175,59 @@ function select(...fields: string[]): string[] {
   return fields.map((field) => "select[" + field + "]=true");
 }
 
-function toImage(media: any, origin: string): ContentImage | null {
+function toImage(media: any, origin: string, credit?: string): ContentImage | null {
   if (!media || typeof media !== "object" || typeof media.url !== "string" || !media.url) return null;
   const url = /^https?:\/\//.test(media.url) ? media.url : origin + (media.url.startsWith("/") ? "" : "/") + media.url;
-  return { url, width: Number(media.width) || 0, height: Number(media.height) || 0, alt: media.alt ?? "" };
+  return { url, width: Number(media.width) || 0, height: Number(media.height) || 0, alt: media.alt ?? "", credit };
+}
+
+// Music rules ported from packages/app/features/music (artist-photo-policy.ts,
+// artist-photo.ts, music-format.ts) so Specs shows the same portraits and copy.
+const ARTIST_PHOTO_VERSION = "6";
+const REJECTED_STORED_SOURCES: Record<string, string> = {
+  "Black Ivory": "https://commons.wikimedia.org/wiki/File:Black_Ivory_first_promo_picture.jpg",
+  "Dizzy Gillespie": "https://commons.wikimedia.org/wiki/File:(Portrait_of_Dizzy_Gillespie,_New_York,_N.Y.,_between_1946_and_1948)_(LOC)_(4976469817).jpg",
+  "Frankie Cutlass": "https://commons.wikimedia.org/wiki/File:Victor_Cruz_And_Frankie_Cutlass.jpg",
+  "Harlem Gospel Choir": "https://commons.wikimedia.org/wiki/File:ArtFund_Promo_Photo_Credit_Yvonnetnt.jpg",
+  "J. Rosamond Johnson": "https://commons.wikimedia.org/wiki/File:Coleandjohnson.jpg",
+};
+
+function sourceIdentity(value: string): string {
+  const match = /^https?:\/\/([^/?#]+)([^?#]*)/i.exec(value);
+  if (!match) return value;
+  let path = match[2];
+  try { path = decodeURIComponent(path); } catch (error) { /* keep as is */ }
+  return match[1].toLowerCase() + path.replace(/_/g, " ");
+}
+
+export function shouldUseStoredArtistPhoto(name: string, headshot: any): boolean {
+  if (!headshot || typeof headshot !== "object") return false;
+  const rejected = REJECTED_STORED_SOURCES[name];
+  return !rejected || sourceIdentity(headshot.sourceUrl ?? "") !== sourceIdentity(rejected);
+}
+
+function creditLine(media: any): string {
+  return [media?.credit, media?.license].filter(Boolean).join(" \u00b7 ");
+}
+
+function providerLabel(provider: string): string {
+  return provider === "wikimedia_commons" ? "Wikimedia Commons"
+    : provider === "curated_web" ? "Verified artist source" : "";
+}
+
+export function musicConnectionLabel(connection: string): string {
+  switch (connection) {
+    case "born-raised": return "Born or raised in Harlem";
+    case "resident": return "Harlem resident";
+    case "scene": return "Harlem music-scene figure";
+    case "east-harlem": return "East Harlem / El Barrio";
+    default: return "";
+  }
+}
+
+/** The plain-text biography as paragraphs (blank-line separated in the CMS). */
+export function biographyParagraphs(biography: string): string[] {
+  return biography.split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean);
 }
 
 function toPlace(doc: any, origin: string): ContentPlace {
