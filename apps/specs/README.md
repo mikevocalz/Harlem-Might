@@ -44,7 +44,11 @@ renderer.
    fetches `https://` URLs. A local `http://localhost:3000/payload-api` works
    in Preview only with Experimental APIs on, and Spectacles need a public
    https host. When a read fails, the tab shows its offline preview and
-   retries the next time it opens.
+   retries the next time it opens. Detail views show the record's CMS photo
+   (place images, story images or archive art, artist headshots, event or
+   venue images) when it has one. Set `assetRegistryObject` to the
+   `ViroSpecsAssetRegistry` object; photos are registered there at runtime
+   (`registerImage`, viro-external #69).
 8. Set up the Music video screen. Turn on Project Settings > Experimental
    APIs; WebView refuses to start without it. Create an Internet Module asset,
    add a scene object with an Image (the header logo's material works, the

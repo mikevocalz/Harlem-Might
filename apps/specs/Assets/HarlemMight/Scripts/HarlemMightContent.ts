@@ -5,20 +5,25 @@
  * GETs only; Payload's read access serves published documents to anyone.
  */
 
+/** A CMS photo with an absolute URL and its pixel size, when Payload has it. */
+export type ContentImage = { url: string; width: number; height: number; alt: string };
+
 export type ContentPlace = {
   id: string; name: string; category: string; street: string; summary: string;
-  latitude: number | null; longitude: number | null;
+  latitude: number | null; longitude: number | null; image: ContentImage | null;
 };
 export type ContentWalk = {
   id: string; title: string; summary: string; facts: string; firstStop: ContentPlace | null;
+  image: ContentImage | null;
 };
-export type ContentStory = { id: string; title: string; dek: string; author: string };
+export type ContentStory = { id: string; title: string; dek: string; author: string; image: ContentImage | null };
 export type ContentArtist = {
   id: string; name: string; genre: string; era: string; shortBio: string;
-  songTitle: string; youtubeUrl: string | null;
+  songTitle: string; youtubeUrl: string | null; image: ContentImage | null;
 };
 export type ContentEvent = {
   id: string; title: string; startsAt: string; venue: string; lifecycle: string;
+  image: ContentImage | null;
 };
 
 type Fetcher = (url: string) => Promise<any>;
@@ -36,10 +41,10 @@ export class HarlemMightContent {
   // Without a keyboard the Specs list starts from the curated featured set.
   async featuredPlaces(): Promise<ContentPlace[]> {
     const docs = await this.docs("places", [
-      "where[featured][equals]=true", "depth=0", "limit=24", "sort=name",
-      ...select("slug", "name", "primaryCategory", "summary", "location", "address"),
+      "where[featured][equals]=true", "depth=1", "limit=24", "sort=name",
+      ...select("slug", "name", "primaryCategory", "summary", "location", "address", "images"),
     ]);
-    return docs.map(toPlace);
+    return docs.map((doc) => toPlace(doc, this.origin()));
   }
 
   async walks(): Promise<ContentWalk[]> {
@@ -50,20 +55,23 @@ export class HarlemMightContent {
       summary: doc.summary ?? "",
       facts: walkFacts(doc),
       firstStop: doc.stops?.[0]?.place && typeof doc.stops[0].place === "object"
-        ? toPlace(doc.stops[0].place) : null,
+        ? toPlace(doc.stops[0].place, this.origin()) : null,
+      image: toImage(doc.images?.[0], this.origin()),
     }));
   }
 
   async stories(): Promise<ContentStory[]> {
-    const docs = await this.docs("stories", [published(), "depth=0", "limit=100", "sort=-publishedAt"]);
+    const docs = await this.docs("stories", [published(), "depth=1", "limit=100", "sort=-publishedAt"]);
     return docs.map((doc) => ({
       id: String(doc.id), title: doc.title ?? "", dek: doc.dek ?? "", author: doc.author ?? "",
+      // Same order as the mobile story card: own images, then archive art.
+      image: toImage(doc.images?.[0], this.origin()) ?? toImage(doc.archive?.[0]?.media, this.origin()),
     }));
   }
 
   async musicArtists(page: number): Promise<{ artists: ContentArtist[]; hasNextPage: boolean }> {
     const body = await this.body("music-artists", [
-      published(), "depth=0", "limit=24", "sort=name,id", "page=" + page,
+      published(), "depth=1", "limit=24", "sort=name,id", "page=" + page,
     ]);
     return {
       hasNextPage: Boolean(body.hasNextPage),
@@ -75,6 +83,8 @@ export class HarlemMightContent {
         shortBio: doc.shortBio ?? "",
         songTitle: doc.featuredSong?.title ?? "",
         youtubeUrl: doc.featuredSong?.youtubeUrl ?? null,
+        // CMS headshot only; the mobile app never uses album art as a portrait.
+        image: toImage(doc.headshot, this.origin()),
       })),
     };
   }
@@ -102,7 +112,17 @@ export class HarlemMightContent {
       startsAt: doc.startsAt ?? "",
       venue: (typeof doc.place === "object" && doc.place?.name) || doc.venueName || "",
       lifecycle: doc.lifecycle ?? "scheduled",
+      // The event's own image, else its venue's, as on the mobile event card.
+      image: toImage(doc.images?.[0], this.origin())
+        ?? (typeof doc.place === "object" ? toImage(doc.place?.images?.[0], this.origin()) : null),
     }));
+  }
+
+  // Media URLs are often relative ("/payload-api/media/file/..."); they resolve
+  // against the API's origin, as in packages/app/content/editorial-images.ts.
+  private origin(): string {
+    const match = /^(https?:\/\/[^/]+)/.exec(this.apiBase);
+    return match ? match[1] : "";
   }
 
   private async docs(collection: string, params: string[]): Promise<any[]> {
@@ -125,7 +145,13 @@ function select(...fields: string[]): string[] {
   return fields.map((field) => "select[" + field + "]=true");
 }
 
-function toPlace(doc: any): ContentPlace {
+function toImage(media: any, origin: string): ContentImage | null {
+  if (!media || typeof media !== "object" || typeof media.url !== "string" || !media.url) return null;
+  const url = /^https?:\/\//.test(media.url) ? media.url : origin + (media.url.startsWith("/") ? "" : "/") + media.url;
+  return { url, width: Number(media.width) || 0, height: Number(media.height) || 0, alt: media.alt ?? "" };
+}
+
+function toPlace(doc: any, origin: string): ContentPlace {
   // Payload stores points as [longitude, latitude].
   const point = Array.isArray(doc.location) && doc.location.length === 2 ? doc.location : null;
   return {
@@ -136,6 +162,7 @@ function toPlace(doc: any): ContentPlace {
     summary: doc.summary ?? "",
     latitude: point ? Number(point[1]) : null,
     longitude: point ? Number(point[0]) : null,
+    image: toImage(doc.images?.[0], origin),
   };
 }
 

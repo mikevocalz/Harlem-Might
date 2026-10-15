@@ -2,10 +2,11 @@ import {
   ViroSpecsPresentationHost,
   type ViroSpecsPresentationSnapshot,
 } from "../../ViroSpecs/lens/ViroSpecsPresentationHost";
+import { ViroSpecsAssetRegistry } from "../../ViroSpecs/lens/ViroSpecsAssetRegistry";
 import { HarlemMightVideoScreen } from "./HarlemMightVideoScreen";
 import {
   HarlemMightContent, formatEventTime,
-  type ContentArtist, type ContentEvent, type ContentPlace, type ContentStory, type ContentWalk,
+  type ContentArtist, type ContentEvent, type ContentImage, type ContentPlace, type ContentStory, type ContentWalk,
 } from "./HarlemMightContent";
 import { Place } from "SpecsNavigationKit.lspkg/NavigationDataComponent/Place";
 import { ARNavigation } from "SpecsNavigationKit.lspkg/ARNavigationComponent/Scripts/ARNavigation";
@@ -50,6 +51,11 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
   internetModule: InternetModule;
 
   @input
+  @allowUndefined
+  @hint("ViroSpecsAssetRegistry object; CMS photos are registered on it at runtime")
+  assetRegistryObject: SceneObject;
+
+  @input
   @hint("Payload REST base the mobile app uses (EXPO_PUBLIC_PAYLOAD_API_BASE). Spectacles need a public https host.")
   apiBase: string = "http://localhost:3200/payload-api";
 
@@ -68,6 +74,10 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
   private eventsUpcoming = false;
   private readonly page = new Map<TabId, number>();
   private selected: string | null = null;
+  private registry: ViroSpecsAssetRegistry | null = null;
+  private readonly remoteMedia = require("LensStudio:RemoteMediaModule") as RemoteMediaModule;
+  // url -> registry image id once loaded, or the load's state.
+  private readonly photos = new Map<string, string | "loading" | "failed">();
   private navigation: NavigationDataComponent | null = null;
   private arrow: ARNavigation | null = null;
   private unsubscribe: (() => void) | null = null;
@@ -95,6 +105,9 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       throw new Error("Harlem Might requires Navigation Kit's NavigationDataComponent and ARNavigation.");
     }
 
+    this.registry = (this.assetRegistryObject?.getComponent(
+      ViroSpecsAssetRegistry.getTypeName()
+    ) as ViroSpecsAssetRegistry | null) ?? null;
     if (this.internetModule && this.apiBase) {
       this.content = new HarlemMightContent(this.apiBase, (url) => this.fetchJson(url));
     }
@@ -327,6 +340,27 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
     return this.status.get("music") === "ready" ? this.artists : OFFLINE_ARTISTS;
   }
 
+  // Returns the registry id of a loaded CMS photo, or null while it loads or
+  // when it can't load; a finished load redraws the current view.
+  private photo(image: ContentImage | null): string | null {
+    if (!image || !this.registry || !this.internetModule) return null;
+    const state = this.photos.get(image.url);
+    if (state === "loading" || state === "failed") return null;
+    if (state) return state;
+    this.photos.set(image.url, "loading");
+    const resource = this.internetModule.makeResourceFromUrl(image.url);
+    this.remoteMedia.loadResourceAsImageTexture(resource, (texture) => {
+      const id = "cms-photo:" + image.url;
+      this.registry!.registerImage(id, texture);
+      this.photos.set(image.url, id);
+      this.showPreview();
+    }, (message) => {
+      print("[HarlemMightSpecsEntry] photo failed: " + image.url + " " + message);
+      this.photos.set(image.url, "failed");
+    });
+    return null;
+  }
+
   private stopSong(): void {
     if (!this.playing) return;
     this.playing = null;
@@ -397,8 +431,21 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       text("hm-title", clip(title, 26), 0, 0.07, 88, GOLD);
       if (subtitle) text("hm-subtitle", clip(subtitle, 52), 0, 0.03, 46, MUTED);
     };
-    const paragraph = (value: string): void => {
-      if (value) text("hm-body", wrap(clip(value, 150), 44), 0, -0.05, 46, IVORY);
+    // Body copy, with the item's CMS photo on the left when it has one. The
+    // photo keeps its aspect ratio inside an 18 x 11 cm box (image units are cm),
+    // clear of the action row below it.
+    const paragraph = (value: string, image: ContentImage | null = null): void => {
+      const photoId = this.photo(image);
+      if (photoId && image) {
+        const aspect = image.width > 0 && image.height > 0 ? image.width / image.height : 4 / 3;
+        const [w, h] = aspect >= PHOTO_BOX[0] / PHOTO_BOX[1]
+          ? [PHOTO_BOX[0], PHOTO_BOX[0] / aspect] : [PHOTO_BOX[1] * aspect, PHOTO_BOX[1]];
+        nodes.push({ id: "hm-photo", kind: "image", parentId: "hm-root", source: photoId,
+          position: [-0.12, -0.06, 0.01], scale: [w, h, 1] });
+        if (value) text("hm-body", wrap(clip(value, 110), 24), 0.115, -0.06, 44, IVORY);
+      } else if (value) {
+        text("hm-body", wrap(clip(value, 150), 44), 0, -0.05, 46, IVORY);
+      }
     };
     // Bottom row of a detail view: the tab's main action on the left, Back on the right.
     const actions = (primary: { label: string; action: string } | null): void => {
@@ -458,7 +505,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
   // mobile screen (Place Detail, walk, story, artist and event pages).
   private renderDetail(
     header: (title: string, subtitle: string) => void,
-    paragraph: (value: string) => void,
+    paragraph: (value: string, image?: ContentImage | null) => void,
     actions: (primary: { label: string; action: string } | null) => void,
     text: (id: string, value: string, x: number, y: number, size: number, color: Color) => void,
   ): void {
@@ -467,19 +514,19 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       const place = this.currentPlaces().find((p) => p.id === id);
       if (!place) return actions(null);
       header(place.name, [place.category, place.street].filter(Boolean).join(", "));
-      paragraph(place.summary);
+      paragraph(place.summary, place.image);
       actions(this.walkTarget() ? { label: "Start walking", action: "preview:walk" } : null);
     } else if (this.tab === "walks") {
       const walk = this.walks.find((w) => w.id === id);
       if (!walk) return actions(null);
       header(walk.title, walk.facts);
-      paragraph(walk.summary);
+      paragraph(walk.summary, walk.image);
       actions(this.walkTarget() ? { label: "Walk to first stop", action: "preview:walk" } : null);
     } else if (this.tab === "stories") {
       const story = this.stories.find((st) => st.id === id);
       if (!story) return actions(null);
       header(story.title, story.author ? "By " + story.author : "");
-      paragraph(story.dek);
+      paragraph(story.dek, story.image);
       actions(null);
     } else if (this.tab === "music") {
       const artist = this.currentArtists().find((a) => a.id === id);
@@ -492,7 +539,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
         return;
       }
       header(artist.name, [artist.genre, artist.era].filter(Boolean).join(" \u00b7 "));
-      paragraph(artist.shortBio);
+      paragraph(artist.shortBio, artist.image);
       actions(artist.youtubeUrl ? { label: "Play " + (artist.songTitle || "song"), action: "preview:play" } : null);
     } else {
       const event = this.events.find((e) => e.id === id);
@@ -500,7 +547,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       const time = formatEventTime(event.startsAt);
       const state = event.lifecycle === "scheduled" ? "" : event.lifecycle === "cancelled" ? "Cancelled" : "Postponed";
       header(event.title, [state, time].filter(Boolean).join(" \u00b7 "));
-      if (event.venue) text("hm-body", wrap(event.venue, 44), 0, -0.05, 52, IVORY);
+      paragraph(event.venue, event.image);
       actions(null);
     }
   }
@@ -582,6 +629,8 @@ const TAB_SPACING = 0.096;
 const HALF_BUTTON_SCALE: [number, number, number] = [0.96, 0.58, 1];
 // Lists are two columns by two rows, with a Previous/More or action row below.
 const PAGE_SIZE = 4;
+// Largest CMS photo in a detail view, in cm (width, height).
+const PHOTO_BOX = [18, 11] as const;
 const COLUMN_X = 0.12;
 const ROW_Y = [-0.02, -0.092, -0.164] as const;
 const LOGO_IMAGE_ID = "harlem-might-logo";
@@ -604,19 +653,19 @@ const ARROW_SCALE = 5;
 const OFFLINE_PLACES: ContentPlace[] = [
   { id: "apollo", name: "Apollo Theater", category: "Culture", street: "253 West 125th Street",
     summary: "A Harlem performing-arts landmark with a global cultural reach.",
-    latitude: 40.8100895, longitude: -73.9499948 },
+    latitude: 40.8100895, longitude: -73.9499948, image: null },
   { id: "schomburg", name: "Schomburg Center", category: "Books", street: "515 Malcolm X Boulevard",
-    summary: "", latitude: 40.8146476, longitude: -73.9409874 },
+    summary: "", latitude: 40.8146476, longitude: -73.9409874, image: null },
 ];
 const OFFLINE_ARTISTS: ContentArtist[] = [
   { id: "fats-waller", name: "Fats Waller", genre: "Jazz", era: "1920s\u20131940s", shortBio: "",
-    songTitle: "Ain't Misbehavin'", youtubeUrl: "https://www.youtube.com/watch?v=pZ8fWP6a3Q4" },
+    songTitle: "Ain't Misbehavin'", youtubeUrl: "https://www.youtube.com/watch?v=pZ8fWP6a3Q4", image: null },
   { id: "frankie-lymon", name: "Frankie Lymon", genre: "Doo-wop", era: "1950s\u20131960s", shortBio: "",
-    songTitle: "Goody Goody", youtubeUrl: "https://www.youtube.com/watch?v=K3VLt_Q5pmA" },
+    songTitle: "Goody Goody", youtubeUrl: "https://www.youtube.com/watch?v=K3VLt_Q5pmA", image: null },
   { id: "big-l", name: "Big L", genre: "Hip-hop", era: "1990s", shortBio: "",
-    songTitle: "Put It On", youtubeUrl: "https://www.youtube.com/watch?v=WWMjRMJ0dTI" },
+    songTitle: "Put It On", youtubeUrl: "https://www.youtube.com/watch?v=WWMjRMJ0dTI", image: null },
   { id: "teyana-taylor", name: "Teyana Taylor", genre: "R&B", era: "2000s\u2013present", shortBio: "",
-    songTitle: "Gonna Love Me", youtubeUrl: "https://www.youtube.com/watch?v=LwSCplLupTA" },
+    songTitle: "Gonna Love Me", youtubeUrl: "https://www.youtube.com/watch?v=LwSCplLupTA", image: null },
 ];
 
 // Copied from packages/app/content/history-facts.ts, where each date was

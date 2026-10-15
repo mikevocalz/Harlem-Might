@@ -19,9 +19,9 @@ test('reads the same published collections and sort orders as the mobile readers
   await content.musicArtists(2);
   await content.featuredPlaces();
   assert.equal(urls[0], 'https://example.test/payload-api/walks?where[_status][equals]=published&depth=1&limit=100&sort=-updatedAt&draft=false');
-  assert.equal(urls[1], 'https://example.test/payload-api/stories?where[_status][equals]=published&depth=0&limit=100&sort=-publishedAt&draft=false');
-  assert.equal(urls[2], 'https://example.test/payload-api/music-artists?where[_status][equals]=published&depth=0&limit=24&sort=name,id&page=2&draft=false');
-  assert.match(urls[3], /places\?where\[featured\]\[equals\]=true&depth=0&limit=24&sort=name&select\[slug\]=true/);
+  assert.equal(urls[1], 'https://example.test/payload-api/stories?where[_status][equals]=published&depth=1&limit=100&sort=-publishedAt&draft=false');
+  assert.equal(urls[2], 'https://example.test/payload-api/music-artists?where[_status][equals]=published&depth=1&limit=24&sort=name,id&page=2&draft=false');
+  assert.match(urls[3], /places\?where\[featured\]\[equals\]=true&depth=1&limit=24&sort=name&select\[slug\]=true/);
 });
 
 test('maps Payload [lng, lat] points and the first address segment as the street', async () => {
@@ -53,4 +53,12 @@ test('New York days and times follow US Eastern daylight time', () => {
   assert.equal(newYorkDay(new Date('2026-01-10T12:00:00Z'))[0].toISOString(), '2026-01-10T05:00:00.000Z');
   assert.equal(formatEventTime('2026-10-15T14:00:00.000Z'), 'Thu Oct 15 · 10:00 AM');
   assert.equal(formatEventTime('2026-01-10T00:30:00.000Z'), 'Fri Jan 9 · 7:30 PM');
+});
+
+test('resolves relative CMS media URLs against the API origin', async () => {
+  const { content } = client({ 'music-artists': { docs: [{ id: 21, name: '40 Cal',
+    headshot: { url: '/payload-api/media/file/artist-21-original.jpg', width: 980, height: 735, alt: 'portrait' } }] } });
+  const { artists } = await content.musicArtists(1);
+  assert.deepEqual(artists[0].image, { url: 'https://example.test/payload-api/media/file/artist-21-original.jpg',
+    width: 980, height: 735, alt: 'portrait' });
 });
