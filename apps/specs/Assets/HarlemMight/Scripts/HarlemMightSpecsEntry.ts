@@ -59,6 +59,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       throw new Error("Harlem Might requires Navigation Kit's NavigationDataComponent and ARNavigation.");
     }
 
+    this.raiseArrowIntoView();
     this.createEvent("OnStartEvent").bind(() => {
       this.unsubscribe = this.presentation!.subscribeAction((command) => this.onAction(command));
       this.navigation!.onArrivedAtPlace.add((place) => {
@@ -136,6 +137,51 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
     this.arrow!.setVisible(true);
   }
 
+  // Navigation Kit's head-locked arrow hangs 35 cm below eye level at 1 m,
+  // about 19 degrees down and past the bottom of the Specs display, so you had
+  // to tilt your head to find it. Lift the arrow and its name/distance labels
+  // into the lower part of the view; the walking card moves above eye level.
+  private raiseArrowIntoView(): void {
+    const find = (root: SceneObject, name: string): SceneObject | null => {
+      for (let i = 0; i < root.getChildrenCount(); i++) {
+        const child = root.getChild(i);
+        if (child.name === name) return child;
+        const found = find(child, name);
+        if (found) return found;
+      }
+      return null;
+    };
+    for (const name of ["ArrowPivot", "CheckSignPivot"]) {
+      const pivot = find(this.arNavigationObject, name);
+      if (!pivot) continue;
+      const transform = pivot.getTransform();
+      const position = transform.getLocalPosition();
+      transform.setLocalPosition(new vec3(position.x, -ARROW_DROP_CM, position.z));
+    }
+    // The kit lays the arrow flat and sets ArrowPivot's world rotation to a
+    // pure heading every frame, so at eye level it is seen edge-on. Move the
+    // mesh under a display object that copies that heading and tilts it toward
+    // the wearer. The kit's reset/arrive animations only touch the arrow's
+    // local transform, so they keep working.
+    const pivot = find(this.arNavigationObject, "ArrowPivot");
+    const arrowMesh = pivot ? find(pivot, "Arrow") : null;
+    if (!pivot || !arrowMesh) return;
+    const display = global.scene.createSceneObject("HarlemArrowDisplay");
+    display.setParent(pivot.getParent());
+    const pivotTransform = pivot.getTransform();
+    const displayTransform = display.getTransform();
+    displayTransform.setLocalPosition(pivotTransform.getLocalPosition());
+    displayTransform.setLocalRotation(pivotTransform.getLocalRotation());
+    arrowMesh.setParentPreserveWorldTransform(display);
+    displayTransform.setLocalScale(vec3.one().uniformScale(ARROW_SCALE));
+    const head = pivot.getParent().getTransform();
+    this.createEvent("LateUpdateEvent").bind(() => {
+      displayTransform.setWorldPosition(pivotTransform.getWorldPosition());
+      const tilt = quat.angleAxis(ARROW_TILT_DEGREES * MathUtils.DegToRad, head.right);
+      displayTransform.setWorldRotation(tilt.multiply(pivotTransform.getWorldRotation()));
+    });
+  }
+
   private endWalk(): void {
     if (!this.walk) return;
     this.arrow?.setVisible(false);
@@ -167,10 +213,10 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
       pinchable("hm-button-" + index, label, action, 0, y, BUTTON_SCALE, 80, IVORY);
 
     if (this.walk) {
-      // While walking the card drops low and shrinks so the street and the
-      // Navigation Kit arrow stay clear. Navigation Kit's own HUD already shows
-      // the place name and distance, so the card carries only the next step.
-      nodes.push({ id: "hm-root", kind: "group", position: [0, -0.17, -1.1] });
+      // While walking the card shrinks and moves above eye level, leaving the
+      // lower view to the Navigation Kit arrow, which already shows the place
+      // name and distance. The card carries only the next step.
+      nodes.push({ id: "hm-root", kind: "group", position: [0, 0.15, -1.1] });
       nodes.push({ id: "hm-frame", kind: "panel", parentId: "hm-root", position: [0, -0.01, -0.03], scale: WALK_FRAME_SCALE });
       const { arrived, place } = this.walk;
       text("hm-note", arrived ? "You're at " + place.name : "Follow the arrow to " + place.name,
@@ -293,6 +339,13 @@ const LOGO_IMAGE_ID = "harlem-might-logo";
 // the frame's top edge and the tab row.
 const LOGO_SCALE: [number, number, number] = [30, 10, 1];
 const ARRIVAL_RADIUS_METERS = 25;
+// Arrow height below eye level at Navigation Kit's 1 m head-lock distance.
+const ARROW_DROP_CM = 14;
+// Tilt of the flat arrow toward the wearer, so its face reads at eye level.
+const ARROW_TILT_DEGREES = 60;
+// The kit sizes the arrow for a glance down at 35 cm below; at eye level it
+// needs to be larger to read.
+const ARROW_SCALE = 5;
 
 // Demonstration content only; live frames come from projectHarlemSpecs.
 // Coordinates match the Harlem Might route fixtures for these places.
