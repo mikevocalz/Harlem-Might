@@ -2,6 +2,7 @@ import {
   ViroSpecsPresentationHost,
   type ViroSpecsPresentationSnapshot,
 } from "../../ViroSpecs/lens/ViroSpecsPresentationHost";
+import { Place } from "SpecsNavigationKit.lspkg/NavigationDataComponent/Place";
 import { ARNavigation } from "SpecsNavigationKit.lspkg/ARNavigationComponent/Scripts/ARNavigation";
 import { GeoLocationPlace } from "SpecsNavigationKit.lspkg/NavigationDataComponent/GeoLocationPlace";
 import { NavigationDataComponent } from "SpecsNavigationKit.lspkg/NavigationDataComponent/NavigationDataComponent";
@@ -41,7 +42,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
   private readonly allowedLiveActions = new Set<string>();
   private tab: TabId = "explore";
   private previewPlace: PreviewPlace | null = null;
-  private walk: { place: PreviewPlace; target: GeoLocationPlace; arrived: boolean } | null = null;
+  private walk: { place: PreviewPlace; target: Place; owned: boolean; arrived: boolean } | null = null;
   private usingLiveFrame = false;
 
   onAwake(): void {
@@ -127,12 +128,18 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
   // geometry still waits for the phone's route provider and its safety gates.
   private startWalk(place: PreviewPlace): void {
     this.endWalk();
-    const geo = GeoPosition.create();
-    geo.latitude = place.latitude;
-    geo.longitude = place.longitude;
-    const target = new GeoLocationPlace(geo, ARRIVAL_RADIUS_METERS, place.name, this.placeIcon,
-      place.address, this.navigation!.getUserPosition());
-    this.walk = { place, target, arrived: false };
+    // Reuse the scene's ManualPlaceList entry so the map shows one pin per
+    // place; create a temporary place only when the list doesn't have it.
+    let target: Place | undefined = this.navigation!.places.find((p) => p.name === place.name);
+    const owned = !target;
+    if (!target) {
+      const geo = GeoPosition.create();
+      geo.latitude = place.latitude;
+      geo.longitude = place.longitude;
+      target = new GeoLocationPlace(geo, ARRIVAL_RADIUS_METERS, place.name, this.placeIcon,
+        place.address, this.navigation!.getUserPosition());
+    }
+    this.walk = { place, target, owned, arrived: false };
     this.navigation!.navigateToPlace(target);
     this.arrow!.setVisible(true);
   }
@@ -186,7 +193,7 @@ export class HarlemMightSpecsEntry extends BaseScriptComponent {
     if (!this.walk) return;
     this.arrow?.setVisible(false);
     this.navigation?.stopNavigation();
-    this.navigation?.removePlace(this.walk.target);
+    if (this.walk.owned) this.navigation?.removePlace(this.walk.target);
     this.walk = null;
   }
 
