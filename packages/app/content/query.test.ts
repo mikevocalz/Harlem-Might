@@ -11,16 +11,24 @@ const readersFor = (fetch: ContentFetch) => createContentReaders(createRestConte
 const emptyResponse = () => ({ ok: true, status: 200, json: async () => ({ docs: [] }) });
 const clientFor = () => new QueryClient({ defaultOptions: { queries: { retry: 2, retryDelay: 0, gcTime: Infinity } } });
 
+// Isolated cache identities for the generic query-contract test harness.
+const queryFixtureKeys = {
+  walks: ['walks'] as const,
+  stories: ['stories'] as const,
+  result: (kind: string) => [kind] as const,
+  refresh: (status: string, count: number) => ['refresh', status, count] as const,
+};
+
 test('unavailable rejects at the query boundary and exhausts the configured retries', async () => {
   const client = clientFor();
   let calls = 0;
   const readers = readersFor(async () => { calls++; throw new Error('offline'); });
   try {
     await assert.rejects(client.fetchQuery({
-      queryKey: ['walks'], queryFn: ({ signal }) => contentQuery(readers.listWalks({ signal })),
+      queryKey: queryFixtureKeys.walks, queryFn: ({ signal }) => contentQuery(readers.listWalks({ signal })),
     }), ContentQueryError);
     assert.equal(calls, 3);
-    const state = client.getQueryState(['walks']);
+    const state = client.getQueryState(queryFixtureKeys.walks);
     assert.equal(state?.status, 'error');
     assert.equal(state?.fetchFailureCount, 3);
     assert.equal(state?.data, undefined);
@@ -45,8 +53,8 @@ test('successful records, empty lists and not-found remain domain results', asyn
     for (const [key, result] of [
       ['success', ok(['walk'])], ['empty', await readers.listWalks()], ['missing', await readers.getWalk('absent')],
     ] as const) {
-      assert.equal(await client.fetchQuery({ queryKey: [key], queryFn: () => contentQuery(Promise.resolve(result)) }), result);
-      assert.equal(client.getQueryState([key])?.status, 'success');
+      assert.equal(await client.fetchQuery({ queryKey: queryFixtureKeys.result(key), queryFn: () => contentQuery(Promise.resolve(result)) }), result);
+      assert.equal(client.getQueryState(queryFixtureKeys.result(key))?.status, 'success');
     }
     assert.equal(contentQueryResult({ data: undefined, error: null }), undefined);
   } finally { client.clear(); }
@@ -56,7 +64,7 @@ test('a failed refresh preserves last good data, including a successful empty li
   const client = clientFor();
   try {
     for (const data of [ok(['walk']), ok([]), { status: 'not-found' } as const]) {
-      const queryKey = ['refresh', data.status, data.status === 'ok' ? data.data.length : 0];
+      const queryKey = queryFixtureKeys.refresh(data.status, data.status === 'ok' ? data.data.length : 0);
       client.setQueryData(queryKey, data);
       await assert.rejects(client.fetchQuery({ queryKey, queryFn: () => contentQuery(Promise.resolve(queryFailed(new Error('offline')))) }));
       const state = client.getQueryState<typeof data>(queryKey);
@@ -99,18 +107,18 @@ test('concurrent queries isolate signals and cancellation cannot cache success o
     return emptyResponse();
   });
   try {
-    const walk = client.fetchQuery({ queryKey: ['walks'], queryFn: ({ signal }) => contentQuery(readers.listWalks({ signal })) });
+    const walk = client.fetchQuery({ queryKey: queryFixtureKeys.walks, queryFn: ({ signal }) => contentQuery(readers.listWalks({ signal })) });
     const rejected = assert.rejects(walk);
-    const story = client.fetchQuery({ queryKey: ['stories'], queryFn: ({ signal }) => contentQuery(readers.listStories({ signal })) });
+    const story = client.fetchQuery({ queryKey: queryFixtureKeys.stories, queryFn: ({ signal }) => contentQuery(readers.listStories({ signal })) });
     await started;
-    await client.cancelQueries({ queryKey: ['walks'] });
+    await client.cancelQueries({ queryKey: queryFixtureKeys.walks });
     await rejected;
     assert.notEqual(signals.get('walks'), signals.get('stories'));
     assert.equal(signals.get('walks')?.aborted, true);
     assert.equal(signals.get('stories')?.aborted, false);
     assert.deepEqual(await story, ok([]));
-    assert.equal(client.getQueryData(['walks']), undefined);
-    assert.notEqual(client.getQueryState(['walks'])?.status, 'success');
+    assert.equal(client.getQueryData(queryFixtureKeys.walks), undefined);
+    assert.notEqual(client.getQueryState(queryFixtureKeys.walks)?.status, 'success');
   } finally { client.clear(); }
 });
 
