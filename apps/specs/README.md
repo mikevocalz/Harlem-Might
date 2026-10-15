@@ -89,8 +89,10 @@ renderer.
    Stories, Music, Today). Explore lists two preview places and can start a
    Navigation Kit walk to either one. The arrow is a straight-line bearing to
    the entrance, not a street route. Today shows the next cited history fact;
-   Each tab lists its Payload records four at a time with More/Previous, and
-   pinching one opens a detail view with the mobile screen's fields. Explore
+   Each tab's cards scroll in one window (Music loads its next 24 artists as
+   you near the bottom), and pinching one opens a scrolling page with the
+   mobile screen's content: full story body, artist biography and album art,
+   walk stops. Scrolling needs viro-external's `scroll` node (PR #70). Explore
    and Walks can start a Navigation Kit walk, and a Music artist plays their
    featured song on the video screen.
 11. A future authenticated Mobile Kit transport will call

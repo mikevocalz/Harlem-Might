@@ -14,13 +14,20 @@ export class HarlemMightVideoScreen extends BaseScriptComponent {
   @hint("Image or mesh visual that shows the web page texture; hidden until a video plays")
   screen: Image;
 
+  /** "idle" until a song is cued; "unavailable" when the WebView can't start (Preview, no network). */
+  status: "idle" | "loading" | "ready" | "unavailable" = "idle";
+  onStatusChanged: (() => void) | null = null;
+
   private control: WebPageTextureProvider | null = null;
+  private inView = true;
   private ready = false;
   private pendingUrl: string | null = null;
   private creating = false;
 
   onAwake(): void {
-    this.screen.getSceneObject().enabled = false;
+    // Hide the Image component, not the object: this script lives on the same
+    // object, and a disabled object would stop its timeout and WebView callbacks.
+    this.screen.enabled = false;
     // Own material, so the web texture never lands on other images.
     this.screen.mainMaterial = this.screen.mainMaterial.clone();
   }
@@ -32,6 +39,12 @@ export class HarlemMightVideoScreen extends BaseScriptComponent {
     transform.setWorldScale(new vec3(size.x, size.y, 1));
   }
 
+  /** Shows or hides the screen without stopping playback, e.g. while its slot is scrolled away. */
+  setInView(inView: boolean): void {
+    this.inView = inView;
+    this.screen.enabled = inView && this.ready && this.pendingUrl !== null;
+  }
+
   /** Loads the video's embed player; `autoplay` starts it, otherwise it waits cued. */
   play(youtubeUrl: string, autoplay = true): void {
     const id = youTubeVideoId(youtubeUrl);
@@ -41,7 +54,7 @@ export class HarlemMightVideoScreen extends BaseScriptComponent {
     this.pendingUrl = "https://www.youtube-nocookie.com/embed/" + id + "?rel=0&playsinline=1"
       + (autoplay ? "&autoplay=1" : "");
     if (this.ready) {
-      this.screen.getSceneObject().enabled = true;
+      this.screen.enabled = this.inView;
       this.flush();
     }
     else this.create();
@@ -49,14 +62,31 @@ export class HarlemMightVideoScreen extends BaseScriptComponent {
 
   stop(): void {
     this.pendingUrl = null;
-    this.screen.getSceneObject().enabled = false;
+    this.screen.enabled = false;
     // Loading a blank https page stops playback; WebView only accepts https.
     if (this.ready) this.control!.loadUrl("https://www.youtube-nocookie.com/embed/");
+  }
+
+  private setStatus(status: HarlemMightVideoScreen["status"]): void {
+    if (this.status === status) return;
+    this.status = status;
+    this.onStatusChanged?.();
   }
 
   private create(): void {
     if (this.creating) return;
     this.creating = true;
+    this.setStatus("loading");
+    // Lens Studio Preview neither creates the WebView nor reports a failure,
+    // so a creation that hasn't answered in a few seconds counts as unavailable.
+    const timeout = this.createEvent("DelayedCallbackEvent");
+    timeout.bind(() => {
+      if (this.status !== "loading") return;
+      this.creating = false;
+      print("[HarlemMightVideoScreen] WebView did not start within " + CREATE_TIMEOUT_S + " s");
+      this.setStatus("unavailable");
+    });
+    timeout.reset(CREATE_TIMEOUT_S);
     let options: WebViewOptions;
     try {
       // Throws unless Project Settings > Experimental APIs is on.
@@ -64,6 +94,7 @@ export class HarlemMightVideoScreen extends BaseScriptComponent {
     } catch (error) {
       this.creating = false;
       print("[HarlemMightVideoScreen] WebView unavailable: " + error);
+      this.setStatus("unavailable");
       return;
     }
     this.internetModule.createWebView(
@@ -73,16 +104,18 @@ export class HarlemMightVideoScreen extends BaseScriptComponent {
         this.control = texture.control as WebPageTextureProvider;
         this.control.onReady.add(() => {
           this.ready = true;
+          this.setStatus("ready");
           // Show the screen only once it has a page; until then the image
           // has no texture and would render Lens's missing-texture checker.
-          if (this.pendingUrl) this.screen.getSceneObject().enabled = true;
+          if (this.pendingUrl) this.screen.enabled = this.inView;
           this.flush();
         });
       },
       (message) => {
         this.creating = false;
-        this.screen.getSceneObject().enabled = false;
+        this.screen.enabled = false;
         print("[HarlemMightVideoScreen] WebView unavailable: " + message);
+        this.setStatus("unavailable");
       },
     );
   }
@@ -91,6 +124,8 @@ export class HarlemMightVideoScreen extends BaseScriptComponent {
     if (this.pendingUrl) this.control!.loadUrl(this.pendingUrl);
   }
 }
+
+const CREATE_TIMEOUT_S = 5;
 
 function youTubeVideoId(url: string): string | null {
   const match = /(?:youtu\.be\/|[?&]v=|\/embed\/)([A-Za-z0-9_-]{11})/.exec(url);
