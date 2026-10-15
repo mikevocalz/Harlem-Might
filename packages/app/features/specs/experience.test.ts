@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import type { ExplorePlace } from '../explore/explore.store.ts';
+import type { ExplorePlace } from '../explore/place-model.ts';
 import type { NavigationState } from '../navigation/session/navigationStore.ts';
 import {
   projectHarlemSpecs, SPECS_BACKPLATE_M, SPECS_BUTTON_SCALE, SPECS_WALK_FRAME_SCALE,
@@ -143,7 +143,7 @@ describe('Harlem Might Specs scene projections', () => {
         reroute: { kind: 'idle' },
       },
       arTracking: { kind: 'normal' },
-      positioning: { kind: 'tracking', confidence: 'high', sigmaM: 3, isMovingTooFast: false },
+      positioning: { kind: 'tracking', confidence: 'high', horizontalRadius68M: 3, isMovingTooFast: false },
       progress: { kind: 'tracking', progress: {
         routeId: 'walk-a', distanceTravelledM: 50, distanceRemainingM: 150,
         fractionTravelled: 0.25, durationRemainingS: 220, etaMs: 221_000,
@@ -165,7 +165,7 @@ describe('Harlem Might Specs scene projections', () => {
     assert.equal(projectHarlemSpecs({ places: [], navigation, nowMs: 40000 }).navigation, undefined);
     assert.equal(projectHarlemSpecs({ places: [], navigation }).navigation, undefined);
     assert.equal(projectHarlemSpecs({ places: [], navigation: {
-      ...navigation, positioning: { kind: 'tracking', confidence: 'low', sigmaM: 200, isMovingTooFast: false },
+      ...navigation, positioning: { kind: 'tracking', confidence: 'low', horizontalRadius68M: 200, isMovingTooFast: false },
     }, nowMs: 2000 }).navigation, undefined);
     const activeSession = navigation.session;
     if (!('activeRoute' in activeSession)) throw new Error('Expected active test session.');
